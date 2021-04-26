@@ -2,30 +2,49 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"log"
+
+	"github.com/dgraph-io/badger/v2"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/tsdb/wal"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-	"github.com/onflow/flow-go/ledger/complete/wal"
-	"github.com/prometheus/client_golang/prometheus"
-	pwal "github.com/prometheus/tsdb/wal"
+	exec "github.com/onflow/flow-go/ledger/complete/wal"
+	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/storage"
+	"github.com/onflow/flow-go/storage/badger/operation"
 )
 
 func main() {
 
-	// `--mtrie-cache-size` == 1000 => `capacity`
-	// `ledger.DefaultPathFinderVersion` == 1
-	// `pathfinder.PathByteSize` == 32
+	// As the first step, we initialize the badger database and retrieve the
+	// root height. The below loop uses the height as the pointer to identify
+	// the next execution state checkpoint, so we can merge all updates for the
+	// same block together.
+	opts := badger.DefaultOptions("data").WithLogger(nil)
+	db, err := badger.Open(opts)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var height uint64
+	err = operation.RetrieveRootHeight(&height)(db.NewTransaction(false))
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// We initialize an empty trie with the default path length.
+	// In the second stop, we just create an empty trie to replay the updates
+	// from the WAL into.
 	t, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// We initialize a native prometheus WAL here, rather than our wrapper.
-	w, err := pwal.NewSize(
+	// Finally, we initialize the reader for the write-ahead log.
+	w, err := wal.NewSize(
 		nil,
 		prometheus.DefaultRegisterer,
 		"trie",
@@ -34,41 +53,64 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// We prepare for reading all segments of the WAL.
-	from, to, err := w.Segments()
+	r, err := wal.NewSegmentsReader(w.Dir())
 	if err != nil {
 		log.Fatal(err)
 	}
-	r, err := pwal.NewSegmentsRangeReader(pwal.SegmentRange{
-		Dir:   w.Dir(),
-		First: from,
-		Last:  to,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	s := wal.NewReader(r)
 
-	// We step through the records one by one, trying to decode.
-	s := pwal.NewReader(r)
-	for s.Next() {
+	var commit flow.StateCommitment
+TopLoop:
+	for {
 
-		// We decode the operation, the root hash and the potential update.
-		operation, _, update, err := wal.Decode(s.Record())
-		if err != nil {
-			log.Fatal(err)
+	SealLoop:
+		for {
+			// We get the seal so that we know which state commitment to look for
+			// when replaying updates onto the trie.
+			var blockID flow.Identifier
+			err = operation.LookupBlockHeight(height, &blockID)(db.NewTransaction(false))
+			if errors.Is(err, storage.ErrNotFound) {
+				break TopLoop
+			}
+			if err != nil {
+				log.Fatal(err)
+			}
+			var sealID flow.Identifier
+			err = operation.LookupBlockSeal(blockID, &sealID)(db.NewTransaction(false))
+			if err != nil {
+				log.Fatal(err)
+			}
+			var seal flow.Seal
+			err = operation.RetrieveSeal(sealID, &seal)(db.NewTransaction(false))
+			if err != nil {
+				log.Fatal(err)
+			}
+			if !bytes.Equal(seal.FinalState, commit) {
+				commit = seal.FinalState
+				break SealLoop
+			}
+			height++
 		}
 
-		// Then, we apply updates and deletes appropriately.
-		switch operation {
+		// Now we play updates into it until we reach our state commitment.
+		var updates []*ledger.TrieUpdate
+	UpdateLoop:
+		for s.Next() {
 
-		// For updates, we update the underlying trie and discard the previous version.
-		case wal.WALUpdate:
-
+			// Decode the update and do a sanity check to see if it actually is
+			// supposed to be applied on the trie in the given state.
+			operation, _, update, err := exec.Decode(s.Record())
+			if err != nil {
+				log.Fatal(err)
+			}
+			if operation != exec.WALUpdate {
+				continue
+			}
 			if !bytes.Equal(t.RootHash(), update.RootHash) {
 				log.Fatal("mismatched root hash for update")
 			}
 
+			// Now we can play the update into the trie and get our next commitment.
 			payloads := make([]ledger.Payload, 0, len(update.Payloads))
 			for _, payload := range update.Payloads {
 				payloads = append(payloads, *payload)
@@ -78,10 +120,20 @@ func main() {
 				log.Fatal(err)
 			}
 
-		// For deletes, we simply drop the branch of the sub-trie in question.
-		case wal.WALDelete:
-			// Note: these are actually irrelevant, as it's about deleting tries
-			// from the cache, not register values.
+			// Append the update to the list and check if we reached a block
+			// checkpoint.
+			updates = append(updates, update)
+			if !bytes.Equal(t.RootHash(), commit) {
+				continue
+			}
+
+			// At this point, we have reached the checkpoint and we should
+			// compound.
+			// TODO: actually compound and store stuff
+			fmt.Printf("%x: %d update(s)\n", commit, len(updates))
+			updates = nil
+			height++
+			break UpdateLoop
 		}
 	}
 }
