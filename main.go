@@ -59,14 +59,17 @@ func main() {
 	}
 	s := wal.NewReader(r)
 
-	var commit flow.StateCommitment
+	// The idea here is that we always look at the next sealed block and then
+	// add together all deltas that are needed to get to the trie to the same
+	// execution state as was sealed next.
+	var seal flow.Seal
 TopLoop:
 	for {
 
+		// We get the seal so that we know which state commitment to look for
+		// when replaying updates onto the trie.
 	SealLoop:
 		for {
-			// We get the seal so that we know which state commitment to look for
-			// when replaying updates onto the trie.
 			var blockID flow.Identifier
 			err = operation.LookupBlockHeight(height, &blockID)(db.NewTransaction(false))
 			if errors.Is(err, storage.ErrNotFound) {
@@ -80,20 +83,21 @@ TopLoop:
 			if err != nil {
 				log.Fatal(err)
 			}
-			var seal flow.Seal
-			err = operation.RetrieveSeal(sealID, &seal)(db.NewTransaction(false))
+			var next flow.Seal
+			err = operation.RetrieveSeal(sealID, &next)(db.NewTransaction(false))
 			if err != nil {
 				log.Fatal(err)
 			}
-			if !bytes.Equal(seal.FinalState, commit) {
-				commit = seal.FinalState
-				break SealLoop
+			if bytes.Equal(next.FinalState, seal.FinalState) {
+				height++
+				continue
 			}
-			height++
+			seal = next
+			break SealLoop
 		}
 
 		// Now we play updates into it until we reach our state commitment.
-		var updates []*ledger.TrieUpdate
+		var set ChangeSet
 	UpdateLoop:
 		for s.Next() {
 
@@ -122,16 +126,15 @@ TopLoop:
 
 			// Append the update to the list and check if we reached a block
 			// checkpoint.
-			updates = append(updates, update)
-			if !bytes.Equal(t.RootHash(), commit) {
+			set = set.Merge(update)
+			if !bytes.Equal(t.RootHash(), seal.FinalState) {
 				continue
 			}
 
 			// At this point, we have reached the checkpoint and we should
 			// compound.
-			// TODO: actually compound and store stuff
-			fmt.Printf("%x: %d update(s)\n", commit, len(updates))
-			updates = nil
+			fmt.Printf("%x => %x => %3d changes\n", seal.BlockID, seal.FinalState, set.Size())
+			set = nil
 			height++
 			break UpdateLoop
 		}
