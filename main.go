@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"log"
 
 	"github.com/awfm9/flow-dps/ral"
@@ -10,80 +9,22 @@ import (
 	"github.com/prometheus/tsdb/wal"
 
 	exec "github.com/onflow/flow-go/ledger/complete/wal"
-	"github.com/onflow/flow-go/model/flow"
-	"github.com/onflow/flow-go/storage"
-	"github.com/onflow/flow-go/storage/badger/operation"
 )
 
 func main() {
 
-	// As a first step, we load the protocol state database in order to identify
-	// the root block and the root state commitment to bootstrap the ledger from.
+	// Initialize the badger database that contains the protocol state data.
 	opts := badger.DefaultOptions("data").WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var height uint64
-	err = operation.RetrieveRootHeight(&height)(db.NewTransaction(false))
-	if err != nil {
-		log.Fatal(err)
-	}
-	var rootID flow.Identifier
-	err = operation.LookupBlockHeight(height, &rootID)(db.NewTransaction(false))
-	if err != nil {
-		log.Fatal(err)
-	}
-	var sealID flow.Identifier
-	err = operation.LookupBlockSeal(rootID, &sealID)(db.NewTransaction(false))
-	if err != nil {
-		log.Fatal(err)
-	}
-	var seal flow.Seal
-	err = operation.RetrieveSeal(sealID, &seal)(db.NewTransaction(false))
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	// In the second step, we use this information to bootstrap a random access
-	// ledger streamer, that allows us to stream data into a ledger that can
-	// access any register at any block height.
-	streamer, err := ral.NewStreamer(rootID, seal.FinalState)
+	// Initialize the static random access ledger that uses the protocol state
+	// data to index execution state updates.
+	static, err := ral.NewStatic(db)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	// The third step is about pushing all of the block and seal information
-	// into the streamer, so it knows which commits to look for in the stream
-	// of updates that change the state root hash.
-	parentID := rootID
-	var blockID flow.Identifier
-	for {
-		height++
-		err = operation.LookupBlockHeight(height, &blockID)(db.NewTransaction(false))
-		if errors.Is(err, storage.ErrNotFound) {
-			break
-		}
-		err = streamer.Block(parentID, blockID)
-		if err != nil {
-			log.Fatal(err)
-		}
-		parentID = blockID
-		err = operation.LookupBlockSeal(blockID, &sealID)(db.NewTransaction(false))
-		if errors.Is(err, storage.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = operation.RetrieveSeal(sealID, &seal)(db.NewTransaction(false))
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = streamer.Seal(blockID, seal.FinalState)
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	// Lastly, we can stream the updates from the write-ahead log into the
@@ -119,7 +60,7 @@ func main() {
 			}
 			delta = append(delta, change)
 		}
-		err = streamer.Delta(update.RootHash, delta)
+		err = static.Delta(update.RootHash, delta)
 		if err != nil {
 			log.Fatal(err)
 		}
