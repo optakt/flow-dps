@@ -1,18 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"errors"
-	"fmt"
 	"log"
 
+	"github.com/awfm9/flow-dps/ral"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/tsdb/wal"
 
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/pathfinder"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	exec "github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
@@ -21,10 +17,8 @@ import (
 
 func main() {
 
-	// As the first step, we initialize the badger database and retrieve the
-	// root height. The below loop uses the height as the pointer to identify
-	// the next execution state checkpoint, so we can merge all updates for the
-	// same block together.
+	// As a first step, we load the protocol state database in order to identify
+	// the root block and the root state commitment to bootstrap the ledger from.
 	opts := badger.DefaultOptions("data").WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
@@ -35,15 +29,65 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// In the second stop, we just create an empty trie to replay the updates
-	// from the WAL into.
-	t, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
+	var rootID flow.Identifier
+	err = operation.LookupBlockHeight(height, &rootID)(db.NewTransaction(false))
+	if err != nil {
+		log.Fatal(err)
+	}
+	var sealID flow.Identifier
+	err = operation.LookupBlockSeal(rootID, &sealID)(db.NewTransaction(false))
+	if err != nil {
+		log.Fatal(err)
+	}
+	var seal flow.Seal
+	err = operation.RetrieveSeal(sealID, &seal)(db.NewTransaction(false))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Finally, we initialize the reader for the write-ahead log.
+	// In the second step, we use this information to bootstrap a random access
+	// ledger streamer, that allows us to stream data into a ledger that can
+	// access any register at any block height.
+	streamer, err := ral.NewStreamer(rootID, seal.FinalState)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// The third step is about pushing all of the block and seal information
+	// into the streamer, so it knows which commits to look for in the stream
+	// of updates that change the state root hash.
+	parentID := rootID
+	var blockID flow.Identifier
+	for {
+		height++
+		err = operation.LookupBlockHeight(height, &blockID)(db.NewTransaction(false))
+		if errors.Is(err, storage.ErrNotFound) {
+			break
+		}
+		err = streamer.Block(parentID, blockID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		parentID = blockID
+		err = operation.LookupBlockSeal(blockID, &sealID)(db.NewTransaction(false))
+		if errors.Is(err, storage.ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = operation.RetrieveSeal(sealID, &seal)(db.NewTransaction(false))
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = streamer.Seal(blockID, seal.FinalState)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Lastly, we can stream the updates from the write-ahead log into the
+	// streamer to map them to blocks according to the information it has.
 	w, err := wal.NewSize(
 		nil,
 		prometheus.DefaultRegisterer,
@@ -58,85 +102,26 @@ func main() {
 		log.Fatal(err)
 	}
 	s := wal.NewReader(r)
-
-	// The idea here is that we always look at the next sealed block and then
-	// add together all deltas that are needed to get to the trie to the same
-	// execution state as was sealed next.
-	var seal flow.Seal
-TopLoop:
-	for {
-
-		// We get the seal so that we know which state commitment to look for
-		// when replaying updates onto the trie.
-	SealLoop:
-		for {
-			var blockID flow.Identifier
-			err = operation.LookupBlockHeight(height, &blockID)(db.NewTransaction(false))
-			if errors.Is(err, storage.ErrNotFound) {
-				break TopLoop
-			}
-			if err != nil {
-				log.Fatal(err)
-			}
-			var sealID flow.Identifier
-			err = operation.LookupBlockSeal(blockID, &sealID)(db.NewTransaction(false))
-			if err != nil {
-				log.Fatal(err)
-			}
-			var next flow.Seal
-			err = operation.RetrieveSeal(sealID, &next)(db.NewTransaction(false))
-			if err != nil {
-				log.Fatal(err)
-			}
-			if bytes.Equal(next.FinalState, seal.FinalState) {
-				height++
-				continue
-			}
-			seal = next
-			break SealLoop
+	for s.Next() {
+		operation, _, update, err := exec.Decode(s.Record())
+		if err != nil {
+			log.Fatal(err)
 		}
-
-		// Now we play updates into it until we reach our state commitment.
-		var set ChangeSet
-	UpdateLoop:
-		for s.Next() {
-
-			// Decode the update and do a sanity check to see if it actually is
-			// supposed to be applied on the trie in the given state.
-			operation, _, update, err := exec.Decode(s.Record())
-			if err != nil {
-				log.Fatal(err)
+		if operation != exec.WALUpdate {
+			continue
+		}
+		delta := make(ral.Delta, 0, len(update.Paths))
+		for index, path := range update.Paths {
+			payload := *update.Payloads[index]
+			change := ral.Change{
+				Path:    path,
+				Payload: payload,
 			}
-			if operation != exec.WALUpdate {
-				continue
-			}
-			if !bytes.Equal(t.RootHash(), update.RootHash) {
-				log.Fatal("mismatched root hash for update")
-			}
-
-			// Now we can play the update into the trie and get our next commitment.
-			payloads := make([]ledger.Payload, 0, len(update.Payloads))
-			for _, payload := range update.Payloads {
-				payloads = append(payloads, *payload)
-			}
-			t, err = trie.NewTrieWithUpdatedRegisters(t, update.Paths, payloads)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			// Append the update to the list and check if we reached a block
-			// checkpoint.
-			set = set.Merge(update)
-			if !bytes.Equal(t.RootHash(), seal.FinalState) {
-				continue
-			}
-
-			// At this point, we have reached the checkpoint and we should
-			// compound.
-			fmt.Printf("%x => %x => %3d changes\n", seal.BlockID, seal.FinalState, set.Size())
-			set = nil
-			height++
-			break UpdateLoop
+			delta = append(delta, change)
+		}
+		err = streamer.Delta(update.RootHash, delta)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 }
