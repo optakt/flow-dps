@@ -14,15 +14,26 @@ import (
 func main() {
 
 	// Initialize the badger database that contains the protocol state data.
-	opts := badger.DefaultOptions("data").WithLogger(nil)
-	db, err := badger.Open(opts)
+	data, err := badger.Open(badger.DefaultOptions("data").WithLogger(nil))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Initialize the badger database for the random access ledger index.
+	index, err := badger.Open(badger.DefaultOptions("index").WithLogger(nil))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Initialize the random access ledger core.
+	core, err := ral.NewCore(index)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Initialize the static random access ledger that uses the protocol state
 	// data to index execution state updates.
-	static, err := ral.NewStatic(db)
+	static, err := ral.NewStatic(core, data)
 	if err != nil {
 		log.Fatal(err)
 	}
