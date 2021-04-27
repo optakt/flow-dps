@@ -100,16 +100,18 @@ func (s *Static) Delta(commit flow.StateCommitment, delta Delta) error {
 		// if the trie root hash does indeed correspond to the state committed
 		// at the currently active block, we can store the deltas in the cache
 		// as the delta between the last block and the active one
-		err = s.core.Index(s.active.Height, s.active.BlockID, s.deltas)
+		err = s.core.Index(s.active.Height, s.active.BlockID, s.active.Commit, s.deltas)
 		if err != nil {
 			return fmt.Errorf("could not index active deltas (%w)", err)
 		}
 		s.deltas = []Delta{}
 
+		fmt.Printf("%d:%x:%x - %d\n", s.active.Height, s.active.BlockID, s.active.Commit, len(s.deltas))
+
 		// then we can forward the currently active block to the next one in the
 		// chain; if no more blocks are there, we break
 		var blockID flow.Identifier
-		err = operation.LookupBlockHeight(s.active.Height, &blockID)(s.data.NewTransaction(false))
+		err = operation.LookupBlockHeight(s.active.Height+1, &blockID)(s.data.NewTransaction(false))
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil
 		}
