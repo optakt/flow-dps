@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
@@ -16,29 +17,36 @@ import (
 
 // Core represents the core indexing infrastructure of the random access ledger.
 type Core struct {
+	log   zerolog.Logger
 	index *badger.DB
 	trie  *trie.MTrie // the current execution state trie
-	tip   uint64
 }
 
 // NewCore creates a new random access ledger core, using the provided badger
 // database as a backend.
 // WARNING: this should be a separate database from the protocol state!
-func NewCore(index *badger.DB) (*Core, error) {
+func NewCore(log zerolog.Logger, index *badger.DB) (*Core, error) {
 	trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize empty trie (%w)", err)
 	}
 	c := &Core{
+		log:   log.With().Str("component", "core").Logger(),
 		index: index,
 		trie:  trie,
-		tip:   0,
 	}
 	return c, nil
 }
 
 // Index is used to index a new set of state deltas for the given block.
 func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCommitment, deltas []Delta) error {
+
+	c.log.Info().
+		Uint64("height", height).
+		Hex("block", blockID[:]).
+		Hex("commit", commit[:]).
+		Int("deltas", len(deltas)).
+		Msg("indexing state deltas")
 
 	// let's use a single transaction to make indexing of a new block atomic
 	tx := c.index.NewTransaction(true)
@@ -118,11 +126,6 @@ func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
 
 // Payload returns the payload of the given path at the given block height.
 func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error) {
-
-	// if the height is beyond tip, we can't answer the query
-	if height > c.tip {
-		return nil, fmt.Errorf("unknown block height (%d)", height)
-	}
 
 	// Use seek on Badger to seek to the next biggest key lower than the key we
 	// seek for; this should represent the last update to the path before the

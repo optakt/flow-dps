@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
@@ -22,6 +23,7 @@ type Active struct {
 // Static is a random access ledger that bootstraps the index from a static
 // snapshot of the protocol state and the corresponding ledger write-ahead log.
 type Static struct {
+	log    zerolog.Logger
 	core   *Core
 	data   *badger.DB
 	active *Active // the block we currently try to match
@@ -30,7 +32,7 @@ type Static struct {
 
 // NewStatic creates a new random access ledger, bootstrapping the state from
 // the provided badger snapshot and write-ahead log.
-func NewStatic(core *Core, data *badger.DB) (*Static, error) {
+func NewStatic(log zerolog.Logger, core *Core, data *badger.DB) (*Static, error) {
 	var height uint64
 	err := operation.RetrieveRootHeight(&height)(data.NewTransaction(false))
 	if err != nil {
@@ -57,6 +59,7 @@ func NewStatic(core *Core, data *badger.DB) (*Static, error) {
 		Commit:  seal.FinalState,
 	}
 	s := &Static{
+		log:    log.With().Str("component", "static").Logger(),
 		core:   core,
 		data:   data,
 		active: active,
@@ -68,6 +71,11 @@ func NewStatic(core *Core, data *badger.DB) (*Static, error) {
 // Delta adds an execution state delta to the streamer, that can be applied to
 // the state trie when its root hash corresponds to the given commit.
 func (s *Static) Delta(commit flow.StateCommitment, delta Delta) error {
+
+	s.log.Debug().
+		Hex("commit", commit[:]).
+		Int("changes", len(delta)).
+		Msg("processing register changes")
 
 	// We first do a sanity check to make sure that the provided delta is
 	// supposed to be applied to a state trie with the given root hash.
@@ -97,6 +105,12 @@ func (s *Static) Delta(commit flow.StateCommitment, delta Delta) error {
 			break
 		}
 
+		s.log.Debug().
+			Uint64("height", s.active.Height).
+			Hex("commit", s.active.Commit[:]).
+			Hex("block", s.active.BlockID[:]).
+			Msg("active commit matched")
+
 		// if the trie root hash does indeed correspond to the state committed
 		// at the currently active block, we can store the deltas in the cache
 		// as the delta between the last block and the active one
@@ -105,8 +119,6 @@ func (s *Static) Delta(commit flow.StateCommitment, delta Delta) error {
 			return fmt.Errorf("could not index active deltas (%w)", err)
 		}
 		s.deltas = []Delta{}
-
-		fmt.Printf("%d:%x:%x - %d\n", s.active.Height, s.active.BlockID, s.active.Commit, len(s.deltas))
 
 		// then we can forward the currently active block to the next one in the
 		// chain; if no more blocks are there, we break
