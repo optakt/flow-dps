@@ -25,11 +25,7 @@ type Core struct {
 // NewCore creates a new random access ledger core, using the provided badger
 // database as a backend.
 // WARNING: this should be a separate database from the protocol state!
-func NewCore(log zerolog.Logger, index *badger.DB) (*Core, error) {
-	trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize empty trie (%w)", err)
-	}
+func NewCore(log zerolog.Logger, trie *trie.MTrie, index *badger.DB) (*Core, error) {
 	c := &Core{
 		log:   log.With().Str("component", "core").Logger(),
 		index: index,
