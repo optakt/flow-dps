@@ -10,26 +10,46 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/tsdb/wal"
 	"github.com/rs/zerolog"
+	"github.com/spf13/pflag"
 
 	exec "github.com/onflow/flow-go/ledger/complete/wal"
 )
 
 func main() {
 
+	var (
+		flagLevel      string
+		flagData       string
+		flagTrie       string
+		flagIndex      string
+		flagCheckpoint string
+	)
+
+	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log level")
+	pflag.StringVarP(&flagData, "data-dir", "d", "data", "protocol state data directory")
+	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "execution state trie directory")
+	pflag.StringVarP(&flagIndex, "index-dir", "i", "index", "dps state index directory")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint-file", "c", "root.checkpoint", "execution state trie root checkpoint")
+
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
+	level, err := zerolog.ParseLevel(flagLevel)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	log = log.Level(level)
 
 	// Initialize the badger database that contains the protocol state data.
-	data, err := badger.Open(badger.DefaultOptions("data").WithLogger(nil))
+	data, err := badger.Open(badger.DefaultOptions(flagData).WithLogger(nil))
 	if err != nil {
 		log.Fatal().Err(err)
 	}
 
 	// Initialize the badger database for the random access ledger index.
-	index, err := badger.Open(badger.DefaultOptions("index").WithLogger(nil))
+	index, err := badger.Open(badger.DefaultOptions(flagIndex).WithLogger(nil))
 	if err != nil {
 		log.Fatal().Err(err)
 	}
@@ -52,7 +72,7 @@ func main() {
 	w, err := wal.NewSize(
 		nil,
 		prometheus.DefaultRegisterer,
-		"trie",
+		flagTrie,
 		32*1024*1024,
 	)
 	if err != nil {
@@ -90,4 +110,13 @@ func main() {
 			log.Fatal().Err(err)
 		}
 	}
+
+	// TODO: implement component interfaces
+	// file := NewFilesytemChain(data)
+	// core := NewCore(index)
+	// streamer := NewLedgerWALStreamer(wal, file, core)
+
+	// net := NewNetworkChain(access)
+	// core := NewCore(index)
+	// streamer := NewLiveStreamer(pub, net, core)
 }
