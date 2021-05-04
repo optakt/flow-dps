@@ -3,13 +3,12 @@
 ## Road Map
 
 - bootstrap from checkpoint
-  - (is the first update the root checkpoint?)
-    - check Flow Go code
 - add proper logging
-- clean up component interfaces
 
 - index transaction events
 - events retrieval interface
+- clean up component interfaces
+- build snapshot creator
 - REST API interface
 - DPS web client
 

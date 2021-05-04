@@ -1,4 +1,4 @@
-package ral
+package ledger
 
 import (
 	"fmt"
@@ -12,7 +12,6 @@ type Ledger struct {
 	version uint8
 }
 
-// Get implements the get method of the Flow ledger interface.
 func (l *Ledger) Get(query *ledger.Query) ([]ledger.Value, error) {
 
 	// convert the query state commitment to a height, so we can use the core

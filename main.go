@@ -5,7 +5,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/awfm9/flow-dps/ral"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/tsdb/wal"

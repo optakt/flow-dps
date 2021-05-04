@@ -1,4 +1,4 @@
-package ral
+package model
 
 const (
 	BlockToHeight  = 1
