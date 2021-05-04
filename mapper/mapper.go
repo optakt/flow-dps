@@ -49,7 +49,7 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 		feeder:  feeder,
 		indexer: indexer,
 		trie:    nil,
-		deltas:  nil,
+		deltas:  []model.Delta{},
 	}
 
 	if cfg.CheckpointFile != "" {
@@ -124,7 +124,7 @@ func (m *Mapper) Run() error {
 			if err != nil {
 				return fmt.Errorf("could not index deltas: %w (height: %d, block: %x, commit: %x)", err, height, blockID, commit)
 			}
-			m.deltas = nil
+			m.deltas = []model.Delta{}
 			err = m.chain.Forward()
 			if errors.Is(err, io.EOF) {
 				return nil
