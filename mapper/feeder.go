@@ -1,9 +1,10 @@
 package mapper
 
 import (
-	"github.com/onflow/flow-go/ledger"
+	"github.com/awfm9/flow-dps/model"
+	"github.com/onflow/flow-go/model/flow"
 )
 
 type Feeder interface {
-	Feed() (*ledger.TrieUpdate, error)
+	Feed(commit flow.StateCommitment) (model.Delta, error)
 }

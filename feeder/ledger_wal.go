@@ -1,11 +1,13 @@
 package feeder
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
-	"github.com/onflow/flow-go/ledger"
+	"github.com/awfm9/flow-dps/model"
 	"github.com/onflow/flow-go/ledger/complete/wal"
+	"github.com/onflow/flow-go/model/flow"
 	"github.com/prometheus/client_golang/prometheus"
 	pwal "github.com/prometheus/tsdb/wal"
 )
@@ -39,7 +41,7 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	return l, nil
 }
 
-func (l *LedgerWAL) Feed() (*ledger.TrieUpdate, error) {
+func (l *LedgerWAL) Feed(commit flow.StateCommitment) (model.Delta, error) {
 	for {
 		next := l.reader.Next()
 		err := l.reader.Err()
@@ -57,6 +59,18 @@ func (l *LedgerWAL) Feed() (*ledger.TrieUpdate, error) {
 		if operation != wal.WALUpdate {
 			continue
 		}
-		return update, nil
+		if !bytes.Equal(commit, update.RootHash) {
+			return nil, fmt.Errorf("mismatch for next trie update in sequence (trie: %x, feed: %x)", commit, update.RootHash)
+		}
+		delta := make(model.Delta, 0, len(update.Paths))
+		for index, path := range update.Paths {
+			payload := update.Payloads[index]
+			change := model.Change{
+				Path:    path,
+				Payload: *payload,
+			}
+			delta = append(delta, change)
+		}
+		return delta, nil
 	}
 }

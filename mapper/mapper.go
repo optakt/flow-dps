@@ -2,9 +2,7 @@ package mapper
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/awfm9/flow-dps/model"
@@ -14,6 +12,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
+	"github.com/onflow/flow-go/model/flow"
 )
 
 // MapperOptions contains optional parameters we can set for the mapper.
@@ -84,25 +83,10 @@ func (m *Mapper) Run() error {
 	for {
 
 		// First, we load the next update and apply it to the current trie.
-		update, err := m.feeder.Feed()
-		if errors.Is(err, io.EOF) {
-			return nil
-		}
+		commit := flow.StateCommitment(m.trie.RootHash())
+		delta, err := m.feeder.Feed(commit)
 		if err != nil {
 			return fmt.Errorf("could not feed next update: %w", err)
-		}
-		delta := make(model.Delta, 0, len(update.Paths))
-		for index, path := range update.Paths {
-			payload := update.Payloads[index]
-			change := model.Change{
-				Path:    path,
-				Payload: *payload,
-			}
-			delta = append(delta, change)
-		}
-		hash := m.trie.RootHash()
-		if !bytes.Equal(update.RootHash, hash) {
-			return fmt.Errorf("could not match root hash (trie: %x, update: %x)", hash, update.RootHash)
 		}
 		trie, err := trie.NewTrieWithUpdatedRegisters(m.trie, delta.Paths(), delta.Payloads())
 		if err != nil {
@@ -115,9 +99,8 @@ func (m *Mapper) Run() error {
 		// currently active block in the chain. If we have, we keep forwarding
 		// the chain until we reach a new state commitment.
 		for {
-			hash := m.trie.RootHash()
-			height, blockID, commit := m.chain.Active()
-			if !bytes.Equal(hash, commit) {
+			height, blockID, sentinel := m.chain.Active()
+			if !bytes.Equal(sentinel, commit) {
 				break
 			}
 			err := m.indexer.Index(height, blockID, commit, m.deltas)
@@ -126,9 +109,6 @@ func (m *Mapper) Run() error {
 			}
 			m.deltas = []model.Delta{}
 			err = m.chain.Forward()
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
 			if err != nil {
 				return fmt.Errorf("could not forward chain: %w", err)
 			}
