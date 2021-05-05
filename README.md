@@ -36,8 +36,8 @@ resources.
 
 ### Components
 
-socket for live ones.)
 The Flow Data Provisioning Service is constituted of three main components.
+
 1. The **Chain** interface is responsible for reconstructing a view of the sequence of blocks, along with their metadata. It allows the consumer to step from the root block to the last sealed block, while presenting height, block identifier and state commitment for each step. The file i/o version does so by using the execution node's on-disk key-value store, while the network version relies on data retrieved from access nodes.
 2. The **Streamer** interface is responsible for streaming in-order trie updates from different sources; the file i/o version reads them from the LedgerWAL, while the network version receives trie updates through its network subscription on the execution node.
 3. The **Mapper** interface is responsible for mapping incoming state trie updates to blocks. Generally, trie updates come in by chunk, so each block maps from zero to multiple trie updates. Once a block is mapped to its respective trie updates, the mapper forwards the information to the indexer.
@@ -59,11 +59,11 @@ is a live one, which sends
 │ │             │ │
 │ │  Exec Node  │ │
 │ │             │ │
-│ │ ┌─────────┐ │ │
+│ │ ┌─────────┐ │ │     State updates
 │ │ │LedgerWAL├─┼─┼───────────────────────────────────┐
 │ │ └─────────┘ │ │                                   │
 │ │             │ │                                   │
-│ │ ┌─────────┐ │ │                                   │
+│ │ ┌─────────┐ │ │     Blocks                        │
 │ │ │Badger DB├─┼─┼─────────────────┐                 │
 │ │ └─────────┘ │ │                 │                 │
 │ │             │ │                 │                 │
