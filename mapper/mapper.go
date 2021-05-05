@@ -81,9 +81,14 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 }
 
 func (m *Mapper) Run() error {
-	for {
 
-		// First, we load the next update and apply it to the current trie.
+	// The first loop is responsible for reading deltas from the feeder and
+	// updating the state trie with the delta in order to get the next trie
+	// state. If the feeder times out (which can happen, for example, for a
+	// feeder receiving trie updates over the network), it will go into a tight
+	// loop until the state delta to be applied to the trie with the current
+	// root hash has been successfully retrieved.
+	for {
 		commit := flow.StateCommitment(m.trie.RootHash())
 		delta, err := m.feeder.Feed(commit)
 		if errors.Is(err, model.ErrTimeout) {
@@ -104,9 +109,16 @@ func (m *Mapper) Run() error {
 		m.deltas = append(m.deltas, delta)
 		m.trie = trie
 
-		// Second, we check if we have reached the state commitment of the
-		// currently active block in the chain. If we have, we keep forwarding
-		// the chain until we reach a new state commitment.
+		// The second loop is responsible for mapping the currently active block
+		// to the set of deltas that were collected. If the state commitment for
+		// the block we are looking for isn't the same as the trie root hash, we
+		// will immediately go to the next iteration of the outer loop to keep
+		// adding deltas to the trie. If it does match, we will index the block
+		// with the set of deltas we collected. This might happen more than once
+		// if no change to the state trie happens between multiple blocks, at
+		// which point we map the second and any subsequent blocks without
+		// change to an empty set of deltas.
+		commit = flow.StateCommitment(m.trie.RootHash())
 		for {
 			height, blockID, sentinel := m.chain.Active()
 			if !bytes.Equal(sentinel, commit) {
@@ -118,6 +130,13 @@ func (m *Mapper) Run() error {
 			}
 			m.deltas = []model.Delta{}
 
+			// The third loop is responsible for forwarding the chain to the
+			// next block after each block indexing. This basically forwards the
+			// pointer to the active block, for which we will look for the
+			// state commitment in the trie next. The loop is required in case
+			// there is a timeout (which can happen if we load the chain data
+			// over the network), so that we only resume the rest of the logic
+			// once we have successfully forwarded to the next block.
 			for {
 				err = m.chain.Forward()
 				if errors.Is(err, model.ErrTimeout) {
