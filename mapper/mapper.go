@@ -68,23 +68,9 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 		t = trie
 	}
 
-	// At this point, we can sanity check whether the root block's state
-	// commitment corresponds to the initial trie root hash. It seems like the
-	// root block's seal's state commitment actually corresponds to the root
-	// hash of the trie after applying the first trie update from the WAL.
-	delta, err := feeder.Feed(t.RootHash())
-	if err != nil {
-		return nil, fmt.Errorf("could not feed first trie update: %w", err)
-	}
-	t, err = trie.NewTrieWithUpdatedRegisters(t, delta.Paths(), delta.Payloads())
-	if err != nil {
-		return nil, fmt.Errorf("could not update trie with first trie update: %w", err)
-	}
-	_, _, commit := chain.Active()
-	hash := t.RootHash()
-	if !bytes.Equal(commit, hash) {
-		return nil, fmt.Errorf("state trie root hash doesn't match root block state commitment (seal: %x, trie: %x)", commit, hash)
-	}
+	// NOTE: there might be a number of trie updates in the WAL before the root
+	// block, which means that we can not sanity check the state trie against
+	// the root block state commitment here.
 
 	m := &Mapper{
 		log:     log.With().Str("component", "mapper").Logger(),
