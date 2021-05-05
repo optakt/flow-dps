@@ -5,14 +5,13 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/dgraph-io/badger/v2"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/tsdb/wal"
+	"github.com/awfm9/flow-dps/chain"
+	"github.com/awfm9/flow-dps/feeder"
+	"github.com/awfm9/flow-dps/indexer"
+	"github.com/awfm9/flow-dps/ledger"
+	"github.com/awfm9/flow-dps/mapper"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
-
-	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
-	exec "github.com/onflow/flow-go/ledger/complete/wal"
 )
 
 func main() {
@@ -25,11 +24,11 @@ func main() {
 		flagCheckpoint string
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log level")
-	pflag.StringVarP(&flagData, "data-dir", "d", "data", "protocol state data directory")
-	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "execution state trie directory")
-	pflag.StringVarP(&flagIndex, "index-dir", "i", "index", "dps state index directory")
-	pflag.StringVarP(&flagCheckpoint, "checkpoint-file", "c", "root.checkpoint", "execution state trie root checkpoint")
+	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log output level")
+	pflag.StringVarP(&flagData, "data-dir", "d", "data", "protocol state database directory")
+	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "state trie write-ahead log directory")
+	pflag.StringVarP(&flagIndex, "index-dir", "i", "index", "state ledger index directory")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint-file", "c", "", "state trie root checkpoint file")
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
@@ -42,98 +41,34 @@ func main() {
 	}
 	log = log.Level(level)
 
-	// Initialize the first checkpoint.
-	file, err := os.Open(flagCheckpoint)
+	chain, err := chain.FromProtocolState(flagData)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open checkpoint file")
-	}
-	flat, err := exec.ReadCheckpoint(file)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not decode flattened tries")
-	}
-	tries, err := flattener.RebuildTries(flat)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not rebuild memory tries")
-	}
-	if len(tries) != 1 {
-		log.Fatal().Int("tries", len(tries)).Msg("should have exactly one memory trie")
+		log.Fatal().Err(err).Msg("could not initialize chain")
 	}
 
-	// Initialize the badger database that contains the protocol state data.
-	data, err := badger.Open(badger.DefaultOptions(flagData).WithLogger(nil))
+	feeder, err := feeder.FromLedgerWAL(flagTrie)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open protocol state database")
+		log.Fatal().Err(err).Msg("could not initialize feeder")
 	}
 
-	// Initialize the badger database for the random access ledger index.
-	index, err := badger.Open(badger.DefaultOptions(flagIndex).WithLogger(nil))
+	indexer, err := indexer.New(flagIndex)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open DPS state index")
+		log.Fatal().Err(err).Msg("could not initialize indexer")
 	}
 
-	// Initialize the random access ledger core.
-	core, err := ral.NewCore(log, tries[0], index)
+	mapper, err := mapper.New(log, chain, feeder, indexer, mapper.WithCheckpointFile(flagCheckpoint))
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize DPS indexer")
+		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
 
-	// Initialize the static random access ledger that uses the protocol state
-	// data to index execution state updates.
-	static, err := ral.NewStatic(log, core, data)
+	ledger, err := ledger.NewCore(indexer.DB())
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize DPS streamer")
+		log.Fatal().Err(err).Msg("could not initialize ledger")
 	}
+	_ = ledger
 
-	// Lastly, we can stream the updates from the write-ahead log into the
-	// streamer to map them to blocks according to the information it has.
-	w, err := wal.NewSize(
-		nil,
-		prometheus.DefaultRegisterer,
-		flagTrie,
-		32*1024*1024,
-	)
+	err = mapper.Run()
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize WAL")
+		log.Fatal().Err(err).Msg("could not run mapper")
 	}
-	r, err := wal.NewSegmentsReader(w.Dir())
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize segments reader")
-	}
-	s := wal.NewReader(r)
-	for s.Next() {
-		select {
-		case <-sig:
-			os.Exit(0)
-		default:
-		}
-		operation, _, update, err := exec.Decode(s.Record())
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not decode WAL operation")
-		}
-		if operation != exec.WALUpdate {
-			continue
-		}
-		delta := make(ral.Delta, 0, len(update.Paths))
-		for index, path := range update.Paths {
-			payload := *update.Payloads[index]
-			change := ral.Change{
-				Path:    path,
-				Payload: payload,
-			}
-			delta = append(delta, change)
-		}
-		err = static.Delta(update.RootHash, delta)
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not stream state delta")
-		}
-	}
-
-	// TODO: implement component interfaces
-	// file := NewFilesytemChain(data)
-	// core := NewCore(index)
-	// streamer := NewLedgerWALStreamer(wal, file, core)
-
-	// net := NewNetworkChain(access)
-	// core := NewCore(index)
-	// streamer := NewLiveStreamer(pub, net, core)
 }

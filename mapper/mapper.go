@@ -15,11 +15,6 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
-// MapperOptions contains optional parameters we can set for the mapper.
-type MapperConfig struct {
-	CheckpointFile string
-}
-
 // Static is a random access ledger that bootstraps the index from a static
 // snapshot of the protocol state and the corresponding ledger write-ahead log.
 type Mapper struct {
@@ -74,7 +69,17 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 	}
 
 	// At this point, we can sanity check whether the root block's state
-	// commitment corresponds to the initial trie root hash.
+	// commitment corresponds to the initial trie root hash. It seems like the
+	// root block's seal's state commitment actually corresponds to the root
+	// hash of the trie after applying the first trie update from the WAL.
+	delta, err := feeder.Feed(t.RootHash())
+	if err != nil {
+		return nil, fmt.Errorf("could not feed first trie update: %w", err)
+	}
+	t, err = trie.NewTrieWithUpdatedRegisters(t, delta.Paths(), delta.Payloads())
+	if err != nil {
+		return nil, fmt.Errorf("could not update trie with first trie update: %w", err)
+	}
 	_, _, commit := chain.Active()
 	hash := t.RootHash()
 	if !bytes.Equal(commit, hash) {
@@ -122,6 +127,14 @@ func (m *Mapper) Run() error {
 			if err != nil {
 				return fmt.Errorf("could not index deltas: %w (height: %d, block: %x, commit: %x)", err, height, blockID, commit)
 			}
+
+			m.log.Info().
+				Uint64("height", height).
+				Hex("block", blockID[:]).
+				Hex("commit", commit).
+				Int("deltas", len(m.deltas)).
+				Msg("block deltas indexed")
+
 			m.deltas = []model.Delta{}
 
 			// The third loop is responsible for forwarding the chain to the
@@ -164,6 +177,13 @@ func (m *Mapper) Run() error {
 		if err != nil {
 			return fmt.Errorf("could not update trie: %w", err)
 		}
+
+		m.log.Info().
+			Hex("hash_before", hash).
+			Hex("hash_after", trie.RootHash()).
+			Int("changes", len(delta)).
+			Msg("state trie updated")
+
 		m.deltas = append(m.deltas, delta)
 		m.trie = trie
 	}

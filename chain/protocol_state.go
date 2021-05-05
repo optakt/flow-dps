@@ -20,7 +20,7 @@ type ProtocolState struct {
 
 func FromProtocolState(dir string) (*ProtocolState, error) {
 
-	opts := badger.DefaultOptions(dir)
+	opts := badger.DefaultOptions(dir).WithLogger(nil)
 	state, err := badger.Open(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not open badger database: %w", err)
@@ -65,8 +65,11 @@ func (ps *ProtocolState) Forward() error {
 	height := ps.height + 1
 	var blockID flow.Identifier
 	err := operation.LookupBlockHeight(height, &blockID)(ps.state.NewTransaction(false))
+	if errors.Is(err, storage.ErrNotFound) {
+		return model.ErrFinished
+	}
 	if err != nil {
-		return fmt.Errorf("could not look up root block: %w", err)
+		return fmt.Errorf("could not look up next block: %w", err)
 	}
 	var sealID flow.Identifier
 	err = operation.LookupBlockSeal(blockID, &sealID)(ps.state.NewTransaction(false))
@@ -74,12 +77,12 @@ func (ps *ProtocolState) Forward() error {
 		return model.ErrFinished
 	}
 	if err != nil {
-		return fmt.Errorf("could not look up root seal: %w", err)
+		return fmt.Errorf("could not look up next seal: %w", err)
 	}
 	var seal flow.Seal
 	err = operation.RetrieveSeal(sealID, &seal)(ps.state.NewTransaction(false))
 	if err != nil {
-		return fmt.Errorf("could not retrieve root seal: %w", err)
+		return fmt.Errorf("could not retrieve next seal: %w", err)
 	}
 	ps.height = height
 	ps.blockID = blockID

@@ -9,31 +9,34 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/rs/zerolog"
 )
 
 type Indexer struct {
-	log   zerolog.Logger
 	index *badger.DB
 }
 
-func New(log zerolog.Logger, index *badger.DB) (*Indexer, error) {
+func New(dir string) (*Indexer, error) {
+
+	opts := badger.DefaultOptions(dir).WithLogger(nil)
+	index, err := badger.Open(opts)
+	if err != nil {
+		return nil, fmt.Errorf("could not open index database: %w", err)
+	}
+
 	i := &Indexer{
-		log:   log.With().Str("component", "indexer").Logger(),
 		index: index,
 	}
+
 	return i, nil
+}
+
+// DB returns the database handle used by the indexer.
+func (i *Indexer) DB() *badger.DB {
+	return i.index
 }
 
 // Index is used to index a new set of state deltas for the given block.
 func (i *Indexer) Index(height uint64, blockID flow.Identifier, commit flow.StateCommitment, deltas []model.Delta) error {
-
-	i.log.Info().
-		Uint64("height", height).
-		Hex("block", blockID[:]).
-		Hex("commit", commit[:]).
-		Int("deltas", len(deltas)).
-		Msg("indexing state deltas")
 
 	// let's use a single transaction to make indexing of a new block atomic
 	tx := i.index.NewTransaction(true)
