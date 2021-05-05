@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 
@@ -85,6 +86,14 @@ func (m *Mapper) Run() error {
 		// First, we load the next update and apply it to the current trie.
 		commit := flow.StateCommitment(m.trie.RootHash())
 		delta, err := m.feeder.Feed(commit)
+		if errors.Is(err, model.ErrTimeout) {
+			m.log.Warn().Msg("delta feeding has timed out")
+			continue
+		}
+		if errors.Is(err, model.ErrFinished) {
+			m.log.Debug().Msg("no more trie updates available")
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("could not feed next update: %w", err)
 		}
@@ -108,9 +117,21 @@ func (m *Mapper) Run() error {
 				return fmt.Errorf("could not index deltas: %w (height: %d, block: %x, commit: %x)", err, height, blockID, commit)
 			}
 			m.deltas = []model.Delta{}
-			err = m.chain.Forward()
-			if err != nil {
-				return fmt.Errorf("could not forward chain: %w", err)
+
+			for {
+				err = m.chain.Forward()
+				if errors.Is(err, model.ErrTimeout) {
+					m.log.Warn().Msg("chain forwarding has timed out")
+					continue
+				}
+				if errors.Is(err, model.ErrFinished) {
+					m.log.Debug().Msg("no more sealed blocks available")
+					return nil
+				}
+				if err != nil {
+					return fmt.Errorf("could not forward chain: %w", err)
+				}
+				break
 			}
 		}
 	}

@@ -3,7 +3,6 @@ package feeder
 import (
 	"bytes"
 	"fmt"
-	"io"
 
 	"github.com/awfm9/flow-dps/model"
 	"github.com/onflow/flow-go/ledger/complete/wal"
@@ -49,7 +48,7 @@ func (l *LedgerWAL) Feed(commit flow.StateCommitment) (model.Delta, error) {
 			return nil, fmt.Errorf("could not read next record: %w", err)
 		}
 		if !next {
-			return nil, io.EOF
+			return nil, model.ErrFinished
 		}
 		record := l.reader.Record()
 		operation, _, update, err := wal.Decode(record)
