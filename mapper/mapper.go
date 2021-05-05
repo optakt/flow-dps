@@ -13,7 +13,6 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
-	"github.com/onflow/flow-go/model/flow"
 )
 
 // MapperOptions contains optional parameters we can set for the mapper.
@@ -36,6 +35,8 @@ type Mapper struct {
 // and then passes on the details to the indexer for indexing.
 func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, options ...func(*MapperConfig)) (*Mapper, error) {
 
+	// By default, we don't have a checkpoint to bootstrap from, so check if we
+	// explicitly passed one using the variadic option parameters.
 	cfg := MapperConfig{
 		CheckpointFile: "",
 	}
@@ -43,15 +44,10 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 		option(&cfg)
 	}
 
-	m := &Mapper{
-		log:     log.With().Str("component", "mapper").Logger(),
-		chain:   chain,
-		feeder:  feeder,
-		indexer: indexer,
-		trie:    nil,
-		deltas:  []model.Delta{},
-	}
-
+	// If we have a checkpoint file, it should be a root checkpoint, so it
+	// should only contain a single trie that we load as our initial root state.
+	// Otherwise, the root state is an empty memory trie.
+	var t *trie.MTrie
 	if cfg.CheckpointFile != "" {
 		file, err := os.Open(cfg.CheckpointFile)
 		if err != nil {
@@ -68,13 +64,30 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 		if len(tries) != 1 {
 			return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(tries))
 		}
-		m.trie = tries[0]
+		t = tries[0]
 	} else {
 		trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize empty memory trie: %w", err)
 		}
-		m.trie = trie
+		t = trie
+	}
+
+	// At this point, we can sanity check whether the root block's state
+	// commitment corresponds to the initial trie root hash.
+	_, _, commit := chain.Active()
+	hash := t.RootHash()
+	if !bytes.Equal(commit, hash) {
+		return nil, fmt.Errorf("state trie root hash doesn't match root block state commitment (seal: %x, trie: %x)", commit, hash)
+	}
+
+	m := &Mapper{
+		log:     log.With().Str("component", "mapper").Logger(),
+		chain:   chain,
+		feeder:  feeder,
+		indexer: indexer,
+		trie:    t,
+		deltas:  []model.Delta{},
 	}
 
 	return m, nil
@@ -89,25 +102,6 @@ func (m *Mapper) Run() error {
 	// loop until the state delta to be applied to the trie with the current
 	// root hash has been successfully retrieved.
 	for {
-		commit := flow.StateCommitment(m.trie.RootHash())
-		delta, err := m.feeder.Feed(commit)
-		if errors.Is(err, model.ErrTimeout) {
-			m.log.Warn().Msg("delta feeding has timed out")
-			continue
-		}
-		if errors.Is(err, model.ErrFinished) {
-			m.log.Debug().Msg("no more trie updates available")
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("could not feed next update: %w", err)
-		}
-		trie, err := trie.NewTrieWithUpdatedRegisters(m.trie, delta.Paths(), delta.Payloads())
-		if err != nil {
-			return fmt.Errorf("could not update trie: %w", err)
-		}
-		m.deltas = append(m.deltas, delta)
-		m.trie = trie
 
 		// The second loop is responsible for mapping the currently active block
 		// to the set of deltas that were collected. If the state commitment for
@@ -118,10 +112,10 @@ func (m *Mapper) Run() error {
 		// if no change to the state trie happens between multiple blocks, at
 		// which point we map the second and any subsequent blocks without
 		// change to an empty set of deltas.
-		commit = flow.StateCommitment(m.trie.RootHash())
+		hash := m.trie.RootHash()
 		for {
-			height, blockID, sentinel := m.chain.Active()
-			if !bytes.Equal(sentinel, commit) {
+			height, blockID, commit := m.chain.Active()
+			if !bytes.Equal(commit, hash) {
 				break
 			}
 			err := m.indexer.Index(height, blockID, commit, m.deltas)
@@ -153,5 +147,24 @@ func (m *Mapper) Run() error {
 				break
 			}
 		}
+
+		delta, err := m.feeder.Feed(hash)
+		if errors.Is(err, model.ErrTimeout) {
+			m.log.Warn().Msg("delta feeding has timed out")
+			continue
+		}
+		if errors.Is(err, model.ErrFinished) {
+			m.log.Debug().Msg("no more trie updates available")
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("could not feed next update: %w", err)
+		}
+		trie, err := trie.NewTrieWithUpdatedRegisters(m.trie, delta.Paths(), delta.Payloads())
+		if err != nil {
+			return fmt.Errorf("could not update trie: %w", err)
+		}
+		m.deltas = append(m.deltas, delta)
+		m.trie = trie
 	}
 }
