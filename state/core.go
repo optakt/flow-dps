@@ -7,6 +7,7 @@ import (
 	"math"
 
 	"github.com/awfm9/flow-dps/model"
+	"github.com/awfm9/flow-dps/rest"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
@@ -95,7 +96,7 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	return &payload, nil
 }
 
-func (c *Core) Raw() *Raw {
+func (c *Core) Raw() rest.Raw {
 	r := Raw{
 		core:   c,
 		height: math.MaxUint64, // TODO: update to latest indexed height
@@ -103,7 +104,7 @@ func (c *Core) Raw() *Raw {
 	return &r
 }
 
-func (c *Core) Ledger() *Ledger {
+func (c *Core) Ledger() rest.Ledger {
 	l := Ledger{
 		core:    c,
 		version: complete.DefaultPathFinderVersion,

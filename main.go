@@ -87,7 +87,7 @@ func main() {
 	e.HidePort = true
 	e.Logger.SetLevel(5) // == `log.OFF`
 	e.GET("/registers/:key", controller.GetRegister)
-	e.GET("/payloads/:hash", controller.GetPayloads)
+	e.GET("/values/:keys", controller.GetValue)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

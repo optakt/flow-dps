@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 
+	"github.com/awfm9/flow-dps/rest"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 )
@@ -12,7 +13,7 @@ type Ledger struct {
 	version uint8
 }
 
-func (l *Ledger) WithVersion(version uint8) *Ledger {
+func (l *Ledger) WithVersion(version uint8) rest.Ledger {
 	l.version = version
 	return l
 }

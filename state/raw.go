@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 
+	"github.com/awfm9/flow-dps/rest"
 	"github.com/onflow/flow-go/ledger"
 )
 
@@ -11,7 +12,7 @@ type Raw struct {
 	height uint64
 }
 
-func (r *Raw) WithHeight(height uint64) *Raw {
+func (r *Raw) WithHeight(height uint64) rest.Raw {
 	r.height = height
 	return r
 }

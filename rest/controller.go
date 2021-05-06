@@ -11,16 +11,15 @@ import (
 	"github.com/onflow/flow-go/ledger"
 
 	"github.com/awfm9/flow-dps/model"
-	"github.com/awfm9/flow-dps/state"
 )
 
 type Controller struct {
-	core *state.Core
+	state State
 }
 
-func NewController(core *state.Core) (*Controller, error) {
+func NewController(state State) (*Controller, error) {
 	c := &Controller{
-		core: core,
+		state: state,
 	}
 	return c, nil
 }
@@ -32,7 +31,7 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	raw := c.core.Raw()
+	state := c.state.Raw()
 
 	var height uint64
 	heightParam := ctx.QueryParam("height")
@@ -41,10 +40,10 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err)
 		}
-		raw = raw.WithHeight(height)
+		state = state.WithHeight(height)
 	}
 
-	value, err := raw.Get(key)
+	value, err := state.Get(key)
 	if errors.Is(err, model.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
@@ -61,40 +60,28 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, res)
 }
 
-func (c *Controller) GetPayloads(ctx echo.Context) error {
+func (c *Controller) GetValue(ctx echo.Context) error {
 
-	hash, err := hex.DecodeString(ctx.Param("hash"))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
+	keysParam := ctx.Param("keys")
+	keysEncoded := strings.Split(keysParam, ":")
+	if len(keysEncoded) == 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, errors.New("need at least one encoded ledger key"))
 	}
-
 	var keys []ledger.Key
-	pathsParam := ctx.QueryParam("paths")
-	if pathsParam == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
-	keysHex := strings.Split(pathsParam, ",")
-	for _, keyHex := range keysHex {
-		keyBytes, err := hex.DecodeString(keyHex)
+	for _, keyEncoded := range keysEncoded {
+		key, err := decodeKey(keyEncoded)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err)
-		}
-		// TODO: find a proper way to encode keys / key parts with REST
-		key := ledger.Key{
-			KeyParts: []ledger.KeyPart{
-				{Type: 0, Value: keyBytes},
-			},
 		}
 		keys = append(keys, key)
 	}
 
-	// TODO: decide how to encode ledger keys
-	query, err := ledger.NewQuery(hash, keys)
+	hash, err := hex.DecodeString(ctx.QueryParam("hash"))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	ledger := c.core.Ledger()
+	state := c.state.Ledger()
 
 	versionParam := ctx.QueryParam("version")
 	if versionParam != "" {
@@ -102,15 +89,19 @@ func (c *Controller) GetPayloads(ctx echo.Context) error {
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err)
 		}
-		ledger = ledger.WithVersion(uint8(version))
+		state = state.WithVersion(uint8(version))
 	}
 
+	query, err := ledger.NewQuery(hash, keys)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
+	}
 	err = ctx.Bind(query)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	payloads, err := ledger.Get(query)
+	values, err := state.Get(query)
 	if errors.Is(err, model.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
@@ -118,5 +109,10 @@ func (c *Controller) GetPayloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	return ctx.JSON(http.StatusOK, payloads)
+	valuesHex := make([]string, 0, len(values))
+	for _, value := range values {
+		valuesHex = append(valuesHex, hex.EncodeToString(value))
+	}
+
+	return ctx.JSON(http.StatusOK, valuesHex)
 }

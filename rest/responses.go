@@ -5,3 +5,6 @@ type RegisterResponse struct {
 	Key    []byte
 	Value  []byte
 }
+
+type ValueResponse struct {
+}
