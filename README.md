@@ -21,16 +21,16 @@ resources.
 
 ## Road Map
 
-| Milestone |                  Description                  | Past Spork State | Past Spork Events | Live Spork State | Live Spork Events | Raw API | Ledger API | Rosetta API | Liquid Balance | Locked Balance | Staked Balance | Delegated Balance | State Verification | State Proofs |
-|:---------:|:---------------------------------------------:|:----------------:|-------------------|------------------|-------------------|---------|------------|-------------|----------------|----------------|----------------|-------------------|--------------------|--------------|
-|    P.1    |        Past Spork support for registers       |         X        |                   |                  |                   |    X    |      X     |             |        X       |                |                |                   |                    |              |
-|    P.2    |         Past Spork support with events        |         X        |         X         |                  |                   |    X    |      X     |             |        X       |                |                |                   |                    |              |
-|    R.1    |    Rosetta API support for default balance    |         X        |         X         |                  |                   |    X    |      X     |      X      |        X       |                |                |                   |                    |              |
-|    L.1    |        Live Spork support for registers       |         X        |         X         |         X        |                   |    X    |      X     |      X      |        X       |                |                |                   |                    |              |
-|    L.2    |         Live Spork support with events        |         X        |         X         |         X        |         X         |    X    |      X     |      X      |        X       |                |                |                   |                    |              |
-|    R.2    | Rosetta API support with sub-account balances |         X        |         X         |         X        |         X         |    X    |      X     |      X      |        X       |        X       |        X       |         X         |                    |              |
-|    C.1    |   Cryptographic Verification of local state   |         X        |         X         |         X        |         X         |    X    |      X     |      X      |        X       |        X       |        X       |         X         |          X         |              |
-|    C.2    |  Cryptographic Proofs for remote state access |         X        |         X         |         X        |         X         |    X    |      X     |      X      |        X       |        X       |        X       |         X         |          X         |       X      |
+| Milestone |                  Description                  | Past Spork State | Past Spork Events | Live Spork State | Live Spork Events | Raw API | Ledger API | Rosetta API | Liquid Balance | Locked Balance | Staked Balance | Delegated Balance | State Verification | State Proofs | Event Proofs |
+|:---------:|:---------------------------------------------:|:----------------:|-------------------|------------------|-------------------|---------|------------|-------------|----------------|----------------|----------------|-------------------|--------------------|--------------|--------------|
+|    P.1    |        Past Spork support for registers       |         X        |                   |                  |                   |    X    |      X     |             |        X       |                |                |                   |          X         |              |              |
+|    P.2    |         Past Spork support with events        |         X        |         X         |                  |                   |    X    |      X     |             |        X       |                |                |                   |          X         |              |              |
+|    R.1    |    Rosetta API support for default balance    |         X        |         X         |                  |                   |    X    |      X     |      X      |        X       |                |                |                   |          X         |              |              |
+|    L.1    |        Live Spork support for registers       |         X        |         X         |         X        |                   |    X    |      X     |      X      |        X       |                |                |                   |          X         |              |              |
+|    L.2    |         Live Spork support with events        |         X        |         X         |         X        |         X         |    X    |      X     |      X      |        X       |                |                |                   |          X         |              |              |
+|    R.2    | Rosetta API support with sub-account balances |         X        |         X         |         X        |         X         |    X    |      X     |      X      |        X       |        X       |        X       |         X         |          X         |              |              |
+|    C.1    |       Cryptographic Proofs for registers      |         X        |         X         |         X        |         X         |    X    |      X     |      X      |        X       |        X       |        X       |         X         |          X         |       X      |              |
+|    C.2    |         Cryptographic Proofs for events       |         X        |         X         |         X        |         X         |    X    |      X     |      X      |        X       |        X       |        X       |         X         |          X         |       X      |       X      |
 
 ## Architecture
 
@@ -59,12 +59,12 @@ is a live one, which sends
 │ │             │ │
 │ │  Exec Node  │ │
 │ │             │ │
-│ │ ┌─────────┐ │ │     State updates
-│ │ │LedgerWAL├─┼─┼───────────────────────────────────┐
+│ │ ┌─────────┐ │ │  Blocks
+│ │ │Badger DB├─┼─┼───────────────────────────────────┐
 │ │ └─────────┘ │ │                                   │
 │ │             │ │                                   │
-│ │ ┌─────────┐ │ │     Blocks                        │
-│ │ │Badger DB├─┼─┼─────────────────┐                 │
+│ │ ┌─────────┐ │ │  State updates                    │
+│ │ │LedgerWAL├─┼─┼─────────────────┐                 │
 │ │ └─────────┘ │ │                 │                 │
 │ │             │ │                 │                 │
 │ └─────────────┘ │                 │                 │
