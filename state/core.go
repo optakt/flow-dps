@@ -26,6 +26,13 @@ func NewCore(index *badger.DB) (*Core, error) {
 	return c, nil
 }
 
+// Latest returns a list of latest height, block ID and state commitment.
+func (c *Core) Latest() (uint64, flow.Identifier, flow.StateCommitment) {
+	// TODO: implement retrieval from Badger, as well as storage on Badger when
+	// a new block is indexed
+	return 0, flow.ZeroID, []byte{}
+}
+
 // Height returns the first height for a given state commitment.
 func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
 

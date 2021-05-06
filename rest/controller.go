@@ -60,6 +60,18 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, res)
 }
 
+// GetValue returns the payload value of an encoded Ledger entry in the same way
+// as the Flow Ledger interface would. It takes an input that emulates the
+// `ledger.Query` struct, in the following way:
+// - The parameter `keys` is a semicolon (`:`) delimited set of `ledger.Key` strings.
+// - Each `ledger.KeyPart` within the `ledger.Key` is delimited by a comma (`,`).
+// - The type and the value of each `ledger.KeyPart` are delimited by a colon (`.`).
+// - The value is encoded as a hexadecimal string.
+// Additionally, the state hash and the pathfinder key version can be given as
+// query parameters. If omitted, the state hash of the latest sealed block
+// and the default pathfinder key encoding will be used.
+// The response is returned as a simple array of hexadecimal strings.
+// Example: GET /values/0.f647acg,4.ef67d11:0.f3321ab,3.ab321fe?hash=7ae6417ed5&version=1
 func (c *Controller) GetValue(ctx echo.Context) error {
 
 	keysParam := ctx.Param("keys")
@@ -76,9 +88,14 @@ func (c *Controller) GetValue(ctx echo.Context) error {
 		keys = append(keys, key)
 	}
 
-	hash, err := hex.DecodeString(ctx.QueryParam("hash"))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
+	_, _, commit := c.state.Latest()
+	hashParam := ctx.QueryParam("hash")
+	if hashParam != "" {
+		hash, err := hex.DecodeString(hashParam)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err)
+		}
+		commit = hash
 	}
 
 	state := c.state.Ledger()
@@ -92,7 +109,7 @@ func (c *Controller) GetValue(ctx echo.Context) error {
 		state = state.WithVersion(uint8(version))
 	}
 
-	query, err := ledger.NewQuery(hash, keys)
+	query, err := ledger.NewQuery(commit, keys)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}

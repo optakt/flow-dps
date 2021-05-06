@@ -2,9 +2,11 @@ package rest
 
 import (
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
 )
 
 type State interface {
+	Latest() (uint64, flow.Identifier, flow.StateCommitment)
 	Raw() Raw
 	Ledger() Ledger
 }
