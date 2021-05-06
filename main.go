@@ -97,12 +97,14 @@ func main() {
 		if err != nil {
 			log.Error().Err(err).Msg("state mapper encountered error")
 		}
+		log.Info().Msg("state mapper execution complete")
 	}()
 	go func() {
 		err := e.Start(flagHostREST)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("REST API encountered error")
 		}
+		log.Info().Msg("REST API execution complete")
 	}()
 
 	<-sig
@@ -123,7 +125,7 @@ func main() {
 		if err != nil {
 			log.Error().Err(err).Msg("could not shut down REST API")
 		}
-		log.Info().Msg("REST API shut down")
+		log.Info().Msg("REST API shutdown complete")
 	}()
 	go func() {
 		defer wg.Done()
@@ -131,7 +133,7 @@ func main() {
 		if err != nil {
 			log.Error().Err(err).Msg("could not shut down state mapper")
 		}
-		log.Info().Msg("state mapper shut down")
+		log.Info().Msg("state mapper shutdown complete")
 	}()
 
 	wg.Wait()

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/onflow/flow-go/ledger"
@@ -74,18 +73,9 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 // Example: GET /values/0.f647acg,4.ef67d11:0.f3321ab,3.ab321fe?hash=7ae6417ed5&version=1
 func (c *Controller) GetValue(ctx echo.Context) error {
 
-	keysParam := ctx.Param("keys")
-	keysEncoded := strings.Split(keysParam, ":")
-	if len(keysEncoded) == 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.New("need at least one encoded ledger key"))
-	}
-	var keys []ledger.Key
-	for _, keyEncoded := range keysEncoded {
-		key, err := decodeKey(keyEncoded)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err)
-		}
-		keys = append(keys, key)
+	keys, err := DecodeKeys(ctx.Param("keys"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	_, _, commit := c.state.Latest()

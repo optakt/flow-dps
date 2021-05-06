@@ -9,13 +9,27 @@ import (
 	"github.com/onflow/flow-go/ledger"
 )
 
-func decodeKey(keyEncoded string) (ledger.Key, error) {
+func EncodeKey(key ledger.Key) string {
+	partsEncoded := make([]string, 0, len(key.KeyParts))
+	for _, part := range key.KeyParts {
+		partEncoded := fmt.Sprintf("%d.%x", part.Type, part.Value)
+		partsEncoded = append(partsEncoded, partEncoded)
+	}
+	return strings.Join(partsEncoded, ",")
+}
 
-	// split into key parts
-	partsEncoded := strings.Split(keyEncoded, ",")
+func EncodeKeys(keys []ledger.Key) string {
+	keysEncoded := make([]string, 0, len(keys))
+	for _, key := range keys {
+		keyEncoded := EncodeKey(key)
+		keysEncoded = append(keysEncoded, keyEncoded)
+	}
+	return strings.Join(keysEncoded, ":")
+}
 
-	// split each part into type and value
+func DecodeKey(keyEncoded string) (ledger.Key, error) {
 	var key ledger.Key
+	partsEncoded := strings.Split(keyEncoded, ",")
 	for _, partEncoded := range partsEncoded {
 		tokens := strings.Split(partEncoded, ".")
 		if len(tokens) != 2 {
@@ -37,4 +51,20 @@ func decodeKey(keyEncoded string) (ledger.Key, error) {
 	}
 
 	return key, nil
+}
+
+func DecodeKeys(keysParam string) ([]ledger.Key, error) {
+	if len(keysParam) == 0 {
+		return nil, fmt.Errorf("keys parameter is empty")
+	}
+	keysEncoded := strings.Split(keysParam, ":")
+	var keys []ledger.Key
+	for _, keyEncoded := range keysEncoded {
+		key, err := DecodeKey(keyEncoded)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode key: %w (key: %s)", err, keyEncoded)
+		}
+		keys = append(keys, key)
+	}
+	return keys, nil
 }
