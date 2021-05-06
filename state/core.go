@@ -70,9 +70,10 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// seek for; this should represent the last update to the path before the
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
-	key := make([]byte, pathfinder.PathByteSize+8)
-	copy(key[:pathfinder.PathByteSize], path)
-	binary.BigEndian.PutUint64(key[pathfinder.PathByteSize:], height)
+	key := make([]byte, 1+pathfinder.PathByteSize+8)
+	key[0] = model.PathDeltas
+	copy(key[1:1+pathfinder.PathByteSize], path)
+	binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
 	err := c.index.View(func(tx *badger.Txn) error {
 		it := tx.NewIterator(badger.IteratorOptions{
 			PrefetchSize:   0,

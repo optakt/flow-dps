@@ -77,7 +77,7 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 	// the root block state commitment here.
 
 	m := &Mapper{
-		log:     log.With().Str("component", "mapper").Logger(),
+		log:     log,
 		chain:   chain,
 		feeder:  feeder,
 		indexer: indexer,
