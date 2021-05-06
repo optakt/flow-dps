@@ -2,9 +2,11 @@ package mapper
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/awfm9/flow-dps/model"
 	"github.com/rs/zerolog"
@@ -24,6 +26,8 @@ type Mapper struct {
 	indexer Indexer
 	trie    *trie.MTrie
 	deltas  []model.Delta
+	wg      *sync.WaitGroup
+	stop    chan struct{}
 }
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
@@ -79,12 +83,31 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 		indexer: indexer,
 		trie:    t,
 		deltas:  []model.Delta{},
+		wg:      &sync.WaitGroup{},
+		stop:    make(chan struct{}),
 	}
 
 	return m, nil
 }
 
+func (m *Mapper) Stop(ctx context.Context) error {
+	close(m.stop)
+	done := make(chan struct{})
+	go func() {
+		m.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-done:
+		return nil
+	}
+}
+
 func (m *Mapper) Run() error {
+	m.wg.Add(1)
+	defer m.wg.Done()
 
 	// The first loop is responsible for reading deltas from the feeder and
 	// updating the state trie with the delta in order to get the next trie
@@ -98,6 +121,7 @@ func (m *Mapper) Run() error {
 	// block, including zero and many. It also covers the edge case of indexing
 	// the last block, regardless of whether their are additional trie updates
 	// behind it.
+First:
 	for {
 
 		// The second loop is responsible for mapping the currently active block
@@ -110,10 +134,11 @@ func (m *Mapper) Run() error {
 		// which point we map the second and any subsequent blocks without
 		// change to an empty set of deltas.
 		hash := m.trie.RootHash()
+	Second:
 		for {
 			height, blockID, commit := m.chain.Active()
 			if !bytes.Equal(commit, hash) {
-				break
+				break Second
 			}
 			err := m.indexer.Index(height, blockID, commit, m.deltas)
 			if err != nil {
@@ -136,11 +161,25 @@ func (m *Mapper) Run() error {
 			// there is a timeout (which can happen if we load the chain data
 			// over the network), so that we only resume the rest of the logic
 			// once we have successfully forwarded to the next block.
+		Third:
 			for {
+
+				// We also want to check for shutdown before forwarding to the
+				// next block; if the block isn't available, we could loop
+				// indefinitely otherwise. It's important to break out of the
+				// surrounding second loop, otherwise we could keep coming back
+				// here.
+				select {
+				case <-m.stop:
+					break Second
+				default:
+					// keep going
+				}
+
 				err = m.chain.Forward()
 				if errors.Is(err, model.ErrTimeout) {
 					m.log.Warn().Msg("chain forwarding has timed out")
-					continue
+					continue Third
 				}
 				if errors.Is(err, model.ErrFinished) {
 					m.log.Debug().Msg("no more sealed blocks available")
@@ -149,14 +188,25 @@ func (m *Mapper) Run() error {
 				if err != nil {
 					return fmt.Errorf("could not forward chain: %w", err)
 				}
-				break
+
+				break Third
 			}
+		}
+
+		// We do want to check for shutdown before pulling the next delta; both
+		// because it starts a new "round" of processing, and because it could
+		// enter into a tight loop until a delta becomes available.
+		select {
+		case <-m.stop:
+			break First
+		default:
+			// keep going
 		}
 
 		delta, err := m.feeder.Feed(hash)
 		if errors.Is(err, model.ErrTimeout) {
 			m.log.Warn().Msg("delta feeding has timed out")
-			continue
+			continue First
 		}
 		if errors.Is(err, model.ErrFinished) {
 			m.log.Debug().Msg("no more trie updates available")
@@ -179,4 +229,6 @@ func (m *Mapper) Run() error {
 		m.deltas = append(m.deltas, delta)
 		m.trie = trie
 	}
+
+	return nil
 }
