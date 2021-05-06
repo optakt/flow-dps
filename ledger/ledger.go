@@ -12,6 +12,11 @@ type Ledger struct {
 	version uint8
 }
 
+func (l *Ledger) WithVersion(version uint8) *Ledger {
+	l.version = version
+	return l
+}
+
 func (l *Ledger) Get(query *ledger.Query) ([]ledger.Value, error) {
 
 	// convert the query state commitment to a height, so we can use the core

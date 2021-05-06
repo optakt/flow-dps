@@ -4,11 +4,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/awfm9/flow-dps/model"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
+	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -52,6 +54,10 @@ func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
 // Payload returns the payload of the given path at the given block height.
 func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error) {
 
+	// TODO: Make sure the hight actually exists, otherwise we might return an
+	// incorrect value for a future height for registers that will be updated
+	// between now and the requested height.
+
 	// Use seek on Ledger to seek to the next biggest key lower than the key we
 	// seek for; this should represent the last update to the path before the
 	// requested height and should thus be the payload we care about.
@@ -70,7 +76,8 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 		})
 		it.Seek(key)
 		if !it.Valid() {
-			return fmt.Errorf("could not find register for path")
+			// TODO: can we explicitly check the error somehow?
+			return model.ErrNotFound
 		}
 		err := it.Item().Value(func(val []byte) error {
 			err := json.Unmarshal(val, &payload)
@@ -88,12 +95,18 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	return &payload, nil
 }
 
-func (c *Core) Raw(options ...func(*Raw)) *Raw {
-	r := Raw{}
+func (c *Core) Raw() *Raw {
+	r := Raw{
+		core:   c,
+		height: math.MaxUint64, // TODO: update to latest indexed height
+	}
 	return &r
 }
 
-func (c *Core) Ledger(options ...func(*Ledger)) *Ledger {
-	l := Ledger{}
+func (c *Core) Ledger() *Ledger {
+	l := Ledger{
+		core:    c,
+		version: complete.DefaultPathFinderVersion,
+	}
 	return &l
 }

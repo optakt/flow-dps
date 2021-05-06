@@ -5,13 +5,16 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog"
+	"github.com/spf13/pflag"
+
 	"github.com/awfm9/flow-dps/chain"
 	"github.com/awfm9/flow-dps/feeder"
 	"github.com/awfm9/flow-dps/indexer"
 	"github.com/awfm9/flow-dps/ledger"
 	"github.com/awfm9/flow-dps/mapper"
-	"github.com/rs/zerolog"
-	"github.com/spf13/pflag"
+	"github.com/awfm9/flow-dps/rest"
 )
 
 func main() {
@@ -61,11 +64,19 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
 
-	ledger, err := ledger.NewCore(indexer.DB())
+	core, err := ledger.NewCore(indexer.DB())
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize ledger")
 	}
-	_ = ledger
+
+	controller, err := rest.NewController(core)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not initialize controller")
+	}
+
+	e := echo.New()
+	e.GET("/registers/:key", controller.GetRegister)
+	e.GET("/payloads/:keys", controller.GetPayloads)
 
 	err = mapper.Run()
 	if err != nil {
