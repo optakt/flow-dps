@@ -1,4 +1,4 @@
-package ledger
+package state
 
 import (
 	"encoding/binary"

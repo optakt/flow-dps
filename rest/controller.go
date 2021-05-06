@@ -8,17 +8,17 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	fledger "github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger"
 
-	"github.com/awfm9/flow-dps/ledger"
 	"github.com/awfm9/flow-dps/model"
+	"github.com/awfm9/flow-dps/state"
 )
 
 type Controller struct {
-	core *ledger.Core
+	core *state.Core
 }
 
-func NewController(core *ledger.Core) (*Controller, error) {
+func NewController(core *state.Core) (*Controller, error) {
 	c := &Controller{
 		core: core,
 	}
@@ -68,7 +68,7 @@ func (c *Controller) GetPayloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	var keys []fledger.Key
+	var keys []ledger.Key
 	pathsParam := ctx.QueryParam("paths")
 	if pathsParam == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
@@ -80,8 +80,8 @@ func (c *Controller) GetPayloads(ctx echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err)
 		}
 		// TODO: find a proper way to encode keys / key parts with REST
-		key := fledger.Key{
-			KeyParts: []fledger.KeyPart{
+		key := ledger.Key{
+			KeyParts: []ledger.KeyPart{
 				{Type: 0, Value: keyBytes},
 			},
 		}
@@ -89,7 +89,7 @@ func (c *Controller) GetPayloads(ctx echo.Context) error {
 	}
 
 	// TODO: decide how to encode ledger keys
-	query, err := fledger.NewQuery(hash, keys)
+	query, err := ledger.NewQuery(hash, keys)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}

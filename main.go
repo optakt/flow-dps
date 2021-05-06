@@ -12,9 +12,9 @@ import (
 	"github.com/awfm9/flow-dps/chain"
 	"github.com/awfm9/flow-dps/feeder"
 	"github.com/awfm9/flow-dps/indexer"
-	"github.com/awfm9/flow-dps/ledger"
 	"github.com/awfm9/flow-dps/mapper"
 	"github.com/awfm9/flow-dps/rest"
+	"github.com/awfm9/flow-dps/state"
 )
 
 func main() {
@@ -64,7 +64,7 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
 
-	core, err := ledger.NewCore(indexer.DB())
+	core, err := state.NewCore(indexer.DB())
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize ledger")
 	}
@@ -76,7 +76,7 @@ func main() {
 
 	e := echo.New()
 	e.GET("/registers/:key", controller.GetRegister)
-	e.GET("/payloads/:keys", controller.GetPayloads)
+	e.GET("/payloads/:hash", controller.GetPayloads)
 
 	err = mapper.Run()
 	if err != nil {
