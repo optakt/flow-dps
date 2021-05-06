@@ -92,6 +92,12 @@ func (m *Mapper) Run() error {
 	// feeder receiving trie updates over the network), it will go into a tight
 	// loop until the state delta to be applied to the trie with the current
 	// root hash has been successfully retrieved.
+	// NOTE: We moved the logic of the first loop behind the logic for the
+	// second loop, as it allows us to map all matching blocks before retrieving
+	// the next delta. This covers the edge case of trie updates before the root
+	// block, including zero and many. It also covers the edge case of indexing
+	// the last block, regardless of whether their are additional trie updates
+	// behind it.
 	for {
 
 		// The second loop is responsible for mapping the currently active block

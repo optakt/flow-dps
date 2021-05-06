@@ -12,7 +12,7 @@ type Raw struct {
 
 // Get returns the raw ledger data from the given ledger key, without the
 // original key information.
-func (r *Raw) Payload(height uint64, key []byte) ([]byte, error) {
+func (r *Raw) Get(height uint64, key []byte) ([]byte, error) {
 
 	payload, err := r.core.Payload(height, ledger.Path(key))
 	if err != nil {
