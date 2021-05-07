@@ -6,7 +6,7 @@ import (
 
 	"github.com/awfm9/flow-dps/model"
 	"github.com/dgraph-io/badger/v2"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/fxamacker/cbor"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
 )
@@ -68,8 +68,7 @@ func (i *Indexer) Index(height uint64, blockID flow.Identifier, commit flow.Stat
 			key[0] = model.PathDeltas
 			copy(key[1:1+pathfinder.PathByteSize], change.Path)
 			binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
-			// TODO: update to capnproto encoding for performance
-			val, err := rlp.EncodeToBytes(change.Payload)
+			val, err := cbor.Marshal(change.Payload, cbor.CanonicalEncOptions())
 			if err != nil {
 				return fmt.Errorf("could not encode payload (%w)", err)
 			}

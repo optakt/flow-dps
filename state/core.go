@@ -8,7 +8,7 @@ import (
 	"github.com/awfm9/flow-dps/model"
 	"github.com/awfm9/flow-dps/rest"
 	"github.com/dgraph-io/badger/v2"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/fxamacker/cbor"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
@@ -62,7 +62,7 @@ func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
 // Payload returns the payload of the given path at the given block height.
 func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error) {
 
-	// TODO: Make sure the hight actually exists, otherwise we might return an
+	// TODO: Make sure the height actually exists, otherwise we might return an
 	// incorrect value for a future height for registers that will be updated
 	// between now and the requested height.
 
@@ -89,7 +89,7 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 			return model.ErrNotFound
 		}
 		err := it.Item().Value(func(val []byte) error {
-			err := rlp.DecodeBytes(val, &payload)
+			err := cbor.Unmarshal(val, &payload)
 			if err != nil {
 				return fmt.Errorf("could not decode payload (%w)", err)
 			}

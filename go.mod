@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/dgraph-io/badger/v2 v2.2007.2
-	github.com/ethereum/go-ethereum v1.9.13
+	github.com/fxamacker/cbor v1.5.1
 	github.com/labstack/echo/v4 v4.2.2
 	github.com/onflow/flow-go v0.15.4
 	github.com/prometheus/client_golang v1.10.0
