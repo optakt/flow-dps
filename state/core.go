@@ -2,13 +2,13 @@ package state
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"math"
 
 	"github.com/awfm9/flow-dps/model"
 	"github.com/awfm9/flow-dps/rest"
 	"github.com/dgraph-io/badger/v2"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
@@ -37,7 +37,7 @@ func (c *Core) Latest() (uint64, flow.Identifier, flow.StateCommitment) {
 func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
 
 	// build the key and look up the height for the commit
-	key := make([]byte, len(commit)+1)
+	key := make([]byte, 1+len(commit))
 	key[0] = model.CommitToHeight
 	copy(key[1:], commit)
 	var height uint64
@@ -81,15 +81,15 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 			Reverse:        true,
 			AllVersions:    false,
 			InternalAccess: false,
-			Prefix:         path,
+			Prefix:         key[:1+pathfinder.PathByteSize],
 		})
+		defer it.Close()
 		it.Seek(key)
 		if !it.Valid() {
-			// TODO: can we explicitly check the error somehow?
 			return model.ErrNotFound
 		}
 		err := it.Item().Value(func(val []byte) error {
-			err := json.Unmarshal(val, &payload)
+			err := rlp.DecodeBytes(val, &payload)
 			if err != nil {
 				return fmt.Errorf("could not decode payload (%w)", err)
 			}

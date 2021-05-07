@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
@@ -85,7 +86,7 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
-	e.Logger.SetLevel(5) // == `log.OFF`
+	e.Use(middleware.Logger())
 	e.GET("/registers/:key", controller.GetRegister)
 	e.GET("/values/:keys", controller.GetValue)
 

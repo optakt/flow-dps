@@ -2,11 +2,11 @@ package indexer
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 
 	"github.com/awfm9/flow-dps/model"
 	"github.com/dgraph-io/badger/v2"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
 )
@@ -42,7 +42,7 @@ func (i *Indexer) Index(height uint64, blockID flow.Identifier, commit flow.Stat
 	tx := i.index.NewTransaction(true)
 
 	// first, map the block ID to the height for easy lookup later
-	key := make([]byte, len(blockID)+1)
+	key := make([]byte, 1+len(blockID))
 	key[0] = model.BlockToHeight
 	copy(key[1:], blockID[:])
 	val := make([]byte, 8)
@@ -53,7 +53,7 @@ func (i *Indexer) Index(height uint64, blockID flow.Identifier, commit flow.Stat
 	}
 
 	// second, map the commit to the height for easy lookup later
-	key = make([]byte, len(commit)+1)
+	key = make([]byte, 1+len(commit))
 	key[0] = model.CommitToHeight
 	copy(key[1:], commit)
 	err = tx.Set(key, val)
@@ -66,10 +66,10 @@ func (i *Indexer) Index(height uint64, blockID flow.Identifier, commit flow.Stat
 		for _, change := range delta {
 			key = make([]byte, 1+pathfinder.PathByteSize+8)
 			key[0] = model.PathDeltas
-			copy(key[1:pathfinder.PathByteSize+1], change.Path)
-			binary.BigEndian.PutUint64(key[pathfinder.PathByteSize+1:], height)
+			copy(key[1:1+pathfinder.PathByteSize], change.Path)
+			binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
 			// TODO: update to capnproto encoding for performance
-			val, err := json.Marshal(change.Payload)
+			val, err := rlp.EncodeToBytes(change.Payload)
 			if err != nil {
 				return fmt.Errorf("could not encode payload (%w)", err)
 			}
