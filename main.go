@@ -94,11 +94,13 @@ func main() {
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
 	go func() {
+		start := time.Now().UTC()
 		err := mapper.Run()
 		if err != nil {
 			log.Error().Err(err).Msg("state mapper encountered error")
 		}
-		log.Info().Msg("state mapper execution complete")
+		finish := time.Now().UTC()
+		log.Info().Dur("duration", finish.Sub(start)).Msg("state mapper execution complete")
 	}()
 	go func() {
 		err := e.Start(flagHostREST)

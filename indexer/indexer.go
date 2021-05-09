@@ -2,17 +2,22 @@ package indexer
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
-	"github.com/awfm9/flow-dps/model"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor"
+	"github.com/klauspost/compress/zstd"
+
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/awfm9/flow-dps/model"
 )
 
 type Indexer struct {
-	index *badger.DB
+	index      *badger.DB
+	compressor *zstd.Encoder
 }
 
 func New(dir string) (*Indexer, error) {
@@ -23,8 +28,22 @@ func New(dir string) (*Indexer, error) {
 		return nil, fmt.Errorf("could not open index database: %w", err)
 	}
 
+	dict, err := hex.DecodeString(model.Dictionary)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode dictionary: %w", err)
+	}
+
+	compressor, err := zstd.NewWriter(nil,
+		zstd.WithEncoderDict(dict),
+		zstd.WithEncoderLevel(zstd.SpeedDefault),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize compressor: %w", err)
+	}
+
 	i := &Indexer{
-		index: index,
+		index:      index,
+		compressor: compressor,
 	}
 
 	return i, nil
@@ -72,6 +91,7 @@ func (i *Indexer) Index(height uint64, blockID flow.Identifier, commit flow.Stat
 			if err != nil {
 				return fmt.Errorf("could not encode payload (%w)", err)
 			}
+			val = i.compressor.EncodeAll(val, nil)
 			err = tx.Set(key, val)
 			if err != nil {
 				return fmt.Errorf("could not set path payload (%w)", err)

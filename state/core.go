@@ -2,27 +2,47 @@ package state
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math"
 
-	"github.com/awfm9/flow-dps/model"
-	"github.com/awfm9/flow-dps/rest"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor"
+	"github.com/klauspost/compress/zstd"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/awfm9/flow-dps/model"
+	"github.com/awfm9/flow-dps/rest"
 )
 
 type Core struct {
-	index *badger.DB
+	index        *badger.DB
+	decompressor *zstd.Decoder
 }
 
 func NewCore(index *badger.DB) (*Core, error) {
-	c := &Core{
-		index: index,
+
+	dict, err := hex.DecodeString(model.Dictionary)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode dictionary")
 	}
+
+	decompressor, err := zstd.NewReader(nil,
+		zstd.WithDecoderDicts(dict),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize decompressor: %w", err)
+	}
+
+	c := &Core{
+		index:        index,
+		decompressor: decompressor,
+	}
+
 	return c, nil
 }
 
@@ -53,7 +73,7 @@ func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
 		return nil
 	})
 	if err != nil {
-		return 0, fmt.Errorf("could not look up height for commit (%w)", err)
+		return 0, fmt.Errorf("could not look up height for commit: %w", err)
 	}
 
 	return height, nil
@@ -89,16 +109,20 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 			return model.ErrNotFound
 		}
 		err := it.Item().Value(func(val []byte) error {
-			err := cbor.Unmarshal(val, &payload)
+			val, err := c.decompressor.DecodeAll(val, nil)
 			if err != nil {
-				return fmt.Errorf("could not decode payload (%w)", err)
+				return fmt.Errorf("could not decompress payload: %w", err)
+			}
+			err = cbor.Unmarshal(val, &payload)
+			if err != nil {
+				return fmt.Errorf("could not decode payload: %w", err)
 			}
 			return nil
 		})
 		return err
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve payload (%w)", err)
+		return nil, fmt.Errorf("could not retrieve payload: %w", err)
 	}
 
 	return &payload, nil
