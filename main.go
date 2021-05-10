@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/awfm9/flow-dps/grpc"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
@@ -86,17 +87,22 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
 
-	controller, err := rest.NewController(core)
+	restController, err := rest.NewController(core)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize controller")
+		log.Fatal().Err(err).Msg("could not initialize REST controller")
 	}
 
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
 	e.Use(middleware.Logger())
-	e.GET("/registers/:key", controller.GetRegister)
-	e.GET("/values/:keys", controller.GetValue)
+	e.GET("/registers/:key", restController.GetRegister)
+	e.GET("/values/:keys", restController.GetValue)
+
+	grpcController, err := grpc.NewController(core)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not initialize GRPC controller")
+	}
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

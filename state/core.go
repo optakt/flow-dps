@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/awfm9/flow-dps/model"
-	"github.com/awfm9/flow-dps/rest"
 )
 
 type Core struct {
@@ -293,7 +292,7 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	return &payload, nil
 }
 
-func (c *Core) Raw() rest.Raw {
+func (c *Core) Raw() model.Raw {
 	r := Raw{
 		core:   c,
 		height: c.height,
@@ -301,7 +300,7 @@ func (c *Core) Raw() rest.Raw {
 	return &r
 }
 
-func (c *Core) Ledger() rest.Ledger {
+func (c *Core) Ledger() model.Ledger {
 	l := Ledger{
 		core:    c,
 		version: complete.DefaultPathFinderVersion,

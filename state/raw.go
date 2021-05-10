@@ -17,8 +17,7 @@ package state
 import (
 	"fmt"
 
-	"github.com/awfm9/flow-dps/rest"
-	"github.com/onflow/flow-go/ledger"
+	"github.com/awfm9/flow-dps/model"
 )
 
 type Raw struct {
@@ -26,7 +25,7 @@ type Raw struct {
 	height uint64
 }
 
-func (r *Raw) WithHeight(height uint64) rest.Raw {
+func (r *Raw) WithHeight(height uint64) model.Raw {
 	r.height = height
 	return r
 }
@@ -35,7 +34,7 @@ func (r *Raw) WithHeight(height uint64) rest.Raw {
 // original key information.
 func (r *Raw) Get(key []byte) ([]byte, error) {
 
-	payload, err := r.core.Payload(r.height, ledger.Path(key))
+	payload, err := r.core.Payload(r.height, key)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve payload: %w", err)
 	}
