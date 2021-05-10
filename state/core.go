@@ -15,6 +15,7 @@
 package state
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -264,6 +265,82 @@ func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
 	}
 
 	return height, nil
+}
+
+func (c *Core) Events(height uint64, types ...[]byte) ([]flow.Event, error) {
+	// Make sure that the request is for a height below the currently active
+	// sentinel height; otherwise, we haven't indexed yet and we might return
+	// false information.
+	if height > c.height {
+		return nil, fmt.Errorf("unknown height (current: %d, requested: %d)", c.height, height)
+	}
+
+	// Iterate over all keys within the events index which are prefixed with the right block height.
+	var events []flow.Event
+	prefix := make([]byte, 1+8)
+	prefix[0] = model.PrefixEventIndex
+	binary.BigEndian.PutUint64(prefix[1:], height)
+	err := c.index.View(func(tx *badger.Txn) error {
+		it := tx.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		// Iterate on all keys with the right prefix.
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			k := item.Key()
+
+			typeHash := k[1+8:]
+			var value []byte
+			err := item.Value(func(v []byte) error {
+				value = v
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("could not read value for key %s: %w", k, err)
+			}
+
+			// If types were given for filtering, discard events which should not be included.
+			if len(types) != 0 {
+				var include bool
+				for _, t := range types {
+					if bytes.Equal(typeHash, t) {
+						include = true
+						break
+					}
+				}
+
+				if !include {
+					continue
+				}
+			}
+
+			// Unmarshal event batch and append them to result slice.
+			var evts []flow.Event
+			err = it.Item().Value(func(val []byte) error {
+				val, err := c.decompressor.DecodeAll(val, nil)
+				if err != nil {
+					return fmt.Errorf("could not decompress events: %w", err)
+				}
+				err = cbor.Unmarshal(val, &evts)
+				if err != nil {
+					return fmt.Errorf("could not decode events: %w", err)
+				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("could not unmarshal events: %w", err)
+			}
+
+			events = append(events, evts...)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve events: %w", err)
+	}
+
+	return events, nil
 }
 
 // Payload returns the payload of the given path at the given block height.
