@@ -16,7 +16,6 @@ import (
 
 	"github.com/awfm9/flow-dps/chain"
 	"github.com/awfm9/flow-dps/feeder"
-	"github.com/awfm9/flow-dps/indexer"
 	"github.com/awfm9/flow-dps/mapper"
 	"github.com/awfm9/flow-dps/rest"
 	"github.com/awfm9/flow-dps/state"
@@ -63,19 +62,14 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize feeder")
 	}
 
-	indexer, err := indexer.New(flagIndex)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize indexer")
-	}
-
-	mapper, err := mapper.New(log, chain, feeder, indexer, mapper.WithCheckpointFile(flagCheckpoint))
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize mapper")
-	}
-
-	core, err := state.NewCore(indexer.DB())
+	core, err := state.NewCore(flagIndex)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize ledger")
+	}
+
+	mapper, err := mapper.New(log, chain, feeder, core, mapper.WithCheckpointFile(flagCheckpoint))
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
 
 	controller, err := rest.NewController(core)

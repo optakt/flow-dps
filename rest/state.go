@@ -6,7 +6,7 @@ import (
 )
 
 type State interface {
-	Latest() (uint64, flow.Identifier, flow.StateCommitment)
+	Last() (uint64, flow.StateCommitment)
 	Raw() Raw
 	Ledger() Ledger
 }

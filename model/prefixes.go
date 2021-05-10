@@ -1,7 +1,9 @@
 package model
 
 const (
-	BlockToHeight  = 1
-	CommitToHeight = 2
-	PathDeltas     = 3
+	PrefixLastHeight  = 1
+	PrefixLastCommit  = 2
+	PrefixBlockIndex  = 3
+	PrefixCommitIndex = 4
+	PrefixDeltaIndex  = 5
 )

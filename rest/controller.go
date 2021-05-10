@@ -31,16 +31,15 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 	}
 
 	state := c.state.Raw()
-
-	var height uint64
+	height, _ := c.state.Last()
 	heightParam := ctx.QueryParam("height")
 	if heightParam != "" {
 		height, err = strconv.ParseUint(heightParam, 10, 64)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err)
 		}
-		state = state.WithHeight(height)
 	}
+	state = state.WithHeight(height)
 
 	value, err := state.Get(key)
 	if errors.Is(err, model.ErrNotFound) {
@@ -78,18 +77,7 @@ func (c *Controller) GetValue(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	_, _, commit := c.state.Latest()
-	hashParam := ctx.QueryParam("hash")
-	if hashParam != "" {
-		hash, err := hex.DecodeString(hashParam)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err)
-		}
-		commit = hash
-	}
-
 	state := c.state.Ledger()
-
 	versionParam := ctx.QueryParam("version")
 	if versionParam != "" {
 		version, err := strconv.ParseUint(versionParam, 10, 8)
@@ -97,6 +85,15 @@ func (c *Controller) GetValue(ctx echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err)
 		}
 		state = state.WithVersion(uint8(version))
+	}
+
+	_, commit := c.state.Last()
+	hashParam := ctx.QueryParam("hash")
+	if hashParam != "" {
+		commit, err = hex.DecodeString(hashParam)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err)
+		}
 	}
 
 	query, err := ledger.NewQuery(commit, keys)
