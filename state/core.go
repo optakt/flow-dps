@@ -267,7 +267,7 @@ func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
 	return height, nil
 }
 
-func (c *Core) Events(height uint64, types ...[]byte) ([]flow.Event, error) {
+func (c *Core) Events(height uint64, types ...string) ([]flow.Event, error) {
 	// Make sure that the request is for a height below the currently active
 	// sentinel height; otherwise, we haven't indexed yet and we might return
 	// false information.
@@ -303,7 +303,8 @@ func (c *Core) Events(height uint64, types ...[]byte) ([]flow.Event, error) {
 			if len(types) != 0 {
 				var include bool
 				for _, t := range types {
-					if bytes.Equal(typeHash, t) {
+					tHash := xxhash.New64().Sum([]byte(t))
+					if bytes.Equal(typeHash, tHash) {
 						include = true
 						break
 					}
