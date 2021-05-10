@@ -14,7 +14,7 @@
 
 This route returns a register's payload from its key.
 
-**Example request**: `GET /registers/6c49490a1f023fda632cfe3a49b66201?height=425`
+**Example request**: `GET /registers/6c49490a1f023fda632cfe3a49b662016c49490a1f023fda632cfe3a49b66201?height=425`
 
 #### Path Parameters
 
@@ -63,8 +63,8 @@ Possible response codes are:
 ```json
 {
   "height": 425,
-  "key": "6c49490a1f023fda632cfe3a49b66201",
-  "value": "1d7dd90eca1066a5905abf243b926d35"
+  "key": "20VDBpq8GZS3JDdmskD70Deq+kdsNetzeCZA=",
+  "value": "+Em4QOD6BU2j9jPdks07DsmalPEDfbsdAk/Cdvs0Dkawo/ei02ocds9D9klSflsa8CH8p9A4ID6A6A"
 }
 ```
 
