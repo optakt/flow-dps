@@ -8,6 +8,7 @@ require (
 	github.com/fxamacker/cbor v1.5.1
 	github.com/klauspost/compress v1.12.2
 	github.com/labstack/echo/v4 v4.2.2
+	github.com/onflow/cadence v0.14.4
 	github.com/onflow/flow-go v0.15.4
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0

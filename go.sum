@@ -242,6 +242,7 @@ github.com/golang/mock v1.3.1/go.mod h1:sBzyDLLjw3U8JLTeZvSv8jJB+tU5PVekmnlKIyFU
 github.com/golang/mock v1.4.0/go.mod h1:UOMv5ysSaYNkG+OFQykRIcU/QvvxJf3p21QfJ2Bt3cw=
 github.com/golang/mock v1.4.1/go.mod h1:UOMv5ysSaYNkG+OFQykRIcU/QvvxJf3p21QfJ2Bt3cw=
 github.com/golang/mock v1.4.3/go.mod h1:UOMv5ysSaYNkG+OFQykRIcU/QvvxJf3p21QfJ2Bt3cw=
+github.com/golang/mock v1.4.4 h1:l75CXGRSwbaYNpl/Z2X1XIIAMSCquvXgpVZDhwEIJsc=
 github.com/golang/mock v1.4.4/go.mod h1:l3mdAwkq5BuhzHwde/uurv3sEJeZMXNpwsxVWU71h+4=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.0/go.mod h1:Qd/q+1AKNOZr9uGQzbzCmRO6sUih6GTPZv6a1/R87v0=
@@ -706,7 +707,9 @@ github.com/olekukonko/tablewriter v0.0.2-0.20190409134802-7e037d187b0c/go.mod h1
 github.com/onflow/cadence v0.14.2/go.mod h1:EEXKRNuW5C2E1wRM4fLhfqoTgXohPFieXwOGJubz1Jg=
 github.com/onflow/cadence v0.14.4 h1:l5HQTGEcbPXZQEjIB0kFxVI8OmBgNHujLKAMSs/JvEQ=
 github.com/onflow/cadence v0.14.4/go.mod h1:Jzno1fQNpJB16RUiodjAN4QuwuMC0dt8cLtjcxp+iI4=
+github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.1 h1:nmIDPf94F9Ecx6ecGyd4uYBUl4LluntWLvtwAJYt4tw=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.1/go.mod h1:4zE/4A+5zyahxSFccQmcBqzp4ONXIwvGHaOKN8h8CRM=
+github.com/onflow/flow-ft/lib/go/contracts v0.4.0 h1:M1I4z027GHOLcjkj9lL2UUUpZpEAF90hY5gRqvFGAPg=
 github.com/onflow/flow-ft/lib/go/contracts v0.4.0/go.mod h1:1zoTjp1KzNnOPkyqKmWKerUyf0gciw+e6tAEt0Ks3JE=
 github.com/onflow/flow-go v0.15.4 h1:z6NPVVZh/1y1o+HlHIg+svVQiNwoKubSgKhWOiQRmjQ=
 github.com/onflow/flow-go v0.15.4/go.mod h1:Td2+8Is8Jn5PUhEtxjdHjVzKYUNDIiMjHsHsFYEftOw=
