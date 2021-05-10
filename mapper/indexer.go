@@ -1,8 +1,9 @@
 package mapper
 
 import (
-	"github.com/awfm9/flow-dps/model"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/awfm9/flow-dps/model"
 )
 
 type Indexer interface {

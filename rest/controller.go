@@ -52,8 +52,8 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 
 	res := RegisterResponse{
 		Height: height,
-		Key:    key,
-		Value:  value,
+		Key:    hex.EncodeToString(key),
+		Value:  hex.EncodeToString(value),
 	}
 
 	return ctx.JSON(http.StatusOK, res)
