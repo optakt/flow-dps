@@ -19,6 +19,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor"
 	"github.com/klauspost/compress/zstd"
@@ -139,7 +140,7 @@ func NewCore(dir string) (*Core, error) {
 }
 
 // Index is used to index a new set of state deltas for the given block.
-func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCommitment, deltas []model.Delta) error {
+func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCommitment, deltas []model.Delta, events []flow.Event) error {
 
 	// let's use a single transaction to make indexing of a new block atomic
 	tx := c.index.NewTransaction(true)
@@ -164,7 +165,7 @@ func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCo
 		return fmt.Errorf("could not persist commit index (%w)", err)
 	}
 
-	// finally, we index the payload for every path that has changed in this block
+	// we then index the payload for every path that has changed in this block
 	for _, delta := range deltas {
 		for _, change := range delta {
 			key = make([]byte, 1+pathfinder.PathByteSize+8)
@@ -180,6 +181,31 @@ func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCo
 			if err != nil {
 				return fmt.Errorf("could not persist payload (%w)", err)
 			}
+		}
+	}
+
+	eventBuckets := make(map[string][]flow.Event)
+	for _, event := range events {
+		typeHash := string(xxhash.New64().Sum([]byte(event.Type)))
+		eventBuckets[typeHash] = append(eventBuckets[typeHash], event)
+	}
+
+	// Finally, we index the events for every height and event type combination in this block.
+	for typeHash, evts := range eventBuckets {
+		// Prefix + Block Height + Type Hash
+		key = make([]byte, 1+8+len(typeHash))
+		key[0] = model.PrefixEventIndex
+		binary.BigEndian.PutUint64(key[1:1+8], height)
+		copy(key[1+8:], typeHash)
+
+		val, err := cbor.Marshal(evts, cbor.CanonicalEncOptions())
+		if err != nil {
+			return fmt.Errorf("could not encode events: %w", err)
+		}
+		val = c.compressor.EncodeAll(val, nil)
+		err = tx.Set(key, val)
+		if err != nil {
+			return fmt.Errorf("could not persist events: %w", err)
 		}
 	}
 

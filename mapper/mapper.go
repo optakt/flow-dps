@@ -22,8 +22,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/awfm9/flow-dps/model"
 	"github.com/rs/zerolog"
+
+	"github.com/awfm9/flow-dps/model"
 
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
@@ -151,7 +152,9 @@ First:
 			if !bytes.Equal(hash, commit) {
 				break Second
 			}
-			err := m.indexer.Index(height, blockID, commit, m.deltas)
+
+			events := m.chain.Events()
+			err := m.indexer.Index(height, blockID, commit, m.deltas, events)
 			if err != nil {
 				return fmt.Errorf("could not index deltas: %w (height: %d, block: %x, commit: %x)", err, height, blockID, commit)
 			}
