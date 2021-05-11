@@ -29,9 +29,24 @@ jobs:
         with:
           go-version: 1.16
 
-      - name: Set up dependencies
-        run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26 && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
+      # See https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os
+      - name: Install Protocol Buffer Compiler
+        run: |
+          PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+          curl -LO $PB_REL/download/v3.15.8/protoc-3.15.8-linux-x86_64.zip
+          unzip protoc-3.15.8-linux-x86_64.zip -d $HOME/.local
+          export PATH="$PATH:$HOME/.local/bin"
+
+      - name: Set up Go dependencies
+        run: |
+          go version
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
+          echo $PATH
 
       # Run our own verifications and scripts.
+      - name: Verify that there is no diff after running go mod tidy
+        run: go mod tidy && git status && git diff-index --quiet HEAD --
+
       - name: Verify that there is no diff after running go generate
-        run: go generate ./... && git diff-index --quiet HEAD --
+        run: go generate ./... && git status && git diff-index --quiet HEAD --
