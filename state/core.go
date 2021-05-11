@@ -8,10 +8,12 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor"
 	"github.com/klauspost/compress/zstd"
+	"github.com/pkg/errors"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/awfm9/flow-dps/model"
@@ -66,6 +68,18 @@ func NewCore(dir string) (*Core, error) {
 		})
 		return nil
 	})
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		err = index.Update(func(tx *badger.Txn) error {
+			height = 0
+			val := make([]byte, 8)
+			binary.BigEndian.PutUint64(val, height)
+			err = tx.Set([]byte{model.PrefixLastHeight}, val)
+			return err
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not set last height: %w", err)
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve last height: %w", err)
 	}
@@ -82,6 +96,20 @@ func NewCore(dir string) (*Core, error) {
 		}
 		return nil
 	})
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		err = index.Update(func(tx *badger.Txn) error {
+			trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
+			if err != nil {
+				return err
+			}
+			commit = trie.RootHash()
+			err = tx.Set([]byte{model.PrefixLastCommit}, commit)
+			return err
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not set last commit: %w", err)
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
 	}

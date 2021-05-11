@@ -46,7 +46,10 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 	// If we have a checkpoint file, it should be a root checkpoint, so it
 	// should only contain a single trie that we load as our initial root state.
 	// Otherwise, the root state is an empty memory trie.
-	var t *trie.MTrie
+	trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize empty memory trie: %w", err)
+	}
 	if cfg.CheckpointFile != "" {
 		file, err := os.Open(cfg.CheckpointFile)
 		if err != nil {
@@ -63,13 +66,7 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 		if len(tries) != 1 {
 			return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(tries))
 		}
-		t = tries[0]
-	} else {
-		trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
-		if err != nil {
-			return nil, fmt.Errorf("could not initialize empty memory trie: %w", err)
-		}
-		t = trie
+		trie = tries[0]
 	}
 
 	// NOTE: there might be a number of trie updates in the WAL before the root
@@ -81,7 +78,7 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 		chain:   chain,
 		feeder:  feeder,
 		indexer: indexer,
-		trie:    t,
+		trie:    trie,
 		deltas:  []model.Delta{},
 		wg:      &sync.WaitGroup{},
 		stop:    make(chan struct{}),
@@ -137,7 +134,7 @@ First:
 	Second:
 		for {
 			height, blockID, commit := m.chain.Active()
-			if !bytes.Equal(commit, hash) {
+			if !bytes.Equal(hash, commit) {
 				break Second
 			}
 			err := m.indexer.Index(height, blockID, commit, m.deltas)
