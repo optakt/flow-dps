@@ -14,6 +14,7 @@ type Controller struct {
 	state model.State
 }
 
+// NewController creates a controller using the given state store.
 func NewController(state model.State) (*Controller, error) {
 	c := &Controller{
 		state: state,
@@ -21,6 +22,8 @@ func NewController(state model.State) (*Controller, error) {
 	return c, nil
 }
 
+// GetRegister gets a single register from a given key. Block height can also be given as an optional parameter.
+// If no height is given, the last height present within the state is used.
 func (c *Controller) GetRegister(_ context.Context, req *GetRegisterRequest, _ ...grpc.CallOption) (*Register, error) {
 	state := c.state.Raw()
 
