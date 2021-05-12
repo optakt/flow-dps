@@ -18,8 +18,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type APIClient interface {
-	GetRegister(ctx context.Context, in *GetRegisterRequest, opts ...grpc.CallOption) (*Register, error)
-	GetValues(ctx context.Context, in *GetValuesRequest, opts ...grpc.CallOption) (*Values, error)
+	GetRegister(ctx context.Context, in *GetRegisterRequest, opts ...grpc.CallOption) (*GetRegisterResponse, error)
+	GetValues(ctx context.Context, in *GetValuesRequest, opts ...grpc.CallOption) (*GetValuesResponse, error)
 }
 
 type aPIClient struct {
@@ -30,8 +30,8 @@ func NewAPIClient(cc grpc.ClientConnInterface) APIClient {
 	return &aPIClient{cc}
 }
 
-func (c *aPIClient) GetRegister(ctx context.Context, in *GetRegisterRequest, opts ...grpc.CallOption) (*Register, error) {
-	out := new(Register)
+func (c *aPIClient) GetRegister(ctx context.Context, in *GetRegisterRequest, opts ...grpc.CallOption) (*GetRegisterResponse, error) {
+	out := new(GetRegisterResponse)
 	err := c.cc.Invoke(ctx, "/API/GetRegister", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -39,8 +39,8 @@ func (c *aPIClient) GetRegister(ctx context.Context, in *GetRegisterRequest, opt
 	return out, nil
 }
 
-func (c *aPIClient) GetValues(ctx context.Context, in *GetValuesRequest, opts ...grpc.CallOption) (*Values, error) {
-	out := new(Values)
+func (c *aPIClient) GetValues(ctx context.Context, in *GetValuesRequest, opts ...grpc.CallOption) (*GetValuesResponse, error) {
+	out := new(GetValuesResponse)
 	err := c.cc.Invoke(ctx, "/API/GetValues", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -52,18 +52,18 @@ func (c *aPIClient) GetValues(ctx context.Context, in *GetValuesRequest, opts ..
 // All implementations should embed UnimplementedAPIServer
 // for forward compatibility
 type APIServer interface {
-	GetRegister(context.Context, *GetRegisterRequest) (*Register, error)
-	GetValues(context.Context, *GetValuesRequest) (*Values, error)
+	GetRegister(context.Context, *GetRegisterRequest) (*GetRegisterResponse, error)
+	GetValues(context.Context, *GetValuesRequest) (*GetValuesResponse, error)
 }
 
 // UnimplementedAPIServer should be embedded to have forward compatible implementations.
 type UnimplementedAPIServer struct {
 }
 
-func (UnimplementedAPIServer) GetRegister(context.Context, *GetRegisterRequest) (*Register, error) {
+func (UnimplementedAPIServer) GetRegister(context.Context, *GetRegisterRequest) (*GetRegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRegister not implemented")
 }
-func (UnimplementedAPIServer) GetValues(context.Context, *GetValuesRequest) (*Values, error) {
+func (UnimplementedAPIServer) GetValues(context.Context, *GetValuesRequest) (*GetValuesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValues not implemented")
 }
 

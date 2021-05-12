@@ -89,7 +89,7 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
 
-	restController, err := rest.NewController(core)
+	rctrl, err := rest.NewController(core)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize REST controller")
 	}
@@ -98,10 +98,10 @@ func main() {
 	e.HideBanner = true
 	e.HidePort = true
 	e.Use(middleware.Logger())
-	e.GET("/registers/:key", restController.GetRegister)
-	e.GET("/values/:keys", restController.GetValue)
+	e.GET("/registers/:key", rctrl.GetRegister)
+	e.GET("/values/:keys", rctrl.GetValue)
 
-	grpcController, err := grpcApi.NewController(core)
+	gctrl, err := grpcApi.NewController(core)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize GRPC controller")
 	}
@@ -132,7 +132,7 @@ func main() {
 			log.Fatal().Err(err).Str("host", flagHostGRPC).Msg("could not listen")
 		}
 
-		grpcApi.RegisterAPIServer(grpcSrv, grpcApi.NewServer(grpcController))
+		grpcApi.RegisterAPIServer(grpcSrv, grpcApi.NewServer(gctrl))
 		err = grpcSrv.Serve(lis)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("GRPC API encountered error")

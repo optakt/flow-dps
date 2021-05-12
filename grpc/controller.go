@@ -39,11 +39,13 @@ func (c *Controller) GetRegister(_ context.Context, req *GetRegisterRequest, _ .
 		return nil, fmt.Errorf("could not get register in GRPC API: %w", err)
 	}
 
-	return &Register{
+	res := &Register{
 		Height: height,
 		Key: req.Key,
 		Value: value,
-	}, nil
+	}
+
+	return res, nil
 }
 
 // GetValues returns the payload value of an encoded Ledger entry in the same way
@@ -82,12 +84,14 @@ func (c *Controller) GetValues(_ context.Context, req *GetValuesRequest, _ ...gr
 	}
 
 	// Convert the ledger.Values into [][]byte.
-	var v [][]byte
+	var vv [][]byte
 	for _, value := range values {
-		v = append(v, value)
+		vv = append(vv, value)
 	}
 
-	return &Values{
-		Values: v,
-	}, nil
+	res := &Values{
+		Values: vv,
+	}
+
+	return res, nil
 }
