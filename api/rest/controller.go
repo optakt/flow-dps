@@ -45,7 +45,7 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 	}
 
 	state := c.state.Raw()
-	height, _ := c.state.Last()
+	height := c.state.Last().Height()
 	heightParam := ctx.QueryParam("height")
 	if heightParam != "" {
 		height, err = strconv.ParseUint(heightParam, 10, 64)
@@ -101,7 +101,7 @@ func (c *Controller) GetValue(ctx echo.Context) error {
 		state = state.WithVersion(uint8(version))
 	}
 
-	_, commit := c.state.Last()
+	commit := c.state.Last().Commit()
 	hashParam := ctx.QueryParam("hash")
 	if hashParam != "" {
 		commit, err = hex.DecodeString(hashParam)

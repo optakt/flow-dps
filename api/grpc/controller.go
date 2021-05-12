@@ -28,7 +28,7 @@ func NewController(state dps.State) (*Controller, error) {
 func (c *Controller) GetRegister(_ context.Context, req *GetRegisterRequest, _ ...grpc.CallOption) (*GetRegisterResponse, error) {
 	state := c.state.Raw()
 
-	height, _ := c.state.Last()
+	height := c.state.Last().Height()
 	if req.Height != nil {
 		height = *req.Height
 	}
@@ -60,7 +60,7 @@ func (c *Controller) GetValues(_ context.Context, req *GetValuesRequest, _ ...gr
 		state = state.WithVersion(uint8(*req.Version))
 	}
 
-	_, commit := c.state.Last()
+	commit := c.state.Last().Commit()
 	if req.Hash != nil {
 		commit = req.Hash
 	}

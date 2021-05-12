@@ -22,7 +22,8 @@ import (
 type State interface {
 	Index() Index
 	Chain() Chain
-	Info() Info
+	Last() Last
+	Lookup() Lookup
 	Raw() Raw
 	Ledger() Ledger
 }
@@ -38,8 +39,12 @@ type Chain interface {
 	Header(height uint64) (*flow.Header, error)
 }
 
-type Info interface {
-	Last() (uint64, flow.StateCommitment)
+type Last interface {
+	Height() uint64
+	Commit() flow.StateCommitment
+}
+
+type Lookup interface {
 	HeightForBlock(blockID flow.Identifier) (uint64, error)
 	HeightForCommit(commit flow.StateCommitment) (uint64, error)
 }
