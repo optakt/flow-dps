@@ -285,11 +285,14 @@ func (c *Core) Events(height uint64, types ...string) ([]flow.Event, error) {
 	var events []flow.Event
 	prefix := make([]byte, 1+8)
 	prefix[0] = model.PrefixEventIndex
-	binary.BigEndian.PutUint64(prefix[1:], height)
+	binary.BigEndian.PutUint64(prefix[1:1+8], height)
 	err := c.index.View(func(tx *badger.Txn) error {
-		it := tx.NewIterator(badger.IteratorOptions{
-			Prefix: prefix,
-		})
+		opts := badger.DefaultIteratorOptions
+		// NOTE: this is an optimization only, it does not enforce that all
+		// results in the iteration have this prefix.
+		opts.Prefix = prefix
+
+		it := tx.NewIterator(opts)
 		defer it.Close()
 
 		// Iterate on all keys with the right prefix.
