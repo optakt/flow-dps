@@ -20,16 +20,28 @@ import (
 )
 
 type State interface {
-	Last() (uint64, flow.StateCommitment)
-	Height() Height
-	Header(height uint64) (*flow.Header, error)
+	Index() Index
+	Chain() Chain
+	Info() Info
 	Raw() Raw
 	Ledger() Ledger
 }
 
-type Height interface {
-	ForBlock(blockID flow.Identifier) (uint64, error)
-	ForCommit(commit flow.StateCommitment) (uint64, error)
+type Index interface {
+	Header(height uint64, header *flow.Header) error
+	Commit(height uint64, commit flow.StateCommitment) error
+	Deltas(height uint64, deltas []Delta) error
+	Events(height uint64, events []flow.Event) error
+}
+
+type Chain interface {
+	Header(height uint64) (*flow.Header, error)
+}
+
+type Info interface {
+	Last() (uint64, flow.StateCommitment)
+	HeightForBlock(blockID flow.Identifier) (uint64, error)
+	HeightForCommit(commit flow.StateCommitment) (uint64, error)
 }
 
 type Raw interface {
