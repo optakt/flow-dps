@@ -21,5 +21,5 @@ import (
 )
 
 type Indexer interface {
-	Index(height uint64, blockID flow.Identifier, commit flow.StateCommitment, deltas []model.Delta) error
+	Index(height uint64, blockID flow.Identifier, commit flow.StateCommitment, deltas []model.Delta, events []flow.Event) error
 }

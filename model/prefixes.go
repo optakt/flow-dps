@@ -20,4 +20,5 @@ const (
 	PrefixBlockIndex  = 3
 	PrefixCommitIndex = 4
 	PrefixDeltaIndex  = 5
+	PrefixEventIndex  = 6
 )

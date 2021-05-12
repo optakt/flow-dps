@@ -22,17 +22,16 @@ import (
 	"os"
 	"sync"
 
-	"github.com/awfm9/flow-dps/model"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
+
+	"github.com/awfm9/flow-dps/model"
 )
 
-// Static is a random access ledger that bootstraps the index from a static
-// snapshot of the protocol state and the corresponding ledger write-ahead log.
 type Mapper struct {
 	log     zerolog.Logger
 	chain   Chain
@@ -151,7 +150,13 @@ First:
 			if !bytes.Equal(hash, commit) {
 				break Second
 			}
-			err := m.indexer.Index(height, blockID, commit, m.deltas)
+
+			events, err := m.chain.Events()
+			if err != nil {
+				return fmt.Errorf("could not index events: %w (height: %d, block: %x, commit: %x)", err, height, blockID, commit)
+			}
+
+			err = m.indexer.Index(height, blockID, commit, m.deltas, events)
 			if err != nil {
 				return fmt.Errorf("could not index deltas: %w (height: %d, block: %x, commit: %x)", err, height, blockID, commit)
 			}

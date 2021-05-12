@@ -20,5 +20,6 @@ import (
 
 type Chain interface {
 	Active() (uint64, flow.Identifier, flow.StateCommitment)
+	Events() ([]flow.Event, error)
 	Forward() error
 }

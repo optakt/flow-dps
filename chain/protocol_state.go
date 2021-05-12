@@ -18,11 +18,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/awfm9/flow-dps/model"
 	"github.com/dgraph-io/badger/v2"
+
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
+
+	"github.com/awfm9/flow-dps/model"
 )
 
 type ProtocolState struct {
@@ -73,6 +75,16 @@ func FromProtocolState(dir string) (*ProtocolState, error) {
 
 func (ps *ProtocolState) Active() (uint64, flow.Identifier, flow.StateCommitment) {
 	return ps.height, ps.blockID, ps.commit
+}
+
+func (ps *ProtocolState) Events() ([]flow.Event, error) {
+	var events []flow.Event
+	err := operation.LookupEventsByBlockID(ps.blockID, &events)(ps.state.NewTransaction(false))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve events: %w", err)
+	}
+
+	return  events, nil
 }
 
 func (ps *ProtocolState) Forward() error {

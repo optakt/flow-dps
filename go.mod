@@ -3,6 +3,7 @@ module github.com/awfm9/flow-dps
 go 1.16
 
 require (
+	github.com/OneOfOne/xxhash v1.2.5
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/fxamacker/cbor v1.5.1
 	github.com/klauspost/compress v1.12.2
