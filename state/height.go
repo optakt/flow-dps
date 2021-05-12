@@ -14,7 +14,7 @@ type Height struct {
 
 func (h *Height) ForBlock(blockID flow.Identifier) (uint64, error) {
 	key := make([]byte, 1+len(blockID))
-	key[0] = PrefixBlockIndex
+	key[0] = prefixBlockIndex
 	copy(key[1:], blockID[:])
 	var height uint64
 	err := h.core.db.View(func(tx *badger.Txn) error {
@@ -36,7 +36,7 @@ func (h *Height) ForBlock(blockID flow.Identifier) (uint64, error) {
 
 func (h *Height) ForCommit(commit flow.StateCommitment) (uint64, error) {
 	key := make([]byte, 1+len(commit))
-	key[0] = PrefixCommitIndex
+	key[0] = prefixCommitIndex
 	copy(key[1:], commit[:])
 	var height uint64
 	err := h.core.db.View(func(tx *badger.Txn) error {

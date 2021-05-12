@@ -37,7 +37,7 @@ type Mapper struct {
 	log    zerolog.Logger
 	chain  Chain
 	feed   Feeder
-	index  Indexer
+	index  dps.Index
 	trie   *trie.MTrie
 	deltas []dps.Delta
 	wg     *sync.WaitGroup
@@ -46,7 +46,7 @@ type Mapper struct {
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
 // and then passes on the details to the indexer for indexing.
-func New(log zerolog.Logger, chain Chain, feed Feeder, index Indexer, options ...func(*MapperConfig)) (*Mapper, error) {
+func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options ...func(*MapperConfig)) (*Mapper, error) {
 
 	// By default, we don't have a checkpoint to bootstrap from, so check if we
 	// explicitly passed one using the variadic option parameters.
@@ -202,11 +202,15 @@ Outer:
 				return fmt.Errorf("could not index deltas: %w", err)
 			}
 <<<<<<< HEAD
+<<<<<<< HEAD
 			err = m.index.Events(height, events)
 			if err != nil {
 				return fmt.Errorf("could not index events: %w", err)
 =======
 			err = m.index.Last(height)
+=======
+			err = m.index.Last(commit)
+>>>>>>> bf3f983 (implemented state index and last component)
 			if err != nil {
 				return fmt.Errorf("could not index last: %w", err)
 >>>>>>> 30fd26c (implement new state index component)

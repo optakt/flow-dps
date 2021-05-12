@@ -15,7 +15,7 @@
 package state
 
 const (
-	prefixLastHeight  = 1
+	prefixLastCommit  = 1
 	prefixHeaderData  = 2
 	prefixBlockIndex  = 3
 	prefixCommitIndex = 4

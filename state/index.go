@@ -141,19 +141,17 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 	return nil
 }
 
-func (i *Index) Last(height uint64) error {
+func (i *Index) Last(commit flow.StateCommitment) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
-		key := []byte{prefixLastHeight}
-		val := make([]byte, 8)
-		binary.BigEndian.PutUint64(val, height)
-		err := tx.Set(key, val)
+		key := []byte{prefixLastCommit}
+		err := tx.Set(key, commit)
 		if err != nil {
-			return fmt.Errorf("could not save last height: %w", err)
+			return fmt.Errorf("could not save last commit: %w", err)
 		}
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("could not index last: %w", err)
+		return fmt.Errorf("could not index last commit: %w", err)
 	}
 	return nil
 }

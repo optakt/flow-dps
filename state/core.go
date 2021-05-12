@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/awfm9/flow-dps/model/dps"
@@ -70,10 +71,26 @@ func NewCore(dir string) (*Core, error) {
 	}
 
 	var height uint64
+	var commit flow.StateCommitment
 	err = db.View(func(tx *badger.Txn) error {
-		item, err := tx.Get([]byte{prefixLastHeight})
+
+		// first we get the last commit
+		key := []byte{prefixLastCommit}
+		item, err := tx.Get(key)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not load last commit: %w", err)
+		}
+		_ = item.Value(func(val []byte) error {
+			commit = val
+			return nil
+		})
+
+		// then we get the height associated with it
+		key = make([]byte, 1+len(commit))
+		copy(key[1:], commit)
+		item, err = tx.Get(key)
+		if err != nil {
+			return fmt.Errorf("could not load commit index: %w", err)
 		}
 		_ = item.Value(func(val []byte) error {
 			height = binary.BigEndian.Uint64(val)
@@ -82,19 +99,43 @@ func NewCore(dir string) (*Core, error) {
 		return nil
 	})
 	if errors.Is(err, badger.ErrKeyNotFound) {
+
+		// create an empty trie root hash as last commit
+		trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
+		if err != nil {
+			return nil, fmt.Errorf("could not initialize empty trie: %w", err)
+		}
+		commit = trie.RootHash()
+
 		err = db.Update(func(tx *badger.Txn) error {
+
+			// store the empty root hash as last commit
+			key := []byte{prefixLastCommit}
+			err = tx.Set(key, commit)
+			if err != nil {
+				return fmt.Errorf("could not save last commit: %w", err)
+			}
+
+			// map the last commit to zero height
 			height = 0
+			key = make([]byte, 1+len(commit))
+			key[0] = prefixCommitIndex
+			copy(key[1:], commit)
 			val := make([]byte, 8)
 			binary.BigEndian.PutUint64(val, height)
-			err = tx.Set([]byte{prefixLastHeight}, val)
-			return err
+			err = tx.Set(key, val)
+			if err != nil {
+				return fmt.Errorf("could not index last commit: %w", err)
+			}
+
+			return nil
 		})
 		if err != nil {
-			return nil, fmt.Errorf("could not set last height: %w", err)
+			return nil, fmt.Errorf("could not bootstrap last commit: %w", err)
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve last height: %w", err)
+		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
 	}
 
 	c := Core{
@@ -102,6 +143,7 @@ func NewCore(dir string) (*Core, error) {
 		compressor:   compressor,
 		decompressor: decompressor,
 		height:       height,
+		commit:       commit,
 	}
 
 	return &c, nil
@@ -221,11 +263,7 @@ func (c *Core) payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
 	key := make([]byte, 1+pathfinder.PathByteSize+8)
-<<<<<<< HEAD
 	key[0] = prefixDeltaData
-=======
-	key[0] = PrefixDeltaData
->>>>>>> dddf6c4 (implement height component for state)
 	copy(key[1:1+pathfinder.PathByteSize], path)
 	binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
 	err := c.db.View(func(tx *badger.Txn) error {
