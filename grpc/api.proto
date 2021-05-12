@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option go_package = "github.com/awfm9/flow-dps/grpc";
+
+service API {
+  rpc GetRegister (GetRegisterRequest) returns (GetRegisterResponse) {}
+  rpc GetValues (GetValuesRequest) returns (GetValuesResponse) {}
+}
+
+message GetRegisterRequest {
+  optional uint64 height = 1;
+  bytes key = 2;
+}
+
+message GetRegisterResponse {
+  uint64 height = 1;
+  bytes key = 2;
+  bytes value = 3;
+}
+
+message GetValuesRequest {
+  optional bytes hash = 1;
+  optional uint64 version = 2;
+  repeated Key keys = 3;
+}
+
+message Key {
+  repeated KeyPart parts = 1;
+}
+
+message KeyPart {
+  uint64 type = 1;
+  bytes value = 2;
+}
+
+message GetValuesResponse {
+  repeated bytes values = 1;
+}

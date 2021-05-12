@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,9 +28,11 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
+	"google.golang.org/grpc"
 
 	"github.com/awfm9/flow-dps/chain"
 	"github.com/awfm9/flow-dps/feeder"
+	grpcApi "github.com/awfm9/flow-dps/grpc"
 	"github.com/awfm9/flow-dps/mapper"
 	"github.com/awfm9/flow-dps/rest"
 	"github.com/awfm9/flow-dps/state"
@@ -86,17 +89,23 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
 
-	controller, err := rest.NewController(core)
+	rctrl, err := rest.NewController(core)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize controller")
+		log.Fatal().Err(err).Msg("could not initialize REST controller")
 	}
 
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
 	e.Use(middleware.Logger())
-	e.GET("/registers/:key", controller.GetRegister)
-	e.GET("/values/:keys", controller.GetValue)
+	e.GET("/registers/:key", rctrl.GetRegister)
+	e.GET("/values/:keys", rctrl.GetValue)
+
+	gctrl, err := grpcApi.NewController(core)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not initialize GRPC controller")
+	}
+	grpcSrv := grpc.NewServer()
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
@@ -117,6 +126,19 @@ func main() {
 		}
 		log.Info().Msg("REST API execution complete")
 	}()
+	go func() {
+		lis, err := net.Listen("tcp", flagHostGRPC)
+		if err != nil {
+			log.Fatal().Err(err).Str("host", flagHostGRPC).Msg("could not listen")
+		}
+
+		grpcApi.RegisterAPIServer(grpcSrv, grpcApi.NewServer(gctrl))
+		err = grpcSrv.Serve(lis)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error().Err(err).Msg("GRPC API encountered error")
+		}
+		log.Info().Msg("GRPC API execution complete")
+	}()
 
 	<-sig
 
@@ -129,7 +151,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	wg := &sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		err := e.Shutdown(ctx)
@@ -137,6 +159,11 @@ func main() {
 			log.Error().Err(err).Msg("could not shut down REST API")
 		}
 		log.Info().Msg("REST API shutdown complete")
+	}()
+	go func() {
+		defer wg.Done()
+		grpcSrv.GracefulStop()
+		log.Info().Msg("state mapper shutdown complete")
 	}()
 	go func() {
 		defer wg.Done()

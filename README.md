@@ -7,9 +7,9 @@ of the Rosetta Data API, used in the larger blockchain ecosystem as a common gen
 The state of past sporks is indexed by reading an execution node's protocol state and state trie write-ahead log.
 Optionally, a root checkpoint can be used to bootstrap state before a spork's start. In more specific terms, indexing
 of past sporks requires a Badger key-value database containing the Flow protocol state of the spork and a LedgerWAL with
-all of the trie updates that happened on the spork.
+all the trie updates that happened on the spork.
 
-Indexing the live spork works in a similar way. The DPS will connect to the publish socket of an execution node that has
+Indexing the live spork works similarly. The DPS will connect to the publish socket of an execution node that has
 whitelisted it and subscribe to state trie and transaction event updates. At the same time, the DPS will use access nodes
 to assemble a view of the finalized blockchain state. By combining these two sources of information, it can reconstruct
 the execution state on-the-fly.
@@ -22,6 +22,17 @@ which enables state retrieval at any point in history and beyond the execution n
 The DPS also supports a set of custom smart contract resources that serve as wrapper for locked token vaults and as
 proxy to staking and delegating resources. This allows the DPS to track multiple balances per account, including locked,
 staked and delegated tokens, for accounts which deploy these custom resources.
+
+## Dependencies
+
+Go `v1.16` or higher is required to compile `flow-dps`.
+
+If you want to make changes to the GRPC API, the two following binaries are required as well.
+
+* `go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26`
+* `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1`
+
+Once they are installed, you can run `go generate ./...` from the root of this repository to update the generated protobuf files.
 
 ## Road Map
 

@@ -27,10 +27,10 @@ import (
 )
 
 type Controller struct {
-	state State
+	state model.State
 }
 
-func NewController(state State) (*Controller, error) {
+func NewController(state model.State) (*Controller, error) {
 	c := &Controller{
 		state: state,
 	}
