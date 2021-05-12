@@ -20,5 +20,8 @@ import (
 )
 
 type Indexer interface {
-	Index(height uint64, blockID flow.Identifier, commit flow.StateCommitment, deltas []dps.Delta, events []flow.Event) error
+	Header(height uint64, header *flow.Header) error
+	Commit(height uint64, commit flow.StateCommitment) error
+	Deltas(height uint64, deltas []dps.Delta) error
+	Events(height uint64, events []flow.Event) error
 }

@@ -56,7 +56,7 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	return &l, nil
 }
 
-func (l *LedgerWAL) Feed(commit flow.StateCommitment) (dps.Delta, error) {
+func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 	for {
 		next := l.reader.Next()
 		err := l.reader.Err()

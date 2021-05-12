@@ -21,5 +21,5 @@ import (
 )
 
 type Feeder interface {
-	Feed(commit flow.StateCommitment) (dps.Delta, error)
+	Delta(commit flow.StateCommitment) (dps.Delta, error)
 }

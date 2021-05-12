@@ -28,24 +28,25 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
+	"github.com/onflow/flow-go/utils/logging"
 
 	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type Mapper struct {
-	log     zerolog.Logger
-	chain   Chain
-	feeder  Feeder
-	indexer Indexer
-	trie    *trie.MTrie
-	deltas  []dps.Delta
-	wg      *sync.WaitGroup
-	stop    chan struct{}
+	log    zerolog.Logger
+	chain  Chain
+	feed   Feeder
+	index  Indexer
+	trie   *trie.MTrie
+	deltas []dps.Delta
+	wg     *sync.WaitGroup
+	stop   chan struct{}
 }
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
 // and then passes on the details to the indexer for indexing.
-func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, options ...func(*MapperConfig)) (*Mapper, error) {
+func New(log zerolog.Logger, chain Chain, feed Feeder, index Indexer, options ...func(*MapperConfig)) (*Mapper, error) {
 
 	// By default, we don't have a checkpoint to bootstrap from, so check if we
 	// explicitly passed one using the variadic option parameters.
@@ -87,14 +88,14 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 	// the root block state commitment here.
 
 	m := Mapper{
-		log:     log,
-		chain:   chain,
-		feeder:  feeder,
-		indexer: indexer,
-		trie:    trie,
-		deltas:  []dps.Delta{},
-		wg:      &sync.WaitGroup{},
-		stop:    make(chan struct{}),
+		log:    log,
+		chain:  chain,
+		feed:   feed,
+		index:  index,
+		trie:   trie,
+		deltas: []dps.Delta{},
+		wg:     &sync.WaitGroup{},
+		stop:   make(chan struct{}),
 	}
 
 	return &m, nil
@@ -115,23 +116,33 @@ func (m *Mapper) Stop(ctx context.Context) error {
 	}
 }
 
-func (m *Mapper) Run() error {
+func (m *Mapper) Run(height uint64) error {
 	m.wg.Add(1)
 	defer m.wg.Done()
 
-	// The first loop is responsible for reading deltas from the feeder and
-	// updating the state trie with the delta in order to get the next trie
-	// state. If the feeder times out (which can happen, for example, for a
-	// feeder receiving trie updates over the network), it will go into a tight
-	// loop until the state delta to be applied to the trie with the current
-	// root hash has been successfully retrieved.
-	// NOTE: We moved the logic of the first loop behind the logic for the
-	// second loop, as it allows us to map all matching blocks before retrieving
-	// the next delta. This covers the edge case of trie updates before the root
-	// block, including zero and many. It also covers the edge case of indexing
-	// the last block, regardless of whether their are additional trie updates
-	// behind it.
-First:
+	// The purpose of this function is to map state deltas from a continuous
+	// feed to specific blocks from the chain. This is necessary because the
+	// trie updates that we receive as state deltas are agnostic of blocks and
+	// instead operate on a chunk level. This means that we will run into the
+	// state commitment of every finalized block in the chain, as long as we
+	// keep applying state deltas to the state trie and checking the root hash
+	// of the state trie against the state commitment of the next block in the
+	// chain.
+	// This is what we do with these two loops. The outer loop skips over the
+	// inner loop each time that the root hash of the state trie does *not*
+	// match the state commitment of the next block in the state. It then
+	// proceeds to retrieving the next state delta and applying it to the state
+	// trie, which will be compared against the state commitment of the next
+	// block in the chain again on the next iteration.
+	// Once the root hash of the state trie matches the state commitment of the
+	// next block in the chain, we go into the inner loop. In the inner loop,
+	// we index the next block with its state commitment and its state deltas.
+	// Every subsequent block is then also matched, which is why we have the
+	// inner loop, as long as the state commitment doesn't change. As soon as a
+	// new state commitment shows up on the chain, we go back to iterating in
+	// the outer loop until we have assembled the necessary deltas to match the
+	// new state commitment again.
+Outer:
 	for {
 
 		// The second loop is responsible for mapping the currently active block
@@ -144,69 +155,66 @@ First:
 		// which point we map the second and any subsequent blocks without
 		// change to an empty set of deltas.
 		hash := m.trie.RootHash()
-	Second:
+	Inner:
 		for {
-			height, blockID, commit := m.chain.Active()
+
+			// We first try to get the next commit by height, because that is
+			// the sign that the block has been sealed. If the retrieval times
+			// out, we loop right back into this condition, because it means the
+			// network might be stalling. If the error indicates we finished,
+			// then we reached the end of the WAL and can finish without error.
+			commit, err := m.chain.Commit(height)
+			if errors.Is(err, dps.ErrTimeout) {
+				m.log.Warn().Uint64("height", height).Msg("commit chain timeout")
+				continue Inner
+			}
+			if errors.Is(err, dps.ErrFinished) {
+				m.log.Debug().Uint64("height", height).Msg("commit chain finished")
+				return nil
+			}
+			if err != nil {
+				return fmt.Errorf("could not retrieve commit: %w (height: %d)", err, height)
+			}
 			if !bytes.Equal(hash, commit) {
-				break Second
+				break Inner
+			}
+			header, err := m.chain.Header(height)
+			if err != nil {
+				return fmt.Errorf("could not retrieve header: %w (height: %d)", err, height)
+			}
+			events, err := m.chain.Events(height)
+			if err != nil {
+				return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 			}
 
-			events, err := m.chain.Events()
+			// If we successfully retrieved the commit, we can index everything
+			// for this block, because everything should be available.
+			err = m.index.Header(height, header)
 			if err != nil {
-				return fmt.Errorf("could not index events: %w (height: %d, block: %x, commit: %x)", err, height, blockID, commit)
+				return fmt.Errorf("could not index header: %w", err)
 			}
-
-			err = m.indexer.Index(height, blockID, commit, m.deltas, events)
+			err = m.index.Commit(height, commit)
 			if err != nil {
-				return fmt.Errorf("could not index deltas: %w (height: %d, block: %x, commit: %x)", err, height, blockID, commit)
+				return fmt.Errorf("could not index commit: %w", err)
+			}
+			err = m.index.Deltas(height, m.deltas)
+			if err != nil {
+				return fmt.Errorf("could not index deltas: %w", err)
+			}
+			err = m.index.Events(height, events)
+			if err != nil {
+				return fmt.Errorf("could not index events: %w", err)
 			}
 
 			m.log.Info().
 				Uint64("height", height).
-				Hex("block", blockID[:]).
+				Hex("block", logging.ID(header.ID())).
 				Hex("commit", commit).
 				Int("deltas", len(m.deltas)).
 				Msg("block deltas indexed")
 
 			m.deltas = []dps.Delta{}
-
-			// The third loop is responsible for forwarding the chain to the
-			// next block after each block indexing. This basically forwards the
-			// pointer to the active block, for which we will look for the
-			// state commitment in the trie next. The loop is required in case
-			// there is a timeout (which can happen if we load the chain data
-			// over the network), so that we only resume the rest of the logic
-			// once we have successfully forwarded to the next block.
-		Third:
-			for {
-
-				// We also want to check for shutdown before forwarding to the
-				// next block; if the block isn't available, we could loop
-				// indefinitely otherwise. It's important to break out of the
-				// surrounding second loop, otherwise we could keep coming back
-				// here.
-				select {
-				case <-m.stop:
-					break Second
-				default:
-					// keep going
-				}
-
-				err = m.chain.Forward()
-				if errors.Is(err, dps.ErrTimeout) {
-					m.log.Warn().Msg("chain forwarding has timed out")
-					continue Third
-				}
-				if errors.Is(err, dps.ErrFinished) {
-					m.log.Debug().Msg("no more sealed blocks available")
-					return nil
-				}
-				if err != nil {
-					return fmt.Errorf("could not forward chain: %w", err)
-				}
-
-				break Third
-			}
+			height++
 		}
 
 		// We do want to check for shutdown before pulling the next delta; both
@@ -214,31 +222,32 @@ First:
 		// enter into a tight loop until a delta becomes available.
 		select {
 		case <-m.stop:
-			break First
+			break Outer
 		default:
 			// keep going
 		}
 
-		delta, err := m.feeder.Feed(hash)
+		delta, err := m.feed.Delta(hash)
 		if errors.Is(err, dps.ErrTimeout) {
-			m.log.Warn().Msg("delta feeding has timed out")
-			continue First
+			m.log.Warn().Hex("commit", hash).Msg("delta feed timeout")
+			continue Outer
 		}
 		if errors.Is(err, dps.ErrFinished) {
-			m.log.Debug().Msg("no more trie updates available")
+			m.log.Debug().Hex("commit", hash).Msg("delta feed finished")
 			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("could not feed next update: %w", err)
 		}
+
 		trie, err := trie.NewTrieWithUpdatedRegisters(m.trie, delta.Paths(), delta.Payloads())
 		if err != nil {
 			return fmt.Errorf("could not update trie: %w", err)
 		}
 
 		m.log.Info().
-			Hex("hash_before", hash).
-			Hex("hash_after", trie.RootHash()).
+			Hex("commit_before", hash).
+			Hex("commit_after", trie.RootHash()).
 			Int("changes", len(delta)).
 			Msg("state trie updated")
 
