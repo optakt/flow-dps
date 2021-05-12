@@ -111,35 +111,32 @@ func (c *Core) Index() dps.Index {
 	return &Index{core: c}
 }
 
-// Last returns the last block height and state commitment indexed.
-func (c *Core) Last() (uint64, flow.StateCommitment) {
-	return c.height, c.commit
+func (c *Core) Chain() dps.Chain {
+	return &Chain{core: c}
 }
 
-// Height returns the first height for a given state commitment.
-func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
+func (c *Core) Last() dps.Last {
+	return &Last{core: c}
+}
 
-	// build the key and look up the height for the commit
-	key := make([]byte, 1+len(commit))
-	key[0] = prefixCommitIndex
-	copy(key[1:], commit)
-	var height uint64
-	err := c.db.View(func(tx *badger.Txn) error {
-		item, err := tx.Get(key)
-		if err != nil {
-			return err
-		}
-		_ = item.Value(func(val []byte) error {
-			height = binary.BigEndian.Uint64(val)
-			return nil
-		})
-		return nil
-	})
-	if err != nil {
-		return 0, fmt.Errorf("could not look up height for commit: %w", err)
+func (c *Core) Height() dps.Height {
+	return &Height{core: c}
+}
+
+func (c *Core) Raw() dps.Raw {
+	r := Raw{
+		core:   c,
+		height: c.height,
 	}
+	return &r
+}
 
-	return height, nil
+func (c *Core) Ledger() dps.Ledger {
+	l := Ledger{
+		core:    c,
+		version: complete.DefaultPathFinderVersion,
+	}
+	return &l
 }
 
 func (c *Core) Events(height uint64, types ...string) ([]flow.Event, error) {
@@ -210,8 +207,7 @@ func (c *Core) Events(height uint64, types ...string) ([]flow.Event, error) {
 	return events, nil
 }
 
-// Payload returns the payload of the given path at the given block height.
-func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error) {
+func (c *Core) payload(height uint64, path ledger.Path) (*ledger.Payload, error) {
 
 	// Make sure that the request is for a height below the currently active
 	// sentinel height; otherwise, we haven't indexed yet and we might return
@@ -225,7 +221,11 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
 	key := make([]byte, 1+pathfinder.PathByteSize+8)
+<<<<<<< HEAD
 	key[0] = prefixDeltaData
+=======
+	key[0] = PrefixDeltaData
+>>>>>>> dddf6c4 (implement height component for state)
 	copy(key[1:1+pathfinder.PathByteSize], path)
 	binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
 	err := c.db.View(func(tx *badger.Txn) error {
@@ -260,20 +260,4 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	}
 
 	return &payload, nil
-}
-
-func (c *Core) Raw() dps.Raw {
-	r := Raw{
-		core:   c,
-		height: c.height,
-	}
-	return &r
-}
-
-func (c *Core) Ledger() dps.Ledger {
-	l := Ledger{
-		core:    c,
-		version: complete.DefaultPathFinderVersion,
-	}
-	return &l
 }

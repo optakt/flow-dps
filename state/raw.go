@@ -34,7 +34,7 @@ func (r *Raw) WithHeight(height uint64) dps.Raw {
 // original key information.
 func (r *Raw) Get(key []byte) ([]byte, error) {
 
-	payload, err := r.core.Payload(r.height, key)
+	payload, err := r.core.payload(r.height, key)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve payload: %w", err)
 	}

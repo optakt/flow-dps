@@ -38,7 +38,7 @@ func (l *Ledger) Get(query *ledger.Query) ([]ledger.Value, error) {
 	// convert the query state commitment to a height, so we can use the core
 	// API to retrieve the payloads
 	commit := query.State()
-	height, err := l.core.Height(commit)
+	height, err := l.core.Height().ForCommit(commit)
 	if err != nil {
 		return nil, fmt.Errorf("could not get height for commit (%w)", err)
 	}
@@ -54,7 +54,7 @@ func (l *Ledger) Get(query *ledger.Query) ([]ledger.Value, error) {
 	}
 	payloads := make([]*ledger.Payload, 0, len(paths))
 	for _, path := range paths {
-		payload, err := l.core.Payload(height, path)
+		payload, err := l.core.payload(height, path)
 		if err != nil {
 			return nil, fmt.Errorf("could not get payload (%w)", err)
 		}
