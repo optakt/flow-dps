@@ -119,7 +119,7 @@ It approves the result of a chunk by publishing a _result approval_ for that chu
 Access nodes are part of the network **around** the core network, which provides services to scale more easily, but they are also part of the core network in the sense that they are part of the node identity table and can connect to other nodes of the network directly.
 
 The way they are able to read from the state of the execution nodes is by sending them requests to execute [Cadence](#cadence) scripts which read from the state and sends back the results, which is then forwarded to the SDK client by access nodes.
-This is highly inefficient because access nodes have to proxy all the requests, and also do so by remotely executing Cadence scripts, which brings a lot of overhead.
+This is highly inefficient because access nodes have to proxy all the requests, and also do so by sending requests to execution nodes to execute cadence scripts, which adds extra load on the execution nodes.
 
 #### Proof of Stake
 
@@ -188,7 +188,7 @@ A Merkle Patricia Trie is a [radix tree](https://en.wikipedia.org/wiki/Radix_tre
 In a normal radix tree, a key is the actual path taken through the tree to get to the corresponding value.
 The Flow implementation of radix trees introduces a number of improvements:
 
-* To make the tree cryptographically secure, each node is referenced by its hash. With this scheme, the root node becomes a cryptographic fingerprint of the entire data structure (this is the _Merkle_ part)
+* Every leaf node is represented by the hash of the data contained within it. For every other node, we can obtain its hash by hashing its children hashes together, all the way up through the tree until we reach the hash of the root node. This allows us to uniquely represent the entire state with a single state commitment, the root hash. Additionally, we can construct so-called merkle proofs that allow us to cryptographically prove the inclusion of an arbitrary part of the trie in a state represented by its root hash.
 * Multiple node types are introduced to improve efficiency. There are blank nodes, leaf nodes (which are a list of keys and values), but also extension nodes which have key/value pairs which point to other nodes.
 
 [More information](https://eth.wiki/fundamentals/patricia-tree)
