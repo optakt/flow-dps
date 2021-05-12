@@ -15,7 +15,6 @@
 package state
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -185,19 +184,21 @@ func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCo
 		}
 	}
 
-	eventBuckets := make(map[string][]flow.Event)
+	// Finally, we index the events for every height and event type combination in this block.
+	// The first step is to group events by type, so that there is one single entry in the index per type, with all
+	// events of that type at the given height.
+	buckets := make(map[uint64][]flow.Event)
 	for _, event := range events {
-		typeHash := string(xxhash.New64().Sum([]byte(event.Type)))
-		eventBuckets[typeHash] = append(eventBuckets[typeHash], event)
+		hash := xxhash.Checksum64([]byte(event.Type))
+		buckets[hash] = append(buckets[hash], event)
 	}
 
-	// Finally, we index the events for every height and event type combination in this block.
-	for typeHash, evts := range eventBuckets {
+	for hash, evts := range buckets {
 		// Prefix + Block Height + Type Hash
-		key = make([]byte, 1+8+len(typeHash))
+		key = make([]byte, 1+8+8)
 		key[0] = model.PrefixEventIndex
-		binary.BigEndian.PutUint64(key[1:1+8], height)
-		copy(key[1+8:], typeHash)
+		binary.BigEndian.PutUint64(key[1 : 1+8], height)
+		binary.BigEndian.PutUint64(key[1+8 : 1+8+8], hash)
 
 		val, err := cbor.Marshal(evts, cbor.CanonicalEncOptions())
 		if err != nil {
@@ -275,49 +276,37 @@ func (c *Core) Events(height uint64, types ...string) ([]flow.Event, error) {
 		return nil, fmt.Errorf("unknown height (current: %d, requested: %d)", c.height, height)
 	}
 
+	lookup := make(map[uint64]struct{})
+	for _, typ := range types {
+		lookup[xxhash.Checksum64([]byte(typ))] = struct{}{}
+	}
+
 	// Iterate over all keys within the events index which are prefixed with the right block height.
 	var events []flow.Event
 	prefix := make([]byte, 1+8)
 	prefix[0] = model.PrefixEventIndex
 	binary.BigEndian.PutUint64(prefix[1:], height)
 	err := c.index.View(func(tx *badger.Txn) error {
-		it := tx.NewIterator(badger.DefaultIteratorOptions)
+		it := tx.NewIterator(badger.IteratorOptions{
+			Prefix: prefix,
+		})
 		defer it.Close()
 
 		// Iterate on all keys with the right prefix.
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
-			k := item.Key()
-
-			typeHash := k[1+8:]
-			var value []byte
-			err := item.Value(func(v []byte) error {
-				value = v
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("could not read value for key %s: %w", k, err)
-			}
+			key := item.Key()
 
 			// If types were given for filtering, discard events which should not be included.
-			if len(types) != 0 {
-				var include bool
-				for _, t := range types {
-					tHash := xxhash.New64().Sum([]byte(t))
-					if bytes.Equal(typeHash, tHash) {
-						include = true
-						break
-					}
-				}
-
-				if !include {
-					continue
-				}
+			hash := binary.BigEndian.Uint64(key[1+8:])
+			_, ok := lookup[hash]
+			if len(lookup) != 0 && !ok {
+				continue
 			}
 
 			// Unmarshal event batch and append them to result slice.
 			var evts []flow.Event
-			err = it.Item().Value(func(val []byte) error {
+			err := it.Item().Value(func(val []byte) error {
 				val, err := c.decompressor.DecodeAll(val, nil)
 				if err != nil {
 					return fmt.Errorf("could not decompress events: %w", err)
