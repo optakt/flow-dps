@@ -1,4 +1,4 @@
-package rosetta
+package invoker
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 
 	"github.com/onflow/flow-go/engine/execution/state"
@@ -19,42 +20,72 @@ import (
 )
 
 type Invoker struct {
-	log     zerolog.Logger
-	state   dps.State
-	vm      *fvm.VirtualMachine
-	options []fvm.Option
+	log   zerolog.Logger
+	state dps.State
+	vm    *fvm.VirtualMachine
 }
 
-func NewInvoker(log zerolog.Logger, state dps.State, options ...fvm.Option) (*Invoker, error) {
-
-	// TODO: add current block for script parameter availability
+func NewInvoker(log zerolog.Logger, state dps.State) (*Invoker, error) {
 
 	rt := runtime.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
 
 	i := &Invoker{
-		log:     log,
-		state:   state,
-		vm:      vm,
-		options: options,
+		log:   log,
+		state: state,
+		vm:    vm,
 	}
 
 	return i, nil
 }
 
-func (i *Invoker) RunScript(commit flow.StateCommitment, script []byte, arguments ...[]byte) (cadence.Value, error) {
-	ctx := fvm.NewContext(i.log, i.options...)
+func (i *Invoker) RunScript(commit flow.StateCommitment, script []byte, arguments []cadence.Value) (cadence.Value, error) {
+
+	// encode the arguments from cadence values to byte slices
+	var args [][]byte
+	for _, argument := range arguments {
+		arg, err := json.Encode(argument)
+		if err != nil {
+			return nil, fmt.Errorf("could not encode value: %w", err)
+		}
+		args = append(args, arg)
+	}
+
+	// look up the current block using the commit
+	height, err := i.state.Height().ForCommit(commit)
+	if err != nil {
+		return nil, fmt.Errorf("could not look up height for commit: %w", err)
+	}
+	header, err := i.state.Header(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve header by height: %w", err)
+	}
+
+	// we initialize the virtual machine context with the given block header so
+	// that parameters related to the block are available from within the script
+	ctx := fvm.NewContext(i.log, fvm.WithBlockHeader(header))
+
+	// we initialize the view of the execution state on top of our ledger by
+	// using the read function at a specific commit
 	view := delta.NewView(i.read(commit))
-	proc := fvm.Script(script).WithArguments(arguments...)
+
+	// we initialize the procedure using the script bytes and the encoded
+	// cadence parameters
+	proc := fvm.Script(script).WithArguments(args...)
+
+	// finally, we initialize an empty programs cache
 	programs := programs.NewEmptyPrograms()
-	err := i.vm.Run(ctx, proc, view, programs)
+
+	// the script procedure is then run using the Flow virtual machine and all
+	// of the constructed contextual parameters
+	err = i.vm.Run(ctx, proc, view, programs)
 	if err != nil {
 		return nil, fmt.Errorf("could not run script: %w", err)
 	}
 	if proc.Err != nil {
 		return nil, fmt.Errorf("script execution encountered error: %w", err)
 	}
-	_ = uint64(proc.Value.ToGoValue().(cadence.UFix64))
+
 	return proc.Value, nil
 }
 

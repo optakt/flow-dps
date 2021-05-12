@@ -21,8 +21,15 @@ import (
 
 type State interface {
 	Last() (uint64, flow.StateCommitment)
+	Height() Height
+	Header(height uint64) (*flow.Header, error)
 	Raw() Raw
 	Ledger() Ledger
+}
+
+type Height interface {
+	ForBlock(blockID flow.Identifier) (uint64, error)
+	ForCommit(commit flow.StateCommitment) (uint64, error)
 }
 
 type Raw interface {
