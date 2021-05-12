@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package indexer
 
 import (
 	"bytes"
@@ -30,10 +30,10 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/utils/logging"
 
-	"github.com/awfm9/flow-dps/model/dps"
+	"github.com/awfm9/flow-dps/models/dps"
 )
 
-type Mapper struct {
+type Indexer struct {
 	log    zerolog.Logger
 	chain  Chain
 	feed   Feeder
@@ -46,7 +46,7 @@ type Mapper struct {
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
 // and then passes on the details to the indexer for indexing.
-func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options ...func(*MapperConfig)) (*Mapper, error) {
+func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options ...func(*MapperConfig)) (*Indexer, error) {
 
 	// By default, we don't have a checkpoint to bootstrap from, so check if we
 	// explicitly passed one using the variadic option parameters.
@@ -87,7 +87,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 	// block, which means that we can not sanity check the state trie against
 	// the root block state commitment here.
 
-	m := Mapper{
+	i := Indexer{
 		log:    log,
 		chain:  chain,
 		feed:   feed,
@@ -98,14 +98,14 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		stop:   make(chan struct{}),
 	}
 
-	return &m, nil
+	return &i, nil
 }
 
-func (m *Mapper) Stop(ctx context.Context) error {
-	close(m.stop)
+func (i *Indexer) Stop(ctx context.Context) error {
+	close(i.stop)
 	done := make(chan struct{})
 	go func() {
-		m.wg.Wait()
+		i.wg.Wait()
 		close(done)
 	}()
 	select {
@@ -116,12 +116,12 @@ func (m *Mapper) Stop(ctx context.Context) error {
 	}
 }
 
-func (m *Mapper) Run() error {
-	m.wg.Add(1)
-	defer m.wg.Done()
+func (i *Indexer) Run() error {
+	i.wg.Add(1)
+	defer i.wg.Done()
 
 	// We start iterating at the root height.
-	height, err := m.chain.Root()
+	height, err := i.chain.Root()
 	if err != nil {
 		return fmt.Errorf("could not get root height: %w", err)
 	}
@@ -160,7 +160,7 @@ Outer:
 		// if no change to the state trie happens between multiple blocks, at
 		// which point we map the second and any subsequent blocks without
 		// change to an empty set of deltas.
-		hash := m.trie.RootHash()
+		hash := i.trie.RootHash()
 	Inner:
 		for {
 
@@ -169,13 +169,13 @@ Outer:
 			// out, we loop right back into this condition, because it means the
 			// network might be stalling. If the error indicates we finished,
 			// then we reached the end of the WAL and can finish without error.
-			commit, err := m.chain.Commit(height)
+			commit, err := i.chain.Commit(height)
 			if errors.Is(err, dps.ErrTimeout) {
-				m.log.Warn().Uint64("height", height).Msg("commit chain timeout")
+				i.log.Warn().Uint64("height", height).Msg("commit chain timeout")
 				continue Inner
 			}
 			if errors.Is(err, dps.ErrFinished) {
-				m.log.Debug().Uint64("height", height).Msg("commit chain finished")
+				i.log.Debug().Uint64("height", height).Msg("commit chain finished")
 				return nil
 			}
 			if err != nil {
@@ -184,46 +184,46 @@ Outer:
 			if !bytes.Equal(hash, commit) {
 				break Inner
 			}
-			header, err := m.chain.Header(height)
+			header, err := i.chain.Header(height)
 			if err != nil {
 				return fmt.Errorf("could not retrieve header: %w (height: %d)", err, height)
 			}
-			events, err := m.chain.Events(height)
+			events, err := i.chain.Events(height)
 			if err != nil {
 				return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 			}
 
 			// If we successfully retrieved the commit, we can index everything
 			// for this block, because everything should be available.
-			err = m.index.Header(height, header)
+			err = i.index.Header(height, header)
 			if err != nil {
 				return fmt.Errorf("could not index header: %w", err)
 			}
-			err = m.index.Commit(height, commit)
+			err = i.index.Commit(height, commit)
 			if err != nil {
 				return fmt.Errorf("could not index commit: %w", err)
 			}
-			err = m.index.Deltas(height, m.deltas)
+			err = i.index.Deltas(height, i.deltas)
 			if err != nil {
 				return fmt.Errorf("could not index deltas: %w", err)
 			}
-			err = m.index.Events(height, events)
+			err = i.index.Events(height, events)
 			if err != nil {
 				return fmt.Errorf("could not index events: %w", err)
 			}
-			err = m.index.Last(commit)
+			err = i.index.Last(commit)
 			if err != nil {
 				return fmt.Errorf("could not index last: %w", err)
 			}
 
-			m.log.Info().
+			i.log.Info().
 				Uint64("height", height).
 				Hex("block", logging.ID(header.ID())).
 				Hex("commit", commit).
-				Int("deltas", len(m.deltas)).
+				Int("deltas", len(i.deltas)).
 				Msg("block deltas indexed")
 
-			m.deltas = []dps.Delta{}
+			i.deltas = []dps.Delta{}
 			height++
 		}
 
@@ -231,38 +231,38 @@ Outer:
 		// because it starts a new "round" of processing, and because it could
 		// enter into a tight loop until a delta becomes available.
 		select {
-		case <-m.stop:
+		case <-i.stop:
 			break Outer
 		default:
 			// keep going
 		}
 
-		delta, err := m.feed.Delta(hash)
+		delta, err := i.feed.Delta(hash)
 		if errors.Is(err, dps.ErrTimeout) {
-			m.log.Warn().Hex("commit", hash).Msg("delta feed timeout")
+			i.log.Warn().Hex("commit", hash).Msg("delta feed timeout")
 			continue Outer
 		}
 		if errors.Is(err, dps.ErrFinished) {
-			m.log.Debug().Hex("commit", hash).Msg("delta feed finished")
+			i.log.Debug().Hex("commit", hash).Msg("delta feed finished")
 			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("could not feed next update: %w", err)
 		}
 
-		trie, err := trie.NewTrieWithUpdatedRegisters(m.trie, delta.Paths(), delta.Payloads())
+		trie, err := trie.NewTrieWithUpdatedRegisters(i.trie, delta.Paths(), delta.Payloads())
 		if err != nil {
 			return fmt.Errorf("could not update trie: %w", err)
 		}
 
-		m.log.Info().
+		i.log.Info().
 			Hex("commit_before", hash).
 			Hex("commit_after", trie.RootHash()).
 			Int("changes", len(delta)).
 			Msg("state trie updated")
 
-		m.deltas = append(m.deltas, delta)
-		m.trie = trie
+		i.deltas = append(i.deltas, delta)
+		i.trie = trie
 	}
 
 	return nil

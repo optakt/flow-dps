@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/model/dps"
+	"github.com/awfm9/flow-dps/models/dps"
 )
 
 type LedgerWAL struct {

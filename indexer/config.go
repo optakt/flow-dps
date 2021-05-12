@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package indexer
 
 // MapperOptions contains optional parameters we can set for the mapper.
 type MapperConfig struct {

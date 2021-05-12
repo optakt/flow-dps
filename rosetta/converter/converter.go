@@ -3,8 +3,8 @@ package converter
 import (
 	"strconv"
 
-	"github.com/awfm9/flow-dps/model/identifier"
-	"github.com/awfm9/flow-dps/model/rosetta"
+	"github.com/awfm9/flow-dps/models/identifier"
+	"github.com/awfm9/flow-dps/models/rosetta"
 )
 
 type Converter struct {

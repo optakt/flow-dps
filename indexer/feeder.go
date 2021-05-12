@@ -12,15 +12,14 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package indexer
 
 import (
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/awfm9/flow-dps/models/dps"
 )
 
-type Chain interface {
-	Root() (uint64, error)
-	Header(height uint64) (*flow.Header, error)
-	Commit(height uint64) (flow.StateCommitment, error)
-	Events(height uint64) ([]flow.Event, error)
+type Feeder interface {
+	Delta(commit flow.StateCommitment) (dps.Delta, error)
 }

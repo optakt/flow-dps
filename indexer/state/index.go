@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/OneOfOne/xxhash"
-	"github.com/awfm9/flow-dps/model/dps"
+	"github.com/awfm9/flow-dps/models/dps"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"

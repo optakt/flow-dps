@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/awfm9/flow-dps/model/dps"
+	"github.com/awfm9/flow-dps/models/dps"
 )
 
 type ProtocolState struct {

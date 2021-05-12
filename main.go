@@ -28,14 +28,15 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
-	"google.golang.org/grpc"
+	gsvr "google.golang.org/grpc"
 
-	grpcApi "github.com/awfm9/flow-dps/api/grpc"
+	"github.com/awfm9/flow-dps/api/grpc"
 	"github.com/awfm9/flow-dps/api/rest"
-	"github.com/awfm9/flow-dps/chain"
-	"github.com/awfm9/flow-dps/feeder"
-	"github.com/awfm9/flow-dps/mapper"
-	"github.com/awfm9/flow-dps/state"
+
+	"github.com/awfm9/flow-dps/indexer"
+	"github.com/awfm9/flow-dps/indexer/chain"
+	"github.com/awfm9/flow-dps/indexer/feeder"
+	"github.com/awfm9/flow-dps/indexer/state"
 )
 
 func main() {
@@ -84,7 +85,7 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize ledger")
 	}
 
-	mapper, err := mapper.New(log, chain, feeder, core.Index(), mapper.WithCheckpointFile(flagCheckpoint))
+	indexer, err := indexer.New(log, chain, feeder, core.Index(), indexer.WithCheckpointFile(flagCheckpoint))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
@@ -101,18 +102,18 @@ func main() {
 	e.GET("/registers/:key", rctrl.GetRegister)
 	e.GET("/values/:keys", rctrl.GetValue)
 
-	gctrl, err := grpcApi.NewController(core)
+	gctrl, err := grpc.NewController(core)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize GRPC controller")
 	}
-	grpcSrv := grpc.NewServer()
+	gsvr := gsvr.NewServer()
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
 	go func() {
 		start := time.Now().UTC()
-		err := mapper.Run()
+		err := indexer.Run()
 		if err != nil {
 			log.Error().Err(err).Msg("state mapper encountered error")
 		}
@@ -132,8 +133,8 @@ func main() {
 			log.Fatal().Err(err).Str("host", flagHostGRPC).Msg("could not listen")
 		}
 
-		grpcApi.RegisterAPIServer(grpcSrv, grpcApi.NewServer(gctrl))
-		err = grpcSrv.Serve(lis)
+		grpc.RegisterAPIServer(gsvr, grpc.NewServer(gctrl))
+		err = gsvr.Serve(lis)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("GRPC API encountered error")
 		}
@@ -162,12 +163,12 @@ func main() {
 	}()
 	go func() {
 		defer wg.Done()
-		grpcSrv.GracefulStop()
+		gsvr.GracefulStop()
 		log.Info().Msg("state mapper shutdown complete")
 	}()
 	go func() {
 		defer wg.Done()
-		err := mapper.Stop(ctx)
+		err := indexer.Stop(ctx)
 		if err != nil {
 			log.Error().Err(err).Msg("could not shut down state mapper")
 		}
