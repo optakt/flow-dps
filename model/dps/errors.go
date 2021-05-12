@@ -12,25 +12,14 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package model
+package dps
 
 import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
+	"errors"
 )
 
-type State interface {
-	Last() (uint64, flow.StateCommitment)
-	Raw() Raw
-	Ledger() Ledger
-}
-
-type Raw interface {
-	WithHeight(height uint64) Raw
-	Get(key []byte) ([]byte, error)
-}
-
-type Ledger interface {
-	WithVersion(version uint8) Ledger
-	Get(*ledger.Query) ([]ledger.Value, error)
-}
+var (
+	ErrFinished = errors.New("finished")
+	ErrTimeout  = errors.New("timeout")
+	ErrNotFound = errors.New("not found")
+)

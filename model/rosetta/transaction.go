@@ -1,7 +1,7 @@
-package object
+package rosetta
 
 import (
-	"github.com/awfm9/flow-dps/rosetta/identifier"
+	"github.com/awfm9/flow-dps/model/identifier"
 )
 
 // Transaction contains an array of operations that are attributable to the same

@@ -4,18 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/onflow/flow-go/ledger"
 	"google.golang.org/grpc"
 
-	"github.com/awfm9/flow-dps/model"
+	"github.com/onflow/flow-go/ledger"
+
+	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type Controller struct {
-	state model.State
+	state dps.State
 }
 
 // NewController creates a controller using the given state store.
-func NewController(state model.State) (*Controller, error) {
+func NewController(state dps.State) (*Controller, error) {
 	c := &Controller{
 		state: state,
 	}
@@ -41,8 +42,8 @@ func (c *Controller) GetRegister(_ context.Context, req *GetRegisterRequest, _ .
 
 	res := &GetRegisterResponse{
 		Height: height,
-		Key: req.Key,
-		Value: value,
+		Key:    req.Key,
+		Value:  value,
 	}
 
 	return res, nil

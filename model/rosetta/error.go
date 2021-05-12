@@ -1,4 +1,4 @@
-package object
+package rosetta
 
 // Error is used to return rich errors from the API instead of utilizing HTTP
 // status codes (which often do not have a good analog). Both the code and the

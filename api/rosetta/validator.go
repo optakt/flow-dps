@@ -1,7 +1,7 @@
 package rosetta
 
 import (
-	"github.com/awfm9/flow-dps/rosetta/identifier"
+	"github.com/awfm9/flow-dps/model/identifier"
 )
 
 type Validator interface {

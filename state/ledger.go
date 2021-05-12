@@ -20,7 +20,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 
-	"github.com/awfm9/flow-dps/model"
+	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type Ledger struct {
@@ -28,7 +28,7 @@ type Ledger struct {
 	version uint8
 }
 
-func (l *Ledger) WithVersion(version uint8) model.Ledger {
+func (l *Ledger) WithVersion(version uint8) dps.Ledger {
 	l.version = version
 	return l
 }

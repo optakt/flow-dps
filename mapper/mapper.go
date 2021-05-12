@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 
-	"github.com/awfm9/flow-dps/model"
+	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type Mapper struct {
@@ -38,7 +38,7 @@ type Mapper struct {
 	feeder  Feeder
 	indexer Indexer
 	trie    *trie.MTrie
-	deltas  []model.Delta
+	deltas  []dps.Delta
 	wg      *sync.WaitGroup
 	stop    chan struct{}
 }
@@ -92,7 +92,7 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 		feeder:  feeder,
 		indexer: indexer,
 		trie:    trie,
-		deltas:  []model.Delta{},
+		deltas:  []dps.Delta{},
 		wg:      &sync.WaitGroup{},
 		stop:    make(chan struct{}),
 	}
@@ -168,7 +168,7 @@ First:
 				Int("deltas", len(m.deltas)).
 				Msg("block deltas indexed")
 
-			m.deltas = []model.Delta{}
+			m.deltas = []dps.Delta{}
 
 			// The third loop is responsible for forwarding the chain to the
 			// next block after each block indexing. This basically forwards the
@@ -193,11 +193,11 @@ First:
 				}
 
 				err = m.chain.Forward()
-				if errors.Is(err, model.ErrTimeout) {
+				if errors.Is(err, dps.ErrTimeout) {
 					m.log.Warn().Msg("chain forwarding has timed out")
 					continue Third
 				}
-				if errors.Is(err, model.ErrFinished) {
+				if errors.Is(err, dps.ErrFinished) {
 					m.log.Debug().Msg("no more sealed blocks available")
 					return nil
 				}
@@ -220,11 +220,11 @@ First:
 		}
 
 		delta, err := m.feeder.Feed(hash)
-		if errors.Is(err, model.ErrTimeout) {
+		if errors.Is(err, dps.ErrTimeout) {
 			m.log.Warn().Msg("delta feeding has timed out")
 			continue First
 		}
-		if errors.Is(err, model.ErrFinished) {
+		if errors.Is(err, dps.ErrFinished) {
 			m.log.Debug().Msg("no more trie updates available")
 			return nil
 		}

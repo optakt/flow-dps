@@ -17,7 +17,7 @@ package state
 import (
 	"fmt"
 
-	"github.com/awfm9/flow-dps/model"
+	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type Raw struct {
@@ -25,7 +25,7 @@ type Raw struct {
 	height uint64
 }
 
-func (r *Raw) WithHeight(height uint64) model.Raw {
+func (r *Raw) WithHeight(height uint64) dps.Raw {
 	r.height = height
 	return r
 }

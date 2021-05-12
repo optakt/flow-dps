@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/awfm9/flow-dps/model"
+	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type ProtocolState struct {
@@ -84,7 +84,7 @@ func (ps *ProtocolState) Events() ([]flow.Event, error) {
 		return nil, fmt.Errorf("could not retrieve events: %w", err)
 	}
 
-	return  events, nil
+	return events, nil
 }
 
 func (ps *ProtocolState) Forward() error {
@@ -92,7 +92,7 @@ func (ps *ProtocolState) Forward() error {
 	var blockID flow.Identifier
 	err := operation.LookupBlockHeight(height, &blockID)(ps.state.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
-		return model.ErrFinished
+		return dps.ErrFinished
 	}
 	if err != nil {
 		return fmt.Errorf("could not look up next block: %w", err)
@@ -100,7 +100,7 @@ func (ps *ProtocolState) Forward() error {
 	var sealID flow.Identifier
 	err = operation.LookupBlockSeal(blockID, &sealID)(ps.state.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
-		return model.ErrFinished
+		return dps.ErrFinished
 	}
 	if err != nil {
 		return fmt.Errorf("could not look up next seal: %w", err)

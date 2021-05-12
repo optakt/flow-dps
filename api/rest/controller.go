@@ -23,14 +23,14 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/onflow/flow-go/ledger"
 
-	"github.com/awfm9/flow-dps/model"
+	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type Controller struct {
-	state model.State
+	state dps.State
 }
 
-func NewController(state model.State) (*Controller, error) {
+func NewController(state dps.State) (*Controller, error) {
 	c := &Controller{
 		state: state,
 	}
@@ -56,7 +56,7 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 	state = state.WithHeight(height)
 
 	value, err := state.Get(key)
-	if errors.Is(err, model.ErrNotFound) {
+	if errors.Is(err, dps.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
 	if err != nil {
@@ -120,7 +120,7 @@ func (c *Controller) GetValue(ctx echo.Context) error {
 	}
 
 	values, err := state.Get(query)
-	if errors.Is(err, model.ErrNotFound) {
+	if errors.Is(err, dps.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
 	if err != nil {

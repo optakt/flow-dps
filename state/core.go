@@ -17,13 +17,13 @@ package state
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor"
 	"github.com/klauspost/compress/zstd"
-	"github.com/pkg/errors"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/model"
+	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type Core struct {
@@ -50,7 +50,7 @@ func NewCore(dir string) (*Core, error) {
 		return nil, fmt.Errorf("could not open index database: %w", err)
 	}
 
-	dict, err := hex.DecodeString(model.Dictionary)
+	dict, err := hex.DecodeString(dps.Dictionary)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode dictionary")
 	}
@@ -72,7 +72,7 @@ func NewCore(dir string) (*Core, error) {
 
 	var height uint64
 	err = index.View(func(tx *badger.Txn) error {
-		item, err := tx.Get([]byte{model.PrefixLastHeight})
+		item, err := tx.Get([]byte{dps.PrefixLastHeight})
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func NewCore(dir string) (*Core, error) {
 			height = 0
 			val := make([]byte, 8)
 			binary.BigEndian.PutUint64(val, height)
-			err = tx.Set([]byte{model.PrefixLastHeight}, val)
+			err = tx.Set([]byte{dps.PrefixLastHeight}, val)
 			return err
 		})
 		if err != nil {
@@ -100,7 +100,7 @@ func NewCore(dir string) (*Core, error) {
 
 	var commit flow.StateCommitment
 	err = index.View(func(tx *badger.Txn) error {
-		item, err := tx.Get([]byte{model.PrefixLastCommit})
+		item, err := tx.Get([]byte{dps.PrefixLastCommit})
 		if err != nil {
 			return err
 		}
@@ -117,7 +117,7 @@ func NewCore(dir string) (*Core, error) {
 				return err
 			}
 			commit = trie.RootHash()
-			err = tx.Set([]byte{model.PrefixLastCommit}, commit)
+			err = tx.Set([]byte{dps.PrefixLastCommit}, commit)
 			return err
 		})
 		if err != nil {
@@ -147,7 +147,7 @@ func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCo
 
 	// first, map the block ID to the height for easy lookup later
 	key := make([]byte, 1+len(blockID))
-	key[0] = model.PrefixBlockIndex
+	key[0] = dps.PrefixBlockIndex
 	copy(key[1:], blockID[:])
 	val := make([]byte, 8)
 	binary.BigEndian.PutUint64(val, height)
@@ -158,7 +158,7 @@ func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCo
 
 	// second, map the commit to the height for easy lookup later
 	key = make([]byte, 1+len(commit))
-	key[0] = model.PrefixCommitIndex
+	key[0] = dps.PrefixCommitIndex
 	copy(key[1:], commit)
 	err = tx.Set(key, val)
 	if err != nil {
@@ -169,7 +169,7 @@ func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCo
 	for _, delta := range deltas {
 		for _, change := range delta {
 			key = make([]byte, 1+pathfinder.PathByteSize+8)
-			key[0] = model.PrefixDeltaIndex
+			key[0] = dps.PrefixDeltaIndex
 			copy(key[1:1+pathfinder.PathByteSize], change.Path)
 			binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
 			val, err := cbor.Marshal(change.Payload, cbor.CanonicalEncOptions())
@@ -197,8 +197,8 @@ func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCo
 		// Prefix + Block Height + Type Hash
 		key = make([]byte, 1+8+8)
 		key[0] = model.PrefixEventIndex
-		binary.BigEndian.PutUint64(key[1 : 1+8], height)
-		binary.BigEndian.PutUint64(key[1+8 : 1+8+8], hash)
+		binary.BigEndian.PutUint64(key[1:1+8], height)
+		binary.BigEndian.PutUint64(key[1+8:1+8+8], hash)
 
 		val, err := cbor.Marshal(evts, cbor.CanonicalEncOptions())
 		if err != nil {
@@ -212,14 +212,14 @@ func (c *Core) Index(height uint64, blockID flow.Identifier, commit flow.StateCo
 	}
 
 	// index the latest height/commit
-	key = []byte{model.PrefixLastHeight}
+	key = []byte{dps.PrefixLastHeight}
 	val = make([]byte, 8)
 	binary.BigEndian.PutUint64(val, height)
 	err = tx.Set(key, val)
 	if err != nil {
 		return fmt.Errorf("could not persist last height: %w", err)
 	}
-	key = []byte{model.PrefixLastCommit}
+	key = []byte{dps.PrefixLastCommit}
 	err = tx.Set(key, commit)
 	if err != nil {
 		return fmt.Errorf("could not persist last commit: %w", err)
@@ -247,7 +247,7 @@ func (c *Core) Height(commit flow.StateCommitment) (uint64, error) {
 
 	// build the key and look up the height for the commit
 	key := make([]byte, 1+len(commit))
-	key[0] = model.PrefixCommitIndex
+	key[0] = dps.PrefixCommitIndex
 	copy(key[1:], commit)
 	var height uint64
 	err := c.index.View(func(tx *badger.Txn) error {
@@ -351,7 +351,7 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
 	key := make([]byte, 1+pathfinder.PathByteSize+8)
-	key[0] = model.PrefixDeltaIndex
+	key[0] = dps.PrefixDeltaIndex
 	copy(key[1:1+pathfinder.PathByteSize], path)
 	binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
 	err := c.index.View(func(tx *badger.Txn) error {
@@ -366,7 +366,7 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 		defer it.Close()
 		it.Seek(key)
 		if !it.Valid() {
-			return model.ErrNotFound
+			return dps.ErrNotFound
 		}
 		err := it.Item().Value(func(val []byte) error {
 			val, err := c.decompressor.DecodeAll(val, nil)
@@ -388,7 +388,7 @@ func (c *Core) Payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	return &payload, nil
 }
 
-func (c *Core) Raw() model.Raw {
+func (c *Core) Raw() dps.Raw {
 	r := Raw{
 		core:   c,
 		height: c.height,
@@ -396,7 +396,7 @@ func (c *Core) Raw() model.Raw {
 	return &r
 }
 
-func (c *Core) Ledger() model.Ledger {
+func (c *Core) Ledger() dps.Ledger {
 	l := Ledger{
 		core:    c,
 		version: complete.DefaultPathFinderVersion,

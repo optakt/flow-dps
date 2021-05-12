@@ -1,20 +1,20 @@
 package rosetta
 
 import (
-	"github.com/awfm9/flow-dps/rosetta/identifier"
-	"github.com/awfm9/flow-dps/rosetta/object"
+	"github.com/awfm9/flow-dps/model/identifier"
+	"github.com/awfm9/flow-dps/model/rosetta"
 )
 
 type BlockResponse struct {
-	Block             object.Block             `json:"block"`
+	Block             rosetta.Block            `json:"block"`
 	OtherTransactions []identifier.Transaction `json:"other_transactions"`
 }
 
 type TransactionResponse struct {
-	Transaction object.Transaction `json:"transaction"`
+	Transaction rosetta.Transaction `json:"transaction"`
 }
 
 type BalanceResponse struct {
 	BlockID  identifier.Block `json:"block_identifier"`
-	Balances []object.Amount  `json:"balances"`
+	Balances []rosetta.Amount `json:"balances"`
 }

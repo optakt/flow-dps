@@ -1,7 +1,7 @@
-package object
+package rosetta
 
 import (
-	"github.com/awfm9/flow-dps/rosetta/identifier"
+	"github.com/awfm9/flow-dps/model/identifier"
 )
 
 // Operation contains all balance-changing information within a transaction. It

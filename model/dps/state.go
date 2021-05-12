@@ -12,13 +12,25 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package model
+package dps
 
-const (
-	PrefixLastHeight  = 1
-	PrefixLastCommit  = 2
-	PrefixBlockIndex  = 3
-	PrefixCommitIndex = 4
-	PrefixDeltaIndex  = 5
-	PrefixEventIndex  = 6
+import (
+	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
 )
+
+type State interface {
+	Last() (uint64, flow.StateCommitment)
+	Raw() Raw
+	Ledger() Ledger
+}
+
+type Raw interface {
+	WithHeight(height uint64) Raw
+	Get(key []byte) ([]byte, error)
+}
+
+type Ledger interface {
+	WithVersion(version uint8) Ledger
+	Get(*ledger.Query) ([]ledger.Value, error)
+}

@@ -15,17 +15,17 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/rest"
+	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type Invoker struct {
 	log     zerolog.Logger
-	state   rest.State
+	state   dps.State
 	vm      *fvm.VirtualMachine
 	options []fvm.Option
 }
 
-func NewInvoker(log zerolog.Logger, state rest.State, options ...fvm.Option) (*Invoker, error) {
+func NewInvoker(log zerolog.Logger, state dps.State, options ...fvm.Option) (*Invoker, error) {
 
 	// TODO: add current block for script parameter availability
 

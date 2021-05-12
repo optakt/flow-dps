@@ -15,10 +15,11 @@
 package mapper
 
 import (
-	"github.com/awfm9/flow-dps/model"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/awfm9/flow-dps/model/dps"
 )
 
 type Feeder interface {
-	Feed(commit flow.StateCommitment) (model.Delta, error)
+	Feed(commit flow.StateCommitment) (dps.Delta, error)
 }
