@@ -33,10 +33,10 @@ import (
 	"github.com/awfm9/flow-dps/api/grpc"
 	"github.com/awfm9/flow-dps/api/rest"
 
-	"github.com/awfm9/flow-dps/indexer"
-	"github.com/awfm9/flow-dps/indexer/chain"
-	"github.com/awfm9/flow-dps/indexer/feeder"
-	"github.com/awfm9/flow-dps/indexer/state"
+	"github.com/awfm9/flow-dps/dps/chain"
+	"github.com/awfm9/flow-dps/dps/feeder"
+	"github.com/awfm9/flow-dps/dps/indexer"
+	"github.com/awfm9/flow-dps/dps/state"
 )
 
 func main() {
