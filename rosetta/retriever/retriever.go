@@ -7,11 +7,13 @@ type Retriever struct {
 	convert   Converter
 }
 
-func New(invoke Invoker, convert Converter) *Retriever {
+func New(contracts Contracts, scripts Scripts, invoke Invoker, convert Converter) *Retriever {
 
 	r := &Retriever{
-		invoke:  invoke,
-		convert: convert,
+		contracts: contracts,
+		scripts:   scripts,
+		invoke:    invoke,
+		convert:   convert,
 	}
 
 	return r

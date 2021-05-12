@@ -1,18 +1,36 @@
 package scripts
 
-// var GetBalance = []byte(`
-// // This script reads the balance field of an account's FlowToken Balance
+import (
+	"github.com/onflow/flow-go/model/flow"
+)
 
-// import FungibleToken from 0xFUNGIBLETOKENADDRESS
-// import FlowToken from 0xTOKENADDRESS
+func WithParams(params Params) func(*Scripts) {
+	return func(s *Scripts) {
+		s.params = params
+	}
+}
 
-// pub fun main(account: Address): UFix64 {
+func WithToken(symbol string, address flow.Address) func(*Scripts) {
+	return func(s *Scripts) {
+		s.tokens[symbol] = address
+	}
+}
 
-//     let vaultRef = getAccount(account)
-//         .getCapability(/public/flowTokenBalance)
-//         .borrow<&FlowToken.Vault{FungibleToken.Balance}>()
-//         ?? panic("Could not borrow Balance reference to the Vault")
+type Scripts struct {
+	params Params
+	tokens map[string]flow.Address
+}
 
-//     return vaultRef.balance
-// }
-// `)
+func New(options ...func(*Scripts)) *Scripts {
+
+	s := Scripts{
+		params: TestNet(),
+		tokens: make(map[string]flow.Address),
+	}
+
+	for _, option := range options {
+		option(&s)
+	}
+
+	return &s
+}
