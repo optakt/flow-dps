@@ -28,90 +28,74 @@ import (
 )
 
 type ProtocolState struct {
-	state   *badger.DB
-	height  uint64
-	blockID flow.Identifier
-	commit  flow.StateCommitment
+	db *badger.DB
 }
 
 func FromProtocolState(dir string) (*ProtocolState, error) {
 
 	opts := badger.DefaultOptions(dir).WithLogger(nil)
-	state, err := badger.Open(opts)
+	db, err := badger.Open(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not open badger database: %w", err)
 	}
 
-	var height uint64
-	err = operation.RetrieveRootHeight(&height)(state.NewTransaction(false))
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve root height: %w", err)
-	}
-	var blockID flow.Identifier
-	err = operation.LookupBlockHeight(height, &blockID)(state.NewTransaction(false))
-	if err != nil {
-		return nil, fmt.Errorf("could not look up root block: %w", err)
-	}
-	var sealID flow.Identifier
-	err = operation.LookupBlockSeal(blockID, &sealID)(state.NewTransaction(false))
-	if err != nil {
-		return nil, fmt.Errorf("could not look up root seal: %w", err)
-	}
-	var seal flow.Seal
-	err = operation.RetrieveSeal(sealID, &seal)(state.NewTransaction(false))
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve root seal: %w", err)
-	}
-
 	ps := ProtocolState{
-		state:   state,
-		height:  height,
-		blockID: blockID,
-		commit:  seal.FinalState,
+		db: db,
 	}
 
 	return &ps, nil
 }
 
-func (ps *ProtocolState) Active() (uint64, flow.Identifier, flow.StateCommitment) {
-	return ps.height, ps.blockID, ps.commit
+func (ps *ProtocolState) Header(height uint64) (*flow.Header, error) {
+	var blockID flow.Identifier
+	err := operation.LookupBlockHeight(height, &blockID)(ps.db.NewTransaction(false))
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, dps.ErrFinished
+	}
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+	var header flow.Header
+	err = operation.RetrieveHeader(blockID, &header)(ps.db.NewTransaction(false))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve header: %w", err)
+	}
+	return &header, nil
 }
 
-func (ps *ProtocolState) Events() ([]flow.Event, error) {
+func (ps *ProtocolState) Commit(height uint64) (flow.StateCommitment, error) {
+	var blockID flow.Identifier
+	err := operation.LookupBlockHeight(height, &blockID)(ps.db.NewTransaction(false))
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, dps.ErrFinished
+	}
+	var sealID flow.Identifier
+	err = operation.LookupBlockSeal(blockID, &sealID)(ps.db.NewTransaction(false))
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, dps.ErrFinished
+	}
+	if err != nil {
+		return nil, fmt.Errorf("could not look up seal: %w", err)
+	}
+	var seal flow.Seal
+	err = operation.RetrieveSeal(sealID, &seal)(ps.db.NewTransaction(false))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve seal: %w", err)
+	}
+	return seal.FinalState, nil
+}
+
+func (ps *ProtocolState) Events(height uint64) ([]flow.Event, error) {
+	var blockID flow.Identifier
+	err := operation.LookupBlockHeight(height, &blockID)(ps.db.NewTransaction(false))
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, dps.ErrFinished
+	}
 	var events []flow.Event
-	err := operation.LookupEventsByBlockID(ps.blockID, &events)(ps.state.NewTransaction(false))
+	err = operation.LookupEventsByBlockID(blockID, &events)(ps.db.NewTransaction(false))
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve events: %w", err)
 	}
 
 	return events, nil
-}
-
-func (ps *ProtocolState) Forward() error {
-	height := ps.height + 1
-	var blockID flow.Identifier
-	err := operation.LookupBlockHeight(height, &blockID)(ps.state.NewTransaction(false))
-	if errors.Is(err, storage.ErrNotFound) {
-		return dps.ErrFinished
-	}
-	if err != nil {
-		return fmt.Errorf("could not look up next block: %w", err)
-	}
-	var sealID flow.Identifier
-	err = operation.LookupBlockSeal(blockID, &sealID)(ps.state.NewTransaction(false))
-	if errors.Is(err, storage.ErrNotFound) {
-		return dps.ErrFinished
-	}
-	if err != nil {
-		return fmt.Errorf("could not look up next seal: %w", err)
-	}
-	var seal flow.Seal
-	err = operation.RetrieveSeal(sealID, &seal)(ps.state.NewTransaction(false))
-	if err != nil {
-		return fmt.Errorf("could not retrieve next seal: %w", err)
-	}
-	ps.height = height
-	ps.blockID = blockID
-	ps.commit = seal.FinalState
-	return nil
 }
