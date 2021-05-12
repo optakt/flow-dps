@@ -19,6 +19,7 @@ const (
 	prefixHeaderData  = 2
 	prefixBlockIndex  = 3
 	prefixCommitIndex = 4
-	prefixDeltaData   = 5
-	prefixEventData   = 6
+	prefixHeightIndex = 5
+	prefixDeltaData   = 6
+	prefixEventData   = 7
 )

@@ -133,8 +133,7 @@ func NewCore(dir string) (*Core, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not bootstrap last commit: %w", err)
 		}
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
 	}
 
@@ -163,6 +162,10 @@ func (c *Core) Last() dps.Last {
 
 func (c *Core) Height() dps.Height {
 	return &Height{core: c}
+}
+
+func (c *Core) Commit() dps.Commit {
+	return &Commit{core: c}
 }
 
 func (c *Core) Raw() dps.Raw {

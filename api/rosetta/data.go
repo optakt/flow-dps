@@ -21,13 +21,21 @@ import (
 )
 
 type Data struct {
-	retrieve Retriever
 	validate Validator
+	retrieve Retriever
 }
 
 // TODO: implement the error types to return along with the HTTP codes
 
 // TODO: distinguish not found from other errors
+
+func NewData(validate Validator, retrieve Retriever) *Data {
+	d := Data{
+		validate: validate,
+		retrieve: retrieve,
+	}
+	return &d
+}
 
 func (d *Data) Block(ctx echo.Context) error {
 

@@ -81,6 +81,15 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 			return fmt.Errorf("could not save commit index: %w", err)
 		}
 
+		// create an index to map height to commit
+		key = make([]byte, 1+8)
+		key[0] = prefixHeightIndex
+		binary.BigEndian.PutUint64(key[1:1+8], height)
+		err = tx.Set(key, commit)
+		if err != nil {
+			return fmt.Errorf("could not save height index: %w", err)
+		}
+
 		return nil
 	})
 	if err != nil {

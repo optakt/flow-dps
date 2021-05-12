@@ -39,7 +39,7 @@ type Invoker struct {
 	vm    *fvm.VirtualMachine
 }
 
-func NewInvoker(log zerolog.Logger, state dps.State) (*Invoker, error) {
+func New(log zerolog.Logger, state dps.State) *Invoker {
 
 	rt := runtime.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
@@ -50,10 +50,10 @@ func NewInvoker(log zerolog.Logger, state dps.State) (*Invoker, error) {
 		vm:    vm,
 	}
 
-	return i, nil
+	return i
 }
 
-func (i *Invoker) RunScript(commit flow.StateCommitment, script []byte, arguments []cadence.Value) (cadence.Value, error) {
+func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value) (cadence.Value, error) {
 
 	// encode the arguments from cadence values to byte slices
 	var args [][]byte
@@ -65,14 +65,14 @@ func (i *Invoker) RunScript(commit flow.StateCommitment, script []byte, argument
 		args = append(args, arg)
 	}
 
-	// look up the current block using the commit
-	height, err := i.state.Height().ForCommit(commit)
-	if err != nil {
-		return nil, fmt.Errorf("could not look up height for commit: %w", err)
-	}
+	// look up the current block and commit for the block
 	header, err := i.state.Chain().Header(height)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve header by height: %w", err)
+		return nil, fmt.Errorf("could not retrieve header for height: %w", err)
+	}
+	commit, err := i.state.Commit().ForHeight(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not look up height for commit: %w", err)
 	}
 
 	// we initialize the virtual machine context with the given block header so

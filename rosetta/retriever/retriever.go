@@ -68,8 +68,8 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 	return amounts, nil
 }
 
-func (r *Retriever) Block(network identifier.Network, block identifier.Block) (rosetta.Block, error) {
-	return rosetta.Block{}, nil
+func (r *Retriever) Block(network identifier.Network, block identifier.Block) (rosetta.Block, []identifier.Transaction, error) {
+	return rosetta.Block{}, nil, nil
 }
 
 func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (rosetta.Transaction, error) {

@@ -24,6 +24,7 @@ type State interface {
 	Chain() Chain
 	Last() Last
 	Height() Height
+	Commit() Commit
 	Raw() Raw
 	Ledger() Ledger
 }
@@ -48,6 +49,10 @@ type Last interface {
 type Height interface {
 	ForBlock(blockID flow.Identifier) (uint64, error)
 	ForCommit(commit flow.StateCommitment) (uint64, error)
+}
+
+type Commit interface {
+	ForHeight(height uint64) (flow.StateCommitment, error)
 }
 
 type Raw interface {
