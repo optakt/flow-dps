@@ -30,11 +30,11 @@ import (
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 
+	"github.com/awfm9/flow-dps/api/rest"
 	"github.com/awfm9/flow-dps/chain"
 	"github.com/awfm9/flow-dps/feeder"
 	grpcApi "github.com/awfm9/flow-dps/grpc"
 	"github.com/awfm9/flow-dps/mapper"
-	"github.com/awfm9/flow-dps/rest"
 	"github.com/awfm9/flow-dps/state"
 )
 
