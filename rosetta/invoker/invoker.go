@@ -52,11 +52,11 @@ func (i *Invoker) RunScript(commit flow.StateCommitment, script []byte, argument
 	}
 
 	// look up the current block using the commit
-	height, err := i.state.Height().ForCommit(commit)
+	height, err := i.state.Info().HeightForCommit(commit)
 	if err != nil {
 		return nil, fmt.Errorf("could not look up height for commit: %w", err)
 	}
-	header, err := i.state.Header(height)
+	header, err := i.state.Chain().Header(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve header by height: %w", err)
 	}
