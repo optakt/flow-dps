@@ -63,14 +63,14 @@ func FromProtocolState(dir string) (*ProtocolState, error) {
 		return nil, fmt.Errorf("could not retrieve root seal: %w", err)
 	}
 
-	ps := &ProtocolState{
+	ps := ProtocolState{
 		state:   state,
 		height:  height,
 		blockID: blockID,
 		commit:  seal.FinalState,
 	}
 
-	return ps, nil
+	return &ps, nil
 }
 
 func (ps *ProtocolState) Active() (uint64, flow.Identifier, flow.StateCommitment) {

@@ -1,6 +1,8 @@
 package scripts
 
 import (
+	"strings"
+
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -10,22 +12,14 @@ func WithParams(params Params) func(*Scripts) {
 	}
 }
 
-func WithToken(symbol string, address flow.Address) func(*Scripts) {
-	return func(s *Scripts) {
-		s.tokens[symbol] = address
-	}
-}
-
 type Scripts struct {
 	params Params
-	tokens map[string]flow.Address
 }
 
 func New(options ...func(*Scripts)) *Scripts {
 
 	s := Scripts{
 		params: TestNet(),
-		tokens: make(map[string]flow.Address),
 	}
 
 	for _, option := range options {
@@ -33,4 +27,11 @@ func New(options ...func(*Scripts)) *Scripts {
 	}
 
 	return &s
+}
+
+func (s *Scripts) GetBalance(token flow.Address) []byte {
+	script := GetBalance
+	script = strings.ReplaceAll(script, PlaceholderFungible, s.params.FungibleToken.Hex())
+	script = strings.ReplaceAll(script, PlaceholderToken, token.Hex())
+	return []byte(script)
 }

@@ -1,11 +1,5 @@
 package scripts
 
-import (
-	"strings"
-
-	"github.com/onflow/flow-go/model/flow"
-)
-
 const (
 	PlaceholderFungible = "FUNGIBLE_ADDRESS"
 	PlaceholderToken    = "TOKEN_ADDRESS"
@@ -27,10 +21,3 @@ pub fun main(account: Address): UFix64 {
     return vaultRef.balance
 }
 `
-
-func (s *Scripts) GetBalance(token flow.Address) []byte {
-	script := GetBalance
-	script = strings.ReplaceAll(script, PlaceholderFungible, s.params.FungibleToken.Hex())
-	script = strings.ReplaceAll(script, PlaceholderToken, token.Hex())
-	return []byte(script)
-}

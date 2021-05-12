@@ -86,7 +86,7 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 	// block, which means that we can not sanity check the state trie against
 	// the root block state commitment here.
 
-	m := &Mapper{
+	m := Mapper{
 		log:     log,
 		chain:   chain,
 		feeder:  feeder,
@@ -97,7 +97,7 @@ func New(log zerolog.Logger, chain Chain, feeder Feeder, indexer Indexer, option
 		stop:    make(chan struct{}),
 	}
 
-	return m, nil
+	return &m, nil
 }
 
 func (m *Mapper) Stop(ctx context.Context) error {

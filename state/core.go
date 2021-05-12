@@ -128,7 +128,7 @@ func NewCore(dir string) (*Core, error) {
 		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
 	}
 
-	c := &Core{
+	c := Core{
 		index:        index,
 		compressor:   compressor,
 		decompressor: decompressor,
@@ -136,7 +136,7 @@ func NewCore(dir string) (*Core, error) {
 		commit:       commit,
 	}
 
-	return c, nil
+	return &c, nil
 }
 
 // Index is used to index a new set of state deltas for the given block.

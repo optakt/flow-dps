@@ -49,11 +49,11 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 		return nil, fmt.Errorf("could not initialize segments reader: %w", err)
 	}
 
-	l := &LedgerWAL{
+	l := LedgerWAL{
 		reader: pwal.NewReader(segments),
 	}
 
-	return l, nil
+	return &l, nil
 }
 
 func (l *LedgerWAL) Feed(commit flow.StateCommitment) (dps.Delta, error) {
