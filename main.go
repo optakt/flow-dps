@@ -84,7 +84,7 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize ledger")
 	}
 
-	mapper, err := mapper.New(log, chain, feeder, core, mapper.WithCheckpointFile(flagCheckpoint))
+	mapper, err := mapper.New(log, chain, feeder, core.Index(), mapper.WithCheckpointFile(flagCheckpoint))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}

@@ -116,9 +116,15 @@ func (m *Mapper) Stop(ctx context.Context) error {
 	}
 }
 
-func (m *Mapper) Run(height uint64) error {
+func (m *Mapper) Run() error {
 	m.wg.Add(1)
 	defer m.wg.Done()
+
+	// We start iterating at the root height.
+	height, err := m.chain.Root()
+	if err != nil {
+		return fmt.Errorf("could not get root height: %w", err)
+	}
 
 	// The purpose of this function is to map state deltas from a continuous
 	// feed to specific blocks from the chain. This is necessary because the

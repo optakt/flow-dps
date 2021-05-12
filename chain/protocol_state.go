@@ -46,6 +46,15 @@ func FromProtocolState(dir string) (*ProtocolState, error) {
 	return &ps, nil
 }
 
+func (ps *ProtocolState) Root() (uint64, error) {
+	var height uint64
+	err := operation.RetrieveRootHeight(&height)(ps.db.NewTransaction(false))
+	if err != nil {
+		return 0, fmt.Errorf("could not look up root height: %w", err)
+	}
+	return height, nil
+}
+
 func (ps *ProtocolState) Header(height uint64) (*flow.Header, error) {
 	var blockID flow.Identifier
 	err := operation.LookupBlockHeight(height, &blockID)(ps.db.NewTransaction(false))
