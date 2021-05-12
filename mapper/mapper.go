@@ -201,9 +201,15 @@ Outer:
 			if err != nil {
 				return fmt.Errorf("could not index deltas: %w", err)
 			}
+<<<<<<< HEAD
 			err = m.index.Events(height, events)
 			if err != nil {
 				return fmt.Errorf("could not index events: %w", err)
+=======
+			err = m.index.Last(height)
+			if err != nil {
+				return fmt.Errorf("could not index last: %w", err)
+>>>>>>> 30fd26c (implement new state index component)
 			}
 
 			m.log.Info().

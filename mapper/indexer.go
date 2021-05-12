@@ -23,5 +23,9 @@ type Indexer interface {
 	Header(height uint64, header *flow.Header) error
 	Commit(height uint64, commit flow.StateCommitment) error
 	Deltas(height uint64, deltas []dps.Delta) error
+<<<<<<< HEAD
 	Events(height uint64, events []flow.Event) error
+=======
+	Last(height uint64) error
+>>>>>>> 30fd26c (implement new state index component)
 }

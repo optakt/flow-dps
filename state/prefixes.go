@@ -12,13 +12,13 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package dps
+package state
 
 const (
-	PrefixLastHeight  = 1
-	PrefixLastCommit  = 2
-	PrefixBlockIndex  = 3
-	PrefixCommitIndex = 4
-	PrefixDeltaIndex  = 5
-	PrefixEventIndex  = 6
+	prefixLastHeight  = 1
+	prefixHeaderData  = 2
+	prefixBlockIndex  = 3
+	prefixCommitIndex = 4
+	prefixDeltaData   = 5
+	prefixEventData   = 6
 )
