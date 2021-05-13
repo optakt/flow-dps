@@ -26,30 +26,20 @@ It is used by the [Mapper](#mapper) to map blocks to the deltas that are collect
 
 [Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/chain)
 
-### Filesystem Chain
+### ProtocolState Chain
 
-The Filesystem Chain uses the execution node's on-disk key-value store to reconstruct the block sequence.
-
-TODO: Need a license to be able to link the godoc.
-
-### Network Chain
-
-The Network Chain retrieves data directly from access nodes in order to reconstruct the block sequence.
+The [Filesystem Chain](https://pkg.go.dev/github.com/awfm9/flow-dps/chain#ProtocolState) uses the execution node's on-disk key-value store to reconstruct the block sequence.
 
 ## Feeder
 
 The Feeder component is responsible for streaming in-order trie updates.
 It outputs deltas which are used by the [Mapper](#mapper) component to map the state trie updates to the block information that the [Chain](#chain) component provides.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/streamer)
+[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/feeder)
 
-### Filesystem Feeder
+### LedgerWAL Feeder
 
-The Filesystem Streamer reads trie updates from the LedgerWAL directly.
-
-### Network Feeder
-
-The Network Streamer receives trie updates through its network subscription on the execution node.
+The [LedgerWAL Feeder](https://pkg.go.dev/github.com/awfm9/flow-dps/feeder#LedgerWAL) reads trie updates from the LedgerWAL directly.
 
 ## Mapper
 
@@ -121,5 +111,5 @@ See the [API documentation](./api.md) for details on the different APIs that are
 
 * [REST package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rest)
 * [GRPC package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/grpc)
-* [Raw package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/raw)
-* [Rosetta package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta)
+
+// TODO: These packages will move to `/api/<name>` once https://github.com/awfm9/flow-dps/pull/23 gets merged.
