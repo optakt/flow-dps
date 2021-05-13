@@ -10,9 +10,9 @@
 
 ## REST API
 
-### `GET /registers/:key` - Get Register
+### `GET /registers/:raw_key` - Get Register
 
-This route returns a register's payload from its key.
+This route returns the raw binary payload, encoded in hexadecimal, for the key's register in the execution state trie.
 
 **Example request**: `GET /registers/6c49490a1f023fda632cfe3a49b662016c49490a1f023fda632cfe3a49b66201?height=425`
 
@@ -22,7 +22,7 @@ This route returns a register's payload from its key.
 
 #### Query Parameters
 
-* `height`: Optional. The height at which to look for the key's payload. If no value is found that the given height, the last height at which a value was set for this register is used. Defaults to `0`.
+* `height`: Optional. The height at which to look for the key's payload. If no value is found that the given height, the last height at which a value was set for this register is used. Defaults to the last sealed block height indexed by the service.
 
 #### Response Codes
 
@@ -68,7 +68,7 @@ Possible response codes are:
 }
 ```
 
-### `GET /values/:encoded_key` - Get Value
+### `GET /values/:ledger_key` - Get Value
 
 This route returns the payload value of an encoded Ledger entry.
 
