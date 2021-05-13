@@ -44,7 +44,7 @@ import (
 
 	"github.com/awfm9/flow-dps/dps/chain"
 	"github.com/awfm9/flow-dps/dps/feeder"
-	"github.com/awfm9/flow-dps/dps/indexer"
+	"github.com/awfm9/flow-dps/dps/mapper"
 	"github.com/awfm9/flow-dps/dps/state"
 )
 
@@ -101,7 +101,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize ledger")
 	}
-	indexer, err := indexer.New(log, chain, feeder, core.Index(), indexer.WithCheckpointFile(flagCheckpoint))
+	mapper, err := mapper.New(log, chain, feeder, core.Index(), mapper.WithCheckpointFile(flagCheckpoint))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
@@ -148,7 +148,7 @@ func main() {
 	// interrupt signal in order to proceed with the next section.
 	go func() {
 		start := time.Now().UTC()
-		err := indexer.Run()
+		err := mapper.Run()
 		if err != nil {
 			log.Error().Err(err).Msg("state mapper encountered error")
 		}
@@ -202,7 +202,7 @@ func main() {
 	}()
 	go func() {
 		defer wg.Done()
-		err := indexer.Stop(ctx)
+		err := mapper.Stop(ctx)
 		if err != nil {
 			log.Error().Err(err).Msg("could not shut down state mapper")
 		}
