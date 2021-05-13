@@ -150,10 +150,10 @@ func main() {
 		start := time.Now().UTC()
 		err := mapper.Run()
 		if err != nil {
-			log.Error().Err(err).Msg("state mapper encountered error")
+			log.Error().Err(err).Msg("disk mapper encountered error")
 		}
 		finish := time.Now().UTC()
-		log.Info().Dur("duration", finish.Sub(start)).Msg("state mapper execution complete")
+		log.Info().Dur("duration", finish.Sub(start)).Msg("disk mapper execution complete")
 	}()
 	go func() {
 		err := rsvr.Start(flagHostREST)
@@ -174,6 +174,13 @@ func main() {
 		}
 		log.Info().Msg("GRPC API execution complete")
 	}()
+	go func() {
+		err := asvr.Start(flagHostRosetta)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error().Err(err).Msg("Rosetta API encountered error")
+		}
+		log.Info().Msg("Rosetta API execution complete")
+	}()
 
 	<-sig
 
@@ -186,7 +193,20 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	wg := &sync.WaitGroup{}
-	wg.Add(3)
+	wg.Add(4)
+	go func() {
+		defer wg.Done()
+		err := asvr.Shutdown(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("could not shut down Rosetta API")
+		}
+		log.Info().Msg("Rosetta API shutdown complete")
+	}()
+	go func() {
+		defer wg.Done()
+		gsvr.GracefulStop()
+		log.Info().Msg("GRPC API shutdown complete")
+	}()
 	go func() {
 		defer wg.Done()
 		err := rsvr.Shutdown(ctx)
@@ -197,16 +217,11 @@ func main() {
 	}()
 	go func() {
 		defer wg.Done()
-		gsvr.GracefulStop()
-		log.Info().Msg("state mapper shutdown complete")
-	}()
-	go func() {
-		defer wg.Done()
 		err := mapper.Stop(ctx)
 		if err != nil {
-			log.Error().Err(err).Msg("could not shut down state mapper")
+			log.Error().Err(err).Msg("could not shut down mapper")
 		}
-		log.Info().Msg("state mapper shutdown complete")
+		log.Info().Msg("disk mapper shutdown complete")
 	}()
 
 	wg.Wait()
