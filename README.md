@@ -29,6 +29,7 @@ Go `v1.16` or higher is required to compile `flow-dps`.
 
 If you want to make changes to the GRPC API, the two following binaries are required as well.
 
+* [`protoc`](https://grpc.io/docs/protoc-installation/) version `3.17.0`
 * `go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26`
 * `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1`
 
