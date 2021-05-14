@@ -23,16 +23,19 @@ import (
 
 	"github.com/awfm9/flow-dps/models/dps"
 	"github.com/awfm9/flow-dps/models/identifier"
+	"github.com/awfm9/flow-dps/rosetta/retriever"
 )
 
 type Validator struct {
-	height dps.Height
+	height    dps.Height
+	contracts retriever.Contracts
 }
 
-func New(height dps.Height) *Validator {
+func New(height dps.Height, contracts retriever.Contracts) *Validator {
 
 	v := &Validator{
-		height: height,
+		height:    height,
+		contracts: contracts,
 	}
 
 	return v
@@ -90,7 +93,15 @@ func (v *Validator) Account(account identifier.Account) error {
 }
 
 func (v *Validator) Currency(currency identifier.Currency) error {
-	// TODO: implement validation for currency
-	// => https://github.com/awfm9/flow-dps/issues/52
-	return fmt.Errorf("not implemented")
+
+	if currency.Decimals != 8 {
+		return fmt.Errorf("invalid number of decimals for currency identifier (%d)", currency.Decimals)
+	}
+
+	_, ok := v.contracts.Token(currency.Symbol)
+	if !ok {
+		return fmt.Errorf("invalid token symbol for currency identifier (%s)", currency.Symbol)
+	}
+
+	return nil
 }
