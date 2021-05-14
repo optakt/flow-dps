@@ -57,6 +57,9 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 }
 
 func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
+	// TODO: add warning when we had too many deltas without matching commit and
+	// add a limit to maximum attempts to match before error
+	// => https://github.com/awfm9/flow-dps/issues/60
 	for {
 		next := l.reader.Next()
 		err := l.reader.Err()
@@ -75,7 +78,7 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			continue
 		}
 		if !bytes.Equal(commit, update.RootHash) {
-			return nil, fmt.Errorf("mismatch for next trie update in sequence (trie: %x, feed: %x)", commit, update.RootHash)
+			continue
 		}
 		delta := make(dps.Delta, 0, len(update.Paths))
 		for index, path := range update.Paths {
