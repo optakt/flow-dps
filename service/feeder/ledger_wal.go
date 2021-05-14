@@ -15,7 +15,6 @@
 package feeder
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,9 +27,7 @@ import (
 )
 
 type LedgerWAL struct {
-	reader    *pwal.Reader
-	cache     map[string]dps.Delta
-	threshold uint
+	reader *pwal.Reader
 }
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
@@ -52,9 +49,7 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	}
 
 	l := LedgerWAL{
-		reader:    pwal.NewReader(segments),
-		cache:     make(map[string]dps.Delta),
-		threshold: 1000,
+		reader: pwal.NewReader(segments),
 	}
 
 	return &l, nil
@@ -62,25 +57,10 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 
 func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 
-	// TODO: implement proper caching to take into account possible edge case of
-	// out-of-order deltas
-	// => https://github.com/awfm9/flow-dps/issues/61
-	key := string(commit)
-	delta, ok := l.cache[key]
-	if ok {
-		delete(l.cache, key)
-		return delta, nil
-	}
-
-	// TODO: add warning when we had too many deltas without matching commit and
-	// add a limit to maximum attempts to match before error
-	// => https://github.com/awfm9/flow-dps/issues/60
-	count := uint(0)
+	// TODO: fix bug where we have multiple trie updates that should be applied
+	// to the same commit (in case of an execution fork)
+	// => https://github.com/awfm9/flow-dps/issues/62
 	for {
-		count++
-		if count > l.threshold {
-			return nil, fmt.Errorf("feeder threshold reached (%d)", l.threshold)
-		}
 		next := l.reader.Next()
 		err := l.reader.Err()
 		if !next && err != nil {
@@ -105,11 +85,6 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 				Payload: *payload,
 			}
 			delta = append(delta, change)
-		}
-		if !bytes.Equal(commit, update.RootHash) {
-			key = string(update.RootHash)
-			l.cache[key] = delta
-			continue
 		}
 		return delta, nil
 	}
