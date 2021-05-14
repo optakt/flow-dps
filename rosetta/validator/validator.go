@@ -15,17 +15,25 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/dgraph-io/badger/v2"
+	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/awfm9/flow-dps/models/dps"
 	"github.com/awfm9/flow-dps/models/identifier"
 )
 
 type Validator struct {
+	height dps.Height
 }
 
-func New() *Validator {
+func New(height dps.Height) *Validator {
 
-	v := &Validator{}
+	v := &Validator{
+		height: height,
+	}
 
 	return v
 }
@@ -44,9 +52,25 @@ func (v *Validator) Network(network identifier.Network) error {
 }
 
 func (v *Validator) Block(block identifier.Block) error {
-	// TODO: implement validation for block
-	// => https://github.com/awfm9/flow-dps/issues/51
-	return fmt.Errorf("not implemented")
+
+	blockID, err := flow.HexStringToIdentifier(block.Hash)
+	if err != nil {
+		return fmt.Errorf("could not parse block hash: %w", err)
+	}
+
+	height, err := v.height.ForBlock(blockID)
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("could not validate block identifier: %w", err)
+	}
+
+	if height != block.Index {
+		return fmt.Errorf("could not match block identifier index to height (%d != %d)", block.Index, height)
+	}
+
+	return nil
 }
 
 func (v *Validator) Transaction(transaction identifier.Transaction) error {
