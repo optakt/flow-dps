@@ -16,6 +16,7 @@ package state
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/OneOfOne/xxhash"
@@ -181,5 +182,28 @@ func (i *Index) Last(commit flow.StateCommitment) error {
 	if err != nil {
 		return fmt.Errorf("could not index last commit: %w", err)
 	}
+	return nil
+}
+
+func (i *Index) Compact() error {
+
+	err := i.core.db.Sync()
+	if err != nil {
+		return fmt.Errorf("could not sync database: %w", err)
+	}
+
+	err = i.core.db.Flatten(4)
+	if err != nil {
+		return fmt.Errorf("could not flatten database: %w", err)
+	}
+
+	err = i.core.db.RunValueLogGC(0.5)
+	if errors.Is(err, badger.ErrNoRewrite) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("could not run value log garbage collection: %w", err)
+	}
+
 	return nil
 }

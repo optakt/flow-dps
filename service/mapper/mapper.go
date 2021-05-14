@@ -176,7 +176,7 @@ Outer:
 			}
 			if errors.Is(err, dps.ErrFinished) {
 				m.log.Debug().Uint64("height", height).Msg("commit chain finished")
-				return nil
+				break Outer
 			}
 			if err != nil {
 				return fmt.Errorf("could not retrieve commit: %w (height: %d)", err, height)
@@ -229,6 +229,11 @@ Outer:
 
 			m.deltas = []dps.Delta{}
 			height++
+
+			// TODO: we should randomly run compactions during this loop as well
+			// so that we still keep the DB optimized even when streaming the
+			// trie updates
+			// => https://github.com/awfm9/flow-dps/issues/59
 		}
 
 		// We do want to check for shutdown before pulling the next delta; both
@@ -248,7 +253,7 @@ Outer:
 		}
 		if errors.Is(err, dps.ErrFinished) {
 			m.log.Debug().Hex("commit", hash).Msg("delta feed finished")
-			return nil
+			break Outer
 		}
 		if err != nil {
 			return fmt.Errorf("could not feed next update: %w", err)
@@ -269,8 +274,12 @@ Outer:
 		m.trie = trie
 	}
 
-	// TODO: compact the Badger value log
-	// => https://github.com/awfm9/flow-dps/issues/35
+	// At the very end, we want to compact the database one more time to make
+	// sure it is stored as efficiently as possible for access optimization.
+	err = m.index.Compact()
+	if err != nil {
+		return fmt.Errorf("could not compact index: %w", err)
+	}
 
 	return nil
 }
