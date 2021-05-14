@@ -154,13 +154,14 @@ func main() {
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
 	go func() {
-		start := time.Now().UTC()
+		start := time.Now()
 		err := runMapper()
 		if err != nil {
 			log.Error().Err(err).Msg("disk mapper encountered error")
 		}
-		finish := time.Now().UTC()
-		log.Info().Dur("duration", finish.Sub(start)).Msg("disk mapper execution complete")
+		finish := time.Now()
+		delta := finish.Sub(start)
+		log.Info().Str("duration", delta.Round(delta).String()).Msg("disk mapper execution complete")
 	}()
 	go func() {
 		err := rsvr.Start(flagHostREST)
