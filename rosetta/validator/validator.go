@@ -41,6 +41,9 @@ func New(height dps.Height, contracts retriever.Contracts) *Validator {
 	return v
 }
 
+// TODO: implement proper validation for network; should depend on the chain
+// configuration parameters
+// => https://github.com/awfm9/flow-dps/issues/50
 func (v *Validator) Network(network identifier.Network) error {
 
 	if network.Blockchain != "flow" {
@@ -54,6 +57,9 @@ func (v *Validator) Network(network identifier.Network) error {
 	return nil
 }
 
+// TODO: implement validation for block; should distinguish between block we
+// don't know yet / haven't seen and blocks that are just mismatched
+// => https://github.com/awfm9/flow-dps/issues/51
 func (v *Validator) Block(block identifier.Block) error {
 
 	blockID, err := flow.HexStringToIdentifier(block.Hash)
@@ -86,12 +92,16 @@ func (v *Validator) Transaction(transaction identifier.Transaction) error {
 	return nil
 }
 
+// TODO: implement validation for account; should use address generator to make
+// sure that it is a valid address for the configured chain
+// => https://github.com/awfm9/flow-dps/issues/53
 func (v *Validator) Account(account identifier.Account) error {
-	// TODO: implement validation for account
-	// => https://github.com/awfm9/flow-dps/issues/53
 	return nil
 }
 
+// TODO: implement validation for currency; this should probably be refactored
+// after we made tokens configurable
+// => https://github.com/awfm9/flow-dps/issues/52
 func (v *Validator) Currency(currency identifier.Currency) error {
 
 	if currency.Decimals != 8 {
