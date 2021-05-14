@@ -18,10 +18,11 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/onflow/cadence"
+	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/awfm9/flow-dps/models/identifier"
 	"github.com/awfm9/flow-dps/models/rosetta"
-	"github.com/onflow/cadence"
-	"github.com/onflow/flow-go-sdk"
 )
 
 type Retriever struct {

@@ -20,7 +20,6 @@ import (
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
-	"github.com/fxamacker/cbor"
 
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
@@ -44,7 +43,7 @@ func (i *Index) Header(height uint64, header *flow.Header) error {
 		key := make([]byte, 1+8)
 		key[0] = prefixDataHeader
 		binary.BigEndian.PutUint64(key[1:1+8], height)
-		val, err := cbor.Marshal(header, cbor.CanonicalEncOptions())
+		val, err := i.core.codec.Marshal(header)
 		if err != nil {
 			return fmt.Errorf("could not encode header: %w", err)
 		}
@@ -114,7 +113,7 @@ func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
 				key[0] = prefixDataDelta
 				copy(key[1:1+pathfinder.PathByteSize], change.Path)
 				binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
-				val, err := cbor.Marshal(change.Payload, cbor.CanonicalEncOptions())
+				val, err := i.core.codec.Marshal(change.Payload)
 				if err != nil {
 					return fmt.Errorf("could not encode delta: %w", err)
 				}
@@ -150,7 +149,7 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 			binary.BigEndian.PutUint64(key[1:1+8], height)
 			binary.BigEndian.PutUint64(key[1+8:1+8+8], hash)
 
-			val, err := cbor.Marshal(evts, cbor.CanonicalEncOptions())
+			val, err := i.core.codec.Marshal(evts)
 			if err != nil {
 				return fmt.Errorf("could not encode events: %w", err)
 			}

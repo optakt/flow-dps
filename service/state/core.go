@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/fxamacker/cbor"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/klauspost/compress/zstd"
 
 	"github.com/onflow/flow-go/ledger"
@@ -41,6 +41,7 @@ type Core struct {
 	db           *badger.DB
 	compressor   *zstd.Encoder
 	decompressor *zstd.Decoder
+	codec        cbor.EncMode
 	height       uint64
 	commit       flow.StateCommitment
 }
@@ -71,6 +72,11 @@ func NewCore(dir string) (*Core, error) {
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize decompressor: %w", err)
+	}
+
+	codec, err := cbor.CanonicalEncOptions().EncMode()
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize codec: %w", err)
 	}
 
 	// TODO: think about refactoring this, especially in regards to the empty
@@ -149,6 +155,7 @@ func NewCore(dir string) (*Core, error) {
 		db:           db,
 		compressor:   compressor,
 		decompressor: decompressor,
+		codec:        codec,
 		height:       height,
 		commit:       commit,
 	}
