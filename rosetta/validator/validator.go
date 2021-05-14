@@ -55,7 +55,7 @@ func (v *Validator) Block(block identifier.Block) error {
 
 	blockID, err := flow.HexStringToIdentifier(block.Hash)
 	if err != nil {
-		return fmt.Errorf("could not parse block hash: %w", err)
+		return fmt.Errorf("could not parse block identifier hash: %w", err)
 	}
 
 	height, err := v.height.ForBlock(blockID)
@@ -74,9 +74,13 @@ func (v *Validator) Block(block identifier.Block) error {
 }
 
 func (v *Validator) Transaction(transaction identifier.Transaction) error {
-	// TODO: implement validation for transaction
-	// => https://github.com/awfm9/flow-dps/issues/54
-	return fmt.Errorf("not implemented")
+
+	_, err := flow.HexStringToIdentifier(transaction.Hash)
+	if err != nil {
+		return fmt.Errorf("could not parse transaction identifier hash: %w", err)
+	}
+
+	return nil
 }
 
 func (v *Validator) Account(account identifier.Account) error {
