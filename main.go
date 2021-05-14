@@ -35,17 +35,17 @@ import (
 	"github.com/awfm9/flow-dps/api/grpc"
 	"github.com/awfm9/flow-dps/api/rest"
 	"github.com/awfm9/flow-dps/api/rosetta"
+
 	"github.com/awfm9/flow-dps/rosetta/contracts"
-	"github.com/awfm9/flow-dps/rosetta/converter"
 	"github.com/awfm9/flow-dps/rosetta/invoker"
 	"github.com/awfm9/flow-dps/rosetta/retriever"
 	"github.com/awfm9/flow-dps/rosetta/scripts"
 	"github.com/awfm9/flow-dps/rosetta/validator"
 
-	"github.com/awfm9/flow-dps/dps/chain"
-	"github.com/awfm9/flow-dps/dps/feeder"
-	"github.com/awfm9/flow-dps/dps/mapper"
-	"github.com/awfm9/flow-dps/dps/state"
+	"github.com/awfm9/flow-dps/service/chain"
+	"github.com/awfm9/flow-dps/service/feeder"
+	"github.com/awfm9/flow-dps/service/mapper"
+	"github.com/awfm9/flow-dps/service/state"
 )
 
 func main() {
@@ -130,9 +130,8 @@ func main() {
 	contracts := contracts.New(contracts.WithToken("FLOW", flow.HexToAddress(flagFlowToken)))
 	scripts := scripts.New(scripts.WithParams(scripts.TestNet()))
 	invoke := invoker.New(log, core)
-	convert := converter.New()
 	validate := validator.New()
-	retrieve := retriever.New(contracts, scripts, invoke, convert)
+	retrieve := retriever.New(contracts, scripts, invoke)
 	actrl := rosetta.NewData(validate, retrieve)
 
 	asvr := echo.New()
@@ -141,7 +140,7 @@ func main() {
 	asvr.Use(middleware.Logger())
 	asvr.POST("/account/balance", actrl.Balance)
 	asvr.POST("/block", actrl.Block)
-	asvr.POST("block/transaction", actrl.Transaction)
+	asvr.POST("/block/transaction", actrl.Transaction)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

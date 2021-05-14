@@ -13,3 +13,6 @@
 // the License.
 
 package rosetta
+
+// TODO: implement the error types to return along with the HTTP codes
+// => https://github.com/awfm9/flow-dps/issues/34

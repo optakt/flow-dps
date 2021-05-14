@@ -14,12 +14,22 @@
 
 package state
 
-const (
-	prefixLastCommit  = 1
-	prefixHeaderData  = 2
-	prefixBlockIndex  = 3
-	prefixCommitIndex = 4
-	prefixHeightIndex = 5
-	prefixDeltaData   = 6
-	prefixEventData   = 7
+import (
+	"fmt"
+
+	"github.com/onflow/flow-go/model/flow"
 )
+
+type Chain struct {
+	core *Core
+}
+
+func (c *Chain) Header(height uint64) (*flow.Header, error) {
+	// FIXME: implement header retrieval
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (c *Chain) Events(height uint64) ([]flow.Event, error) {
+	// FIXME: move events retrieval
+	return nil, fmt.Errorf("not implemented")
+}

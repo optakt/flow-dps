@@ -18,6 +18,9 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// TODO: refactor network parameter and token address components
+// => https://github.com/awfm9/flow-dps/issues/42
+
 type Params struct {
 	FungibleToken flow.Address
 }

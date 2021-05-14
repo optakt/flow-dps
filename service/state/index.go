@@ -32,12 +32,17 @@ type Index struct {
 	core *Core
 }
 
+// TODO: check if there is an intermediate representation of Flow block headers
+// that contains everything we need for the access and Rosetta APIs, but drops
+// a lot of superfluous data (i.e. maybe signatures?)
+// => https://github.com/awfm9/flow-dps/issues/39
+
 func (i *Index) Header(height uint64, header *flow.Header) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 
 		// use the headers height as key to store the encoded header
 		key := make([]byte, 1+8)
-		key[0] = prefixHeaderData
+		key[0] = prefixDataHeader
 		binary.BigEndian.PutUint64(key[1:1+8], height)
 		val, err := cbor.Marshal(header, cbor.CanonicalEncOptions())
 		if err != nil {
@@ -46,19 +51,19 @@ func (i *Index) Header(height uint64, header *flow.Header) error {
 		val = i.core.compressor.EncodeAll(val, nil)
 		err = tx.Set(key, val)
 		if err != nil {
-			return fmt.Errorf("could not save header data: %w", err)
+			return fmt.Errorf("could not persist header data: %w", err)
 		}
 
 		// create an index to map block ID to height
 		blockID := header.ID()
 		key = make([]byte, 1+len(blockID))
-		key[0] = prefixBlockIndex
+		key[0] = prefixIndexBlock
 		copy(key[1:], blockID[:])
 		val = make([]byte, 8)
 		binary.BigEndian.PutUint64(val[0:8], height)
 		err = tx.Set(key, val)
 		if err != nil {
-			return fmt.Errorf("could not save block index: %w", err)
+			return fmt.Errorf("could not persist block index: %w", err)
 		}
 
 		return nil
@@ -74,22 +79,22 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 
 		// create an index to map commit to height
 		key := make([]byte, 1+len(commit))
-		key[0] = prefixCommitIndex
+		key[0] = prefixIndexCommit
 		copy(key[1:], commit)
 		val := make([]byte, 8)
 		binary.BigEndian.PutUint64(val[0:8], height)
 		err := tx.Set(key, val)
 		if err != nil {
-			return fmt.Errorf("could not save commit index: %w", err)
+			return fmt.Errorf("could not persist commit index: %w", err)
 		}
 
 		// create an index to map height to commit
 		key = make([]byte, 1+8)
-		key[0] = prefixHeightIndex
+		key[0] = prefixIndexHeight
 		binary.BigEndian.PutUint64(key[1:1+8], height)
 		err = tx.Set(key, commit)
 		if err != nil {
-			return fmt.Errorf("could not save height index: %w", err)
+			return fmt.Errorf("could not persist height index: %w", err)
 		}
 
 		return nil
@@ -102,12 +107,11 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 
 func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
 
-	// finally, we index the payload for every path that has changed in this block
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 		for _, delta := range deltas {
 			for _, change := range delta {
 				key := make([]byte, 1+pathfinder.PathByteSize+8)
-				key[0] = prefixDeltaData
+				key[0] = prefixDataDelta
 				copy(key[1:1+pathfinder.PathByteSize], change.Path)
 				binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
 				val, err := cbor.Marshal(change.Payload, cbor.CanonicalEncOptions())
@@ -117,7 +121,7 @@ func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
 				val = i.core.compressor.EncodeAll(val, nil)
 				err = tx.Set(key, val)
 				if err != nil {
-					return fmt.Errorf("could not save delta data: %w", err)
+					return fmt.Errorf("could not persist delta data: %w", err)
 				}
 			}
 		}
@@ -142,7 +146,7 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 		for hash, evts := range buckets {
 			// Prefix + Block Height + Type Hash
 			key := make([]byte, 1+8+8)
-			key[0] = prefixEventData
+			key[0] = prefixDataEvent
 			binary.BigEndian.PutUint64(key[1:1+8], height)
 			binary.BigEndian.PutUint64(key[1+8:1+8+8], hash)
 
@@ -171,7 +175,7 @@ func (i *Index) Last(commit flow.StateCommitment) error {
 		key := []byte{prefixLastCommit}
 		err := tx.Set(key, commit)
 		if err != nil {
-			return fmt.Errorf("could not save last commit: %w", err)
+			return fmt.Errorf("could not persist last commit: %w", err)
 		}
 		return nil
 	})

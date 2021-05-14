@@ -44,13 +44,13 @@ func New(log zerolog.Logger, state dps.State) *Invoker {
 	rt := runtime.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
 
-	i := &Invoker{
+	i := Invoker{
 		log:   log,
 		state: state,
 		vm:    vm,
 	}
 
-	return i
+	return &i
 }
 
 func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value) (cadence.Value, error) {

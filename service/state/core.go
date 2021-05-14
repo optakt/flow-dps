@@ -34,6 +34,10 @@ import (
 	"github.com/awfm9/flow-dps/models/dps"
 )
 
+// TODO: improve code comments & documentation throughout the refactored
+// DPS architecture & components
+// => https://github.com/awfm9/flow-dps/issues/40
+
 type Core struct {
 	db           *badger.DB
 	compressor   *zstd.Encoder
@@ -70,6 +74,10 @@ func NewCore(dir string) (*Core, error) {
 		return nil, fmt.Errorf("could not initialize decompressor: %w", err)
 	}
 
+	// TODO: think about refactoring this, especially in regards to the empty
+	// trie initialization, once we have switched to the new storage API
+	// => https://github.com/awfm9/flow-dps/issues/38
+
 	var height uint64
 	var commit flow.StateCommitment
 	err = db.View(func(tx *badger.Txn) error {
@@ -78,7 +86,7 @@ func NewCore(dir string) (*Core, error) {
 		key := []byte{prefixLastCommit}
 		item, err := tx.Get(key)
 		if err != nil {
-			return fmt.Errorf("could not load last commit: %w", err)
+			return fmt.Errorf("could not retrieve last commit: %w", err)
 		}
 		_ = item.Value(func(val []byte) error {
 			commit = val
@@ -90,7 +98,7 @@ func NewCore(dir string) (*Core, error) {
 		copy(key[1:], commit)
 		item, err = tx.Get(key)
 		if err != nil {
-			return fmt.Errorf("could not load commit index: %w", err)
+			return fmt.Errorf("could not access commit index: %w", err)
 		}
 		_ = item.Value(func(val []byte) error {
 			height = binary.BigEndian.Uint64(val)
@@ -98,6 +106,9 @@ func NewCore(dir string) (*Core, error) {
 		})
 		return nil
 	})
+	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
+	}
 	if errors.Is(err, badger.ErrKeyNotFound) {
 
 		// create an empty trie root hash as last commit
@@ -113,19 +124,19 @@ func NewCore(dir string) (*Core, error) {
 			key := []byte{prefixLastCommit}
 			err = tx.Set(key, commit)
 			if err != nil {
-				return fmt.Errorf("could not save last commit: %w", err)
+				return fmt.Errorf("could not persist last commit: %w", err)
 			}
 
 			// map the last commit to zero height
 			height = 0
 			key = make([]byte, 1+len(commit))
-			key[0] = prefixCommitIndex
+			key[0] = prefixIndexCommit
 			copy(key[1:], commit)
 			val := make([]byte, 8)
 			binary.BigEndian.PutUint64(val, height)
 			err = tx.Set(key, val)
 			if err != nil {
-				return fmt.Errorf("could not index last commit: %w", err)
+				return fmt.Errorf("could not persist commit index: %w", err)
 			}
 
 			return nil
@@ -133,8 +144,6 @@ func NewCore(dir string) (*Core, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not bootstrap last commit: %w", err)
 		}
-	} else if err != nil {
-		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
 	}
 
 	c := Core{
@@ -184,6 +193,8 @@ func (c *Core) Ledger() dps.Ledger {
 	return &l
 }
 
+// FIXME: move to correct sub-interface
+
 func (c *Core) Events(height uint64, types ...string) ([]flow.Event, error) {
 	// Make sure that the request is for a height below the currently active
 	// sentinel height; otherwise, we haven't indexed yet and we might return
@@ -200,7 +211,7 @@ func (c *Core) Events(height uint64, types ...string) ([]flow.Event, error) {
 	// Iterate over all keys within the events index which are prefixed with the right block height.
 	var events []flow.Event
 	prefix := make([]byte, 1+8)
-	prefix[0] = prefixEventData
+	prefix[0] = prefixDataEvent
 	binary.BigEndian.PutUint64(prefix[1:1+8], height)
 	err := c.db.View(func(tx *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
@@ -266,7 +277,7 @@ func (c *Core) payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
 	key := make([]byte, 1+pathfinder.PathByteSize+8)
-	key[0] = prefixDeltaData
+	key[0] = prefixDataDelta
 	copy(key[1:1+pathfinder.PathByteSize], path)
 	binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
 	err := c.db.View(func(tx *badger.Txn) error {

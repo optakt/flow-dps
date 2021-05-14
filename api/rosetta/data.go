@@ -25,10 +25,6 @@ type Data struct {
 	retrieve Retriever
 }
 
-// TODO: implement the error types to return along with the HTTP codes
-
-// TODO: distinguish not found from other errors
-
 func NewData(validate Validator, retrieve Retriever) *Data {
 	d := Data{
 		validate: validate,
@@ -37,6 +33,8 @@ func NewData(validate Validator, retrieve Retriever) *Data {
 	return &d
 }
 
+// TODO: integration testing of Rosetta block endpoint
+// => https://github.com/awfm9/flow-dps/issues/47
 func (d *Data) Block(ctx echo.Context) error {
 
 	var req BlockRequest
@@ -67,6 +65,8 @@ func (d *Data) Block(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, res)
 }
 
+// TODO: integration testing of Rosetta transaction endpoint
+// => https://github.com/awfm9/flow-dps/issues/46
 func (d *Data) Transaction(ctx echo.Context) error {
 
 	var req TransactionRequest
@@ -96,6 +96,8 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, res)
 }
 
+// TODO: integration testing of Rosetta balance endpoint
+// => https://github.com/awfm9/flow-dps/issues/45
 func (d *Data) Balance(ctx echo.Context) error {
 
 	var req BalanceRequest

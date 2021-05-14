@@ -16,6 +16,7 @@ package retriever
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/awfm9/flow-dps/models/identifier"
 	"github.com/awfm9/flow-dps/models/rosetta"
@@ -27,16 +28,14 @@ type Retriever struct {
 	contracts Contracts
 	scripts   Scripts
 	invoke    Invoker
-	convert   Converter
 }
 
-func New(contracts Contracts, scripts Scripts, invoke Invoker, convert Converter) *Retriever {
+func New(contracts Contracts, scripts Scripts, invoke Invoker) *Retriever {
 
 	r := Retriever{
 		contracts: contracts,
 		scripts:   scripts,
 		invoke:    invoke,
-		convert:   convert,
 	}
 
 	return &r
@@ -61,7 +60,10 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 		if !ok {
 			return nil, fmt.Errorf("could not convert balance (type: %T)", value.ToGoValue())
 		}
-		amount := r.convert.Balance(currency, balance)
+		amount := rosetta.Amount{
+			Currency: currency,
+			Value:    strconv.FormatUint(balance, 10),
+		}
 		amounts = append(amounts, amount)
 	}
 
@@ -69,9 +71,13 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 }
 
 func (r *Retriever) Block(network identifier.Network, block identifier.Block) (rosetta.Block, []identifier.Transaction, error) {
-	return rosetta.Block{}, nil, nil
+	// TODO: implement Rosetta block retrieval
+	// => https://github.com/awfm9/flow-dps/issues/43
+	return rosetta.Block{}, nil, fmt.Errorf("not implemented")
 }
 
 func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (rosetta.Transaction, error) {
-	return rosetta.Transaction{}, nil
+	// TODO: implement Rosetta transaction retrieval
+	// => https://github.com/awfm9/flow-dps/issues/44
+	return rosetta.Transaction{}, fmt.Errorf("not implemented")
 }

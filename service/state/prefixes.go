@@ -14,15 +14,12 @@
 
 package state
 
-import (
-	"github.com/onflow/flow-go/model/flow"
+const (
+	prefixLastCommit  = 1
+	prefixIndexBlock  = 2
+	prefixIndexCommit = 3
+	prefixIndexHeight = 4
+	prefixDataHeader  = 5
+	prefixDataDelta   = 6
+	prefixDataEvent   = 7
 )
-
-type Chain struct {
-	core *Core
-}
-
-func (c *Chain) Header(height uint64) (*flow.Header, error) {
-
-	return nil, nil
-}

@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -26,9 +27,13 @@ type Height struct {
 	core *Core
 }
 
+// TODO: move all core logic to the core state and just proxy to unexported
+// functions from the sub-interfaces
+// => https://github.com/awfm9/flow-dps/issues/37
+
 func (h *Height) ForBlock(blockID flow.Identifier) (uint64, error) {
 	key := make([]byte, 1+len(blockID))
-	key[0] = prefixBlockIndex
+	key[0] = prefixIndexBlock
 	copy(key[1:], blockID[:])
 	var height uint64
 	err := h.core.db.View(func(tx *badger.Txn) error {
@@ -50,7 +55,7 @@ func (h *Height) ForBlock(blockID flow.Identifier) (uint64, error) {
 
 func (h *Height) ForCommit(commit flow.StateCommitment) (uint64, error) {
 	key := make([]byte, 1+len(commit))
-	key[0] = prefixCommitIndex
+	key[0] = prefixIndexCommit
 	copy(key[1:], commit[:])
 	var height uint64
 	err := h.core.db.View(func(tx *badger.Txn) error {

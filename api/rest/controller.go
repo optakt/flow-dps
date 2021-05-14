@@ -37,6 +37,8 @@ func NewController(state dps.State) (*Controller, error) {
 	return c, nil
 }
 
+// TODO: integration testing of GetRegister endpoint
+// => https://github.com/awfm9/flow-dps/issues/48
 func (c *Controller) GetRegister(ctx echo.Context) error {
 
 	key, err := hex.DecodeString(ctx.Param("key"))
@@ -84,6 +86,8 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 // and the default pathfinder key encoding will be used.
 // The response is returned as a simple array of hexadecimal strings.
 // Example: GET /values/0.f647acg,4.ef67d11:0.f3321ab,3.ab321fe?hash=7ae6417ed5&version=1
+// TODO: integration testing of GetValue endpoints
+// => https://github.com/awfm9/flow-dps/issues/49
 func (c *Controller) GetValue(ctx echo.Context) error {
 
 	keys, err := DecodeKeys(ctx.Param("keys"))

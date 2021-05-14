@@ -14,6 +14,9 @@
 
 package scripts
 
+// TODO: implement complete third party token support (i.e. storage path)
+// => https://github.com/awfm9/flow-dps/issues/41
+
 const (
 	PlaceholderFungible = "FUNGIBLE_ADDRESS"
 	PlaceholderToken    = "TOKEN_ADDRESS"

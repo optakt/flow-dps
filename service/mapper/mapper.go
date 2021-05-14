@@ -48,8 +48,8 @@ type Mapper struct {
 // and then passes on the details to the indexer for indexing.
 func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options ...func(*MapperConfig)) (*Mapper, error) {
 
-	// By default, we don't have a checkpoint to bootstrap from, so check if we
-	// explicitly passed one using the variadic option parameters.
+	// We don't use a checkpoint by default. The options can set one, in which
+	// case we will start from the checkpoint instead of an empty trie.
 	cfg := MapperConfig{
 		CheckpointFile: "",
 	}
@@ -193,6 +193,10 @@ Outer:
 				return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 			}
 
+			// TODO: look at performance of doing separate transations versus
+			// having an API that allows combining into a single Badger tx
+			// => https://github.com/awfm9/flow-dps/issues/36
+
 			// If we successfully retrieved the commit, we can index everything
 			// for this block, because everything should be available.
 			err = m.index.Header(height, header)
@@ -264,6 +268,9 @@ Outer:
 		m.deltas = append(m.deltas, delta)
 		m.trie = trie
 	}
+
+	// TODO: compact the Badger value log
+	// => https://github.com/awfm9/flow-dps/issues/35
 
 	return nil
 }
