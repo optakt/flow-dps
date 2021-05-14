@@ -52,3 +52,6 @@ jobs:
 
       - name: Verify that the code compiles
         run: go build main.go
+
+      - name: Verify that unit tests are passing
+        run: go test -v ./...
