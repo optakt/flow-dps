@@ -68,8 +68,8 @@ func main() {
 	)
 
 	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log output level")
-	pflag.StringVarP(&flagData, "data-dir", "d", "data", "protocol state database directory")
-	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "state trie write-ahead log directory")
+	pflag.StringVarP(&flagData, "data-dir", "d", "", "protocol state database directory")
+	pflag.StringVarP(&flagTrie, "trie-dir", "t", "", "state trie write-ahead log directory")
 	pflag.StringVarP(&flagIndex, "index-dir", "i", "index", "state ledger index directory")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint-file", "c", "", "state trie root checkpoint file")
 	pflag.StringVarP(&flagHostREST, "rest-host", "r", ":8080", "host URL for REST API endpoints")
@@ -88,22 +88,30 @@ func main() {
 	}
 	log = log.Level(level)
 
-	// DPS indexer initialization.
-	chain, err := chain.FromProtocolState(flagData)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize chain")
-	}
-	feeder, err := feeder.FromLedgerWAL(flagTrie)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize feeder")
-	}
+	// Initialize the index core state.
 	core, err := state.NewCore(flagIndex)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize ledger")
 	}
-	mapper, err := mapper.New(log, chain, feeder, core.Index(), mapper.WithCheckpointFile(flagCheckpoint))
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize mapper")
+
+	// Initialize bootstrapper components.
+	runMapper := func() error { return nil }
+	stopMapper := func(context.Context) error { return nil }
+	if flagData != "" && flagTrie != "" {
+		chain, err := chain.FromProtocolState(flagData)
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not initialize chain")
+		}
+		feeder, err := feeder.FromLedgerWAL(flagTrie)
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not initialize feeder")
+		}
+		mapper, err := mapper.New(log, chain, feeder, core.Index(), mapper.WithCheckpointFile(flagCheckpoint))
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not initialize mapper")
+		}
+		runMapper = mapper.Run
+		stopMapper = mapper.Stop
 	}
 
 	// REST API initialization.
@@ -147,7 +155,7 @@ func main() {
 	// interrupt signal in order to proceed with the next section.
 	go func() {
 		start := time.Now().UTC()
-		err := mapper.Run()
+		err := runMapper()
 		if err != nil {
 			log.Error().Err(err).Msg("disk mapper encountered error")
 		}
@@ -216,7 +224,7 @@ func main() {
 	}()
 	go func() {
 		defer wg.Done()
-		err := mapper.Stop(ctx)
+		err := stopMapper(ctx)
 		if err != nil {
 			log.Error().Err(err).Msg("could not shut down mapper")
 		}
