@@ -86,7 +86,7 @@ func (v *Validator) Transaction(transaction identifier.Transaction) error {
 func (v *Validator) Account(account identifier.Account) error {
 	// TODO: implement validation for account
 	// => https://github.com/awfm9/flow-dps/issues/53
-	return fmt.Errorf("not implemented")
+	return nil
 }
 
 func (v *Validator) Currency(currency identifier.Currency) error {
