@@ -1,6 +1,6 @@
 # Flow Data Provisioning Service
 
-[[!CI Status](https://github.com/awfm9/flow-dps/workflows/CI/badge.svg)](https://github.com/awfm9/flow-dps/actions/workflows/pr.yml)
+[![CI Status](https://img.shields.io/github/workflow/status/awfm9/flow-dps/MasterCI?logo=GitHub%20Actions&label=&logoColor=silver&labelColor=gray)](https://github.com/awfm9/flow-dps/actions/workflows/master.yml)
 
 The Flow Data Provisioning Service (DPS) aims at providing a scalable and efficient way to access the history of the Flow
 execution state, both for the current live sporks and for past sporks. It also serves as a basis for the implementation
