@@ -83,6 +83,10 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusUnprocessableEntity, nil)
 	}
+	err = d.validate.Transaction(req.TransactionID)
+	if err != nil {
+		return ctx.JSON(http.StatusUnprocessableEntity, nil)
+	}
 
 	transaction, err := d.retrieve.Transaction(req.NetworkID, req.BlockID, req.TransactionID)
 	if err != nil {
@@ -111,6 +115,10 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return ctx.JSON(http.StatusUnprocessableEntity, nil)
 	}
 	err = d.validate.Block(req.BlockID)
+	if err != nil {
+		return ctx.JSON(http.StatusUnprocessableEntity, nil)
+	}
+	err = d.validate.Account(req.AccountID)
 	if err != nil {
 		return ctx.JSON(http.StatusUnprocessableEntity, nil)
 	}

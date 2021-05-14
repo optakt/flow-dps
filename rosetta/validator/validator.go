@@ -14,7 +14,11 @@
 
 package validator
 
-import "github.com/awfm9/flow-dps/models/identifier"
+import (
+	"fmt"
+
+	"github.com/awfm9/flow-dps/models/identifier"
+)
 
 type Validator struct {
 }
@@ -27,13 +31,31 @@ func New() *Validator {
 }
 
 func (v *Validator) Network(network identifier.Network) error {
-	return nil
+	// TODO: implement validation for network
+	// => https://github.com/awfm9/flow-dps/issues/50
+	return fmt.Errorf("not implemented")
 }
 
 func (v *Validator) Block(block identifier.Block) error {
-	return nil
+	// TODO: implement validation for block
+	// => https://github.com/awfm9/flow-dps/issues/51
+	return fmt.Errorf("not implemented")
+}
+
+func (v *Validator) Transaction(transaction identifier.Transaction) error {
+	// TODO: implement validation for transaction
+	// => https://github.com/awfm9/flow-dps/issues/54
+	return fmt.Errorf("not implemented")
+}
+
+func (v *Validator) Account(account identifier.Account) error {
+	// TODO: implement validation for account
+	// => https://github.com/awfm9/flow-dps/issues/53
+	return fmt.Errorf("not implemented")
 }
 
 func (v *Validator) Currency(currency identifier.Currency) error {
-	return nil
+	// TODO: implement validation for currency
+	// => https://github.com/awfm9/flow-dps/issues/52
+	return fmt.Errorf("not implemented")
 }

@@ -21,5 +21,7 @@ import (
 type Validator interface {
 	Network(network identifier.Network) error
 	Block(block identifier.Block) error
+	Transaction(transaction identifier.Transaction) error
+	Account(account identifier.Account) error
 	Currency(currency identifier.Currency) error
 }
