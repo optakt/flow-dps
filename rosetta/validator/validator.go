@@ -31,9 +31,16 @@ func New() *Validator {
 }
 
 func (v *Validator) Network(network identifier.Network) error {
-	// TODO: implement validation for network
-	// => https://github.com/awfm9/flow-dps/issues/50
-	return fmt.Errorf("not implemented")
+
+	if network.Blockchain != "flow" {
+		return fmt.Errorf("invalid network identifier blockchain (%s)", network.Blockchain)
+	}
+
+	if network.Network != "testnet" && network.Network != "mainnet" {
+		return fmt.Errorf("invalid network identifier network (%s)", network.Network)
+	}
+
+	return nil
 }
 
 func (v *Validator) Block(block identifier.Block) error {
