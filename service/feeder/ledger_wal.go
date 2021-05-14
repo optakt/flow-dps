@@ -28,7 +28,9 @@ import (
 )
 
 type LedgerWAL struct {
-	reader *pwal.Reader
+	reader    *pwal.Reader
+	cache     map[string]dps.Delta
+	threshold uint
 }
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
@@ -50,17 +52,35 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	}
 
 	l := LedgerWAL{
-		reader: pwal.NewReader(segments),
+		reader:    pwal.NewReader(segments),
+		cache:     make(map[string]dps.Delta),
+		threshold: 1000,
 	}
 
 	return &l, nil
 }
 
 func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
+
+	// TODO: implement proper caching to take into account possible edge case of
+	// out-of-order deltas
+	// => https://github.com/awfm9/flow-dps/issues/61
+	key := string(commit)
+	delta, ok := l.cache[key]
+	if ok {
+		delete(l.cache, key)
+		return delta, nil
+	}
+
 	// TODO: add warning when we had too many deltas without matching commit and
 	// add a limit to maximum attempts to match before error
 	// => https://github.com/awfm9/flow-dps/issues/60
+	count := uint(0)
 	for {
+		count++
+		if count > l.threshold {
+			return nil, fmt.Errorf("feeder threshold reached (%d)", l.threshold)
+		}
 		next := l.reader.Next()
 		err := l.reader.Err()
 		if !next && err != nil {
@@ -77,9 +97,6 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 		if operation != wal.WALUpdate {
 			continue
 		}
-		if !bytes.Equal(commit, update.RootHash) {
-			continue
-		}
 		delta := make(dps.Delta, 0, len(update.Paths))
 		for index, path := range update.Paths {
 			payload := update.Payloads[index]
@@ -88,6 +105,11 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 				Payload: *payload,
 			}
 			delta = append(delta, change)
+		}
+		if !bytes.Equal(commit, update.RootHash) {
+			key = string(update.RootHash)
+			l.cache[key] = delta
+			continue
 		}
 		return delta, nil
 	}
