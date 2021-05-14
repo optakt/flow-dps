@@ -18,7 +18,7 @@ This route returns the raw binary payload, encoded in hexadecimal, for the key's
 
 #### Path Parameters
 
-* `key`: The hexadecimal-encoded key at which to look for a register.
+* `raw_key`: The hexadecimal-encoded key at which to look for a register.
 
 #### Query Parameters
 
@@ -30,7 +30,7 @@ Possible response codes are:
 
 * `200 OK` - Payload retrieved successfully.
 * `400 Bad Request` - Unable to decode key or height parameters.
-* `404 Not Found` - No payload found for given parameters.
+* `404 Not Found` - Register key not found at the specified height, or at the last sealed height, if no height given.
 * `500 Internal Server Error` - Unable to create query or to read from state database.
 
 #### Response Body
@@ -63,25 +63,26 @@ Possible response codes are:
 ```json
 {
   "height": 425,
-  "key": "20VDBpq8GZS3JDdmskD70Deq+kdsNetzeCZA=",
-  "value": "+Em4QOD6BU2j9jPdks07DsmalPEDfbsdAk/Cdvs0Dkawo/ei02ocds9D9klSflsa8CH8p9A4ID6A6A"
+  "key": "3982123eefe952df5900dbabac2771e4",
+  "value": "42c42176e24d2eeb4f9dfbee38c727f75ed07d8e4623863d350a523ceab36411829560e1848aa47aef4bf3bca6cb86c437561fc5d6afb7fa62b0a17559e4f7eb4be8"
 }
 ```
 
 ### `GET /values/:ledger_key` - Get Value
 
-This route returns the payload value of an encoded Ledger entry.
+This route returns the Ledger payload for a Ledger key from the execution state trie.
+The encoding of the key is inspired by the canonical string format for keys, but made compatible with URLs and with requests for multiple URLs.
 
 **Example request**: `GET /values/0.f647acg,4.ef67d11:0.f3321ab,3.ab321fe?hash=7ae6417ed5&version=1`
 
 #### Path Parameters
 
-* `encoded_key`: A semicolon-delimited (`:`) set of `ledger.Key` strings. Each `ledger.KeyPart` within the `ledger.Key` is delimited by a comma (`,`). The type and value of each `ledger.KeyPart` are delimited by a dot (`.`), and the values are encoded as hexadecimal strings.
+* `ledger_key`: A semicolon-delimited (`:`) set of `ledger.Key` strings. Each `ledger.KeyPart` within the `ledger.Key` is delimited by a comma (`,`). The type and value of each `ledger.KeyPart` are delimited by a dot (`.`), and the values are encoded as hexadecimal strings.
 
 #### Query Parameters
 
-* `hash`: Optional. Specifies which commit hash to get the payload value from. Defaults to the latest commit from the state.
-* `version`: Optional. Specifies the pathfinding version to use to traverse the state. Defaults to the default pathfinder key encoding.
+* `hash`: Optional. Specifies which state commitment hash to get the payload value from. Defaults to the latest state commitment hash from the state.
+* `version`: Optional. Specifies the pathfinding version to use to traverse the state. Defaults to the default pathfinder path encoding used in the respective version of the Flow Go dependency.
 
 #### Response Codes
 
@@ -110,11 +111,11 @@ Possible response codes are:
 
 ```json
 [
-  "6c49490a1f023fda632cfe3a49b66201",
+  "6c49490a1f023fda632cfe3",
   "24e32f4633ff12daf66f1e2d8c73b04f",
-  "7bc1e622a5b639e8befe97262d3a21c5",
+  "7bc1e622a5b639e8befe97262d3a",
   "1d7dd90eca1066a5905abf243b926d35",
-  "8c5178bcaa7b30cec5c9073aee1a1702"
+  "8c5178bcaa7b30cec5c"
 ]
 ```
 

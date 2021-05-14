@@ -61,7 +61,8 @@ It combines writing and retrieving of indexes, so that an efficient caching stra
 
 ### Database Schema
 
-The DPS uses [BadgerDB](https://github.com/dgraph-io/badger) to store datasets of state changes and block information.
+The DPS uses [BadgerDB](https://github.com/dgraph-io/badger) to store datasets of state changes and block information to build all the indexes required for random protocol and execution state access.
+It does not re-use any of the protocol state database, but instead re-indexes everything, so that all databases used to bootstrap can be discarded subsequently.
 
 #### Block-To-Height Index
 
@@ -73,7 +74,7 @@ TODO: Replace link to file and line with a link to the godoc that shows those co
 |:-------------------|:------------------|:-----------|
 | **Type**           | byte              | hex hash   |
 | **Description**    | Index type prefix | Block ID   |
-| **Example Value**  | `1`               | `1FD5532A` |
+| **Example Value**  | `1`               | `1fd5532a` |
 
 The value stored at that key is the **Height** of the referenced block.
 
@@ -85,7 +86,7 @@ In this index, keys map the commit hash to the block height, and they are [prefi
 |:-------------------|:------------------|:-----------|
 | **Type**           | byte              | hex hash   |
 | **Description**    | Index type prefix | Commit     |
-| **Example Value**  | `2`               | `3F5D8120` |
+| **Example Value**  | `2`               | `3f5d8120` |
 
 The value stored at that key is the **Height** of the referenced commit's block.
 
