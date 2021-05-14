@@ -24,7 +24,7 @@ func NewController(state model.State) (*Controller, error) {
 
 // GetRegister gets a single register from a given key. Block height can also be given as an optional parameter.
 // If no height is given, the last height present within the state is used.
-func (c *Controller) GetRegister(_ context.Context, req *GetRegisterRequest, _ ...grpc.CallOption) (*Register, error) {
+func (c *Controller) GetRegister(_ context.Context, req *GetRegisterRequest, _ ...grpc.CallOption) (*GetRegisterResponse, error) {
 	state := c.state.Raw()
 
 	height, _ := c.state.Last()
@@ -39,7 +39,7 @@ func (c *Controller) GetRegister(_ context.Context, req *GetRegisterRequest, _ .
 		return nil, fmt.Errorf("could not get register in GRPC API: %w", err)
 	}
 
-	res := &Register{
+	res := &GetRegisterResponse{
 		Height: height,
 		Key: req.Key,
 		Value: value,
@@ -52,7 +52,7 @@ func (c *Controller) GetRegister(_ context.Context, req *GetRegisterRequest, _ .
 // as the Flow Ledger interface would. It takes an input that emulates the `ledger.Query` struct.
 // The state hash and the pathfinder key version are optional as part of the request.
 // If omitted, the state hash of the latest sealed block and the default pathfinder key encoding is used.
-func (c *Controller) GetValues(_ context.Context, req *GetValuesRequest, _ ...grpc.CallOption) (*Values, error) {
+func (c *Controller) GetValues(_ context.Context, req *GetValuesRequest, _ ...grpc.CallOption) (*GetValuesResponse, error) {
 	state := c.state.Ledger()
 
 	if req.Version != nil {
@@ -89,7 +89,7 @@ func (c *Controller) GetValues(_ context.Context, req *GetValuesRequest, _ ...gr
 		vv = append(vv, value)
 	}
 
-	res := &Values{
+	res := &GetValuesResponse{
 		Values: vv,
 	}
 

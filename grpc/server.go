@@ -17,11 +17,11 @@ func NewServer(ctrl *Controller) *Server {
 }
 
 // GetRegister calls the server's controller with the GetRegister method.
-func (s *Server) GetRegister(ctx context.Context, req *GetRegisterRequest) (*Register, error) {
+func (s *Server) GetRegister(ctx context.Context, req *GetRegisterRequest) (*GetRegisterResponse, error) {
 	return s.ctrl.GetRegister(ctx, req)
 }
 
 // GetValues calls the server's controller with the GetValues method.
-func (s *Server) GetValues(ctx context.Context, req *GetValuesRequest) (*Values, error) {
+func (s *Server) GetValues(ctx context.Context, req *GetValuesRequest) (*GetValuesResponse, error) {
 	return s.ctrl.GetValues(ctx, req)
 }
