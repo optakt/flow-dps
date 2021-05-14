@@ -6,6 +6,7 @@ require (
 	github.com/OneOfOne/xxhash v1.2.5
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/fxamacker/cbor v1.5.1
+	github.com/fxamacker/cbor/v2 v2.2.1-0.20201006223149-25f67fca9803
 	github.com/klauspost/compress v1.12.2
 	github.com/labstack/echo/v4 v4.2.2
 	github.com/onflow/cadence v0.14.4
