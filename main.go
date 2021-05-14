@@ -130,7 +130,7 @@ func main() {
 	contracts := contracts.New(contracts.WithToken("FLOW", flow.HexToAddress(flagFlowToken)))
 	scripts := scripts.New(scripts.WithParams(scripts.TestNet()))
 	invoke := invoker.New(log, core)
-	validate := validator.New()
+	validate := validator.New(core.Height(), contracts)
 	retrieve := retriever.New(contracts, scripts, invoke)
 	actrl := rosetta.NewData(validate, retrieve)
 
