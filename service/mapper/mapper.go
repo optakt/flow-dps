@@ -193,7 +193,7 @@ Outer:
 				return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 			}
 
-			// TODO: look at performance of doing separate transations versus
+			// TODO: look at performance of doing separate transactions versus
 			// having an API that allows combining into a single Badger tx
 			// => https://github.com/awfm9/flow-dps/issues/36
 

@@ -39,7 +39,7 @@ type Index interface {
 
 type Chain interface {
 	Header(height uint64) (*flow.Header, error)
-	Events(height uint64) ([]flow.Event, error)
+	Events(height uint64, types ...string) ([]flow.Event, error)
 }
 
 type Last interface {
