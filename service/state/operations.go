@@ -1,12 +1,23 @@
+// Copyright 2021 Alvalor S.A.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not
+// use this file except in compliance with the License. You may obtain a copy of
+// the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations under
+// the License.
+
 package state
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
-
-	"github.com/awfm9/flow-dps/model"
 )
 
 // Retrieve gets any arbitrary value from a given key.
@@ -28,37 +39,9 @@ func Retrieve(key []byte, value *[]byte) func(txn *badger.Txn) error {
 	}
 }
 
-func RetrieveLastHeight(height *uint64) func(txn *badger.Txn) error {
-	return func(txn *badger.Txn) error {
-		item, err := txn.Get(Encode(model.PrefixLastHeight))
-		if err != nil {
-			return fmt.Errorf("unable to retrieve last height: %w", err)
-		}
-
-		val, err := item.ValueCopy(nil)
-		if err != nil {
-			return fmt.Errorf("unable to copy last height: %w", err)
-		}
-		*height = binary.BigEndian.Uint64(val)
-
-		return nil
-	}
-}
-
-func SetLastHeight(height uint64) func(txn *badger.Txn) error {
-	return func(txn *badger.Txn) error {
-		err := txn.Set(Encode(model.PrefixLastHeight), Encode(height))
-		if err != nil {
-			return fmt.Errorf("unable to persist last height: %w", err)
-		}
-
-		return nil
-	}
-}
-
 func RetrieveLastCommit(commit *[]byte) func(txn *badger.Txn) error {
 	return func(txn *badger.Txn) error {
-		item, err := txn.Get(Encode(model.PrefixLastCommit))
+		item, err := txn.Get(Encode(prefixLastCommit))
 		if err != nil {
 			return fmt.Errorf("unable to retrieve last commit: %w", err)
 		}
@@ -74,7 +57,7 @@ func RetrieveLastCommit(commit *[]byte) func(txn *badger.Txn) error {
 
 func SetLastCommit(commit []byte) func(txn *badger.Txn) error {
 	return func(txn *badger.Txn) error {
-		err := txn.Set(Encode(model.PrefixLastCommit), commit)
+		err := txn.Set(Encode(prefixLastCommit), commit)
 		if err != nil {
 			return fmt.Errorf("unable to persist last commit: %w", err)
 		}
