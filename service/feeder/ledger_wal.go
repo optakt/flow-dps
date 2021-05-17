@@ -71,9 +71,9 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 	// that case, we should just return it, because it means the mapper is
 	// rewinding and switching to another branch, because the one it was one
 	// didn't continue.
-	deltas, ok := l.cache[string(commit)]
-	if ok && deltas.Len() > 0 {
-		return deltas.PopBack().(dps.Delta), nil
+	forks, ok := l.cache[string(commit)]
+	if ok && forks.Len() > 0 {
+		return forks.PopBack().(dps.Delta), nil
 	}
 
 	// Otherwise, we read from the on-disk file until we find a delta that can
@@ -125,12 +125,12 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			delta = append(delta, change)
 		}
 		if !bytes.Equal(update.RootHash, commit) {
-			deltas, ok := l.cache[string(update.RootHash)]
+			forks, ok := l.cache[string(update.RootHash)]
 			if !ok {
-				deltas = deque.New(10, 10)
-				l.cache[string(update.RootHash)] = deltas
+				forks = deque.New(10, 10)
+				l.cache[string(update.RootHash)] = forks
 			}
-			deltas.PushBack(delta)
+			forks.PushBack(delta)
 			l.log.Debug().Hex("commit", update.RootHash).Msg("added non-sequential delta to cache")
 			continue
 		}

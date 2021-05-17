@@ -163,22 +163,24 @@ Outer:
 		// which point we map the second and any subsequent blocks without
 		// change to an empty set of deltas.
 
-		hash := tree.RootHash()
+		commitTree := tree.RootHash()
+		var log zerolog.Logger
 
-		log := m.log.With().
-			Uint64("height", height).
-			Hex("hash", hash).
-			Int("deltas", len(deltas)).
-			Logger()
 	Inner:
 		for {
+
+			log = m.log.With().
+				Uint64("height", height).
+				Hex("commit_trie", commitTree).
+				Int("num_deltas", len(deltas)).
+				Logger()
 
 			// We first try to get the next commit by height, because that is
 			// the sign that the block has been sealed. If the retrieval times
 			// out, we loop right back into this condition, because it means the
 			// network might be stalling. If the error indicates we finished,
 			// then we reached the end of the WAL and can finish without error.
-			commit, err := m.chain.Commit(height)
+			commitHeight, err := m.chain.Commit(height)
 			if errors.Is(err, dps.ErrTimeout) {
 				log.Warn().Msg("commit retrieval timed out, retrying")
 				continue Inner
@@ -191,10 +193,10 @@ Outer:
 				return fmt.Errorf("commit retrieval failed: %w", err)
 			}
 
-			log = log.With().Hex("commit", commit).Logger()
+			log = log.With().Hex("commit_height", commitHeight).Logger()
 
-			if !bytes.Equal(hash, commit) {
-				log.Debug().Msg("hash does not match commit, keep searching")
+			if !bytes.Equal(commitTree, commitHeight) {
+				log.Debug().Msg("commit between tree and height does not match, keep searching")
 				break Inner
 			}
 			header, err := m.chain.Header(height)
@@ -216,7 +218,7 @@ Outer:
 			if err != nil {
 				return fmt.Errorf("could not index header: %w", err)
 			}
-			err = m.index.Commit(height, commit)
+			err = m.index.Commit(height, commitHeight)
 			if err != nil {
 				return fmt.Errorf("could not index commit: %w", err)
 			}
@@ -228,7 +230,7 @@ Outer:
 			if err != nil {
 				return fmt.Errorf("could not index events: %w", err)
 			}
-			err = m.index.Last(commit)
+			err = m.index.Last(commitHeight)
 			if err != nil {
 				return fmt.Errorf("could not index last: %w", err)
 			}
@@ -255,7 +257,10 @@ Outer:
 			// keep going
 		}
 
-		delta, err := m.feed.Delta(hash)
+		delta, err := m.feed.Delta(commitTree)
+		if len(deltas) == 0 && errors.Is(err, dps.ErrNotFound) {
+			return fmt.Errorf("could not resolve fork")
+		}
 		if errors.Is(err, dps.ErrNotFound) {
 			log.Warn().Msg("delta retrieval failed, rewinding")
 			tree = m.tree
@@ -281,7 +286,9 @@ Outer:
 
 		deltas = append(deltas, delta)
 
-		log.Info().Hex("hash_after", tree.RootHash()).Int("changes", len(delta)).Msg("state trie updated")
+		commitAfter := tree.RootHash()
+
+		log.Info().Hex("commit_after", commitAfter).Int("num_changes", len(delta)).Msg("state trie updated")
 	}
 
 	// At the very end, we want to compact the database one more time to make
