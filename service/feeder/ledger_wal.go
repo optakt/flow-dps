@@ -73,7 +73,9 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 	// didn't continue.
 	forks, ok := l.cache[string(commit)]
 	if ok && forks.Len() > 0 {
-		return forks.PopBack().(dps.Delta), nil
+		delta := forks.PopBack().(dps.Delta)
+		l.log.Debug().Hex("commit", commit).Int("num_changes", len(delta)).Msg("returning non-sequential delta from cache")
+		return delta, nil
 	}
 
 	// Otherwise, we read from the on-disk file until we find a delta that can
@@ -131,7 +133,7 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 				l.cache[string(update.RootHash)] = forks
 			}
 			forks.PushBack(delta)
-			l.log.Debug().Hex("commit", update.RootHash).Msg("added non-sequential delta to cache")
+			l.log.Debug().Hex("commit", update.RootHash).Int("num_changes", len(delta)).Msg("added non-sequential delta to cache")
 			continue
 		}
 
