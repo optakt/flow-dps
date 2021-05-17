@@ -15,7 +15,6 @@
 package state
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
@@ -32,31 +31,20 @@ type Height struct {
 // => https://github.com/awfm9/flow-dps/issues/37
 
 func (h *Height) ForBlock(blockID flow.Identifier) (uint64, error) {
-	var height []byte
+	var height uint64
 	err := h.core.db.View(func(tx *badger.Txn) error {
-		return Retrieve(Encode(prefixIndexBlock, blockID[:]), &height)(tx)
+		return RetrieveBlockHeight(Encode(prefixIndexBlock, blockID[:]), &height)(tx)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("could not look up block: %w", err)
 	}
-	return binary.BigEndian.Uint64(height), nil
+	return height, nil
 }
 
 func (h *Height) ForCommit(commit flow.StateCommitment) (uint64, error) {
-	key := make([]byte, 1+len(commit))
-	key[0] = prefixIndexCommit
-	copy(key[1:], commit[:])
 	var height uint64
 	err := h.core.db.View(func(tx *badger.Txn) error {
-		item, err := tx.Get(key)
-		if err != nil {
-			return fmt.Errorf("could not retrieve commit index: %w", err)
-		}
-		_ = item.Value(func(val []byte) error {
-			height = binary.BigEndian.Uint64(val)
-			return nil
-		})
-		return nil
+		return RetrieveBlockHeight(Encode(prefixIndexBlock, commit), &height)(tx)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("could not look up commit: %w", err)

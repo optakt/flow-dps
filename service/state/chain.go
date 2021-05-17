@@ -31,7 +31,7 @@ type Chain struct {
 func (c *Chain) Header(height uint64) (*flow.Header, error) {
 	var header flow.Header
 	err := c.core.db.View(func(tx *badger.Txn) error {
-		return RetrieveCompressed(c.core.decompressor, Encode(prefixDataHeader, height), &header)(tx)
+		return RetrieveHeader(height, &header)(tx)
 	})
 
 	return &header, err
@@ -75,7 +75,7 @@ func (c *Chain) Events(height uint64, types ...string) ([]flow.Event, error) {
 			// Unmarshal event batch and append them to result slice.
 			var evts []flow.Event
 			err := it.Item().Value(func(val []byte) error {
-				val, err := c.core.decompressor.DecodeAll(val, nil)
+				val, err := decoder.DecodeAll(val, nil)
 				if err != nil {
 					return fmt.Errorf("could not decompress events: %w", err)
 				}

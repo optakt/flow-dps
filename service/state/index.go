@@ -39,14 +39,14 @@ func (i *Index) Header(height uint64, header *flow.Header) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 
 		// use the headers height as key to store the encoded header
-		err := SetCompressed(i.core.codec, i.core.compressor, Encode(prefixDataHeader, height), header)(tx)
+		err := SetHeader(height, header)(tx)
 		if err != nil {
 			return fmt.Errorf("could not persist header data: %w", err)
 		}
 
 		// create an index to map block ID to height
 		blockID := header.ID()
-		err = tx.Set(Encode(prefixIndexBlock, blockID[:]), Encode(height))
+		err = SetBlockHeight(blockID[:], height)(tx)
 		if err != nil {
 			return fmt.Errorf("could not persist block index: %w", err)
 		}
@@ -63,13 +63,13 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 
 		// create an index to map commit to height
-		err := tx.Set(Encode(prefixIndexCommit, commit), Encode(height))
+		err := SetCommitHeight(commit, height)(tx)
 		if err != nil {
 			return fmt.Errorf("could not persist commit index: %w", err)
 		}
 
 		// create an index to map height to commit
-		err = tx.Set(Encode(prefixIndexHeight, height), commit)
+		err = SetHeightCommit(height, commit)(tx)
 		if err != nil {
 			return fmt.Errorf("could not persist height index: %w", err)
 		}
@@ -87,7 +87,7 @@ func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 		for _, delta := range deltas {
 			for _, change := range delta {
-				err := SetCompressed(i.core.codec, i.core.compressor, Encode(prefixDataDelta, change.Path, height), change.Payload)(tx)
+				err := SetDeltas(height, change)(tx)
 				if err != nil {
 					return fmt.Errorf("could not persist delta data: %w", err)
 				}
@@ -112,7 +112,7 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 		}
 
 		for hash, evts := range buckets {
-			err := SetCompressed(i.core.codec, i.core.compressor, Encode(prefixDataEvents, height, hash), evts)(tx)
+			err := SetEvents(height, hash, evts)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist events: %w", err)
 			}
@@ -129,7 +129,7 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 
 func (i *Index) Last(commit flow.StateCommitment) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
-		err := tx.Set(Encode(prefixLastCommit), commit)
+		err := SetLastCommit(commit)(tx)
 		if err != nil {
 			return fmt.Errorf("could not persist last commit: %w", err)
 		}

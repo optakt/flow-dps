@@ -15,14 +15,11 @@
 package state
 
 import (
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/klauspost/compress/zstd"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
@@ -39,9 +36,6 @@ import (
 
 type Core struct {
 	db           *badger.DB
-	compressor   *zstd.Encoder
-	decompressor *zstd.Decoder
-	codec        cbor.EncMode
 	height       uint64
 	commit       flow.StateCommitment
 }
@@ -54,30 +48,7 @@ func NewCore(dir string) (*Core, error) {
 		return nil, fmt.Errorf("could not open database: %w", err)
 	}
 
-	dict, err := hex.DecodeString(dps.Dictionary)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode dictionary")
-	}
 
-	compressor, err := zstd.NewWriter(nil,
-		zstd.WithEncoderDict(dict),
-		zstd.WithEncoderLevel(zstd.SpeedDefault),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize compressor: %w", err)
-	}
-
-	decompressor, err := zstd.NewReader(nil,
-		zstd.WithDecoderDicts(dict),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize decompressor: %w", err)
-	}
-
-	codec, err := cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize codec: %w", err)
-	}
 
 	// TODO: think about refactoring this, especially in regards to the empty
 	// trie initialization, once we have switched to the new storage API
@@ -93,11 +64,9 @@ func NewCore(dir string) (*Core, error) {
 		}
 
 		// then we get the height associated with it
-		var heightVal []byte
-		if err := Retrieve(Encode(prefixIndexCommit, commit), &heightVal)(tx); err != nil {
+		if err := RetrieveCommitHeight(commit, &height)(tx); err != nil {
 			return fmt.Errorf("could not retrieve height from commit: %w", err)
 		}
-		height = binary.BigEndian.Uint64(heightVal)
 		return nil
 	})
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
@@ -115,13 +84,13 @@ func NewCore(dir string) (*Core, error) {
 		err = db.Update(func(tx *badger.Txn) error {
 
 			// store the empty root hash as last commit
-			err = tx.Set(Encode(prefixLastCommit), commit)
+			err = SetLastCommit(commit)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist last commit: %w", err)
 			}
 
 			// map the last commit to zero height
-			err = tx.Set(Encode(prefixIndexCommit, commit), Encode(height))
+			err = SetCommitHeight(commit, height)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist commit index: %w", err)
 			}
@@ -135,9 +104,6 @@ func NewCore(dir string) (*Core, error) {
 
 	c := Core{
 		db:           db,
-		compressor:   compressor,
-		decompressor: decompressor,
-		codec:        codec,
 		height:       height,
 		commit:       commit,
 	}
@@ -194,10 +160,7 @@ func (c *Core) payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// seek for; this should represent the last update to the path before the
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
-	key := make([]byte, 1+pathfinder.PathByteSize+8)
-	key[0] = prefixDataDelta
-	copy(key[1:1+pathfinder.PathByteSize], path)
-	binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
+	key := Encode(prefixDataDelta, path, height)
 	err := c.db.View(func(tx *badger.Txn) error {
 		it := tx.NewIterator(badger.IteratorOptions{
 			PrefetchSize:   0,
@@ -213,7 +176,7 @@ func (c *Core) payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 			return dps.ErrNotFound
 		}
 		err := it.Item().Value(func(val []byte) error {
-			val, err := c.decompressor.DecodeAll(val, nil)
+			val, err := decoder.DecodeAll(val, nil)
 			if err != nil {
 				return fmt.Errorf("could not decompress payload: %w", err)
 			}

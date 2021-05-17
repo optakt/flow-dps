@@ -15,7 +15,7 @@ type Commit struct {
 func (c *Commit) ForHeight(height uint64) (flow.StateCommitment, error) {
 	var commit flow.StateCommitment
 	err := c.core.db.View(func(tx *badger.Txn) error {
-		return Retrieve(Encode(prefixIndexHeight, height), &commit)(tx)
+		return RetrieveCommit(height, &commit)(tx)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not look up height: %w", err)
