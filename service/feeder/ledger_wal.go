@@ -17,12 +17,13 @@ package feeder
 import (
 	"bytes"
 	"fmt"
+	"sort"
 
 	"github.com/gammazero/deque"
 	"github.com/prometheus/client_golang/prometheus"
 	pwal "github.com/prometheus/tsdb/wal"
-	"github.com/rs/zerolog"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 
@@ -30,7 +31,6 @@ import (
 )
 
 type LedgerWAL struct {
-	log       zerolog.Logger
 	reader    *pwal.Reader
 	cache     map[string]*deque.Deque
 	threshold uint
@@ -38,7 +38,7 @@ type LedgerWAL struct {
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
 // directly from an execution node's trie directory.
-func FromLedgerWAL(log zerolog.Logger, dir string) (*LedgerWAL, error) {
+func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 
 	w, err := pwal.NewSize(
 		nil,
@@ -55,7 +55,6 @@ func FromLedgerWAL(log zerolog.Logger, dir string) (*LedgerWAL, error) {
 	}
 
 	l := LedgerWAL{
-		log:       log,
 		reader:    pwal.NewReader(segments),
 		cache:     make(map[string]*deque.Deque),
 		threshold: 100,
@@ -74,7 +73,6 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 	forks, ok := l.cache[string(commit)]
 	if ok && forks.Len() > 0 {
 		delta := forks.PopBack().(dps.Delta)
-		l.log.Debug().Hex("commit", commit).Int("num_changes", len(delta)).Msg("returning non-sequential delta from cache")
 		return delta, nil
 	}
 
@@ -105,7 +103,9 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			return nil, dps.ErrFinished
 		}
 		record := l.reader.Record()
-		operation, _, update, err := wal.Decode(record)
+		duplicate := make([]byte, len(record))
+		copy(duplicate, record)
+		operation, _, update, err := wal.Decode(duplicate)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode record: %w", err)
 		}
@@ -113,27 +113,44 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			continue
 		}
 
+		// Deduplicate the paths and payloads.
+		// sort and deduplicate paths (we only consider the last occurrence, and ignore the rest)
+		paths := make([]ledger.Path, 0)
+		lookup := make(map[string]ledger.Payload)
+		for i, path := range update.Paths {
+			if _, ok := lookup[string(path)]; !ok {
+				paths = append(paths, path)
+			}
+			lookup[string(path)] = *update.Payloads[i]
+		}
+		sort.Slice(paths, func(i, j int) bool {
+			return bytes.Compare(paths[i], paths[j]) < 0
+		})
+		payloads := make([]ledger.Payload, 0, len(paths))
+		for _, path := range paths {
+			payloads = append(payloads, lookup[string(path)])
+		}
+
 		// At this point, we can convert the trie update into a delta. If it's
 		// a match for the commit that is requested, we return it. Otherwise,
 		// we store it in the cache in case there was a fork and we need it
 		// later.
 		delta := make(dps.Delta, 0, len(update.Paths))
-		for index, path := range update.Paths {
-			payload := update.Payloads[index]
+		for index, path := range paths {
+			payload := payloads[index]
 			change := dps.Change{
 				Path:    path,
-				Payload: *payload,
+				Payload: payload,
 			}
 			delta = append(delta, change)
 		}
 		if !bytes.Equal(update.RootHash, commit) {
 			forks, ok := l.cache[string(update.RootHash)]
 			if !ok {
-				forks = deque.New(10, 10)
+				forks = deque.New()
 				l.cache[string(update.RootHash)] = forks
 			}
 			forks.PushBack(delta)
-			l.log.Debug().Hex("commit", update.RootHash).Int("num_changes", len(delta)).Msg("added non-sequential delta to cache")
 			continue
 		}
 

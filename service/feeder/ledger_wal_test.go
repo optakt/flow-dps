@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -18,7 +17,7 @@ func TestFeeder_Delta(t *testing.T) {
 		secondCommit = "20a7c8d5447a9acc9cb8de372935669f50645ebd106d98e71a25cf5196595856"
 	)
 
-	f, err := feeder.FromLedgerWAL(zerolog.Nop(), "./testdata")
+	f, err := feeder.FromLedgerWAL("./testdata")
 	require.NoError(t, err)
 
 	// Verify that trying to feed an invalid commit does not work.

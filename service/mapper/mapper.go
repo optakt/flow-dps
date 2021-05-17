@@ -165,7 +165,6 @@ Outer:
 
 		commitTree := tree.RootHash()
 		var log zerolog.Logger
-
 	Inner:
 		for {
 
