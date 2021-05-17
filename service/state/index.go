@@ -15,14 +15,12 @@
 package state
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
 
-	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/awfm9/flow-dps/models/dps"
@@ -41,27 +39,14 @@ func (i *Index) Header(height uint64, header *flow.Header) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 
 		// use the headers height as key to store the encoded header
-		key := make([]byte, 1+8)
-		key[0] = prefixDataHeader
-		binary.BigEndian.PutUint64(key[1:1+8], height)
-		val, err := i.core.codec.Marshal(header)
-		if err != nil {
-			return fmt.Errorf("could not encode header: %w", err)
-		}
-		val = i.core.compressor.EncodeAll(val, nil)
-		err = tx.Set(key, val)
+		err := SetCompressed(i.core.codec, i.core.compressor, Encode(prefixDataHeader, height), header)(tx)
 		if err != nil {
 			return fmt.Errorf("could not persist header data: %w", err)
 		}
 
 		// create an index to map block ID to height
 		blockID := header.ID()
-		key = make([]byte, 1+len(blockID))
-		key[0] = prefixIndexBlock
-		copy(key[1:], blockID[:])
-		val = make([]byte, 8)
-		binary.BigEndian.PutUint64(val[0:8], height)
-		err = tx.Set(key, val)
+		err = tx.Set(Encode(prefixIndexBlock, blockID[:]), Encode(height))
 		if err != nil {
 			return fmt.Errorf("could not persist block index: %w", err)
 		}
@@ -78,21 +63,13 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 
 		// create an index to map commit to height
-		key := make([]byte, 1+len(commit))
-		key[0] = prefixIndexCommit
-		copy(key[1:], commit)
-		val := make([]byte, 8)
-		binary.BigEndian.PutUint64(val[0:8], height)
-		err := tx.Set(key, val)
+		err := tx.Set(Encode(prefixIndexCommit, commit), Encode(height))
 		if err != nil {
 			return fmt.Errorf("could not persist commit index: %w", err)
 		}
 
 		// create an index to map height to commit
-		key = make([]byte, 1+8)
-		key[0] = prefixIndexHeight
-		binary.BigEndian.PutUint64(key[1:1+8], height)
-		err = tx.Set(key, commit)
+		err = tx.Set(Encode(prefixIndexHeight, height), commit)
 		if err != nil {
 			return fmt.Errorf("could not persist height index: %w", err)
 		}
@@ -110,16 +87,7 @@ func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 		for _, delta := range deltas {
 			for _, change := range delta {
-				key := make([]byte, 1+pathfinder.PathByteSize+8)
-				key[0] = prefixDataDelta
-				copy(key[1:1+pathfinder.PathByteSize], change.Path)
-				binary.BigEndian.PutUint64(key[1+pathfinder.PathByteSize:], height)
-				val, err := i.core.codec.Marshal(change.Payload)
-				if err != nil {
-					return fmt.Errorf("could not encode delta: %w", err)
-				}
-				val = i.core.compressor.EncodeAll(val, nil)
-				err = tx.Set(key, val)
+				err := SetCompressed(i.core.codec, i.core.compressor, Encode(prefixDataDelta, change.Path, height), change.Payload)(tx)
 				if err != nil {
 					return fmt.Errorf("could not persist delta data: %w", err)
 				}
@@ -144,18 +112,7 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 		}
 
 		for hash, evts := range buckets {
-			// Prefix + Block Height + Type Hash
-			key := make([]byte, 1+8+8)
-			key[0] = prefixDataEvents
-			binary.BigEndian.PutUint64(key[1:1+8], height)
-			binary.BigEndian.PutUint64(key[1+8:1+8+8], hash)
-
-			val, err := i.core.codec.Marshal(evts)
-			if err != nil {
-				return fmt.Errorf("could not encode events: %w", err)
-			}
-			val = i.core.compressor.EncodeAll(val, nil)
-			err = tx.Set(key, val)
+			err := SetCompressed(i.core.codec, i.core.compressor, Encode(prefixDataEvents, height, hash), evts)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist events: %w", err)
 			}
@@ -172,8 +129,7 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 
 func (i *Index) Last(commit flow.StateCommitment) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
-		key := []byte{prefixLastCommit}
-		err := tx.Set(key, commit)
+		err := tx.Set(Encode(prefixLastCommit), commit)
 		if err != nil {
 			return fmt.Errorf("could not persist last commit: %w", err)
 		}

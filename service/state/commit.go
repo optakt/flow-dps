@@ -1,7 +1,6 @@
 package state
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
@@ -14,20 +13,9 @@ type Commit struct {
 }
 
 func (c *Commit) ForHeight(height uint64) (flow.StateCommitment, error) {
-	key := make([]byte, 1+8)
-	key[0] = prefixIndexHeight
-	binary.BigEndian.PutUint64(key[1:1+8], height)
 	var commit flow.StateCommitment
 	err := c.core.db.View(func(tx *badger.Txn) error {
-		item, err := tx.Get(key)
-		if err != nil {
-			return fmt.Errorf("could not access height index: %w", err)
-		}
-		_ = item.Value(func(val []byte) error {
-			copy(commit, val)
-			return nil
-		})
-		return nil
+		return Retrieve(Encode(prefixIndexHeight, height), &commit)(tx)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not look up height: %w", err)

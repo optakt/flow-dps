@@ -32,25 +32,14 @@ type Height struct {
 // => https://github.com/awfm9/flow-dps/issues/37
 
 func (h *Height) ForBlock(blockID flow.Identifier) (uint64, error) {
-	key := make([]byte, 1+len(blockID))
-	key[0] = prefixIndexBlock
-	copy(key[1:], blockID[:])
-	var height uint64
+	var height []byte
 	err := h.core.db.View(func(tx *badger.Txn) error {
-		item, err := tx.Get(key)
-		if err != nil {
-			return fmt.Errorf("could not retrieve block index: %w", err)
-		}
-		_ = item.Value(func(val []byte) error {
-			height = binary.BigEndian.Uint64(val)
-			return nil
-		})
-		return nil
+		return Retrieve(Encode(prefixIndexBlock, blockID[:]), &height)(tx)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("could not look up block: %w", err)
 	}
-	return height, nil
+	return binary.BigEndian.Uint64(height), nil
 }
 
 func (h *Height) ForCommit(commit flow.StateCommitment) (uint64, error) {

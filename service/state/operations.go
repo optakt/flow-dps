@@ -18,6 +18,8 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/fxamacker/cbor/v2"
+	"github.com/klauspost/compress/zstd"
 )
 
 // Retrieve gets any arbitrary value from a given key.
@@ -39,6 +41,33 @@ func Retrieve(key []byte, value *[]byte) func(txn *badger.Txn) error {
 	}
 }
 
+// RetrieveCompressed gets any arbitrary compressed value from a given key.
+func RetrieveCompressed(decoder *zstd.Decoder, key []byte, value interface{}) func(txn *badger.Txn) error {
+	return func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return fmt.Errorf("unable to retrieve value: %w", err)
+		}
+
+		val, err := item.ValueCopy(nil)
+		if err != nil {
+			return fmt.Errorf("unable to copy value: %w", err)
+		}
+
+		val, err = decoder.DecodeAll(val, nil)
+		if err != nil {
+			return fmt.Errorf("unable to decompress value: %w", err)
+		}
+
+		err = cbor.Unmarshal(val, value)
+		if err != nil {
+			return fmt.Errorf("unable to decode value: %w", err)
+		}
+
+		return nil
+	}
+}
+
 func RetrieveLastCommit(commit *[]byte) func(txn *badger.Txn) error {
 	return func(txn *badger.Txn) error {
 		item, err := txn.Get(Encode(prefixLastCommit))
@@ -55,13 +84,16 @@ func RetrieveLastCommit(commit *[]byte) func(txn *badger.Txn) error {
 	}
 }
 
-func SetLastCommit(commit []byte) func(txn *badger.Txn) error {
+func SetCompressed(codec cbor.EncMode, encoder *zstd.Encoder, key []byte, value interface{}) func(txn *badger.Txn) error {
+	// FIXME: Wouldn't it be better to attach this to the core and make it private, in order to remove the dependency to codec/compressor/decompressor?
 	return func(txn *badger.Txn) error {
-		err := txn.Set(Encode(prefixLastCommit), commit)
+		val, err := codec.Marshal(value)
 		if err != nil {
-			return fmt.Errorf("unable to persist last commit: %w", err)
+			return fmt.Errorf("unable to encode value: %w", err)
 		}
 
-		return nil
+		val = encoder.EncodeAll(val, nil)
+
+		return txn.Set(key, val)
 	}
 }

@@ -30,33 +30,8 @@ type Chain struct {
 
 func (c *Chain) Header(height uint64) (*flow.Header, error) {
 	var header flow.Header
-
 	err := c.core.db.View(func(tx *badger.Txn) error {
-		key := make([]byte, 1+8)
-		key[0] = prefixDataHeader
-		binary.BigEndian.PutUint64(key[1:1+8], height)
-
-		item, err := tx.Get(key)
-		if err != nil {
-			return fmt.Errorf("could not retrieve header at height %d: %w", height, err)
-		}
-
-		err = item.Value(func(val []byte) error {
-			val, err := c.core.decompressor.DecodeAll(val, nil)
-			if err != nil {
-				return fmt.Errorf("could not decompress header: %w", err)
-			}
-			err = cbor.Unmarshal(val, &header)
-			if err != nil {
-				return fmt.Errorf("could not decode header: %w", err)
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return RetrieveCompressed(c.core.decompressor, Encode(prefixDataHeader, height), &header)(tx)
 	})
 
 	return &header, err
@@ -78,9 +53,7 @@ func (c *Chain) Events(height uint64, types ...string) ([]flow.Event, error) {
 
 	// Iterate over all keys within the events index which are prefixed with the right block height.
 	var events []flow.Event
-	prefix := make([]byte, 1+8)
-	prefix[0] = prefixDataEvents
-	binary.BigEndian.PutUint64(prefix[1:1+8], height)
+	prefix := Encode(prefixDataEvents, height)
 	err := c.core.db.View(func(tx *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		// NOTE: this is an optimization only, it does not enforce that all
