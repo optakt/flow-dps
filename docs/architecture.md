@@ -5,18 +5,25 @@ This document describes the internal components that the Flow Data Provisioning 
 **Table of Contents**
 
 1. [Chain](#chain)
-    1. [Filesystem](#filesystem-chain)
-    2. [Network](#network-chain)
+    1. [ProtocolState](#ProtocolState-chain)
 2. [Feeder](#feeder)
-    1. [Filesystem](#filesystem-feeder)
-    2. [Network](#network-feeder)
+    1. [LedgerWAL](#LedgerWAL-feeder)
 3. [Mapper](#mapper)
 4. [Store](#store)
     1. [Database Schema](#database-schema)
         1. [Block-To-Height Index](#block-to-height-index)
         2. [Commit-To-Height Index](#commit-to-height-index)
-        3. [Path Deltas Index](#path-deltas-index)
+        3. [Height-To-Commit Index](#height-to-commit-index)
+        4. [Header Index](#header-index)
+        5. [Path Deltas Index](#path-deltas-index)
+        6. [Events Index](#events-index)
 5. [API](#api)
+    1. [Rosetta API](#rosetta-api)
+        1. [Contracts](#contracts)
+        2. [Scripts](#scripts)
+        3. [Invoker](#invoker)
+        4. [Validator](#validator)
+        5. [Retriever](#retriever)
 
 ## Chain
 
@@ -66,41 +73,78 @@ It does not re-use any of the protocol state database, but instead re-indexes ev
 
 #### Block-To-Height Index
 
-In this index, keys map the block ID to the block height, and they are [prefixed with `1`](https://github.com/awfm9/flow-dps/blob/master/model/prefixes.go#L4).
-
-TODO: Replace link to file and line with a link to the godoc that shows those consts.
+In this index, keys map the block ID to the block height.
 
 | **Length** (bytes) | `1`               | `8`        |
 |:-------------------|:------------------|:-----------|
 | **Type**           | byte              | hex hash   |
 | **Description**    | Index type prefix | Block ID   |
-| **Example Value**  | `1`               | `1fd5532a` |
+| **Example Value**  | `2`               | `1fd5532a` |
 
 The value stored at that key is the **Height** of the referenced block.
 
 ##### Commit-To-Height Index
 
-In this index, keys map the commit hash to the block height, and they are [prefixed with `2`](https://github.com/awfm9/flow-dps/blob/master/model/prefixes.go#L5).
+In this index, keys map the state commitment hash to the block height.
 
 | **Length** (bytes) | `1`               | `8`        |
 |:-------------------|:------------------|:-----------|
 | **Type**           | byte              | hex hash   |
 | **Description**    | Index type prefix | Commit     |
-| **Example Value**  | `2`               | `3f5d8120` |
+| **Example Value**  | `3`               | `3f5d8120` |
 
-The value stored at that key is the **Height** of the referenced commit's block.
+The value stored at that key is the **Height** of the referenced state commitment's block.
+
+##### Height-To-Commit Index
+
+In this index, keys map the block height to the state commitment hash.
+
+| **Length** (bytes) | `1`               | `8`          |
+|:-------------------|:------------------|:-------------|
+| **Type**           | byte              | uint64       |
+| **Description**    | Index type prefix | Block Height |
+| **Example Value**  | `4`               | `425`        |
+
+The value stored at that key is the **state commitment hash** of the referenced block height.
+
+##### Header Index
+
+In order to provide an efficient implementation of the Rosetta API, this index maps block heights to block headers.
+The header contains the metadata for a block as well as a hash representing the combined payload of the entire block.
+
+| **Length (bytes)** | `1`               | `8`          |
+|:-------------------|:------------------|:-------------|
+| **Type**           | uint              | uint64       |
+| **Description**    | Index type prefix | Block Height |
+| **Example Value**  | `5`               | `425`        |
+
+The value stored at that key is the **Height** of the referenced state commitment's block.
 
 ##### Path Deltas Index
 
-This last index maps a block ID to all the paths that are changed within its state updates. Its keys are prefixed with [prefixed with `3`](https://github.com/awfm9/flow-dps/blob/master/model/prefixes.go#L6).
+This index maps a block ID to all the paths that are changed within its state updates.
 
 | **Length (bytes)** | `1`               | `pathfinder.PathByteSize` | `8`          |
 |:-------------------|:------------------|:--------------------------|:-------------|
 | **Type**           | uint              |          string           | uint64       |
 | **Description**    | Index type prefix |       Register path       | Block Height |
-| **Example Value**  | `3`               |      `/0//1//2/uuid`      | `425`        |
+| **Example Value**  | `6`               |      `/0//1//2/uuid`      | `425`        |
 
 The value stored at that key is **the compressed payload of the change at the given path**.
+It is compressed using [CBOR compression](https://en.wikipedia.org/wiki/CBOR).
+
+##### Events Index
+
+The events index indexes events grouped by block height and transaction type.
+The block height is first in the index so that we can look through all events at a given height regardless of type using a key prefix.
+
+| **Length (bytes)** | `1`               | `8`          | `64`                        |
+|:-------------------|:------------------|:-------------|:----------------------------|
+| **Type**           | uint              | uint64       | hex string                  |
+| **Description**    | Index type prefix | Block Height | Transaction Type (xxHashed) |
+| **Example Value**  | `7`               | `425`        | `45D66Q565F5DEDB[...]`      |
+
+The value stored at the key is the **the compressed list of all events at the given height of a common type**.
 It is compressed using [CBOR compression](https://en.wikipedia.org/wiki/CBOR).
 
 ## API
@@ -110,7 +154,42 @@ See the [API documentation](./api.md) for details on the different APIs that are
 
 **API Package documentation**:
 
-* [REST package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rest)
-* [GRPC package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/grpc)
+* [REST package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/api/rest)
+* [GRPC package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/api/grpc)
+* [Rosetta package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/api/rosetta)
 
-// TODO: These packages will move to `/api/<name>` once https://github.com/awfm9/flow-dps/pull/23 gets merged.
+### Rosetta API
+
+The Rosetta API needs its own documentation because of the amount of components it has that interact with each other.
+The main reason for its complexity is that it needs to be able to execute cadence scripts.
+
+#### Contracts
+
+The contracts component keeps track of Flow contracts on the blockchain and provides a method to retrieve the token contract's address, if it exists, from a currency's symbol.
+
+[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/contracts)
+
+#### Scripts
+
+The script package produces Cadence scripts.
+
+[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/scripts)
+
+#### Invoker
+
+This component, given a Cadence script, can execute it at any given height and return the value produced by the script.
+
+[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/invoker)
+
+#### Validator
+
+The Validator components validates whether a given identifier is valid.
+It can be used to validate blocks, networks, accounts, transactions and currencies.
+
+[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/validator)
+
+#### Retriever
+
+The retriever uses all the aforementioned components to retrieve account balances, blocks and transactions.
+
+[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/retriever)
