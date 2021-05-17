@@ -100,6 +100,7 @@ func NewCore(dir string) (*Core, error) {
 
 		// then we get the height associated with it
 		key = make([]byte, 1+len(commit))
+		key[0] = prefixIndexCommit
 		copy(key[1:], commit)
 		item, err = tx.Get(key)
 		if err != nil {

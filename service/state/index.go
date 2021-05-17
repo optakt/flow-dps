@@ -146,7 +146,7 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 		for hash, evts := range buckets {
 			// Prefix + Block Height + Type Hash
 			key := make([]byte, 1+8+8)
-			key[0] = prefixDataEvent
+			key[0] = prefixDataEvents
 			binary.BigEndian.PutUint64(key[1:1+8], height)
 			binary.BigEndian.PutUint64(key[1+8:1+8+8], hash)
 

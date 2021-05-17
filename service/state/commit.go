@@ -15,7 +15,7 @@ type Commit struct {
 
 func (c *Commit) ForHeight(height uint64) (flow.StateCommitment, error) {
 	key := make([]byte, 1+8)
-	key[0] = prefixIndexBlock
+	key[0] = prefixIndexHeight
 	binary.BigEndian.PutUint64(key[1:1+8], height)
 	var commit flow.StateCommitment
 	err := c.core.db.View(func(tx *badger.Txn) error {

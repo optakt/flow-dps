@@ -15,8 +15,10 @@
 package feeder
 
 import (
+	"bytes"
 	"fmt"
 
+	"github.com/gammazero/deque"
 	"github.com/prometheus/client_golang/prometheus"
 	pwal "github.com/prometheus/tsdb/wal"
 
@@ -27,7 +29,9 @@ import (
 )
 
 type LedgerWAL struct {
-	reader *pwal.Reader
+	reader    *pwal.Reader
+	cache     map[string]*deque.Deque
+	threshold uint
 }
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
@@ -49,7 +53,9 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	}
 
 	l := LedgerWAL{
-		reader: pwal.NewReader(segments),
+		reader:    pwal.NewReader(segments),
+		cache:     make(map[string]*deque.Deque),
+		threshold: 1000,
 	}
 
 	return &l, nil
@@ -57,10 +63,34 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 
 func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 
-	// TODO: fix bug where we have multiple trie updates that should be applied
-	// to the same commit (in case of an execution fork)
-	// => https://github.com/awfm9/flow-dps/issues/62
+	// If we have a cached delta for the commit, it means that we skipped it at
+	// an earlier point and it is part of a branch that we didn't follow. In
+	// that case, we should just return it, because it means the mapper is
+	// rewinding and switching to another branch, because the one it was one
+	// didn't continue.
+	deltas, ok := l.cache[string(commit)]
+	if ok && deltas.Len() > 0 {
+		return deltas.PopBack().(dps.Delta), nil
+	}
+
+	// Otherwise, we read from the on-disk file until we find a delta that can
+	// be applied to the requested commit. When we are on a fork that stopped,
+	// it's possible the mapper will request a commit that will never show up
+	// in the WAL. We thus need some kind of threshold at which we give up.
+	traversed := uint(0)
 	for {
+
+		// Increase the number of traversed deltas first, in case we need to
+		// break out of this loop. If we reach the threshold, it means there is
+		// no delta for the requested commit.
+		traversed++
+		if traversed > l.threshold {
+			return nil, dps.ErrNotFound
+		}
+
+		// Read the next record from the WAL and decode. If it's not a trie
+		// update, we skip it, as trie deletes refer to the forest, not
+		// registers, and are thus not important for us.
 		next := l.reader.Next()
 		err := l.reader.Err()
 		if !next && err != nil {
@@ -77,6 +107,11 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 		if operation != wal.WALUpdate {
 			continue
 		}
+
+		// At this point, we can convert the trie update into a delta. If it's
+		// a match for the commit that is requested, we return it. Otherwise,
+		// we store it in the cache in case there was a fork and we need it
+		// later.
 		delta := make(dps.Delta, 0, len(update.Paths))
 		for index, path := range update.Paths {
 			payload := update.Payloads[index]
@@ -86,6 +121,16 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			}
 			delta = append(delta, change)
 		}
+		if !bytes.Equal(update.RootHash, commit) {
+			deltas, ok := l.cache[string(update.RootHash)]
+			if !ok {
+				deltas = deque.New(10, 10)
+				l.cache[string(update.RootHash)] = deltas
+			}
+			deltas.PushBack(delta)
+			continue
+		}
+
 		return delta, nil
 	}
 }

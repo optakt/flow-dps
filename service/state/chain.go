@@ -79,7 +79,7 @@ func (c *Chain) Events(height uint64, types ...string) ([]flow.Event, error) {
 	// Iterate over all keys within the events index which are prefixed with the right block height.
 	var events []flow.Event
 	prefix := make([]byte, 1+8)
-	prefix[0] = prefixDataEvent
+	prefix[0] = prefixDataEvents
 	binary.BigEndian.PutUint64(prefix[1:1+8], height)
 	err := c.core.db.View(func(tx *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions

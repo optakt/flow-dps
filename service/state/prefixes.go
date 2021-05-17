@@ -21,5 +21,5 @@ const (
 	prefixIndexHeight = 4
 	prefixDataHeader  = 5
 	prefixDataDelta   = 6
-	prefixDataEvent   = 7
+	prefixDataEvents  = 7
 )
