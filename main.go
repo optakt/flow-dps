@@ -102,7 +102,7 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not initialize chain")
 		}
-		feeder, err := feeder.FromLedgerWAL(flagTrie)
+		feeder, err := feeder.FromLedgerWAL(log, flagTrie)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not initialize feeder")
 		}

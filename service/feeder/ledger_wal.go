@@ -21,6 +21,7 @@ import (
 	"github.com/gammazero/deque"
 	"github.com/prometheus/client_golang/prometheus"
 	pwal "github.com/prometheus/tsdb/wal"
+	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
@@ -29,6 +30,7 @@ import (
 )
 
 type LedgerWAL struct {
+	log       zerolog.Logger
 	reader    *pwal.Reader
 	cache     map[string]*deque.Deque
 	threshold uint
@@ -36,7 +38,7 @@ type LedgerWAL struct {
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
 // directly from an execution node's trie directory.
-func FromLedgerWAL(dir string) (*LedgerWAL, error) {
+func FromLedgerWAL(log zerolog.Logger, dir string) (*LedgerWAL, error) {
 
 	w, err := pwal.NewSize(
 		nil,
@@ -53,9 +55,10 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	}
 
 	l := LedgerWAL{
+		log:       log,
 		reader:    pwal.NewReader(segments),
 		cache:     make(map[string]*deque.Deque),
-		threshold: 1000,
+		threshold: 100,
 	}
 
 	return &l, nil
@@ -128,6 +131,7 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 				l.cache[string(update.RootHash)] = deltas
 			}
 			deltas.PushBack(delta)
+			l.log.Debug().Hex("commit", update.RootHash).Msg("added non-sequential delta to cache")
 			continue
 		}
 
