@@ -199,14 +199,21 @@ Outer:
 				log.Debug().Msg("commit between tree and height does not match, keep searching")
 				break Inner
 			}
+
 			header, err := m.chain.Header(height)
 			if err != nil {
 				return fmt.Errorf("could not retrieve header: %w (height: %d)", err, height)
 			}
+
+			blockID := header.ID()
+			log = log.With().Hex("block", blockID[:]).Logger()
+
 			events, err := m.chain.Events(height)
 			if err != nil {
 				return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 			}
+
+			log = log.With().Int("num_events", len(events)).Logger()
 
 			// TODO: look at performance of doing separate transactions versus
 			// having an API that allows combining into a single Badger tx
@@ -241,6 +248,8 @@ Outer:
 			deltas = make([]dps.Delta, 0, 16)
 			height++
 
+			continue Outer
+
 			// TODO: we should randomly run compactions during this loop as well
 			// so that we still keep the DB optimized even when streaming the
 			// trie updates
@@ -259,7 +268,7 @@ Outer:
 
 		delta, err := m.feed.Delta(commitTree)
 		if len(deltas) == 0 && errors.Is(err, dps.ErrNotFound) {
-			return fmt.Errorf("could not resolve fork")
+			return fmt.Errorf("could not resolve fork, aborting")
 		}
 		if errors.Is(err, dps.ErrNotFound) {
 			log.Warn().Msg("delta retrieval failed, rewinding")
@@ -287,7 +296,6 @@ Outer:
 		deltas = append(deltas, delta)
 
 		commitAfter := tree.RootHash()
-
 		log.Info().Hex("commit_after", commitAfter).Int("num_changes", len(delta)).Msg("state trie updated")
 	}
 
