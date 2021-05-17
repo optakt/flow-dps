@@ -214,6 +214,11 @@ Execution nodes follow new blocks as they are published by the Consensus Nodes.
 Execution process starts when the Consensus Nodes broadcast evidence that the next block is finalized.
 The process ends when the Execution Nodes broadcast their **execution receipts**.
 
+Conservative Execution Nodes only process finallized blocks to avoid wasting resources.
+An Execution Node can be optimistic - they are allowed to work on unfinalized blocks.
+This can, however, lead to waste or resources if a block is abandoned later.
+Also, validity of unfinalized blocks is not guaranteed - Execution Node may be processing an invalid block.
+
 Execution nodes:
 - receive a finalized block
 - execute the transactions
