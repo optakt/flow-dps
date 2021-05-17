@@ -44,7 +44,8 @@ The final version of the previous execution state remains available through a le
 
 ## Flow
 
-Most current blockchains are built as a homogenous system comprised of *full nodes*. Each full node is expected to collect and choose the transactions to be included in the next block, execute the block, come to a consensus over the output of the block with other full nodes, and finally sign the block and append it to the chain.
+Most current blockchains are built as a homogenous system comprised of *full nodes*.
+Each full node is expected to collect and choose the transactions to be included in the next block, execute the block, come to a consensus over the output of the block with other full nodes, and finally sign the block and append it to the chain.
 
 Existing blockchain architectures have well documented throughput limitations. There are two main approaches to combat this:
 
@@ -53,9 +54,12 @@ Existing blockchain architectures have well documented throughput limitations. T
 
 Layer-2 solutions include include networks like Bitcoin's Lightning and Ethereum's Plasma - these networks work off the main chain.
 
-Sharding represents a technique where a network is broken up into many interconnected networks. Sharding significantly increases the complexity of the programming model by breaking ACID guarantees (Atomicity, Consistency, Isolation and Durability), increasing the cost and time for application development.
+Sharding represents a technique where a network is broken up into many interconnected networks.
+Sharding significantly increases the complexity of the programming model by breaking ACID guarantees (Atomicity, Consistency, Isolation and Durability), increasing the cost and time for application development.
 
-Flow was designed to provide a blockchain that can scale while preserving composability in a single blockchain state. This is achieved by a novel approach where work traditionally assigned to full nodes is split and assigned to specific roles, allowing pipelining. We recognize the following roles in the Flow architecture.
+Flow was designed to provide a blockchain that can scale while preserving composability in a single blockchain state.
+This is achieved by a novel approach where work traditionally assigned to full nodes is split and assigned to specific roles, allowing pipelining.
+We recognize the following roles in the Flow architecture.
 
 1. Collector role - in charge of transaction collection from the user agents
 2. Execution role - in charge of executing the transactions
@@ -63,7 +67,11 @@ Flow was designed to provide a blockchain that can scale while preserving compos
 4. Verification role - done by a more extensive set of Verification Nodes, they confirm that the execution results are correct
 5. Access role - also called Observer role - includes nodes that relay data to protocol-external entities that are not participating in the protocol
 
-By introducing several [node roles](#flow-node-roles), each type of node can be optimized according to the tasks it will perform. For instance, Execution Nodes are compute-optimized nodes, leveraging large-scale data centers, while Collector Nodes are highly bandwidth-optimized. Consensus and Verification Nodes have moderate hardware requirements, allowing for a high degree of participation, requiring only a high-end consumer internet connection.
+By introducing several [node roles](#flow-node-roles), each type of node can be optimized according to the tasks it will perform.
+For instance, Execution Nodes are compute-optimized nodes, leveraging large-scale data centers, while Collector Nodes are highly bandwidth-optimized.
+Consensus and Verification Nodes have moderate hardware requirements, allowing for a high degree of participation, requiring only a high-end consumer internet connection.
+
+This architecture lead to a throughput increase by a multiplicative factor of 56.
 
 ### Rules
 
