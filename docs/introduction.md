@@ -2,15 +2,31 @@
 
 This document is aimed at introducing developers to the Flow Data Provisioning Service project.
 
-## Table of Contents
+**Table of Contents**
 
 1. [Getting Started](#getting-started)
-3. [What is Flow](#flow)
-    1. [Glossary](#glossary)
-4. [Developer Guide](#developer-guide)
-    1. [Installation](#installation)
-    2. [Setting up a test environment](#setting-up-a-test-environment)
-5. [More resources](#more-resources)
+2. [Flow](#flow)
+   1. [Glossary](#glossary)
+      1. [Nodes](#nodes)
+         1. [Execution Nodes](#execution-nodes)
+         2. [Consensus Nodes](#consensus-nodes)
+         3. [Collection Nodes](#collection-nodes)
+         4. [Verification Nodes](#verification-nodes)
+         5. [Access Nodes](#access-nodes)
+      2. [Proof of Stake](#proof-of-stake)
+      3. [Staking](#staking)
+      4. [Slashing](#slashing)
+      5. [Sporks](#sporks)
+      6. [Cadence](#cadence)
+      7. [Transactions](#transactions)
+      8. [Byzantine Fault](#byzantine-fault)
+      9. [Merkle Patricia Tries](#merkle-patricia-tries)
+   2. [Developer Guide](#developer-guide)
+      1. [Installation](#installation)
+         1. [Dependencies](#dependencies)
+         2. [Manual Build](#manual-build)
+      2. [Setting up a test environment](#setting-up-a-test-environment)
+   3. [More Resources](#more-resources)
 
 ## Getting Started
 

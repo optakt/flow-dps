@@ -5,63 +5,63 @@ This document describes the internal components that the Flow Data Provisioning 
 **Table of Contents**
 
 1. [Chain](#chain)
-    1. [ProtocolState](#ProtocolState-chain)
+   1. [ProtocolState Chain](#protocolstate-chain)
 2. [Feeder](#feeder)
-    1. [LedgerWAL](#LedgerWAL-feeder)
+   1. [LedgerWAL Feeder](#ledgerwal-feeder)
 3. [Mapper](#mapper)
 4. [Store](#store)
-    1. [Database Schema](#database-schema)
-        1. [Block-To-Height Index](#block-to-height-index)
-        2. [Commit-To-Height Index](#commit-to-height-index)
-        3. [Height-To-Commit Index](#height-to-commit-index)
-        4. [Header Index](#header-index)
-        5. [Path Deltas Index](#path-deltas-index)
-        6. [Events Index](#events-index)
+   1. [Database Schema](#database-schema)
+      1. [Block-To-Height Index](#block-to-height-index)
+         1. [Commit-To-Height Index](#commit-to-height-index)
+         2. [Height-To-Commit Index](#height-to-commit-index)
+         3. [Header Index](#header-index)
+         4. [Path Deltas Index](#path-deltas-index)
+         5. [Events Index](#events-index)
 5. [API](#api)
-    1. [Rosetta API](#rosetta-api)
-        1. [Contracts](#contracts)
-        2. [Scripts](#scripts)
-        3. [Invoker](#invoker)
-        4. [Validator](#validator)
-        5. [Retriever](#retriever)
+   1. [Rosetta API](#rosetta-api)
+      1. [Contracts](#contracts)
+      2. [Scripts](#scripts)
+      3. [Invoker](#invoker)
+      4. [Validator](#validator)
+      5. [Retriever](#retriever)
 
 ## Chain
 
 The Chain component is responsible for reconstructing a view of the sequence of blocks, along with their metadata.
-It allows the consumer to step from the root block to the last sealed block, while presenting height, block identifier and state commitment for each step.
-It is used by the [Mapper](#mapper) to map blocks to the deltas that are collected by the [Feeder](#feeder) component.
+It allows the consumer to step from the root block to the last sealed block, while providing data related to each height along the sequence of blocks, such as block identifier, state commitment and events.
+It is used by the [Mapper](#mapper) to map a set of deltas from the [Feeder](#feeder) to each block height.
 
 [Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/chain)
 
 ### ProtocolState Chain
 
-The [Filesystem Chain](https://pkg.go.dev/github.com/awfm9/flow-dps/chain#ProtocolState) uses the execution node's on-disk key-value store to reconstruct the block sequence.
+The [Filesystem Chain](https://pkg.go.dev/github.com/awfm9/flow-dps/chain#ProtocolState) uses the execution node's on-disk key-value store for the Flow protocol state to reconstruct the block sequence.
 
 ## Feeder
 
-The Feeder component is responsible for streaming in-order trie updates.
-It outputs deltas which are used by the [Mapper](#mapper) component to map the state trie updates to the block information that the [Chain](#chain) component provides.
+The Feeder component is responsible for streaming trie updates to the [Mapper](#mapper).
+It outputs a state delta for each requested state commitment, so that the [Mapper](#mapper) can follow the sequence of changes to the state trie and attribute each change to a block height.
 
 [Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/feeder)
 
 ### LedgerWAL Feeder
 
-The [LedgerWAL Feeder](https://pkg.go.dev/github.com/awfm9/flow-dps/feeder#LedgerWAL) reads trie updates from the LedgerWAL directly.
+The [LedgerWAL Feeder](https://pkg.go.dev/github.com/awfm9/flow-dps/feeder#LedgerWAL) reads trie updates directly from an on-disk write-ahead log of the execution node.
 
 ## Mapper
 
 The mapper component is at the core of the DPS. It is responsible for mapping incoming state trie updates to blocks.
 In order to do that, it depends on the [Feeder](#feeder) and [Chain](#chain) components to get state trie updates and block information, as well as on the [Store](#store) component for indexing.
-Generally, trie updates come in by chunk, so each block maps from zero to multiple trie updates.
-Once a block is mapped to its respective trie updates, the mapper forwards the information to the indexer.
+Generally, trie updates come in by chunk, so each block height corresponds to an arbitrary number of trie updates, from zero to many.
+Once a block height is mapped to its respective trie updates, the mapper uses the indexer to persist the information.
 
 [Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/mapper)
 
 ## Store
 
-The Store component is responsible for receiving a set of trie updates for each block and creating the necessary main indexes and auxiliary in the on-disk database.
-These indexes allow efficient retrieval of the state at arbitrary block heights in the state history.
-It also provides random access to the execution state by providing smart access to these indexes.
+The Store component is responsible for receiving a set of trie updates for each block and creating the necessary mainand auxiliary indexes in the on-disk database.
+These indexes allow efficient retrieval of the state at arbitrary block heights of the state history.
+This translates to random access to state registers of the execution state at any block height.
 It combines writing and retrieving of indexes, so that an efficient caching strategy is possible.
 
 [Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/indexer)
@@ -69,7 +69,7 @@ It combines writing and retrieving of indexes, so that an efficient caching stra
 ### Database Schema
 
 The DPS uses [BadgerDB](https://github.com/dgraph-io/badger) to store datasets of state changes and block information to build all the indexes required for random protocol and execution state access.
-It does not re-use any of the protocol state database, but instead re-indexes everything, so that all databases used to bootstrap can be discarded subsequently.
+It does not re-use any of the protocol state database, but instead re-indexes everything, so that all databases used to bootstrap the index can be discarded subsequently.
 
 #### Block-To-Height Index
 
@@ -161,7 +161,7 @@ See the [API documentation](./api.md) for details on the different APIs that are
 ### Rosetta API
 
 The Rosetta API needs its own documentation because of the amount of components it has that interact with each other.
-The main reason for its complexity is that it needs to be able to execute cadence scripts.
+The main reason for its complexity is that it needs to interact with the Flow Virtual Machine (FVM) and to translate between the Flow and Rosetta application domains.
 
 #### Contracts
 
@@ -171,7 +171,7 @@ The contracts component keeps track of Flow contracts on the blockchain and prov
 
 #### Scripts
 
-The script package produces Cadence scripts.
+The script package produces Cadence scripts with the correct imports and storage paths, depending on the configured Flow chain.
 
 [Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/scripts)
 
@@ -183,7 +183,7 @@ This component, given a Cadence script, can execute it at any given height and r
 
 #### Validator
 
-The Validator components validates whether a given identifier is valid.
+The Validator component validates whether a given Rosetta identifier is valid.
 It can be used to validate blocks, networks, accounts, transactions and currencies.
 
 [Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/validator)

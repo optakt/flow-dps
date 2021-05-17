@@ -1,10 +1,18 @@
 # API Documentation
 
-## Table of Contents
+**Table of Contents**
 
-1. [Rest API](#rest-api)
-    1.1 [GET /registers/:key](#get-registerskey---get-register)
-    1.2 [GET /values/:encoded_key](#get-valuesencoded_key---get-value)
+1. [REST API](#rest-api)
+   1. [`GET /registers/:raw_key` - Get Register](#get-registersraw_key---get-register)
+      1. [Path Parameters](#path-parameters)
+      2. [Query Parameters](#query-parameters)
+      3. [Response Codes](#response-codes)
+      4. [Response Body](#response-body)
+   2. [`GET /values/:ledger_key` - Get Value](#get-valuesledger_key---get-value)
+      1. [Path Parameters](#path-parameters-1)
+      2. [Query Parameters](#query-parameters-1)
+      3. [Response Codes](#response-codes-1)
+      4. [Response Body](#response-body-1)
 2. [Rosetta API](#rosetta-api)
 3. [GRPC API](#grpc-api)
 
@@ -22,7 +30,7 @@ This route returns the raw binary payload, encoded in hexadecimal, for the key's
 
 #### Query Parameters
 
-* `height`: Optional. The height at which to look for the key's payload. If no value is found that the given height, the last height at which a value was set for this register is used. Defaults to the last sealed block height indexed by the service.
+* `height`: Optional. The height at which to look for the key's payload. Defaults to the height of the last sealed block indexed by the service.
 
 #### Response Codes
 
@@ -71,7 +79,7 @@ Possible response codes are:
 ### `GET /values/:ledger_key` - Get Value
 
 This route returns the Ledger payload for a Ledger key from the execution state trie.
-The encoding of the key is inspired by the canonical string format for keys, but made compatible with URLs and with requests for multiple URLs.
+The encoding of the key is inspired by the canonical string format for keys, but made compatible with URLs and with requests for multiple keys.
 
 **Example request**: `GET /values/0.f647acg,4.ef67d11:0.f3321ab,3.ab321fe?hash=7ae6417ed5&version=1`
 
@@ -81,8 +89,8 @@ The encoding of the key is inspired by the canonical string format for keys, but
 
 #### Query Parameters
 
-* `hash`: Optional. Specifies which state commitment hash to get the payload value from. Defaults to the latest state commitment hash from the state.
-* `version`: Optional. Specifies the pathfinding version to use to traverse the state. Defaults to the default pathfinder path encoding used in the respective version of the Flow Go dependency.
+* `hash`: Optional. Specifies which state commitment hash to get the payload value from. Defaults to the state commitment of the last sealed block indexed by the service.
+* `version`: Optional. Specifies the pathfinder version to use to traverse the state trie. Defaults to the default pathfinder of the Flow Go dependency version.
 
 #### Response Codes
 
