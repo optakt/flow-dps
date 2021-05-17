@@ -57,7 +57,7 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	l := LedgerWAL{
 		reader:    pwal.NewReader(segments),
 		cache:     make(map[string]*deque.Deque),
-		threshold: 100,
+		threshold: 300,
 	}
 
 	return &l, nil

@@ -267,7 +267,7 @@ Outer:
 
 		delta, err := m.feed.Delta(commitTree)
 		if len(deltas) == 0 && errors.Is(err, dps.ErrNotFound) {
-			return fmt.Errorf("could not resolve fork, aborting")
+			return fmt.Errorf("could not resolve gap, aborting")
 		}
 		if errors.Is(err, dps.ErrNotFound) {
 			log.Warn().Msg("delta retrieval failed, rewinding")
