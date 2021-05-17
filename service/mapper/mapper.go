@@ -38,8 +38,8 @@ type Mapper struct {
 	chain  Chain
 	feed   Feeder
 	index  dps.Index
-	trie   *trie.MTrie
-	deltas []dps.Delta
+	tree   *trie.MTrie
+	height uint64
 	wg     *sync.WaitGroup
 	stop   chan struct{}
 }
@@ -57,10 +57,16 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		option(&cfg)
 	}
 
+	// Get the root height so we know where to start at.
+	height, err := chain.Root()
+	if err != nil {
+		return nil, fmt.Errorf("could not get root height: %w", err)
+	}
+
 	// If we have a checkpoint file, it should be a root checkpoint, so it
 	// should only contain a single trie that we load as our initial root state.
 	// Otherwise, the root state is an empty memory trie.
-	trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
+	tree, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize empty memory trie: %w", err)
 	}
@@ -80,7 +86,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		if len(tries) != 1 {
 			return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(tries))
 		}
-		trie = tries[0]
+		tree = tries[0]
 	}
 
 	// NOTE: there might be a number of trie updates in the WAL before the root
@@ -92,8 +98,8 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		chain:  chain,
 		feed:   feed,
 		index:  index,
-		trie:   trie,
-		deltas: []dps.Delta{},
+		tree:   tree,
+		height: height,
 		wg:     &sync.WaitGroup{},
 		stop:   make(chan struct{}),
 	}
@@ -120,12 +126,6 @@ func (m *Mapper) Run() error {
 	m.wg.Add(1)
 	defer m.wg.Done()
 
-	// We start iterating at the root height.
-	height, err := m.chain.Root()
-	if err != nil {
-		return fmt.Errorf("could not get root height: %w", err)
-	}
-
 	// The purpose of this function is to map state deltas from a continuous
 	// feed to specific blocks from the chain. This is necessary because the
 	// trie updates that we receive as state deltas are agnostic of blocks and
@@ -148,6 +148,9 @@ func (m *Mapper) Run() error {
 	// new state commitment shows up on the chain, we go back to iterating in
 	// the outer loop until we have assembled the necessary deltas to match the
 	// new state commitment again.
+	height := m.height
+	tree := m.tree
+	deltas := make([]dps.Delta, 0, 16)
 Outer:
 	for {
 
@@ -160,7 +163,7 @@ Outer:
 		// if no change to the state trie happens between multiple blocks, at
 		// which point we map the second and any subsequent blocks without
 		// change to an empty set of deltas.
-		hash := m.trie.RootHash()
+		hash := tree.RootHash()
 	Inner:
 		for {
 
@@ -207,7 +210,7 @@ Outer:
 			if err != nil {
 				return fmt.Errorf("could not index commit: %w", err)
 			}
-			err = m.index.Deltas(height, m.deltas)
+			err = m.index.Deltas(height, deltas)
 			if err != nil {
 				return fmt.Errorf("could not index deltas: %w", err)
 			}
@@ -224,10 +227,11 @@ Outer:
 				Uint64("height", height).
 				Hex("block", logging.ID(header.ID())).
 				Hex("commit", commit).
-				Int("deltas", len(m.deltas)).
+				Int("deltas", len(deltas)).
 				Msg("block deltas indexed")
 
-			m.deltas = []dps.Delta{}
+			m.tree = tree
+			deltas = make([]dps.Delta, 0, 16)
 			height++
 
 			// TODO: we should randomly run compactions during this loop as well
@@ -247,6 +251,12 @@ Outer:
 		}
 
 		delta, err := m.feed.Delta(hash)
+		if errors.Is(err, dps.ErrNotFound) {
+			m.log.Warn().Hex("commit", hash).Msg("delta not found")
+			tree = m.tree
+			deltas = make([]dps.Delta, 0, 16)
+			continue Outer
+		}
 		if errors.Is(err, dps.ErrTimeout) {
 			m.log.Warn().Hex("commit", hash).Msg("delta feed timeout")
 			continue Outer
@@ -259,24 +269,23 @@ Outer:
 			return fmt.Errorf("could not feed next update: %w", err)
 		}
 
-		trie, err := trie.NewTrieWithUpdatedRegisters(m.trie, delta.Paths(), delta.Payloads())
+		tree, err = trie.NewTrieWithUpdatedRegisters(tree, delta.Paths(), delta.Payloads())
 		if err != nil {
 			return fmt.Errorf("could not update trie: %w", err)
 		}
 
 		m.log.Info().
 			Hex("commit_before", hash).
-			Hex("commit_after", trie.RootHash()).
+			Hex("commit_after", tree.RootHash()).
 			Int("changes", len(delta)).
 			Msg("state trie updated")
 
-		m.deltas = append(m.deltas, delta)
-		m.trie = trie
+		deltas = append(deltas, delta)
 	}
 
 	// At the very end, we want to compact the database one more time to make
 	// sure it is stored as efficiently as possible for access optimization.
-	err = m.index.Compact()
+	err := m.index.Compact()
 	if err != nil {
 		return fmt.Errorf("could not compact index: %w", err)
 	}
