@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
-	"github.com/onflow/flow-go/utils/logging"
 
 	"github.com/awfm9/flow-dps/models/dps"
 )
@@ -163,7 +162,14 @@ Outer:
 		// if no change to the state trie happens between multiple blocks, at
 		// which point we map the second and any subsequent blocks without
 		// change to an empty set of deltas.
+
 		hash := tree.RootHash()
+
+		log := m.log.With().
+			Uint64("height", height).
+			Hex("hash", hash).
+			Int("deltas", len(deltas)).
+			Logger()
 	Inner:
 		for {
 
@@ -174,17 +180,21 @@ Outer:
 			// then we reached the end of the WAL and can finish without error.
 			commit, err := m.chain.Commit(height)
 			if errors.Is(err, dps.ErrTimeout) {
-				m.log.Warn().Uint64("height", height).Msg("commit chain timeout")
+				log.Warn().Msg("commit retrieval timed out, retrying")
 				continue Inner
 			}
 			if errors.Is(err, dps.ErrFinished) {
-				m.log.Debug().Uint64("height", height).Msg("commit chain finished")
+				log.Debug().Msg("end of commit chain reached, stopping")
 				break Outer
 			}
 			if err != nil {
-				return fmt.Errorf("could not retrieve commit: %w (height: %d)", err, height)
+				return fmt.Errorf("commit retrieval failed: %w", err)
 			}
+
+			log = log.With().Hex("commit", commit).Logger()
+
 			if !bytes.Equal(hash, commit) {
+				log.Debug().Msg("hash does not match commit, keep searching")
 				break Inner
 			}
 			header, err := m.chain.Header(height)
@@ -223,12 +233,7 @@ Outer:
 				return fmt.Errorf("could not index last: %w", err)
 			}
 
-			m.log.Info().
-				Uint64("height", height).
-				Hex("block", logging.ID(header.ID())).
-				Hex("commit", commit).
-				Int("deltas", len(deltas)).
-				Msg("block deltas indexed")
+			log.Info().Msg("block indexed")
 
 			m.tree = tree
 			deltas = make([]dps.Delta, 0, 16)
@@ -252,17 +257,17 @@ Outer:
 
 		delta, err := m.feed.Delta(hash)
 		if errors.Is(err, dps.ErrNotFound) {
-			m.log.Warn().Hex("commit", hash).Msg("delta not found")
+			log.Warn().Msg("delta retrieval failed, rewinding")
 			tree = m.tree
 			deltas = make([]dps.Delta, 0, 16)
 			continue Outer
 		}
 		if errors.Is(err, dps.ErrTimeout) {
-			m.log.Warn().Hex("commit", hash).Msg("delta feed timeout")
+			log.Warn().Msg("delta retrieval timed out, retrying")
 			continue Outer
 		}
 		if errors.Is(err, dps.ErrFinished) {
-			m.log.Debug().Hex("commit", hash).Msg("delta feed finished")
+			log.Debug().Msg("end of delta chain reached, stopping")
 			break Outer
 		}
 		if err != nil {
@@ -274,13 +279,9 @@ Outer:
 			return fmt.Errorf("could not update trie: %w", err)
 		}
 
-		m.log.Info().
-			Hex("commit_before", hash).
-			Hex("commit_after", tree.RootHash()).
-			Int("changes", len(delta)).
-			Msg("state trie updated")
-
 		deltas = append(deltas, delta)
+
+		log.Info().Hex("hash_after", tree.RootHash()).Int("changes", len(delta)).Msg("state trie updated")
 	}
 
 	// At the very end, we want to compact the database one more time to make
