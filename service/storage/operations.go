@@ -169,7 +169,7 @@ func RetrieveEvents(height uint64, types []string, events *[]flow.Event) func(tx
 	}
 }
 
-func RetrieveDeltas(height uint64, path ledger.Path, payload *ledger.Payload) func(txn *badger.Txn) error {
+func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(txn *badger.Txn) error {
 	return func(txn *badger.Txn) error {
 		key := Encode(prefixDataDelta, path, height)
 		it := txn.NewIterator(badger.IteratorOptions{
@@ -236,13 +236,13 @@ func SaveHeaderForHeight(height uint64, header *flow.Header) func(txn *badger.Tx
 	}
 }
 
-func SaveDeltasForHeight(height uint64, change dps.Change) func(txn *badger.Txn) error {
+func SaveChangeForHeight(height uint64, change dps.Change) func(txn *badger.Txn) error {
 	return func(txn *badger.Txn) error {
 		return save(Encode(prefixDataDelta, change.Path, height), change.Payload)(txn)
 	}
 }
 
-func SaveEventsForHeight(height, typeHash uint64, events []flow.Event) func(txn *badger.Txn) error {
+func SaveEvents(height, typeHash uint64, events []flow.Event) func(txn *badger.Txn) error {
 	return func(txn *badger.Txn) error {
 		return save(Encode(prefixDataEvents, height, typeHash), events)(txn)
 	}
@@ -255,19 +255,19 @@ func retrieve(key []byte, value interface{}) func(txn *badger.Txn) error {
 			return fmt.Errorf("unable to retrieve value: %w", err)
 		}
 
-		val, err := item.ValueCopy(nil)
+		err = item.Value(func(val []byte) error {
+			val, err := decoder.DecodeAll(val, nil)
+			if err != nil {
+				return fmt.Errorf("unable to decompress value: %w", err)
+			}
+			err = cbor.Unmarshal(val, value)
+			if err != nil {
+				return fmt.Errorf("unable to decode value: %w", err)
+			}
+			return nil
+		})
 		if err != nil {
-			return fmt.Errorf("unable to copy value: %w", err)
-		}
-
-		val, err = decoder.DecodeAll(val, nil)
-		if err != nil {
-			return fmt.Errorf("unable to decompress value: %w", err)
-		}
-
-		err = cbor.Unmarshal(val, value)
-		if err != nil {
-			return fmt.Errorf("unable to decode value: %w", err)
+			return fmt.Errorf("unable to retrieve zalue: %w", err)
 		}
 
 		return nil

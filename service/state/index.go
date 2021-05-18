@@ -88,7 +88,7 @@ func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 		for _, delta := range deltas {
 			for _, change := range delta {
-				err := storage.SaveDeltasForHeight(height, change)(tx)
+				err := storage.SaveChangeForHeight(height, change)(tx)
 				if err != nil {
 					return fmt.Errorf("could not persist delta data: %w", err)
 				}
@@ -113,7 +113,7 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 		}
 
 		for hash, evts := range buckets {
-			err := storage.SaveEventsForHeight(height, hash, evts)(tx)
+			err := storage.SaveEvents(height, hash, evts)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist events: %w", err)
 			}
@@ -129,17 +129,8 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 }
 
 func (i *Index) Last(commit flow.StateCommitment) error {
-	err := i.core.db.Update(func(tx *badger.Txn) error {
-		err := storage.SaveLastCommit(commit)(tx)
-		if err != nil {
-			return fmt.Errorf("could not persist last commit: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not index last commit: %w", err)
-	}
-	return nil
+	err := i.core.db.Update(storage.SaveLastCommit(commit))
+	return err
 }
 
 func (i *Index) Compact() error {

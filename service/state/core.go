@@ -158,12 +158,6 @@ func (c *Core) payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// seek for; this should represent the last update to the path before the
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
-	err := c.db.View(func(tx *badger.Txn) error {
-		return storage.RetrieveDeltas(height, path, &payload)(tx)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve payload: %w", err)
-	}
-
-	return &payload, nil
+	err := c.db.View(storage.RetrievePayload(height, path, &payload))
+	return &payload, err
 }

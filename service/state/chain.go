@@ -17,8 +17,6 @@ package state
 import (
 	"fmt"
 
-	"github.com/dgraph-io/badger/v2"
-
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/awfm9/flow-dps/service/storage"
@@ -30,10 +28,7 @@ type Chain struct {
 
 func (c *Chain) Header(height uint64) (*flow.Header, error) {
 	var header flow.Header
-	err := c.core.db.View(func(tx *badger.Txn) error {
-		return storage.RetrieveHeader(height, &header)(tx)
-	})
-
+	err := c.core.db.View(storage.RetrieveHeader(height, &header))
 	return &header, err
 }
 
@@ -47,12 +42,6 @@ func (c *Chain) Events(height uint64, types ...string) ([]flow.Event, error) {
 
 	// Iterate over all keys within the events index which are prefixed with the right block height.
 	var events []flow.Event
-	err := c.core.db.View(func(tx *badger.Txn) error {
-		return storage.RetrieveEvents(height, types, &events)(tx)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve events: %w", err)
-	}
-
-	return events, nil
+	err := c.core.db.View(storage.RetrieveEvents(height, types, &events))
+	return events, err
 }
