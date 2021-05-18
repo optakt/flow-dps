@@ -54,7 +54,7 @@ func Decode(key []byte, segments ...interface{}) (prefix uint8, err error) {
 	for _, segment := range segments {
 		switch ptr := segment.(type) {
 		case *uint64:
-			*ptr = binary.BigEndian.Uint64(key[it:it+8])
+			*ptr = binary.BigEndian.Uint64(key[it : it+8])
 			it += 8
 		case *[]byte:
 			length := len(*ptr)
