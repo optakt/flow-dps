@@ -18,8 +18,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/awfm9/flow-dps/service/state/storage"
 	"github.com/dgraph-io/badger/v2"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/awfm9/flow-dps/models/dps"
+	"github.com/awfm9/flow-dps/service/storage"
 )
 
 // TODO: improve code comments & documentation throughout the refactored
@@ -34,9 +35,9 @@ import (
 // => https://github.com/awfm9/flow-dps/issues/40
 
 type Core struct {
-	db           *badger.DB
-	height       uint64
-	commit       flow.StateCommitment
+	db     *badger.DB
+	height uint64
+	commit flow.StateCommitment
 }
 
 func NewCore(dir string) (*Core, error) {
@@ -100,9 +101,9 @@ func NewCore(dir string) (*Core, error) {
 	}
 
 	c := Core{
-		db:           db,
-		height:       height,
-		commit:       commit,
+		db:     db,
+		height: height,
+		commit: commit,
 	}
 
 	return &c, nil

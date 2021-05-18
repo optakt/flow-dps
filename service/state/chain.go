@@ -17,9 +17,11 @@ package state
 import (
 	"fmt"
 
-	"github.com/awfm9/flow-dps/service/state/storage"
 	"github.com/dgraph-io/badger/v2"
+
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/awfm9/flow-dps/service/storage"
 )
 
 type Chain struct {
