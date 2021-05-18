@@ -1,0 +1,73 @@
+name: CI
+
+# Continuous integration will run whenever a pull request for the master branch
+# is created or updated.
+on:
+  pull_request:
+    branches: [ master ]
+
+# A workflow is made up of one or more jobs, which can be run in sequence or in
+# parrallel. In this case, we have a single job, called "check", that runs on
+# the latest Ubuntu image.
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    # A job is made up of sequential steps. The pre-defined checkout step checks
+    # out the source code to $GITHUB_WORKSPACE, while the pre-defined setup-go
+    # step installs the Go at the configured version.
+    steps:
+      - name: check out source code
+        uses: actions/checkout@v2
+
+      - name: install go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      # Here, we simply print the exact go version, to have it as part of the
+      # action's output, which might be convenient.
+      - name: print go version
+        run: go version
+
+      # The protobuf steps uses the official instructions to install the
+      # pre-compiled binary, see:
+      # https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os
+      - name: install protocol buffers compiler
+        run: |
+          PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+          curl -LO $PB_REL/download/v3.17.0/protoc-3.17.0-linux-x86_64.zip
+          unzip protoc-3.17.0-linux-x86_64.zip -d $HOME/.local
+          export PATH="$PATH:$HOME/.local/bin"
+
+      # In order to be able to generate the protocol buffer and GRPC files, we
+      # need to install the related Go modules.
+      - name: install protobuf dependencies
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
+
+      # This check makes sure that the `go.mod` and `go.sum` files for Go
+      # modules are always up-to-date.
+      - name: check go modules
+        run: go mod tidy && git status && git diff-index --quiet HEAD --
+
+      # This check makes sure that the generated protocol buffer files in Go
+      # have been updated in case there was a change in the definitions.
+      - name: check generated files
+        run: go generate ./... && git status && git diff-index --quiet HEAD --
+
+      # This check makes sure that the source code is formatted according to the
+      # Go standard `go fmt` formatting.
+      - name: check source code formatting
+        run: go fmt ./... && git status && git diff-index --quiet HEAD --
+
+      # This check makes sure that we can compile the binary as a pure Go binary
+      # without CGO support.
+      - name: check compilation
+        run: CGO_ENABLED=0 go build
+
+      # This check runs all test with verbose output and ensures that all of the
+      # tests pass successfully.
+      - name: check unit tests
+        run: go test -v ./...
