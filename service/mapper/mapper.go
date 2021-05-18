@@ -149,7 +149,7 @@ func (m *Mapper) Run() error {
 	// new state commitment again.
 	height := m.height
 	tree := m.tree
-	deltas := make([]dps.Delta, 0, 16)
+	deltas := make([]dps.Delta, 0, 10)
 Outer:
 	for {
 
@@ -179,7 +179,7 @@ Outer:
 			// out, we loop right back into this condition, because it means the
 			// network might be stalling. If the error indicates we finished,
 			// then we reached the end of the WAL and can finish without error.
-			commitHeight, err := m.chain.Commit(height)
+			commitNext, err := m.chain.Commit(height)
 			if errors.Is(err, dps.ErrTimeout) {
 				log.Warn().Msg("commit retrieval timed out, retrying")
 				continue Inner
@@ -192,9 +192,9 @@ Outer:
 				return fmt.Errorf("commit retrieval failed: %w", err)
 			}
 
-			log = log.With().Hex("commit_height", commitHeight).Logger()
+			log = log.With().Hex("commit_next", commitNext).Logger()
 
-			if !bytes.Equal(commitTree, commitHeight) {
+			if !bytes.Equal(commitTree, commitNext) {
 				log.Debug().Msg("commit between tree and height does not match, keep searching")
 				break Inner
 			}
@@ -224,7 +224,7 @@ Outer:
 			if err != nil {
 				return fmt.Errorf("could not index header: %w", err)
 			}
-			err = m.index.Commit(height, commitHeight)
+			err = m.index.Commit(height, commitNext)
 			if err != nil {
 				return fmt.Errorf("could not index commit: %w", err)
 			}
@@ -236,7 +236,7 @@ Outer:
 			if err != nil {
 				return fmt.Errorf("could not index events: %w", err)
 			}
-			err = m.index.Last(commitHeight)
+			err = m.index.Last(commitNext)
 			if err != nil {
 				return fmt.Errorf("could not index last: %w", err)
 			}
@@ -248,7 +248,7 @@ Outer:
 			log.Info().Msg("block indexed")
 
 			m.tree = tree
-			deltas = make([]dps.Delta, 0, 16)
+			deltas = deltas[:0]
 			height++
 
 			continue Outer
@@ -276,7 +276,7 @@ Outer:
 		if errors.Is(err, dps.ErrNotFound) {
 			log.Warn().Msg("delta retrieval failed, rewinding")
 			tree = m.tree
-			deltas = make([]dps.Delta, 0, 16)
+			deltas = deltas[:0]
 			continue Outer
 		}
 		if errors.Is(err, dps.ErrTimeout) {

@@ -70,7 +70,6 @@ func (l *LedgerWAL) Clear() {
 		commit := l.queue.PopFront().(flow.StateCommitment)
 		delete(l.cache, string(commit))
 	}
-
 }
 
 func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error) {
