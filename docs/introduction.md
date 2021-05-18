@@ -52,7 +52,7 @@ Existing blockchain architectures have well documented throughput limitations. T
 1. Layer-2 networks
 2. Sharding
 
-Layer-2 solutions include include networks like Bitcoin's Lightning and Ethereum's Plasma - these networks work off the main chain.
+Layer-2 solutions include include networks like Bitcoin's Lightning and Ethereum's Plasma — these networks work off the main chain.
 
 Sharding represents a technique where a network is broken up into many interconnected networks.
 Sharding significantly increases the complexity of the programming model by breaking ACID guarantees (Atomicity, Consistency, Isolation and Durability), increasing the cost and time for application development.
@@ -61,11 +61,11 @@ Flow was designed to provide a blockchain that can scale while preserving compos
 This is achieved by a novel approach where work traditionally assigned to full nodes is split and assigned to specific roles, allowing pipelining.
 We recognize the following roles in the Flow architecture.
 
-1. Collector role - in charge of transaction collection from the user agents
-2. Execution role - in charge of executing the transactions
-3. Consensus role - maintain the chain of blocks and responsible for the chain extension by appending new blocks. These nodes also rule on reported misbehaviors of other nodes
-4. Verification role - done by a more extensive set of Verification Nodes, they confirm that the execution results are correct
-5. Access role - also called Observer role - includes nodes that relay data to protocol-external entities that are not participating in the protocol
+1. Collector role — in charge of transaction collection from the user agents
+2. Execution role — in charge of executing the transactions
+3. Consensus role — maintain the chain of blocks and responsible for the chain extension by appending new blocks. These nodes also rule on reported misbehaviors of other nodes
+4. Verification role — done by a more extensive set of Verification Nodes, they confirm that the execution results are correct
+5. Access role — also called Observer role — includes nodes that relay data to protocol-external entities that are not participating in the protocol
 
 By introducing several [node roles](#flow-node-roles), each type of node can be optimized according to the tasks it will perform.
 For instance, Execution Nodes are compute-optimized nodes, leveraging large-scale data centers, while Collector Nodes are highly bandwidth-optimized.
@@ -124,7 +124,7 @@ To better illustrate the difference and the independence of the two states, we c
 
 **Scenario 1**: Nodes never join, leave or change stake. Transactions are regularly processed. In this system, the protocol state never changes, but the execution state does.
 
-**Scenario 2**: No transactions are submitted/processed. Nodes are regularly joining or leaving the network - here only the network infrastructure / protocol state changes.
+**Scenario 2**: No transactions are submitted/processed. Nodes are regularly joining or leaving the network — here only the network infrastructure / protocol state changes.
 
 ## Flow Node Roles
 
@@ -161,7 +161,7 @@ Collection formation is a process that
 Cluster nodes continually form consensus on when to start a new collection, the set of transactions to include in the collection under construction, and when to close the current collection and submit it to the Consensus Nodes.
 As a result of this consensus, a collection grows over time.
 
-Collections are built one at a time - current collection must be closed and submitted to the Consensus Nodes before a new collection can be started. 
+Collections are built one at a time — current collection must be closed and submitted to the Consensus Nodes before a new collection can be started. 
 A Collection is closed when the c**ollection size has reached a certain threshold**, or a **predefined time span has passed**.
 
 Once a collection has been submitted to the Consensus Nodes, it becomes a **guaranteed collection**. A guaranteed collection is an immutable data structure. Each node in the cluster that participated in forming the guaranteed collection is called a **guarantor**. Guarantor attests that all transactions in the collection are well formed, and that they will store the entire collection including the full script of all transactions for as long as it is necessary (until Execution Nodes are done executing them). A guaranteed collection is broadcast by the guarantors to all Consensus Nodes.
@@ -207,12 +207,12 @@ Block formation is a continuous process executed by the Consensus Nodes to form 
     - whenever a nodes stake changes, Consensus Nodes include that update in the next block
 6. Providing a state of randomness
 
-If there are no guaranteed collections, Consensus Nodes will continue block formation with an empty set of collections - block formation is never blocked.
+If there are no guaranteed collections, Consensus Nodes will continue block formation with an empty set of collections — block formation is never blocked.
 
 Sealing a blocks computation result is done **after** the block itself is finalized.
 After the computation results have been broadcast as Execution Receipts, the Consensus Nodes wait for the verification in the form of **Result Approvals** by the Verification Nodes.
-When a super-majority has approved the result (and no errors were found / slashing results were issued) - Execution Result is considered for **sealing**.
-**Block Seal** is included in the next block that the Consensus Nodes finalize - block seal for a block is stored in a later block.
+When a super-majority has approved the result (and no errors were found / slashing results were issued) — Execution Result is considered for **sealing**.
+**Block Seal** is included in the next block that the Consensus Nodes finalize — block seal for a block is stored in a later block.
 
 ### Execution Nodes
 
@@ -223,9 +223,9 @@ Execution process starts when the Consensus Nodes broadcast evidence that the ne
 The process ends when the Execution Nodes broadcast their **execution receipts**.
 
 Conservative Execution Nodes only process finallized blocks to avoid wasting resources.
-An Execution Node can be optimistic - they are allowed to work on unfinalized blocks.
+An Execution Node can be optimistic — they are allowed to work on unfinalized blocks.
 This can, however, lead to waste or resources if a block is abandoned later.
-Also, validity of unfinalized blocks is not guaranteed - Execution Node may be processing an invalid block.
+Also, validity of unfinalized blocks is not guaranteed — Execution Node may be processing an invalid block.
 
 Execution nodes:
 - receive a finalized block
@@ -276,7 +276,7 @@ It approves the result of a chunk by publishing a **Result Approval** for that c
 When enough Result Approvals have been issued, Consensus Nodes publish Block Seal as part of the new blocks they finalize.
 Verification Nodes verifiably self-select the chunks they check independently of each other.
 Any Execution Receipt can be checked in isolation.
-If correct, Verifier signs the Execution Result - not the Execution Receipt. Multiple consistent Execution Receipts have identical Execution Results.
+If correct, Verifier signs the Execution Result — not the Execution Receipt. Multiple consistent Execution Receipts have identical Execution Results.
 
 ### Access Nodes
 
@@ -366,9 +366,9 @@ It is Flows countermeasure so that Execution Node cannot just copy the result fr
 SPoCKs also make it so that a Verification Node cannot just blindly approve the execution results of an Execution Node without actually doing the verification work.
 SPoCKs cannot be copied or forged.
 
-Execution Result has a list of SPoCKs - each SPoCK coresponds to a chunk, and a SPoCK for a chunk can only be generated by executing the chunk.
+Execution Result has a list of SPoCKs — each SPoCK coresponds to a chunk, and a SPoCK for a chunk can only be generated by executing the chunk.
 
-This secret is derived from the execution trace - the cheapest way one can get the execution trace is by executing the entire computation.
+This secret is derived from the execution trace — the cheapest way one can get the execution trace is by executing the entire computation.
 
 ## Developer Guide
 
