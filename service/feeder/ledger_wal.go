@@ -31,9 +31,10 @@ import (
 )
 
 type LedgerWAL struct {
-	reader    *pwal.Reader
-	cache     map[string]*deque.Deque
-	threshold uint
+	reader *pwal.Reader
+	cache  map[string]*deque.Deque
+	limit  uint
+	peeked uint
 }
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
@@ -55,9 +56,10 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	}
 
 	l := LedgerWAL{
-		reader:    pwal.NewReader(segments),
-		cache:     make(map[string]*deque.Deque),
-		threshold: 300,
+		reader: pwal.NewReader(segments),
+		cache:  make(map[string]*deque.Deque),
+		limit:  1000,
+		peeked: 0,
 	}
 
 	return &l, nil
@@ -73,21 +75,23 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 	forks, ok := l.cache[string(commit)]
 	if ok && forks.Len() > 0 {
 		delta := forks.PopBack().(dps.Delta)
+		if forks.Len() == 0 {
+			delete(l.cache, string(commit))
+		}
 		return delta, nil
 	}
 
 	// Otherwise, we read from the on-disk file until we find a delta that can
 	// be applied to the requested commit. When we are on a fork that stopped,
 	// it's possible the mapper will request a commit that will never show up
-	// in the WAL. We thus need some kind of threshold at which we give up.
-	traversed := uint(0)
+	// in the WAL. We thus need some kind of limit at which we give up.
 	for {
 
 		// Increase the number of traversed deltas first, in case we need to
-		// break out of this loop. If we reach the threshold, it means there is
+		// break out of this loop. If we reach the limit, it means there is
 		// no delta for the requested commit.
-		traversed++
-		if traversed > l.threshold {
+		l.peeked++
+		if l.peeked > l.limit {
 			return nil, dps.ErrNotFound
 		}
 
@@ -153,6 +157,10 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			forks.PushBack(delta)
 			continue
 		}
+
+		// We can reset how many we peeked in advance now, as we are on a new
+		// path from the Ledger and might have to cache everything again.
+		l.peeked = 0
 
 		return delta, nil
 	}
