@@ -32,8 +32,9 @@ import (
 
 type LedgerWAL struct {
 	reader *pwal.Reader
-	cache  map[string]*deque.Deque
 	limit  uint
+	queue  *deque.Deque
+	cache  map[string]*deque.Deque
 }
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
@@ -56,28 +57,30 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 
 	l := LedgerWAL{
 		reader: pwal.NewReader(segments),
+		limit:  1200, // some tolerance on top of execution node forest capacity
+		queue:  deque.New(1200, 1200),
 		cache:  make(map[string]*deque.Deque),
-		limit:  1000,
 	}
 
 	return &l, nil
 }
 
 func (l *LedgerWAL) Clear() {
-	for key := range l.cache {
-		delete(l.cache, key)
+	for uint(l.queue.Len()) > l.limit {
+		commit := l.queue.PopFront().(flow.StateCommitment)
+		delete(l.cache, string(commit))
 	}
-	l.cache = make(map[string]*deque.Deque)
+
 }
 
-func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
+func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error) {
 
 	// If we have a cached delta for the commit, it means that we skipped it at
 	// an earlier point and it is part of a branch that we didn't follow. In
 	// that case, we should just return it, because it means the mapper is
 	// rewinding and switching to another branch, because the one it was one
 	// didn't continue.
-	forks, ok := l.cache[string(commit)]
+	forks, ok := l.cache[string(commitRequest)]
 	if ok && forks.Len() > 0 {
 		delta := forks.PopBack().(dps.Delta)
 		return delta, nil
@@ -122,6 +125,7 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 
 		// Deduplicate the paths and payloads.
 		// sort and deduplicate paths (we only consider the last occurrence, and ignore the rest)
+		commitUpdate := flow.StateCommitment(update.RootHash)
 		paths := make([]ledger.Path, 0)
 		lookup := make(map[string]ledger.Payload)
 		for i, path := range update.Paths {
@@ -151,13 +155,14 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			}
 			delta = append(delta, change)
 		}
-		if !bytes.Equal(update.RootHash, commit) {
-			forks, ok := l.cache[string(update.RootHash)]
+		if !bytes.Equal(commitUpdate, commitRequest) {
+			forks, ok := l.cache[string(commitUpdate)]
 			if !ok {
 				forks = deque.New()
-				l.cache[string(update.RootHash)] = forks
+				l.cache[string(commitUpdate)] = forks
 			}
 			forks.PushBack(delta)
+			l.queue.PushBack(commitUpdate)
 			continue
 		}
 
