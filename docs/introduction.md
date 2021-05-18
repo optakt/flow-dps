@@ -111,12 +111,12 @@ Flow is designed to guarantee that any error introduced by the execution nodes a
 ### Execution State vs Protocol State
 
 Flow differentiates between two sorts of states:
-1. Execution State (computational state)
-2. Protocol State (network infrastructure state)
+1. Execution state (computational state)
+2. Protocol state (network infrastructure state)
 
-Execution State and Protocol State are maintained and updated independently. Execution state is maintained and updated by the execution nodes, while the Protocol State is maintained and updated by the consensus nodes.
+Execution and protocol states are maintained and updated independently. Execution state is maintained and updated by the execution nodes, while the protocol state is maintained and updated by the consensus nodes.
 
-Execution sState contains the register values which are modified by the transaction execution. Updates to the execution states are done by the execution nodes but their integrity is governed by the verification process.
+Execution state contains the register values which are modified by the transaction execution. Updates to the execution states are done by the execution nodes but their integrity is governed by the verification process.
 
 Protocol state keeps track of the system related features like staked nodes, node roles, public keys, network addresses and staking amounts. Protocol state is updated when the nodes are slashed, join the system via staking or leave the system by unstaking. Consensus nodes publish updates on the protocol state directly as part of the blocks they generate. Consensus protocol guarantees the integrity of the protocol state.
 
@@ -210,8 +210,8 @@ Block formation is a continuous process executed by the consensus nodes to form 
 If there are no guaranteed collections, consensus nodes will continue block formation with an empty set of collections — block formation is never blocked.
 
 Sealing a blocks computation result is done **after** the block itself is finalized.
-After the computation results have been broadcast as Execution Receipts, the consensus nodes wait for the verification in the form of **Result Approvals** by the verification nodes.
-When a super-majority has approved the result (and no errors were found / slashing results were issued) — Execution Result is considered for **sealing**.
+After the computation results have been broadcast as execution receipts, the consensus nodes wait for the verification in the form of **result approvals** by the verification nodes.
+When a super-majority has approved the result (and no errors were found / slashing results were issued) — execution result is considered for **sealing**.
 **Block Seal** is included in the next block that the consensus nodes finalize — block seal for a block is stored in a later block.
 
 ### Execution Nodes
@@ -235,8 +235,8 @@ Execution nodes:
 During the execution process the following operations occur:
 - each collection of transactions from the finalized block is retrieved from the relevant cluster
 - execution node executes the transactions according to their cannonical order and update the execution state of the system
-- an Execution Receipt is built for the block. Execution Receipt is a cryptographic commitment on the execution result of the block
-- Execution Receipt is broadcast to the verification nodes and consensus nodes
+- an execution receipt is built for the block. Execution receipt is a cryptographic commitment on the execution result of the block
+- execution receipt is broadcast to the verification nodes and consensus nodes
 
 #### Collection retrieval
 
@@ -246,15 +246,15 @@ Transactions are processed in order.
 
 #### Block Execution
 
-A block is executed when the previous blocks Execution Result is known.
-This previous Execution Result is the starting point for the execution of the block.
+A block is executed when the previous blocks execution result is known.
+This previous execution result is the starting point for the execution of the block.
 
-Execution Receipt for a block includes execution nodes signature, Excution Result and [SPoCKs](#specialized-proof-of-confidential-knowledge).
-Execution Receipt is a signed Execution Result.
-The Execution Receipts can be used to challenge the claims of an execution node when they are shown to be incorrect.
+Execution receipt for a block includes execution nodes signature, execution result and [SPoCKs](#specialized-proof-of-confidential-knowledge).
+Execution receipt is a signed execution result.
+The execution receipts can be used to challenge the claims of an execution node when they are shown to be incorrect.
 They are also used to create proofs of the current state of the chain once they are known to be correct.
 
-Execution Result of a block includes:
+Execution result of a block includes:
 - block hash
 - hash reference to the previous execution result
 - one or more chunks
@@ -271,12 +271,12 @@ Each chunk corresponds to a [collection](#collector-nodes).
 The verification nodes are in charge of collectively verifying the correctness of the execution nodes' published results.
 With the chunking approach of Flow, each node only checks a small fraction of chunks.
 A verification node requests the information it needs for re-computing the chunks it is checking from the execution nodes.
-It approves the result of a chunk by publishing a **Result Approval** for that chunk.
+It approves the result of a chunk by publishing a **result approval** for that chunk.
 
-When enough Result Approvals have been issued, consensus nodes publish Block Seal as part of the new blocks they finalize.
+When enough result approvals have been issued, consensus nodes publish Block Seal as part of the new blocks they finalize.
 Verification nodes verifiably self-select the chunks they check independently of each other.
-Any Execution Receipt can be checked in isolation.
-If correct, Verifier signs the Execution Result — not the Execution Receipt. Multiple consistent Execution Receipts have identical Execution Results.
+Any execution receipt can be checked in isolation.
+If correct, Verifier signs the execution result — not the execution receipt. Multiple consistent execution receipts have identical execution results.
 
 ### Access Nodes
 
@@ -366,7 +366,7 @@ It is Flows countermeasure so that execution node cannot just copy the result fr
 SPoCKs also make it so that a verification node cannot just blindly approve the execution results of an execution node without actually doing the verification work.
 SPoCKs cannot be copied or forged.
 
-Execution Result has a list of SPoCKs — each SPoCK coresponds to a chunk, and a SPoCK for a chunk can only be generated by executing the chunk.
+Execution result has a list of SPoCKs — each SPoCK coresponds to a chunk, and a SPoCK for a chunk can only be generated by executing the chunk.
 
 This secret is derived from the execution trace — the cheapest way one can get the execution trace is by executing the entire computation.
 
