@@ -64,47 +64,27 @@ func init() {
 	}
 }
 
-func RetrieveLastCommit(commit *[]byte) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		item, err := tx.Get(encodeKey(prefixLastCommit))
-		if err != nil {
-			return fmt.Errorf("unable to retrieve last commit: %w", err)
-		}
-
-		_, err = item.ValueCopy(*commit)
-		if err != nil {
-			return fmt.Errorf("unable to copy last commit: %w", err)
-		}
-
-		return nil
-	}
+func RetrieveLastCommit(commit *[]byte) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixLastCommit), commit)
 }
 
-func RetrieveHeightByCommit(commit []byte, height *uint64) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return retrieve(encodeKey(prefixIndexCommitToHeight, commit), height)(tx)
-	}
+func RetrieveHeightByCommit(commit []byte, height *uint64) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixIndexCommitToHeight, commit), height)
 }
 
-func RetrieveHeightByBlock(blockID []byte, height *uint64) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return retrieve(encodeKey(prefixIndexBlockToHeight, blockID), height)(tx)
-	}
+func RetrieveHeightByBlock(blockID []byte, height *uint64) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixIndexBlockToHeight, blockID), height)
 }
 
-func RetrieveCommitByHeight(height uint64, commit *[]byte) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return retrieve(encodeKey(prefixIndexHeightToCommit, height), &commit)(tx)
-	}
+func RetrieveCommitByHeight(height uint64, commit *[]byte) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixIndexHeightToCommit, height), &commit)
 }
 
-func RetrieveHeader(height uint64, header *flow.Header) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return retrieve(encodeKey(prefixDataHeader, height), &header)(tx)
-	}
+func RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixDataHeader, height), &header)
 }
 
-func RetrieveEvents(height uint64, types []string, events *[]flow.Event) func(tx *badger.Txn) error {
+func RetrieveEvents(height uint64, types []string, events *[]flow.Event) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
 		lookup := make(map[uint64]struct{})
 		for _, typ := range types {
@@ -153,7 +133,7 @@ func RetrieveEvents(height uint64, types []string, events *[]flow.Event) func(tx
 	}
 }
 
-func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(tx *badger.Txn) error {
+func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
 		key := encodeKey(prefixDataDelta, path, height)
 		it := tx.NewIterator(badger.IteratorOptions{
@@ -186,46 +166,32 @@ func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) f
 	}
 }
 
-func SaveLastCommit(commit []byte) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return save(encodeKey(prefixLastCommit), commit)(tx)
-	}
+func SaveLastCommit(commit []byte) func(*badger.Txn) error {
+	return save(encodeKey(prefixLastCommit), commit)
 }
 
-func SaveCommitForHeight(commit []byte, height uint64) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return save(encodeKey(prefixIndexCommitToHeight, commit), height)(tx)
-	}
+func SaveCommitForHeight(commit []byte, height uint64) func(*badger.Txn) error {
+	return save(encodeKey(prefixIndexCommitToHeight, commit), height)
 }
 
-func SaveHeightForCommit(height uint64, commit []byte) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return save(encodeKey(prefixIndexHeightToCommit, height), commit)(tx)
-	}
+func SaveHeightForCommit(height uint64, commit []byte) func(*badger.Txn) error {
+	return save(encodeKey(prefixIndexHeightToCommit, height), commit)
 }
 
-func SaveHeightForBlock(blockID []byte, height uint64) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return save(encodeKey(prefixIndexBlockToHeight, blockID), height)(tx)
-	}
+func SaveHeightForBlock(blockID []byte, height uint64) func(*badger.Txn) error {
+	return save(encodeKey(prefixIndexBlockToHeight, blockID), height)
 }
 
-func SaveHeaderForHeight(height uint64, header *flow.Header) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return save(encodeKey(prefixDataHeader, height), header)(tx)
-	}
+func SaveHeaderForHeight(height uint64, header *flow.Header) func(*badger.Txn) error {
+	return save(encodeKey(prefixDataHeader, height), header)
 }
 
-func SaveChangeForHeight(height uint64, change dps.Change) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return save(encodeKey(prefixDataDelta, change.Path, height), change.Payload)(tx)
-	}
+func SaveChangeForHeight(height uint64, change dps.Change) func(*badger.Txn) error {
+	return save(encodeKey(prefixDataDelta, change.Path, height), change.Payload)
 }
 
-func SaveEvents(height, typeHash uint64, events []flow.Event) func(tx *badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		return save(encodeKey(prefixDataEvents, height, typeHash), events)(tx)
-	}
+func SaveEvents(height, typeHash uint64, events []flow.Event) func(*badger.Txn) error {
+	return save(encodeKey(prefixDataEvents, height, typeHash), events)
 }
 
 func retrieve(key []byte, value interface{}) func(tx *badger.Txn) error {
@@ -254,7 +220,7 @@ func retrieve(key []byte, value interface{}) func(tx *badger.Txn) error {
 	}
 }
 
-func save(key []byte, value interface{}) func(tx *badger.Txn) error {
+func save(key []byte, value interface{}) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
 		val, err := codec.Marshal(value)
 		if err != nil {
