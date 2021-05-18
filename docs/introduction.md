@@ -10,7 +10,7 @@ This document is aimed at introducing developers to the Flow Data Provisioning S
     2. [Errors](#errors)
     3. [Execution state vs Protocol state](#execution-state-vs-protocol-state)
 3. [Flow Node roles](#flow-node-roles)
-    * [Collector Nodes](#collector-nodes)
+    * [Collection Nodes](#collection-nodes)
     * [Consensus Nodes](#consensus-nodes)
     * [Execution Nodes](#execution-nodes)
     * [Verification Nodes](#verification-nodes)
@@ -61,14 +61,14 @@ Flow was designed to provide a blockchain that can scale while preserving compos
 This is achieved by a novel approach where work traditionally assigned to full nodes is split and assigned to specific roles, allowing pipelining.
 We recognize the following roles in the Flow architecture.
 
-1. Collector role — in charge of transaction collection from the user agents
+1. Collection role — in charge of transaction collection from the user agents
 2. Execution role — in charge of executing the transactions
 3. Consensus role — maintain the chain of blocks and responsible for the chain extension by appending new blocks. These nodes also rule on reported misbehaviors of other nodes
 4. Verification role — done by a more extensive set of verification nodes, they confirm that the execution results are correct
 5. Access role — also called Observer role — includes nodes that relay data to protocol-external entities that are not participating in the protocol
 
 Using those [node roles](#flow-node-roles), each type of node can be optimized according to the tasks it performs.
-For instance, execution nodes are compute-optimized nodes, leveraging large-scale data centers, while collector nodes are highly bandwidth-optimized.
+For instance, execution nodes are compute-optimized nodes, leveraging large-scale data centers, while collection nodes are highly bandwidth-optimized.
 Consensus and verification nodes have moderate hardware requirements, allowing for a high degree of participation, requiring only a high-end consumer internet connection.
 
 This architecture lead to a throughput increase by a multiplicative factor of 56.
@@ -130,24 +130,24 @@ To better illustrate the difference and the independence of the two states, we c
 
 <img alt="node roles" src="https://assets.website-files.com/5f6294c0c7a8cdd643b1c820/5fcff1a16213f9d33a6db5ff_ezgif.com-resize.gif" />
 
-### Collector Nodes
+### Collection Nodes
 
-Collector nodes are nodes in charge of collecting transactions from user agents.
+Collection nodes are nodes in charge of collecting transactions from user agents.
 For the sake of load-balancing, redundancy and [Byzantine resilience](#byzantine-fault), they are all [staked](#staking) equally and randomly partitioned into clusters of roughly equal size (sizes of each two different clusters varies by at most a single node).
 Cluster sizes are hinted to be in the range of 20-80 nodes in a mature system.
 
-At the beginning of an epoch, each collector node is randomly assigned to exactly one cluster.
+At the beginning of an epoch, each collection node is randomly assigned to exactly one cluster.
 Number of clusters is a protocol parameter.
 
 Each cluster of collection nodes acts as a gateway to Flow from the external world.
 There is a **one-way deterministic assignment** between each transaction and a cluster that is responsible for processing it.
-When a collector node receives a transaction, it also checks whether it was submitted to the correct cluster.
-The clustering mechanism avoids heterogeneous systems where a collector node with better service would be getting all the traffic and end up reducing the decentralization of the whole system as well as starving out other collector nodes.
+When a collection node receives a transaction, it also checks whether it was submitted to the correct cluster.
+The clustering mechanism avoids heterogeneous systems where a collection node with better service would be getting all the traffic and end up reducing the decentralization of the whole system as well as starving out other collection nodes.
 
-Example of a typical sequence for a collector node:
+Example of a typical sequence for a collection node:
 
-1. Collector node receives a transaction from a user agent
-2. Collector node broadcasts that transaction to the other nodes in its Cluster.
+1. Collection node receives a transaction from a user agent
+2. Collection node broadcasts that transaction to the other nodes in its Cluster.
 3. Cluster is batching transactions into **collections**.
 4. Collection is submitted to consensus nodes for **inclusion into a block**.
 
@@ -155,28 +155,28 @@ Example of a typical sequence for a collector node:
 
 A collection is an ordered list of one or more transactions.
 Collection formation is a process that
-- starts when a user agent submits a transaction to the collector node, and
+- starts when a user agent submits a transaction to the collection node, and
 - ends when a guaranteed collection is submitted to the consensus nodes
 
 Cluster nodes continually form consensus on when to start a new collection, the set of transactions to include in the collection under construction, and when to close the current collection and submit it to the consensus nodes.
 As a result of this consensus, a collection grows over time.
 
 Collections are built one at a time — current collection must be closed and submitted to the consensus nodes before a new collection can be started. 
-A Collection is closed when the c**ollection size has reached a certain threshold**, or a **predefined time span has passed**.
+A collection is closed when the c**ollection size has reached a certain threshold**, or a **predefined time span has passed**.
 
 Once a collection has been submitted to the consensus nodes, it becomes a **guaranteed collection**. A guaranteed collection is an immutable data structure. Each node in the cluster that participated in forming the guaranteed collection is called a **guarantor**. Guarantor attests that all transactions in the collection are well formed, and that they will store the entire collection including the full script of all transactions for as long as it is necessary (until execution nodes are done executing them). A guaranteed collection is broadcast by the guarantors to all consensus nodes.
 
-To vote to append a transaction to a collection, a collector node must verify that:
-1. The collector node has received all the relevant transactions
+To vote to append a transaction to a collection, a collection node must verify that:
+1. The collection node has received all the relevant transactions
 2. Transaction is well-formed
 3. Appending the transaction does not result in duplicate transactions
-4. There are no common transactions between the current collection under construction and any other collection that the cluster of the collector node already guaranteed
+4. There are no common transactions between the current collection under construction and any other collection that the cluster of the collection node already guaranteed
 
-Collector node must store all the transactions of all guaranteed collections, and must produce relevant transaction when requested by the execution nodes. If they fail to do so, they will be slashed, along with the rest of the cluster.
+Collection node must store all the transactions of all guaranteed collections, and must produce relevant transaction when requested by the execution nodes. If they fail to do so, they will be slashed, along with the rest of the cluster.
 
 ### Consensus Nodes
 
-The consensus nodes work with transaction batches - [_collections_](#collector-nodes), submitted by the collector nodes.
+The consensus nodes work with transaction batches - [_collections_](#collection-nodes), submitted by the collection nodes.
 They form blocks from collections, are in charge of sealing those blocks, and adjudicate slashing requests from other nodes (for example, claims that an execution node has produced incorrect outputs.)
 
 Since the responsibility to maintain a large state is delegated to specialized nodes, hardware requirements for consensus nodes remain moderate even for high-throughput blockchains.
@@ -212,7 +212,7 @@ If there are no guaranteed collections, consensus nodes will continue block form
 Sealing a blocks computation result is done **after** the block itself is finalized.
 After the computation results have been broadcast as execution receipts, the consensus nodes wait for the verification in the form of **result approvals** by the verification nodes.
 When a super-majority has approved the result (and no errors were found / slashing results were issued) — execution result is considered for **sealing**.
-**Block Seal** is included in the next block that the consensus nodes finalize — block seal for a block is stored in a later block.
+**Block seal** is included in the next block that the consensus nodes finalize — block seal for a block is stored in a later block.
 
 ### Execution Nodes
 
@@ -263,8 +263,8 @@ Execution result of a block includes:
 Execution result has one or more **chunks**.
 **Chunking** is a process of dividing blocks computation into smaller pieces so that individual chunks can be executed and verified in a distributed and parallel manner by many verification nodes.
 Chunks aim to be equally computation-heavy, to avoid a scenario where verification node takes too much time to verify a specific chunk.
-There is a system wide threshold for chunk computation consumption. 
-Each chunk corresponds to a [collection](#collector-nodes).
+There is a system-wide threshold for chunk computation consumption. 
+Each chunk corresponds to a [collection](#collection-nodes).
 
 ### Verification Nodes
 
@@ -273,10 +273,10 @@ With the chunking approach of Flow, each node only checks a small fraction of ch
 A verification node requests the information it needs for re-computing the chunks it is checking from the execution nodes.
 It approves the result of a chunk by publishing a **result approval** for that chunk.
 
-When enough result approvals have been issued, consensus nodes publish Block Seal as part of the new blocks they finalize.
+When enough result approvals have been issued, consensus nodes publish a block seal as part of the new blocks they finalize.
 Verification nodes verifiably self-select the chunks they check independently of each other.
 Any execution receipt can be checked in isolation.
-If correct, Verifier signs the execution result — not the execution receipt. Multiple consistent execution receipts have identical execution results.
+If correct, the verifier signs the execution result — not the execution receipt. Multiple consistent execution receipts have identical execution results.
 
 ### Access Nodes
 
@@ -362,7 +362,7 @@ The Flow implementation of radix trees introduces a number of improvements:
 ### Specialized Proof of Confidential Knowledge
 
 Specialized Proof of Confidential Knowledge or SPoCK allows provers to demonstrate that they have some confidential knowledge (secret) without leaking any information about the secret.
-It is Flows countermeasure so that execution node cannot just copy the result from another execution node.
+It is Flow's countermeasure so that execution node cannot just copy the result from another execution node.
 SPoCKs also make it so that a verification node cannot just blindly approve the execution results of an execution node without actually doing the verification work.
 SPoCKs cannot be copied or forged.
 
