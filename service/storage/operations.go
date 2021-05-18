@@ -32,9 +32,9 @@ import (
 )
 
 var (
-	codec   cbor.EncMode
-	encoder *zstd.Encoder
-	decoder *zstd.Decoder
+	codec        cbor.EncMode
+	compressor   *zstd.Encoder
+	decompressor *zstd.Decoder
 )
 
 func init() {
@@ -43,7 +43,7 @@ func init() {
 		panic(fmt.Errorf("could not decode dictionary"))
 	}
 
-	encoder, err = zstd.NewWriter(nil,
+	compressor, err = zstd.NewWriter(nil,
 		zstd.WithEncoderDict(dict),
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
 	)
@@ -51,7 +51,7 @@ func init() {
 		panic(fmt.Errorf("could not initialize compressor: %w", err))
 	}
 
-	decoder, err = zstd.NewReader(nil,
+	decompressor, err = zstd.NewReader(nil,
 		zstd.WithDecoderDicts(dict),
 	)
 	if err != nil {
@@ -148,7 +148,7 @@ func RetrieveEvents(height uint64, types []string, events *[]flow.Event) func(tx
 			// Unmarshal event batch and append them to result slice.
 			var evts []flow.Event
 			err := it.Item().Value(func(val []byte) error {
-				val, err := decoder.DecodeAll(val, nil)
+				val, err := decompressor.DecodeAll(val, nil)
 				if err != nil {
 					return fmt.Errorf("could not decompress events: %w", err)
 				}
@@ -188,7 +188,7 @@ func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) f
 		}
 
 		err := it.Item().Value(func(val []byte) error {
-			val, err := decoder.DecodeAll(val, nil)
+			val, err := decompressor.DecodeAll(val, nil)
 			if err != nil {
 				return fmt.Errorf("could not decompress payload: %w", err)
 			}
@@ -256,7 +256,7 @@ func retrieve(key []byte, value interface{}) func(txn *badger.Txn) error {
 		}
 
 		err = item.Value(func(val []byte) error {
-			val, err := decoder.DecodeAll(val, nil)
+			val, err := decompressor.DecodeAll(val, nil)
 			if err != nil {
 				return fmt.Errorf("unable to decompress value: %w", err)
 			}
@@ -281,7 +281,7 @@ func save(key []byte, value interface{}) func(txn *badger.Txn) error {
 			return fmt.Errorf("unable to encode value: %w", err)
 		}
 
-		val = encoder.EncodeAll(val, nil)
+		val = compressor.EncodeAll(val, nil)
 
 		return txn.Set(key, val)
 	}
