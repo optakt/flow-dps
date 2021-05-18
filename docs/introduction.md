@@ -71,8 +71,6 @@ Using those [node roles](#flow-node-roles), each type of node can be optimized a
 For instance, execution nodes are compute-optimized nodes, leveraging large-scale data centers, while collection nodes are highly bandwidth-optimized.
 Consensus and verification nodes have moderate hardware requirements, allowing for a high degree of participation, requiring only a high-end consumer internet connection.
 
-This architecture lead to a throughput increase by a multiplicative factor of 56.
-
 ### Rules
 
 Flow is based upon the following set of rules:
@@ -116,15 +114,18 @@ Flow differentiates between two sorts of states:
 
 Execution and protocol states are maintained and updated independently. Execution state is maintained and updated by the execution nodes, while the protocol state is maintained and updated by the consensus nodes.
 
-Execution state contains the register values which are modified by the transaction execution. Updates to the execution states are done by the execution nodes but their integrity is governed by the verification process.
+The execution state contains the register values which are modified by the transaction execution. Updates to the execution states are done by the execution nodes but their integrity is governed by the verification process.
 
-Protocol state keeps track of the system related features like staked nodes, node roles, public keys, network addresses and staking amounts. Protocol state is updated when the nodes are slashed, join the system via staking or leave the system by unstaking. Consensus nodes publish updates on the protocol state directly as part of the blocks they generate. Consensus protocol guarantees the integrity of the protocol state.
+The protocol state keeps track of the system related features like staked nodes, node roles, public keys, network addresses and staking amounts.
+It is updated when the nodes are slashed, join the system via staking or leave the system by unstaking.
+Consensus nodes publish updates on the protocol state directly as part of the blocks they generate.
+Consensus protocol guarantees the integrity of the protocol state.
 
 To better illustrate the difference and the independence of the two states, we can consider two scenarios:
 
 **Scenario 1**: Nodes never join, leave or change stake. Transactions are regularly processed. In this system, the protocol state never changes, but the execution state does.
 
-**Scenario 2**: No transactions are submitted/processed. Nodes are regularly joining or leaving the network — here only the network infrastructure / protocol state changes.
+**Scenario 2**: No transactions are submitted/processed. Nodes are regularly joining or leaving the network — here only the network infrastructure/protocol state changes.
 
 ## Flow Node Roles
 
@@ -147,28 +148,30 @@ The clustering mechanism avoids heterogeneous systems where a collection node wi
 Example of a typical sequence for a collection node:
 
 1. Collection node receives a transaction from a user agent
-2. Collection node broadcasts that transaction to the other nodes in its Cluster.
+2. Collection node broadcasts that transaction to the other nodes in its cluster.
 3. Cluster is batching transactions into **collections**.
 4. Collection is submitted to consensus nodes for **inclusion into a block**.
 
-#### Collection formation
+#### Collection Formation
 
 A collection is an ordered list of one or more transactions.
-Collection formation is a process that
-- starts when a user agent submits a transaction to the collection node, and
-- ends when a guaranteed collection is submitted to the consensus nodes
+Collection formation is a process that starts when a user agent submits a transaction to the collection node, and ends when a guaranteed collection is submitted to the consensus nodes.
 
 Cluster nodes continually form consensus on when to start a new collection, the set of transactions to include in the collection under construction, and when to close the current collection and submit it to the consensus nodes.
 As a result of this consensus, a collection grows over time.
 
 Collections are built one at a time — current collection must be closed and submitted to the consensus nodes before a new collection can be started. 
-A collection is closed when the c**ollection size has reached a certain threshold**, or a **predefined time span has passed**.
+A collection is closed when the **collection size has reached a certain threshold**, or a **predefined time span has passed**.
 
-Once a collection has been submitted to the consensus nodes, it becomes a **guaranteed collection**. A guaranteed collection is an immutable data structure. Each node in the cluster that participated in forming the guaranteed collection is called a **guarantor**. Guarantor attests that all transactions in the collection are well formed, and that they will store the entire collection including the full script of all transactions for as long as it is necessary (until execution nodes are done executing them). A guaranteed collection is broadcast by the guarantors to all consensus nodes.
+Once a collection has been submitted to the consensus nodes, it becomes a **guaranteed collection**.
+A guaranteed collection is an immutable data structure.
+Each node in the cluster that participated in forming the guaranteed collection is called a **guarantor**.
+Guarantors attest that all transactions in the collection are well-formed, and that they will store the entire collection including the full script of all transactions for as long as it is necessary (until execution nodes are done executing them).
+A guaranteed collection is broadcast by the guarantors to all consensus nodes.
 
 To vote to append a transaction to a collection, a collection node must verify that:
 1. The collection node has received all the relevant transactions
-2. Transaction is well-formed
+2. The transaction is well-formed
 3. Appending the transaction does not result in duplicate transactions
 4. There are no common transactions between the current collection under construction and any other collection that the cluster of the collection node already guaranteed
 
@@ -191,9 +194,9 @@ It is worth noting that a block in Flow does not include the resulting execution
 
 In order for consensus nodes to seal blocks, they must commit to the execution result of a block after it is executed and verified.
 
-#### Block formation
+#### Block Formation
 
-Block formation is a continuous process executed by the consensus nodes to form new blocks. Block formation has several purposes:
+Block formation is a continuous process performed by the consensus nodes to form new blocks. Block formation has several purposes:
 
 1. Including newly submitted guaranteed collections and reaching aggreement over the order of them
 2. Provide a measure of time by continuously publishing blocks (determining the length of an epoch)
@@ -209,20 +212,20 @@ Block formation is a continuous process executed by the consensus nodes to form 
 
 If there are no guaranteed collections, consensus nodes will continue block formation with an empty set of collections — block formation is never blocked.
 
-Sealing a blocks computation result is done **after** the block itself is finalized.
+Sealing a block's computation result is done **after** the block itself is finalized.
 After the computation results have been broadcast as execution receipts, the consensus nodes wait for the verification in the form of **result approvals** by the verification nodes.
-When a super-majority has approved the result (and no errors were found / slashing results were issued) — execution result is considered for **sealing**.
-**Block seal** is included in the next block that the consensus nodes finalize — block seal for a block is stored in a later block.
+When a super-majority has approved the result (and no errors were found) — execution result is considered for **sealing**.
+A **block seal** is included in the next block that the consensus nodes finalize, meaning that the block seal for a block is stored in a later block.
 
 ### Execution Nodes
 
 The execution nodes determine the results of [transactions](#transactions) when executed in the order determined by the [consensus nodes](#consensus-nodes). 
 They are responsible for scaling the computational power of the blockchain, and are the only node role to have access to the **execution state**.
 Execution nodes follow new blocks as they are published by the consensus nodes.
-Execution process starts when the consensus nodes broadcast evidence that the next block is finalized.
+The execution process starts when the consensus nodes broadcast evidence that the next block is finalized.
 The process ends when the execution nodes broadcast their **execution receipts**.
 
-Conservative execution nodes only process finallized blocks to avoid wasting resources.
+Conservative execution nodes only process finalized blocks to avoid wasting resources.
 An execution node can be optimistic — they are allowed to work on unfinalized blocks.
 This can, however, lead to waste or resources if a block is abandoned later.
 Also, validity of unfinalized blocks is not guaranteed — execution node may be processing an invalid block.
@@ -234,35 +237,35 @@ Execution nodes:
 
 During the execution process the following operations occur:
 - each collection of transactions from the finalized block is retrieved from the relevant cluster
-- execution node executes the transactions according to their cannonical order and update the execution state of the system
-- an execution receipt is built for the block. Execution receipt is a cryptographic commitment on the execution result of the block
-- execution receipt is broadcast to the verification nodes and consensus nodes
+- execution node executes the transactions according to their canonical order and update the execution state of the system
+- an execution receipt is built for the block. An execution receipt is a cryptographic commitment on the execution result of the block
+- the execution receipt is broadcast to the verification nodes and consensus nodes
 
 #### Collection retrieval
 
-Block being executed contains a number of guaranteed collections. Guaranteed collections only includes a hash of the set of transactions, not their full texts.
-Execution node retrieves the collection text from the appropriate cluster, and reconstructs the collection hash from the transaction text to verify the data consistency.
+Blocks being executed contain a number of guaranteed collections. Guaranteed collections only include a hash of the set of transactions, not their full texts.
+Execution nodes retrieve the collection text from the appropriate cluster, and reconstruct the collection hash from the transaction text to verify data consistency.
 Transactions are processed in order.
 
 #### Block Execution
 
-A block is executed when the previous blocks execution result is known.
+A block is executed when the previous block's execution result is known.
 This previous execution result is the starting point for the execution of the block.
 
 Execution receipt for a block includes execution nodes signature, execution result and [SPoCKs](#specialized-proof-of-confidential-knowledge).
-Execution receipt is a signed execution result.
+An execution receipt is a signed execution result.
 The execution receipts can be used to challenge the claims of an execution node when they are shown to be incorrect.
 They are also used to create proofs of the current state of the chain once they are known to be correct.
 
-Execution result of a block includes:
+The execution result of a block includes:
 - block hash
 - hash reference to the previous execution result
 - one or more chunks
 - commitment to the final execution state of the system after executing the block
 
-Execution result has one or more **chunks**.
-**Chunking** is a process of dividing blocks computation into smaller pieces so that individual chunks can be executed and verified in a distributed and parallel manner by many verification nodes.
-Chunks aim to be equally computation-heavy, to avoid a scenario where verification node takes too much time to verify a specific chunk.
+Execution results have one or more **chunks**.
+**Chunking** is a process of dividing a block's computation into smaller pieces so that individual chunks can be executed and verified in a distributed and parallel manner by many verification nodes.
+Chunks aim to be equally computation-heavy, to avoid a scenario where some verification nodes take too long to verify a specific chunk.
 There is a system-wide threshold for chunk computation consumption. 
 Each chunk corresponds to a [collection](#collection-nodes).
 
