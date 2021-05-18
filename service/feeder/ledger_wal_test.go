@@ -13,7 +13,7 @@ import (
 
 func TestFeeder_Delta(t *testing.T) {
 	const (
-		firstCommit = "d85b7dc2d6be69c5cc10f0d128595352354e57fbd923ac1ad3f734518610ca73"
+		firstCommit  = "d85b7dc2d6be69c5cc10f0d128595352354e57fbd923ac1ad3f734518610ca73"
 		secondCommit = "20a7c8d5447a9acc9cb8de372935669f50645ebd106d98e71a25cf5196595856"
 	)
 

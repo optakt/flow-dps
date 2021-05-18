@@ -48,6 +48,9 @@ jobs:
       - name: Verify that there is no diff after running go generate
         run: go generate ./... && git status && git diff-index --quiet HEAD --
 
+      - name: Verify that there is no diff after running go fmt
+        run: go fmt ./... && git status && git diff-index --quiet HEAD --
+
       - name: Verify that the code compiles
         run: go build main.go
 
