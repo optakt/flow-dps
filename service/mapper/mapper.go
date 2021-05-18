@@ -22,6 +22,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
@@ -41,6 +42,7 @@ type Mapper struct {
 	log        zerolog.Logger
 	chain      Chain
 	feed       Feeder
+	sync       Synchronizer
 	index      index.Writer
 	checkpoint string
 	post       func(*trie.MTrie)
@@ -50,7 +52,7 @@ type Mapper struct {
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
 // and then passes on the details to the indexer for indexing.
-func New(log zerolog.Logger, chain Chain, feed Feeder, index index.Writer, options ...func(*MapperConfig)) (*Mapper, error) {
+func New(log zerolog.Logger, chain Chain, feed Feeder, synchronizer Synchronizer, index index.Writer, options ...func(*MapperConfig)) (*Mapper, error) {
 
 	// We don't use a checkpoint by default. The options can set one, in which
 	// case we will add the checkpoint as a finalized state commitment in our
@@ -79,6 +81,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index index.Writer, optio
 		chain:      chain,
 		feed:       feed,
 		index:      index,
+		sync:       synchronizer,
 		checkpoint: cfg.CheckpointFile,
 		post:       cfg.PostProcessing,
 		wg:         &sync.WaitGroup{},
@@ -112,10 +115,22 @@ func (m *Mapper) Run() error {
 	defer m.wg.Done()
 
 	// We start trying to map at the root height.
-	height, err := m.chain.Root()
-	if err != nil {
+	var height uint64
+	var err error
+	for {
+		height, err = m.chain.Root()
+		if err == nil {
+			break
+		}
+		// If the chain never indexed anything, it needs to start from height 0.
+		if errors.Is(err, dps.ErrTimeout) {
+			break
+		}
+
 		return fmt.Errorf("could not get root height: %w", err)
 	}
+
+	m.sync.SetBlockHeight(height)
 
 	// We always initialize an empty state trie to refer to the first step
 	// before the checkpoint. If there is no checkpoint, then the step after the
@@ -226,9 +241,15 @@ Outer:
 			// keep going
 		}
 
+		// Set the tree's root hash as the sync state for live updates.
+		m.sync.SetRootHash(tree.RootHash())
+		m.sync.SetBlockHeight(height)
+
 		log := m.log.With().
 			Uint64("height", height).
 			Hex("commit_prev", commitPrev[:]).Logger()
+
+		log.Info().Str("rootHash", tree.RootHash().String()).Msg("set height and root hash in synchronizer")
 
 		// As a first step, we retrieve the state commitment of the finalized
 		// block at the current height; we start at the root height and then
@@ -243,6 +264,7 @@ Outer:
 		// retry until we have a new block.
 		if errors.Is(err, dps.ErrTimeout) {
 			log.Warn().Msg("commit retrieval timed out, retrying")
+			time.Sleep(1 * time.Second) // FIXME: Change this, maybe make the timeout a typed err.
 			continue Outer
 		}
 
@@ -304,6 +326,7 @@ Outer:
 
 			// Other errors should fail execution as they should not happen.
 			if err != nil {
+				// FIXME: use sentinel error to say that the update needs to be polled later.
 				return fmt.Errorf("could not retrieve next delta: %w", err)
 			}
 

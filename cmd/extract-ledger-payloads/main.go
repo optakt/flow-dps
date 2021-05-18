@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	"github.com/optakt/flow-dps/service/synchronizer"
 
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
@@ -103,7 +104,8 @@ func run() int {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 		return failure
 	}
-	mapper, err := mapper.New(log, chain, feeder, &Index{},
+	sync := synchronizer.New()
+	mapper, err := mapper.New(log, chain, feeder, sync, &Index{},
 		mapper.WithCheckpointFile(flagCheckpoint),
 		mapper.WithPostProcessing(post),
 	)

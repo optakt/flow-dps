@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/prometheus/tsdb/wal"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
@@ -51,17 +50,18 @@ func run() int {
 	// Command line parameter initialization.
 	var (
 		flagCheckpoint string
-		flagData       string
 		flagIndex      string
 		flagLevel      string
-		flagTrie       string
+
+		liveNode dps.LiveNodeConfig
 	)
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
-	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
+	pflag.StringVarP(&liveNode.Host, "node-host", "n", "", "hostname or IP of the live node")
+	pflag.Uint16VarP(&liveNode.SubPort, "pub-port", "p", 14532, "port on which the pub socket is exposed")
+	pflag.Uint16VarP(&liveNode.ReqPort, "req-port", "r", 14533, "port on which the req socket is exposed")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
 	pflag.Parse()
 
@@ -83,28 +83,19 @@ func run() int {
 	}
 	defer db.Close()
 
-	// Open protocol state database.
-	data, err := badger.Open(dps.DefaultOptions(flagData))
-	if err != nil {
-		log.Error().Err(err).Msg("could not open blockchain database")
-		return failure
-	}
-	defer data.Close()
-
 	// Initialize mapper.
-	chain := chain.FromDisk(data)
-	segments, err := wal.NewSegmentsReader(flagTrie)
+	sync := synchronizer.New()
+	chain, err := chain.FromLiveNode(log, liveNode, sync)
 	if err != nil {
-		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
+		log.Error().Err(err).Msg("could not initialize live chain")
 		return failure
 	}
-	feeder, err := feeder.FromDisk(wal.NewReader(segments))
+	feeder, err := feeder.FromLiveNode(log, liveNode, sync)
 	if err != nil {
-		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
+		log.Error().Err(err).Msg("could not initialize live feeder")
 		return failure
 	}
 	index := index.NewWriter(db)
-	sync := synchronizer.New()
 	mapper, err := mapper.New(log, chain, feeder, sync, index, mapper.WithCheckpointFile(flagCheckpoint))
 	if err != nil {
 		log.Error().Str("checkpoint", flagCheckpoint).Err(err).Msg("could not initialize mapper")
@@ -129,6 +120,28 @@ func run() int {
 		finish := time.Now()
 		duration := finish.Sub(start)
 		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
+	}()
+	go func() {
+		for {
+			err := feeder.Run()
+			if err != nil {
+				log.Warn().Err(err).Msg("Live feeder failed, retrying")
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			log.Info().Msg("Live feeder stopped")
+		}
+	}()
+	go func() {
+		for {
+			err := chain.Run()
+			if err != nil {
+				log.Warn().Err(err).Msg("Live chain failed, retrying")
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			log.Info().Msg("Live chain stopped")
+		}
 	}()
 
 	select {
