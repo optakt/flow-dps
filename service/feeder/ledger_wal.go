@@ -63,6 +63,13 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	return &l, nil
 }
 
+func (l *LedgerWAL) Clear() {
+	for key := range l.cache {
+		delete(l.cache, key)
+	}
+	l.cache = make(map[string]*deque.Deque)
+}
+
 func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 
 	// If we have a cached delta for the commit, it means that we skipped it at
@@ -73,9 +80,6 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 	forks, ok := l.cache[string(commit)]
 	if ok && forks.Len() > 0 {
 		delta := forks.PopBack().(dps.Delta)
-		if forks.Len() == 0 {
-			delete(l.cache, string(commit))
-		}
 		return delta, nil
 	}
 

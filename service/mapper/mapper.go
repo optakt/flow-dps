@@ -241,6 +241,10 @@ Outer:
 				return fmt.Errorf("could not index last: %w", err)
 			}
 
+			// Clear the feeder cache, which knows nothing about when we reach
+			// a finalized block.
+			m.feed.Clear()
+
 			log.Info().Msg("block indexed")
 
 			m.tree = tree
