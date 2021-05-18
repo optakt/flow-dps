@@ -12,14 +12,14 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package state
+package storage
 
 const (
-	prefixLastCommit  = 1
-	prefixIndexBlock  = 2
-	prefixIndexCommit = 3
-	prefixIndexHeight = 4
-	prefixDataHeader  = 5
-	prefixDataDelta   = 6
-	prefixDataEvents  = 7
+	prefixLastCommit          = 1
+	prefixIndexBlockToHeight  = 2
+	prefixIndexCommitToHeight = 3
+	prefixIndexHeightToCommit = 4
+	prefixDataHeader          = 5
+	prefixDataDelta           = 6
+	prefixDataEvents          = 7
 )
