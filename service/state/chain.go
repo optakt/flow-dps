@@ -15,12 +15,10 @@
 package state
 
 import (
-	"encoding/binary"
 	"fmt"
 
-	"github.com/OneOfOne/xxhash"
+	"github.com/awfm9/flow-dps/service/state/storage"
 	"github.com/dgraph-io/badger/v2"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -31,7 +29,7 @@ type Chain struct {
 func (c *Chain) Header(height uint64) (*flow.Header, error) {
 	var header flow.Header
 	err := c.core.db.View(func(tx *badger.Txn) error {
-		return RetrieveHeader(height, &header)(tx)
+		return storage.RetrieveHeader(height, &header)(tx)
 	})
 
 	return &header, err
@@ -45,54 +43,10 @@ func (c *Chain) Events(height uint64, types ...string) ([]flow.Event, error) {
 		return nil, fmt.Errorf("unknown height (current: %d, requested: %d)", c.core.height, height)
 	}
 
-	// FIXME: Should we keep the types filtering or not?
-	lookup := make(map[uint64]struct{})
-	for _, typ := range types {
-		lookup[xxhash.Checksum64([]byte(typ))] = struct{}{}
-	}
-
 	// Iterate over all keys within the events index which are prefixed with the right block height.
 	var events []flow.Event
-	prefix := Encode(prefixDataEvents, height)
 	err := c.core.db.View(func(tx *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		// NOTE: this is an optimization only, it does not enforce that all
-		// results in the iteration have this prefix.
-		opts.Prefix = prefix
-
-		it := tx.NewIterator(opts)
-		defer it.Close()
-
-		// Iterate on all keys with the right prefix.
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			// If types were given for filtering, discard events which should not be included.
-			hash := binary.BigEndian.Uint64(it.Item().Key()[1+8:])
-			_, ok := lookup[hash]
-			if len(lookup) != 0 && !ok {
-				continue
-			}
-
-			// Unmarshal event batch and append them to result slice.
-			var evts []flow.Event
-			err := it.Item().Value(func(val []byte) error {
-				val, err := decoder.DecodeAll(val, nil)
-				if err != nil {
-					return fmt.Errorf("could not decompress events: %w", err)
-				}
-				err = cbor.Unmarshal(val, &evts)
-				if err != nil {
-					return fmt.Errorf("could not decode events: %w", err)
-				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("could not unmarshal events: %w", err)
-			}
-
-			events = append(events, evts...)
-		}
-
-		return nil
+		return storage.RetrieveEvents(height, types, &events)(tx)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve events: %w", err)

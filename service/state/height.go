@@ -17,6 +17,7 @@ package state
 import (
 	"fmt"
 
+	"github.com/awfm9/flow-dps/service/state/storage"
 	"github.com/dgraph-io/badger/v2"
 
 	"github.com/onflow/flow-go/model/flow"
@@ -33,7 +34,7 @@ type Height struct {
 func (h *Height) ForBlock(blockID flow.Identifier) (uint64, error) {
 	var height uint64
 	err := h.core.db.View(func(tx *badger.Txn) error {
-		return RetrieveBlockHeight(Encode(prefixIndexBlock, blockID[:]), &height)(tx)
+		return storage.RetrieveHeightByBlock(blockID[:], &height)(tx)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("could not look up block: %w", err)
@@ -44,7 +45,7 @@ func (h *Height) ForBlock(blockID flow.Identifier) (uint64, error) {
 func (h *Height) ForCommit(commit flow.StateCommitment) (uint64, error) {
 	var height uint64
 	err := h.core.db.View(func(tx *badger.Txn) error {
-		return RetrieveBlockHeight(Encode(prefixIndexBlock, commit), &height)(tx)
+		return storage.RetrieveHeightByCommit(commit, &height)(tx)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("could not look up commit: %w", err)

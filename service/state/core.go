@@ -18,9 +18,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/awfm9/flow-dps/service/state/storage"
 	"github.com/dgraph-io/badger/v2"
-	"github.com/fxamacker/cbor/v2"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
@@ -48,8 +47,6 @@ func NewCore(dir string) (*Core, error) {
 		return nil, fmt.Errorf("could not open database: %w", err)
 	}
 
-
-
 	// TODO: think about refactoring this, especially in regards to the empty
 	// trie initialization, once we have switched to the new storage API
 	// => https://github.com/awfm9/flow-dps/issues/38
@@ -59,12 +56,12 @@ func NewCore(dir string) (*Core, error) {
 	err = db.View(func(tx *badger.Txn) error {
 
 		// first we get the last commit
-		if err := RetrieveLastCommit(&commit)(tx); err != nil {
+		if err := storage.RetrieveLastCommit(&commit)(tx); err != nil {
 			return fmt.Errorf("could not retrieve last commit: %w", err)
 		}
 
 		// then we get the height associated with it
-		if err := RetrieveCommitHeight(commit, &height)(tx); err != nil {
+		if err := storage.RetrieveHeightByCommit(commit, &height)(tx); err != nil {
 			return fmt.Errorf("could not retrieve height from commit: %w", err)
 		}
 		return nil
@@ -84,13 +81,13 @@ func NewCore(dir string) (*Core, error) {
 		err = db.Update(func(tx *badger.Txn) error {
 
 			// store the empty root hash as last commit
-			err = SetLastCommit(commit)(tx)
+			err = storage.SaveLastCommit(commit)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist last commit: %w", err)
 			}
 
 			// map the last commit to zero height
-			err = SetCommitHeight(commit, height)(tx)
+			err = storage.SaveCommitForHeight(commit, height)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist commit index: %w", err)
 			}
@@ -160,33 +157,8 @@ func (c *Core) payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// seek for; this should represent the last update to the path before the
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
-	key := Encode(prefixDataDelta, path, height)
 	err := c.db.View(func(tx *badger.Txn) error {
-		it := tx.NewIterator(badger.IteratorOptions{
-			PrefetchSize:   0,
-			PrefetchValues: false,
-			Reverse:        true,
-			AllVersions:    false,
-			InternalAccess: false,
-			Prefix:         key[:1+pathfinder.PathByteSize],
-		})
-		defer it.Close()
-		it.Seek(key)
-		if !it.Valid() {
-			return dps.ErrNotFound
-		}
-		err := it.Item().Value(func(val []byte) error {
-			val, err := decoder.DecodeAll(val, nil)
-			if err != nil {
-				return fmt.Errorf("could not decompress payload: %w", err)
-			}
-			err = cbor.Unmarshal(val, &payload)
-			if err != nil {
-				return fmt.Errorf("could not decode payload: %w", err)
-			}
-			return nil
-		})
-		return err
+		return storage.RetrieveDeltas(height, path, &payload)(tx)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve payload: %w", err)

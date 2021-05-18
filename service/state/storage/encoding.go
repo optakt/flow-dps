@@ -12,31 +12,30 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package state
+package storage
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
-func Encode(pins ...interface{}) []byte {
-	var key []byte
+func Encode(prefix uint8, segments ...interface{}) []byte {
+	key := []byte{prefix}
 	var it int
-	for _, pin := range pins {
-		switch pin.(type) {
-		case uint8:
-			key = append(key, pin.(uint8))
-			it += 1
+	for _, segment := range segments {
+		switch s := segment.(type) {
 		case uint64:
 			val := make([]byte, 8)
 
-			binary.BigEndian.PutUint64(val, pin.(uint64))
+			binary.BigEndian.PutUint64(val, s)
 			key = append(key, val...)
 			it += 8
 		case []byte:
-			payload := pin.([]byte)
-			val := make([]byte, len(payload))
+			val := make([]byte, len(s))
 
-			copy(val, payload)
+			copy(val, s)
 			key = append(key, val...)
-			it += len(payload)
+			it += len(s)
 		default:
 			panic("unknown type")
 		}
@@ -45,16 +44,19 @@ func Encode(pins ...interface{}) []byte {
 	return key
 }
 
-func Decode(key []byte, pins ...interface{}) error {
+func Decode(key []byte, segments ...interface{}) (prefix uint8, err error) {
 	var it int
-	for _, pin := range pins {
-		switch pin.(type) {
+
+	if len(key) > 0 {
+		prefix = key[0]
+		it++
+	}
+	for _, segment := range segments {
+		switch ptr := segment.(type) {
 		case *uint64:
-			ptr := pin.(*uint64)
 			*ptr = binary.BigEndian.Uint64(key[it:it+8])
 			it += 8
 		case *[]byte:
-			ptr := pin.(*[]byte)
 			length := len(*ptr)
 			if length == 0 { // This makes it possible to skip a pin by just giving nil.
 				continue
@@ -67,9 +69,9 @@ func Decode(key []byte, pins ...interface{}) error {
 			*ptr = val
 			it += length
 		default:
-			panic("unknown type")
+			return prefix, fmt.Errorf("unknown segment type %T", ptr)
 		}
 	}
 
-	return nil
+	return prefix, nil
 }
