@@ -419,4 +419,4 @@ You can then run the DPS, and it should properly build its index based on the gi
 * [Flow Technical Papers](https://www.onflow.org/technical-paper)
 * [Flow Developer Documentation](https://docs.onflow.org/)
 * [Flow Developer Discord Server](https://onflow.org/discord)
-* [Scalability Trilemma](https://aakash-111.medium.com/the-scalability-trilemma-in-blockchain-75fb57f646df)
+* [Scalability Trilemma](https://vitalik.ca/general/2021/04/07/sharding.html)
