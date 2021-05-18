@@ -17,11 +17,13 @@ package feeder
 import (
 	"bytes"
 	"fmt"
+	"sort"
 
 	"github.com/gammazero/deque"
 	"github.com/prometheus/client_golang/prometheus"
 	pwal "github.com/prometheus/tsdb/wal"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 
@@ -29,9 +31,10 @@ import (
 )
 
 type LedgerWAL struct {
-	reader    *pwal.Reader
-	cache     map[string]*deque.Deque
-	threshold uint
+	reader *pwal.Reader
+	limit  uint
+	queue  *deque.Deque
+	cache  map[string]*deque.Deque
 }
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
@@ -53,38 +56,47 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	}
 
 	l := LedgerWAL{
-		reader:    pwal.NewReader(segments),
-		cache:     make(map[string]*deque.Deque),
-		threshold: 1000,
+		reader: pwal.NewReader(segments),
+		limit:  1200, // some tolerance on top of execution node forest capacity
+		queue:  deque.New(1200, 1200),
+		cache:  make(map[string]*deque.Deque),
 	}
 
 	return &l, nil
 }
 
-func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
+func (l *LedgerWAL) Clear() {
+	for uint(l.queue.Len()) > l.limit {
+		commit := l.queue.PopFront().(flow.StateCommitment)
+		delete(l.cache, string(commit))
+	}
+}
+
+func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error) {
 
 	// If we have a cached delta for the commit, it means that we skipped it at
 	// an earlier point and it is part of a branch that we didn't follow. In
 	// that case, we should just return it, because it means the mapper is
 	// rewinding and switching to another branch, because the one it was one
 	// didn't continue.
-	deltas, ok := l.cache[string(commit)]
-	if ok && deltas.Len() > 0 {
-		return deltas.PopBack().(dps.Delta), nil
+	forks, ok := l.cache[string(commitRequest)]
+	if ok && forks.Len() > 0 {
+		delta := forks.PopBack().(dps.Delta)
+		return delta, nil
 	}
 
 	// Otherwise, we read from the on-disk file until we find a delta that can
 	// be applied to the requested commit. When we are on a fork that stopped,
 	// it's possible the mapper will request a commit that will never show up
-	// in the WAL. We thus need some kind of threshold at which we give up.
-	traversed := uint(0)
+	// in the WAL. We thus need some kind of limit at which we give up.
+	peeked := uint(0)
 	for {
 
 		// Increase the number of traversed deltas first, in case we need to
-		// break out of this loop. If we reach the threshold, it means there is
+		// break out of this loop. If we reach the limit, it means there is
 		// no delta for the requested commit.
-		traversed++
-		if traversed > l.threshold {
+		peeked++
+		if peeked > l.limit {
 			return nil, dps.ErrNotFound
 		}
 
@@ -100,7 +112,9 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			return nil, dps.ErrFinished
 		}
 		record := l.reader.Record()
-		operation, _, update, err := wal.Decode(record)
+		duplicate := make([]byte, len(record))
+		copy(duplicate, record)
+		operation, _, update, err := wal.Decode(duplicate)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode record: %w", err)
 		}
@@ -108,26 +122,46 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			continue
 		}
 
+		// Deduplicate the paths and payloads.
+		// sort and deduplicate paths (we only consider the last occurrence, and ignore the rest)
+		commitUpdate := flow.StateCommitment(update.RootHash)
+		paths := make([]ledger.Path, 0)
+		lookup := make(map[string]ledger.Payload)
+		for i, path := range update.Paths {
+			if _, ok := lookup[string(path)]; !ok {
+				paths = append(paths, path)
+			}
+			lookup[string(path)] = *update.Payloads[i]
+		}
+		sort.Slice(paths, func(i, j int) bool {
+			return bytes.Compare(paths[i], paths[j]) < 0
+		})
+		payloads := make([]ledger.Payload, 0, len(paths))
+		for _, path := range paths {
+			payloads = append(payloads, lookup[string(path)])
+		}
+
 		// At this point, we can convert the trie update into a delta. If it's
 		// a match for the commit that is requested, we return it. Otherwise,
 		// we store it in the cache in case there was a fork and we need it
 		// later.
 		delta := make(dps.Delta, 0, len(update.Paths))
-		for index, path := range update.Paths {
-			payload := update.Payloads[index]
+		for index, path := range paths {
+			payload := payloads[index]
 			change := dps.Change{
 				Path:    path,
-				Payload: *payload,
+				Payload: payload,
 			}
 			delta = append(delta, change)
 		}
-		if !bytes.Equal(update.RootHash, commit) {
-			deltas, ok := l.cache[string(update.RootHash)]
+		if !bytes.Equal(commitUpdate, commitRequest) {
+			forks, ok := l.cache[string(commitUpdate)]
 			if !ok {
-				deltas = deque.New(10, 10)
-				l.cache[string(update.RootHash)] = deltas
+				forks = deque.New()
+				l.cache[string(commitUpdate)] = forks
 			}
-			deltas.PushBack(delta)
+			forks.PushBack(delta)
+			l.queue.PushBack(commitUpdate)
 			continue
 		}
 
