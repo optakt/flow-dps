@@ -16,10 +16,9 @@ package storage
 
 import (
 	"encoding/binary"
-	"fmt"
 )
 
-func Encode(prefix uint8, segments ...interface{}) []byte {
+func encodeKey(prefix uint8, segments ...interface{}) []byte {
 	key := []byte{prefix}
 	var it int
 	for _, segment := range segments {
@@ -44,34 +43,34 @@ func Encode(prefix uint8, segments ...interface{}) []byte {
 	return key
 }
 
-func Decode(key []byte, segments ...interface{}) (prefix uint8, err error) {
-	var it int
+// func decodeKey(key []byte, segments ...interface{}) (prefix uint8, err error) {
+// 	var it int
 
-	if len(key) > 0 {
-		prefix = key[0]
-		it++
-	}
-	for _, segment := range segments {
-		switch ptr := segment.(type) {
-		case *uint64:
-			*ptr = binary.BigEndian.Uint64(key[it : it+8])
-			it += 8
-		case *[]byte:
-			length := len(*ptr)
-			if length == 0 { // This makes it possible to skip a pin by just giving nil.
-				continue
-			}
+// 	if len(key) > 0 {
+// 		prefix = key[0]
+// 		it++
+// 	}
+// 	for _, segment := range segments {
+// 		switch ptr := segment.(type) {
+// 		case *uint64:
+// 			*ptr = binary.BigEndian.Uint64(key[it : it+8])
+// 			it += 8
+// 		case *[]byte:
+// 			length := len(*ptr)
+// 			if length == 0 { // This makes it possible to skip a pin by just giving nil.
+// 				continue
+// 			}
 
-			// Retrieve value.
-			val := make([]byte, length)
-			copy(val, key[it:it+length])
+// 			// Retrieve value.
+// 			val := make([]byte, length)
+// 			copy(val, key[it:it+length])
 
-			*ptr = val
-			it += length
-		default:
-			return prefix, fmt.Errorf("unknown segment type %T", ptr)
-		}
-	}
+// 			*ptr = val
+// 			it += length
+// 		default:
+// 			return prefix, fmt.Errorf("unknown segment type %T", ptr)
+// 		}
+// 	}
 
-	return prefix, nil
-}
+// 	return prefix, nil
+// }
