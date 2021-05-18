@@ -34,7 +34,6 @@ type LedgerWAL struct {
 	reader *pwal.Reader
 	cache  map[string]*deque.Deque
 	limit  uint
-	peeked uint
 }
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
@@ -59,7 +58,6 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 		reader: pwal.NewReader(segments),
 		cache:  make(map[string]*deque.Deque),
 		limit:  1000,
-		peeked: 0,
 	}
 
 	return &l, nil
@@ -85,13 +83,14 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 	// be applied to the requested commit. When we are on a fork that stopped,
 	// it's possible the mapper will request a commit that will never show up
 	// in the WAL. We thus need some kind of limit at which we give up.
+	peeked := uint(0)
 	for {
 
 		// Increase the number of traversed deltas first, in case we need to
 		// break out of this loop. If we reach the limit, it means there is
 		// no delta for the requested commit.
-		l.peeked++
-		if l.peeked > l.limit {
+		peeked++
+		if peeked > l.limit {
 			return nil, dps.ErrNotFound
 		}
 
@@ -157,10 +156,6 @@ func (l *LedgerWAL) Delta(commit flow.StateCommitment) (dps.Delta, error) {
 			forks.PushBack(delta)
 			continue
 		}
-
-		// We can reset how many we peeked in advance now, as we are on a new
-		// path from the Ledger and might have to cache everything again.
-		l.peeked = 0
 
 		return delta, nil
 	}
