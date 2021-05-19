@@ -77,11 +77,11 @@ func RetrieveHeightByBlock(blockID flow.Identifier, height *uint64) func(*badger
 }
 
 func RetrieveCommitByHeight(height uint64, commit *flow.StateCommitment) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixIndexHeightToCommit, height), &commit)
+	return retrieve(encodeKey(prefixIndexHeightToCommit, height), commit)
 }
 
 func RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixDataHeader, height), &header)
+	return retrieve(encodeKey(prefixDataHeader, height), header)
 }
 
 func RetrieveEvents(height uint64, types []flow.EventType, events *[]flow.Event) func(*badger.Txn) error {
