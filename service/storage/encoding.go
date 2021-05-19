@@ -16,61 +16,28 @@ package storage
 
 import (
 	"encoding/binary"
+	"fmt"
+
+	"github.com/onflow/flow-go/model/flow"
 )
 
 func encodeKey(prefix uint8, segments ...interface{}) []byte {
 	key := []byte{prefix}
-	var it int
+	var val []byte
 	for _, segment := range segments {
 		switch s := segment.(type) {
 		case uint64:
-			val := make([]byte, 8)
-
+			val = make([]byte, 8)
 			binary.BigEndian.PutUint64(val, s)
-			key = append(key, val...)
-			it += 8
 		case []byte:
-			val := make([]byte, len(s))
-
-			copy(val, s)
-			key = append(key, val...)
-			it += len(s)
+			val = s
+		case flow.Identifier:
+			val = s[:]
 		default:
-			panic("unknown type")
+			panic(fmt.Sprintf("unknown type (%T)", segment))
 		}
+		key = append(key, val...)
 	}
 
 	return key
 }
-
-// func decodeKey(key []byte, segments ...interface{}) (prefix uint8, err error) {
-// 	var it int
-
-// 	if len(key) > 0 {
-// 		prefix = key[0]
-// 		it++
-// 	}
-// 	for _, segment := range segments {
-// 		switch ptr := segment.(type) {
-// 		case *uint64:
-// 			*ptr = binary.BigEndian.Uint64(key[it : it+8])
-// 			it += 8
-// 		case *[]byte:
-// 			length := len(*ptr)
-// 			if length == 0 { // This makes it possible to skip a pin by just giving nil.
-// 				continue
-// 			}
-
-// 			// Retrieve value.
-// 			val := make([]byte, length)
-// 			copy(val, key[it:it+length])
-
-// 			*ptr = val
-// 			it += length
-// 		default:
-// 			return prefix, fmt.Errorf("unknown segment type %T", ptr)
-// 		}
-// 	}
-
-// 	return prefix, nil
-// }

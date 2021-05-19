@@ -26,7 +26,7 @@ type Height struct {
 
 func (h *Height) ForBlock(blockID flow.Identifier) (uint64, error) {
 	var height uint64
-	err := h.core.db.View(storage.RetrieveHeightByBlock(blockID[:], &height))
+	err := h.core.db.View(storage.RetrieveHeightByBlock(blockID, &height))
 	return height, err
 }
 

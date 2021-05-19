@@ -32,7 +32,7 @@ func (c *Chain) Header(height uint64) (*flow.Header, error) {
 	return &header, err
 }
 
-func (c *Chain) Events(height uint64, types ...string) ([]flow.Event, error) {
+func (c *Chain) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 	// Make sure that the request is for a height below the currently active
 	// sentinel height; otherwise, we haven't indexed yet and we might return
 	// false information.

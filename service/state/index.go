@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
 
 	"github.com/onflow/flow-go/model/flow"
@@ -46,8 +45,7 @@ func (i *Index) Header(height uint64, header *flow.Header) error {
 		}
 
 		// create an index to map block ID to height
-		blockID := header.ID()
-		err = storage.SaveHeightForBlock(blockID[:], height)(tx)
+		err = storage.SaveHeightForBlock(header.ID(), height)(tx)
 		if err != nil {
 			return fmt.Errorf("could not persist block index: %w", err)
 		}
@@ -88,7 +86,7 @@ func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 		for _, delta := range deltas {
 			for _, change := range delta {
-				err := storage.SaveChangeForHeight(height, change)(tx)
+				err := storage.SavePayload(height, change.Path, change.Payload)(tx)
 				if err != nil {
 					return fmt.Errorf("could not persist delta data: %w", err)
 				}
@@ -106,14 +104,13 @@ func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
 func (i *Index) Events(height uint64, events []flow.Event) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 
-		buckets := make(map[uint64][]flow.Event)
+		buckets := make(map[flow.EventType][]flow.Event)
 		for _, event := range events {
-			hash := xxhash.Checksum64([]byte(event.Type))
-			buckets[hash] = append(buckets[hash], event)
+			buckets[event.Type] = append(buckets[event.Type], event)
 		}
 
-		for hash, evts := range buckets {
-			err := storage.SaveEvents(height, hash, evts)(tx)
+		for typ, evts := range buckets {
+			err := storage.SaveEvents(height, typ, evts)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist events: %w", err)
 			}
