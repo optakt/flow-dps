@@ -22,6 +22,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
@@ -37,10 +38,15 @@ type Mapper struct {
 	chain  Chain
 	feed   Feeder
 	index  dps.Index
-	tree   *trie.MTrie
 	height uint64
+	tree   *trie.MTrie
 	wg     *sync.WaitGroup
 	stop   chan struct{}
+}
+
+type Step struct {
+	tree  *trie.MTrie
+	delta dps.Delta
 }
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
@@ -97,8 +103,8 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		chain:  chain,
 		feed:   feed,
 		index:  index,
-		tree:   tree,
 		height: height,
+		tree:   tree,
 		wg:     &sync.WaitGroup{},
 		stop:   make(chan struct{}),
 	}
@@ -120,6 +126,10 @@ func (m *Mapper) Stop(ctx context.Context) error {
 		return nil
 	}
 }
+
+// NOTE: We might want to move height and tree (checkpoint) to parameters of the
+// run function; that would make it quite easy to resume from an arbitrary
+// point in the LedgerWAL and get rid of the related struct fields.
 
 func (m *Mapper) Run() error {
 	m.wg.Add(1)
@@ -149,11 +159,11 @@ func (m *Mapper) Run() error {
 	// new state commitment again.
 	height := m.height
 	tree := m.tree
-	deltas := make([]dps.Delta, 0, 10)
+	steps := deque.New(32, 32)
 Outer:
 	for {
 
-		// The second loop is responsible for mapping the currently active block
+		// The inner loop is responsible for mapping the currently active block
 		// to the set of deltas that were collected. If the state commitment for
 		// the block we are looking for isn't the same as the trie root hash, we
 		// will immediately go to the next iteration of the outer loop to keep
@@ -162,17 +172,14 @@ Outer:
 		// if no change to the state trie happens between multiple blocks, at
 		// which point we map the second and any subsequent blocks without
 		// change to an empty set of deltas.
-
 		commitTree := tree.RootHash()
-		var log zerolog.Logger
+		log := m.log.With().
+			Uint64("height", height).
+			Hex("commit_trie", commitTree).
+			Int("num_steps", steps.Len()).
+			Logger()
 	Inner:
 		for {
-
-			log = m.log.With().
-				Uint64("height", height).
-				Hex("commit_trie", commitTree).
-				Int("num_deltas", len(deltas)).
-				Logger()
 
 			// We first try to get the next commit by height, because that is
 			// the sign that the block has been sealed. If the retrieval times
@@ -192,10 +199,10 @@ Outer:
 				return fmt.Errorf("commit retrieval failed: %w", err)
 			}
 
-			log = log.With().Hex("commit_next", commitNext).Logger()
+			log := log.With().Hex("commit_next", commitNext).Logger()
 
 			if !bytes.Equal(commitTree, commitNext) {
-				log.Debug().Msg("commit between tree and height does not match, keep searching")
+				log.Debug().Msg("trie and next commit mismatch, keep searching")
 				break Inner
 			}
 
@@ -218,13 +225,25 @@ Outer:
 			// having an API that allows combining into a single Badger tx
 			// => https://github.com/awfm9/flow-dps/issues/36
 
+			// Collect all of the deltas from the steps; this also clears the
+			// steps queue. As we have now reached a finalized block, we don't
+			// need the information to handle execution forks before that
+			// finalized block anymore.
+			deltas := make([]dps.Delta, 0, steps.Len())
+			for steps.Len() > 0 {
+				s := steps.PopFront().(Step)
+				deltas = append(deltas, s.delta)
+			}
+
+			log = log.With().Int("num_deltas", len(deltas)).Logger()
+
 			// If we successfully retrieved the commit, we can index everything
 			// for this block, because everything should be available.
 			err = m.index.Header(height, header)
 			if err != nil {
 				return fmt.Errorf("could not index header: %w", err)
 			}
-			err = m.index.Commit(height, commitNext)
+			err = m.index.Commit(height, commitTree)
 			if err != nil {
 				return fmt.Errorf("could not index commit: %w", err)
 			}
@@ -236,27 +255,24 @@ Outer:
 			if err != nil {
 				return fmt.Errorf("could not index events: %w", err)
 			}
-			err = m.index.Last(commitNext)
+			err = m.index.Last(commitTree)
 			if err != nil {
 				return fmt.Errorf("could not index last: %w", err)
 			}
 
-			// Clear the feeder cache, which knows nothing about when we reach
-			// a finalized block.
-			m.feed.Clear()
+			log.Info().Msg("block data indexed")
 
-			log.Info().Msg("block indexed")
-
-			m.tree = tree
-			deltas = deltas[:0]
+			// At this point, we increase the height; we have found the full
+			// path of deltas to the current height and it is a finalized block,
+			// so we will never look at a lower height again.
 			height++
-
-			continue Outer
 
 			// TODO: we should randomly run compactions during this loop as well
 			// so that we still keep the DB optimized even when streaming the
 			// trie updates
 			// => https://github.com/awfm9/flow-dps/issues/59
+
+			continue Outer
 		}
 
 		// We do want to check for shutdown before pulling the next delta; both
@@ -269,16 +285,38 @@ Outer:
 			// keep going
 		}
 
+		// We try to retrieve the next delta that can be applied to the current
+		// state trie. There are a number of cases we need to handle then going
+		// forward.
 		delta, err := m.feed.Delta(commitTree)
-		if len(deltas) == 0 && errors.Is(err, dps.ErrNotFound) {
+
+		// First is the case where we are unable to find a delta for the current
+		// state trie within the defined limit of peeking forward. The limit is
+		// defined in a way where this should only happen if the delta is
+		// indeed not available in the WAL. If there are no deltas here, we have
+		// no path forward from the last indexed finalized block, which means we
+		// have to abort.
+		if steps.Len() == 0 && errors.Is(err, dps.ErrNotFound) {
 			return fmt.Errorf("could not resolve gap, aborting")
 		}
+
+		// In the case where we have some deltas, we go back by one chunk in our
+		// mapping. This allows us to see if there was an execution fork at the
+		// previous chunk, and follow that one instead. We can keep stepping
+		// back like that to walk through all forks all the way back to the last
+		// indexed finalized block.
 		if errors.Is(err, dps.ErrNotFound) {
 			log.Warn().Msg("delta retrieval failed, rewinding")
-			tree = m.tree
-			deltas = deltas[:0]
+			step := steps.PopBack().(Step)
+			tree = step.tree
 			continue Outer
 		}
+
+		// These two errors are used to handle the absence of input for the
+		// feeder. If there is a timeout, the network feeder might have
+		// connectivity issues and we should just loop until the next delta
+		// becomes available. If the disk feeder reaches the end of the file, it
+		// will return finished instead, at which point we can stop the mapper.
 		if errors.Is(err, dps.ErrTimeout) {
 			log.Warn().Msg("delta retrieval timed out, retrying")
 			continue Outer
@@ -287,19 +325,30 @@ Outer:
 			log.Debug().Msg("end of delta chain reached, stopping")
 			break Outer
 		}
+
+		// Finally, we handle any kind of unexpected error by just hard failing.
 		if err != nil {
 			return fmt.Errorf("could not feed next update: %w", err)
 		}
 
+		log = log.With().Int("num_changes", len(delta)).Logger()
+
+		// If we get to this point, we found the next delta on the execution
+		// path that we are currently on. We store the step with the trie as it
+		// was before updating, and the delta that was applied. This will allow
+		// us to rewind step by step, discarding the deltas and resolving any
+		// execution forks that might appear.
+		step := Step{
+			tree:  tree,
+			delta: delta,
+		}
 		tree, err = trie.NewTrieWithUpdatedRegisters(tree, delta.Paths(), delta.Payloads())
 		if err != nil {
 			return fmt.Errorf("could not update trie: %w", err)
 		}
+		steps.PushBack(step)
 
-		deltas = append(deltas, delta)
-
-		commitAfter := tree.RootHash()
-		log.Info().Hex("commit_after", commitAfter).Int("num_changes", len(delta)).Msg("state trie updated")
+		log.Info().Hex("commit_after", tree.RootHash()).Msg("state trie updated")
 	}
 
 	// At the very end, we want to compact the database one more time to make

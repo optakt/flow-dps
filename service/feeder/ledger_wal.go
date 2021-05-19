@@ -30,10 +30,11 @@ import (
 	"github.com/awfm9/flow-dps/models/dps"
 )
 
+// TODO: Find a way to clear the cache without discarding needed items.
+
 type LedgerWAL struct {
 	reader *pwal.Reader
 	limit  uint
-	queue  *deque.Deque
 	cache  map[string]*deque.Deque
 }
 
@@ -58,41 +59,33 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 	l := LedgerWAL{
 		reader: pwal.NewReader(segments),
 		limit:  1200, // some tolerance on top of execution node forest capacity
-		queue:  deque.New(1200, 1200),
 		cache:  make(map[string]*deque.Deque),
 	}
 
 	return &l, nil
 }
 
-func (l *LedgerWAL) Clear() {
-	for uint(l.queue.Len()) > l.limit {
-		commit := l.queue.PopFront().(flow.StateCommitment)
-		delete(l.cache, string(commit))
-	}
-}
-
 func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error) {
 
 	// If we have a cached delta for the commit, it means that we skipped it at
-	// an earlier point and it is part of a branch that we didn't follow. In
-	// that case, we should just return it, because it means the mapper is
-	// rewinding and switching to another branch, because the one it was one
-	// didn't continue.
+	// an earlier point and it is part of an execution branch that we didn't
+	// follow yet. We should just return it, because it means the mapper is
+	// rewinding and switching to a new execution branch, meaning that the
+	// previously returned delta for the same commit was part of a dead branch.
 	forks, ok := l.cache[string(commitRequest)]
 	if ok && forks.Len() > 0 {
-		delta := forks.PopBack().(dps.Delta)
+		delta := forks.PopFront().(dps.Delta)
 		return delta, nil
 	}
 
 	// Otherwise, we read from the on-disk file until we find a delta that can
-	// be applied to the requested commit. When we are on a fork that stopped,
+	// be applied to the requested commit. When we are on a dead execution fork
 	// it's possible the mapper will request a commit that will never show up
 	// in the WAL. We thus need some kind of limit at which we give up.
 	peeked := uint(0)
 	for {
 
-		// Increase the number of traversed deltas first, in case we need to
+		// Increase the number of traversed disk deltas, in case we need to
 		// break out of this loop. If we reach the limit, it means there is
 		// no delta for the requested commit.
 		peeked++
@@ -122,8 +115,11 @@ func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error)
 			continue
 		}
 
-		// Deduplicate the paths and payloads.
-		// sort and deduplicate paths (we only consider the last occurrence, and ignore the rest)
+		// Deduplicate the paths and payloads. This code is copied from a
+		// version of Flow Go where both deduplication and sorting logic where
+		// part of the calling logic. In more recent versions, this is done in
+		// the called logic, but we want to remain as compatible as possible, at
+		// the risk of deduplicating and sorting twice.
 		commitUpdate := flow.StateCommitment(update.RootHash)
 		paths := make([]ledger.Path, 0)
 		lookup := make(map[string]ledger.Payload)
@@ -141,11 +137,9 @@ func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error)
 			payloads = append(payloads, lookup[string(path)])
 		}
 
-		// At this point, we can convert the trie update into a delta. If it's
-		// a match for the commit that is requested, we return it. Otherwise,
-		// we store it in the cache in case there was a fork and we need it
-		// later.
-		delta := make(dps.Delta, 0, len(update.Paths))
+		// At this point, we can convert the trie update into a delta; it is a
+		// more efficient DPS format to store on disk.
+		delta := make(dps.Delta, 0, len(paths))
 		for index, path := range paths {
 			payload := payloads[index]
 			change := dps.Change{
@@ -154,6 +148,11 @@ func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error)
 			}
 			delta = append(delta, change)
 		}
+
+		// If the state commitment of the update doesn't match the requested
+		// state commitment, we cache the delta and repeat the loop to read the
+		// next one from disk. Cached deltas will potentially be needed for
+		// subsequent execution fork resolution.
 		if !bytes.Equal(commitUpdate, commitRequest) {
 			forks, ok := l.cache[string(commitUpdate)]
 			if !ok {
@@ -161,7 +160,6 @@ func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error)
 				l.cache[string(commitUpdate)] = forks
 			}
 			forks.PushBack(delta)
-			l.queue.PushBack(commitUpdate)
 			continue
 		}
 
