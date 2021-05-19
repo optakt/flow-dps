@@ -18,6 +18,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -32,6 +33,8 @@ func encodeKey(prefix uint8, segments ...interface{}) []byte {
 		case []byte:
 			val = s
 		case flow.Identifier:
+			val = s[:]
+		case ledger.Path:
 			val = s[:]
 		default:
 			panic(fmt.Sprintf("unknown type (%T)", segment))
