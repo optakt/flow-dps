@@ -215,7 +215,7 @@ func retrieve(key []byte, value interface{}) func(tx *badger.Txn) error {
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("unable to retrieve zalue: %w", err)
+			return fmt.Errorf("unable to retrieve value: %w", err)
 		}
 
 		return nil
