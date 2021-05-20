@@ -231,8 +231,8 @@ Outer:
 			// finalized block anymore.
 			deltas := make([]dps.Delta, 0, steps.Len())
 			for steps.Len() > 0 {
-				s := steps.PopFront().(Step)
-				deltas = append(deltas, s.delta)
+				step := steps.PopFront().(Step)
+				deltas = append(deltas, step.delta)
 			}
 
 			log = log.With().Int("num_deltas", len(deltas)).Logger()

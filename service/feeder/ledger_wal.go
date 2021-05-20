@@ -29,8 +29,6 @@ import (
 	"github.com/awfm9/flow-dps/models/dps"
 )
 
-// TODO: Find a way to clear the cache without discarding needed items.
-
 type LedgerWAL struct {
 	reader *pwal.Reader
 	count  uint64
@@ -50,7 +48,7 @@ func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 
 	l := LedgerWAL{
 		reader: pwal.NewReader(segments),
-		count:  10,
+		count:  0,
 		limit:  1200, // some tolerance on top of execution node forest capacity
 		queue:  deque.New(1200, 1200),
 		lookup: make(map[string]*Cache),
