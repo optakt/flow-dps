@@ -35,7 +35,6 @@ type Index interface {
 	Deltas(height uint64, deltas []Delta) error
 	Events(height uint64, events []flow.Event) error
 	Last(commit flow.StateCommitment) error
-	Compact() error
 }
 
 type Chain interface {

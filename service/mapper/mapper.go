@@ -351,12 +351,5 @@ Outer:
 		log.Info().Hex("commit_after", tree.RootHash()).Msg("state trie updated")
 	}
 
-	// At the very end, we want to compact the database one more time to make
-	// sure it is stored as efficiently as possible for access optimization.
-	err := m.index.Compact()
-	if err != nil {
-		return fmt.Errorf("could not compact index: %w", err)
-	}
-
 	return nil
 }

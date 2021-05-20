@@ -20,7 +20,6 @@ import (
 	"sort"
 
 	"github.com/gammazero/deque"
-	"github.com/prometheus/client_golang/prometheus"
 	pwal "github.com/prometheus/tsdb/wal"
 
 	"github.com/onflow/flow-go/ledger"
@@ -34,32 +33,27 @@ import (
 
 type LedgerWAL struct {
 	reader *pwal.Reader
+	count  uint64
 	limit  uint
-	cache  map[string]*deque.Deque
+	queue  *deque.Deque
+	lookup map[string]*Cache
 }
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
 // directly from an execution node's trie directory.
 func FromLedgerWAL(dir string) (*LedgerWAL, error) {
 
-	w, err := pwal.NewSize(
-		nil,
-		prometheus.DefaultRegisterer,
-		dir,
-		32*1024*1024,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize WAL: %w", err)
-	}
-	segments, err := pwal.NewSegmentsReader(w.Dir())
+	segments, err := pwal.NewSegmentsReader(dir)
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize segments reader: %w", err)
 	}
 
 	l := LedgerWAL{
 		reader: pwal.NewReader(segments),
+		count:  10,
 		limit:  1200, // some tolerance on top of execution node forest capacity
-		cache:  make(map[string]*deque.Deque),
+		queue:  deque.New(1200, 1200),
+		lookup: make(map[string]*Cache),
 	}
 
 	return &l, nil
@@ -72,9 +66,9 @@ func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error)
 	// follow yet. We should just return it, because it means the mapper is
 	// rewinding and switching to a new execution branch, meaning that the
 	// previously returned delta for the same commit was part of a dead branch.
-	forks, ok := l.cache[string(commitRequest)]
-	if ok && forks.Len() > 0 {
-		delta := forks.PopFront().(dps.Delta)
+	cache, ok := l.lookup[string(commitRequest)]
+	if ok && cache.forks.Len() > 0 {
+		delta := cache.forks.PopFront().(dps.Delta)
 		return delta, nil
 	}
 
@@ -82,14 +76,12 @@ func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error)
 	// be applied to the requested commit. When we are on a dead execution fork
 	// it's possible the mapper will request a commit that will never show up
 	// in the WAL. We thus need some kind of limit at which we give up.
-	peeked := uint(0)
+	start := l.count
 	for {
 
-		// Increase the number of traversed disk deltas, in case we need to
-		// break out of this loop. If we reach the limit, it means there is
-		// no delta for the requested commit.
-		peeked++
-		if peeked > l.limit {
+		// If we have tried to find the next delta on disk for more than the
+		// configured limit, we should give up.
+		if l.count >= start+uint64(l.limit) {
 			return nil, dps.ErrNotFound
 		}
 
@@ -105,9 +97,7 @@ func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error)
 			return nil, dps.ErrFinished
 		}
 		record := l.reader.Record()
-		duplicate := make([]byte, len(record))
-		copy(duplicate, record)
-		operation, _, update, err := wal.Decode(duplicate)
+		operation, _, update, err := wal.Decode(record)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode record: %w", err)
 		}
@@ -115,19 +105,27 @@ func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error)
 			continue
 		}
 
+		// Increase the count of deltas read from disk.
+		l.count++
+
 		// Deduplicate the paths and payloads. This code is copied from a
 		// version of Flow Go where both deduplication and sorting logic where
 		// part of the calling logic. In more recent versions, this is done in
 		// the called logic, but we want to remain as compatible as possible, at
 		// the risk of deduplicating and sorting twice.
+		// We also make copies of the paths and payloads, as the code behind the
+		// decode function re-uses the underlying slice, which is also re-used
+		// by the WAL reader. It also makes it easier to free any space that was
+		// allocated around the parts of the overall decoding slice that are
+		// actually re-used.
 		commitUpdate := flow.StateCommitment(update.RootHash)
 		paths := make([]ledger.Path, 0)
 		lookup := make(map[string]ledger.Payload)
 		for i, path := range update.Paths {
 			if _, ok := lookup[string(path)]; !ok {
-				paths = append(paths, path)
+				paths = append(paths, path.DeepCopy())
 			}
-			lookup[string(path)] = *update.Payloads[i]
+			lookup[string(path)] = *update.Payloads[i].DeepCopy()
 		}
 		sort.Slice(paths, func(i, j int) bool {
 			return bytes.Compare(paths[i], paths[j]) < 0
@@ -154,13 +152,29 @@ func (l *LedgerWAL) Delta(commitRequest flow.StateCommitment) (dps.Delta, error)
 		// next one from disk. Cached deltas will potentially be needed for
 		// subsequent execution fork resolution.
 		if !bytes.Equal(commitUpdate, commitRequest) {
-			forks, ok := l.cache[string(commitUpdate)]
+			cache, ok := l.lookup[string(commitUpdate)]
 			if !ok {
-				forks = deque.New()
-				l.cache[string(commitUpdate)] = forks
+				cache = &Cache{
+					commit: commitUpdate,
+					forks:  deque.New(),
+					expiry: 0,
+				}
+				l.queue.PushBack(cache)
+				l.lookup[string(commitUpdate)] = cache
 			}
-			forks.PushBack(delta)
+			cache.expiry = l.count + uint64(l.limit)
+			cache.forks.PushBack(delta)
 			continue
+		}
+
+		// Clean up all cache items that have expired.
+		for l.queue.Len() > 0 {
+			cache := l.queue.Front().(*Cache)
+			if cache.expiry > l.count {
+				break
+			}
+			_ = l.queue.PopFront()
+			delete(l.lookup, string(cache.commit))
 		}
 
 		return delta, nil
