@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/dgraph-io/badger/v2/options"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
@@ -42,7 +43,20 @@ type Core struct {
 
 func NewCore(dir string) (*Core, error) {
 
-	opts := badger.DefaultOptions(dir).WithLogger(nil)
+	opts := badger.DefaultOptions(dir).
+		WithMaxTableSize(256 << 20).
+		WithValueLogFileSize(64 << 20).
+		WithTableLoadingMode(options.FileIO).
+		WithValueLogLoadingMode(options.FileIO).
+		WithNumMemtables(1).
+		WithKeepL0InMemory(false).
+		WithCompactL0OnClose(false).
+		WithNumLevelZeroTables(1).
+		WithNumLevelZeroTablesStall(2).
+		WithLoadBloomsOnOpen(false).
+		WithIndexCacheSize(2000 << 20).
+		WithBlockCacheSize(0).
+		WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not open database: %w", err)

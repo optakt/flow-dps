@@ -15,14 +15,13 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/models/dps"
 	"github.com/awfm9/flow-dps/service/storage"
 )
 
@@ -81,24 +80,20 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 	return nil
 }
 
-func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
-
-	err := i.core.db.Update(func(tx *badger.Txn) error {
-		for _, delta := range deltas {
-			for _, change := range delta {
-				err := storage.SavePayload(height, change.Path, change.Payload)(tx)
-				if err != nil {
-					return fmt.Errorf("could not persist delta data: %w", err)
-				}
+func (i *Index) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
+	if len(paths) != len(payloads) {
+		panic(fmt.Sprintf("mismatch between paths and payloads length (%d != %d)", len(paths), len(payloads)))
+	}
+	return i.core.db.Update(func(tx *badger.Txn) error {
+		for i, path := range paths {
+			payload := payloads[i]
+			err := storage.SavePayload(height, path, payload)(tx)
+			if err != nil {
+				return fmt.Errorf("could not store payload (path: %x): %w", path, err)
 			}
 		}
 		return nil
 	})
-	if err != nil {
-		return fmt.Errorf("could not index deltas: %w", err)
-	}
-
-	return nil
 }
 
 func (i *Index) Events(height uint64, events []flow.Event) error {
@@ -128,27 +123,4 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 func (i *Index) Last(commit flow.StateCommitment) error {
 	err := i.core.db.Update(storage.SaveLastCommit(commit))
 	return err
-}
-
-func (i *Index) Compact() error {
-
-	err := i.core.db.Sync()
-	if err != nil {
-		return fmt.Errorf("could not sync database: %w", err)
-	}
-
-	err = i.core.db.Flatten(4)
-	if err != nil {
-		return fmt.Errorf("could not flatten database: %w", err)
-	}
-
-	err = i.core.db.RunValueLogGC(0.5)
-	if errors.Is(err, badger.ErrNoRewrite) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("could not run value log garbage collection: %w", err)
-	}
-
-	return nil
 }
