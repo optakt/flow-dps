@@ -277,9 +277,6 @@ Outer:
 			// parent and the paths that were changed so we can rebuild the
 			// delta later.
 			commitAfter := flow.StateCommitment(tree.RootHash())
-			for _, path := range update.Paths {
-				paths = append(paths, path.DeepCopy())
-			}
 			step = &Step{
 				Commit: commitBefore,
 				Paths:  paths,
@@ -287,7 +284,7 @@ Outer:
 			}
 			steps[string(commitAfter)] = step
 
-			log.Debug().Hex("commit_after", commitAfter).Msg("trie update applied")
+			log.Info().Hex("commit_after", commitAfter).Msg("trie update applied")
 		}
 
 		// At this point we have identified a step that has lead to the next
@@ -325,10 +322,6 @@ Outer:
 			commit = step.Commit
 		}
 
-		// TODO: look at performance of doing separate transactions versus
-		// having an API that allows combining into a single Badger tx
-		// => https://github.com/awfm9/flow-dps/issues/36
-
 		// At this point, we can delete any trie that does not correspond to
 		// the state that we have just reached.
 		for key := range steps {
@@ -336,6 +329,10 @@ Outer:
 				delete(steps, key)
 			}
 		}
+
+		// TODO: look at performance of doing separate transactions versus
+		// having an API that allows combining into a single Badger tx
+		// => https://github.com/awfm9/flow-dps/issues/36
 
 		// If we successfully indexed all of the deltas, we can index the rest
 		// of the block data.
