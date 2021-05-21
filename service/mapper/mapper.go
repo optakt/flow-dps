@@ -139,12 +139,12 @@ func (m *Mapper) Run() error {
 	// The root tree is the starting point for our mapping. It will either
 	// correspond to the state at the root block, or to a state before it, in
 	// which case we already need to map some deltas to the root block.
-	rootCommit := flow.StateCommitment(m.rootTree.RootHash())
-	steps[string(rootCommit)] = &Step{
+	lastCommit := flow.StateCommitment(m.rootTree.RootHash())
+	steps[string(lastCommit)] = &Step{
 		Delta: &dps.Delta{}, // not needed
 		Tree:  m.rootTree,
 	}
-	lastCommit := rootCommit
+	m.rootTree = nil
 
 	// The purpose of this function is to map state deltas from a continuous
 	// feed to specific blocks from the chain. This is necessary because the
@@ -311,18 +311,18 @@ Outer:
 			return fmt.Errorf("could not index last: %w", err)
 		}
 
+		// At this point, we increase the height; we have found the full
+		// path of deltas to the current height and it is a finalized block,
+		// so we will never look at a lower height again.
+		lastCommit = nextCommit
+		height++
+
 		blockID := header.ID()
 		log.Info().
 			Hex("block", blockID[:]).
 			Int("num_deltas", len(deltas)).
 			Int("num_events", len(events)).
 			Msg("block data indexed")
-
-		// At this point, we increase the height; we have found the full
-		// path of deltas to the current height and it is a finalized block,
-		// so we will never look at a lower height again.
-		lastCommit = nextCommit
-		height++
 	}
 
 	return nil
