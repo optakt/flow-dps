@@ -284,7 +284,10 @@ Outer:
 			// Otherwise, we can apply the delta to the tree we retrieved and
 			// get the resulting state commitment. We then create the step that
 			// tracks our changes throughout the tries in our register
-			tree, err := trie.NewTrieWithUpdatedRegisters(step.Tree, paths, payloads)
+			// NOTE: It's important that we don't shadow the variable here,
+			// otherwise the root trie will never go out of scope and we will
+			// never garbage collect any of the initial payloads.
+			tree, err = trie.NewTrieWithUpdatedRegisters(step.Tree, paths, payloads)
 			if err != nil {
 				return fmt.Errorf("could not update trie: %w", err)
 			}
