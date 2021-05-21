@@ -201,6 +201,16 @@ Outer:
 
 	Inner:
 		for {
+			// We do want to check for shutdown here because it's the one part
+			// that we traverse both for the outer and for the inner loop each
+			// time.
+			select {
+			case <-m.stop:
+				break Outer
+			default:
+				// keep going
+			}
+
 			// We first look for a trie in our register whose state commitment
 			// corresponds to the next block's state commitment. If we find one
 			// we can break the inner loop and simply map the collected deltas
@@ -290,7 +300,7 @@ Outer:
 			}
 			steps[string(commitAfter)] = step
 
-			log.Info().Hex("commit_after", commitAfter).Msg("trie update applied")
+			log.Debug().Hex("commit_after", commitAfter).Msg("trie update applied")
 		}
 
 		// At this point we have identified a step that has lead to the next
@@ -313,17 +323,19 @@ Outer:
 		updated := make(map[string]struct{})
 		for !bytes.Equal(commit, commitLast) {
 			step := steps[string(commit)]
-			payloads := step.Tree.UnsafeRead(step.Paths)
-			for i, path := range step.Paths {
+			paths := make([]ledger.Path, 0, len(step.Paths))
+			for _, path := range step.Paths {
 				_, ok := updated[string(path)]
 				if ok {
 					continue
 				}
-				err = m.index.Payload(height, path, payloads[i])
-				if err != nil {
-					return fmt.Errorf("could not index payload (height: %d, path: %x): %w", height, path, err)
-				}
+				paths = append(paths, path)
 				updated[string(path)] = struct{}{}
+			}
+			payloads := step.Tree.UnsafeRead(paths)
+			err = m.index.Payloads(height, step.Paths, payloads)
+			if err != nil {
+				return fmt.Errorf("could not index payloads: %w", err)
 			}
 			commit = step.Commit
 		}

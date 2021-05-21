@@ -80,8 +80,18 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 	return nil
 }
 
-func (i *Index) Payload(height uint64, path ledger.Path, payload *ledger.Payload) error {
-	return i.core.db.Update(storage.SavePayload(height, path, payload))
+func (i *Index) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
+	return i.core.db.Update(func(tx *badger.Txn) error {
+		for _, path := range paths {
+			for _, payload := range payloads {
+				err := storage.SavePayload(height, path, payload)(tx)
+				if err != nil {
+					return fmt.Errorf("could not store payload (path: %x): %w", path, err)
+				}
+			}
+		}
+		return nil
+	})
 }
 
 func (i *Index) Events(height uint64, events []flow.Event) error {
