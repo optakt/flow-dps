@@ -94,6 +94,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		log:        log,
 		chain:      chain,
 		feed:       feed,
+		index:      index,
 		rootHeight: rootHeight,
 		rootTree:   rootTree,
 		wg:         &sync.WaitGroup{},
@@ -208,7 +209,7 @@ Outer:
 			// Once more, we might be on a live spork and the next delta might not
 			// be available yet. In that case, keep trying.
 			if errors.Is(err, dps.ErrTimeout) {
-				log.Warn().Msg("delta retrieval timeoud out, retrying")
+				log.Warn().Msg("delta retrieval timed out, retrying")
 				continue Inner
 			}
 
