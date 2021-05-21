@@ -15,10 +15,13 @@
 package feeder
 
 import (
+	"bytes"
 	"fmt"
+	"sort"
 
 	pwal "github.com/prometheus/tsdb/wal"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 
@@ -72,18 +75,39 @@ func (l *LedgerWAL) Delta() (*dps.Delta, error) {
 			continue
 		}
 
+		// Deduplicate the paths and payloads. This code is copied from a
+		// version of Flow Go where both deduplication and sorting logic were
+		// part of the consumer logic of the trie API. In more recent versions,
+		// this is done in the trie logic itself, but we want to remain as
+		// compatible as possible, so we might deduplicate and sort twice.
+		paths := make([]ledger.Path, 0)
+		lookup := make(map[string]ledger.Payload)
+		for i, path := range update.Paths {
+			if _, ok := lookup[string(path)]; !ok {
+				paths = append(paths, path)
+			}
+			lookup[string(path)] = *update.Payloads[i]
+		}
+		sort.Slice(paths, func(i, j int) bool {
+			return bytes.Compare(paths[i], paths[j]) < 0
+		})
+		payloads := make([]ledger.Payload, 0, len(paths))
+		for _, path := range paths {
+			payloads = append(payloads, lookup[string(path)])
+		}
+
 		// At this point, we can convert the trie update into a delta; it's
 		// slightly different in structure that groups each path with its
 		// respective payload, rather than having two different slices.
 		delta := dps.Delta{
 			Commit:  flow.StateCommitment(update.RootHash),
-			Changes: make([]dps.Change, 0, len(update.Paths)),
+			Changes: make([]dps.Change, 0, len(paths)),
 		}
-		for index, path := range update.Paths {
-			payload := update.Payloads[index]
+		for index, path := range paths {
+			payload := payloads[index]
 			change := dps.Change{
 				Path:    path,
-				Payload: *payload,
+				Payload: payload,
 			}
 			delta.Changes = append(delta.Changes, change)
 		}

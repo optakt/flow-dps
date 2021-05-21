@@ -15,12 +15,13 @@
 package mapper
 
 import (
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-
-	"github.com/awfm9/flow-dps/models/dps"
+	"github.com/onflow/flow-go/model/flow"
 )
 
 type Step struct {
-	Tree  *trie.MTrie
-	Delta *dps.Delta
+	Commit flow.StateCommitment
+	Paths  []ledger.Path
+	Tree   *trie.MTrie
 }

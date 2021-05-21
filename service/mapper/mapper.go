@@ -24,6 +24,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
@@ -141,7 +142,7 @@ func (m *Mapper) Run() error {
 	// which case we already need to map some deltas to the root block.
 	lastCommit := flow.StateCommitment(m.rootTree.RootHash())
 	steps[string(lastCommit)] = &Step{
-		Delta: &dps.Delta{}, // not needed
+		Paths: nil, // not needed
 		Tree:  m.rootTree,
 	}
 	m.rootTree = nil
@@ -241,10 +242,18 @@ Outer:
 				return fmt.Errorf("could not update trie: %w", err)
 			}
 
+			// We then store the new tree along with the state commitment of its
+			// parent and the paths that were changed so we can rebuild the
+			// delta later.
 			treeCommit := flow.StateCommitment(tree.RootHash())
+			paths := make([]ledger.Path, 0, len(delta.Changes))
+			for _, path := range delta.Paths() {
+				paths = append(paths, path.DeepCopy())
+			}
 			step = &Step{
-				Delta: delta,
-				Tree:  tree,
+				Commit: delta.Commit,
+				Paths:  paths,
+				Tree:   tree,
 			}
 			steps[string(treeCommit)] = step
 
@@ -263,16 +272,27 @@ Outer:
 			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
 
-		// We collect all of the deltas from the next commit that we have now
-		// found, back to the last finalized commit. This will break right away
-		// if the last and next commits are the same, which works well for
-		// blocks that didn't change the state.
+		// We use the tree and the changed paths from each step to rebuild the
+		// delta for that step and collect all of them until we reach the
+		// state commitment of the previously finalized seal.
 		var deltas []*dps.Delta
 		commit := nextCommit
 		for !bytes.Equal(commit, lastCommit) {
 			step := steps[string(commit)]
-			deltas = append(deltas, step.Delta)
-			commit = step.Delta.Commit
+			delta := dps.Delta{
+				Commit:  step.Commit,
+				Changes: make([]dps.Change, 0, len(step.Paths)),
+			}
+			payloads := step.Tree.UnsafeRead(step.Paths)
+			for i, path := range step.Paths {
+				change := dps.Change{
+					Path:    path,
+					Payload: *payloads[i],
+				}
+				delta.Changes = append(delta.Changes, change)
+			}
+			deltas = append(deltas, &delta)
+			commit = step.Commit
 		}
 
 		// TODO: look at performance of doing separate transactions versus
