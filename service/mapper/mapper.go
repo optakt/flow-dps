@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -148,8 +149,8 @@ func (m *Mapper) Run() error {
 	// root block, in which case we map them to it. We therefore have to take
 	// the initial trie's state commitment as starting point and at it to the
 	// transitions as the very first one made.
-	lastCommit := flow.StateCommitment(tree.RootHash())
-	steps[string(lastCommit)] = &Step{
+	commitLast := flow.StateCommitment(tree.RootHash())
+	steps[string(commitLast)] = &Step{
 		Commit: nil, // not needed
 		Paths:  nil, // not needed
 		Tree:   tree,
@@ -168,12 +169,12 @@ Outer:
 
 		log := m.log.With().
 			Uint64("height", height).
-			Hex("last_commit", lastCommit).Logger()
+			Hex("commit_last", commitLast).Logger()
 
 		// As a first step, we retrieve the state commitment of the current
 		// block, which will serve as the sentinel value we will look for from
 		// the state trie.
-		nextCommit, err := m.chain.Commit(height)
+		commitNext, err := m.chain.Commit(height)
 
 		// If the retrieval times out, it's possible that we are on a live chain
 		// and the next block has not been finalized yet. We should thus simply
@@ -196,7 +197,7 @@ Outer:
 			return fmt.Errorf("could not retrieve next commit (height: %d): %w", height, err)
 		}
 
-		log = log.With().Hex("next_commit", nextCommit).Logger()
+		log = log.With().Hex("commit_next", commitNext).Logger()
 
 	Inner:
 		for {
@@ -204,9 +205,8 @@ Outer:
 			// corresponds to the next block's state commitment. If we find one
 			// we can break the inner loop and simply map the collected deltas
 			// and the other block data to the block.
-			_, ok := steps[string(nextCommit)]
+			_, ok := steps[string(commitNext)]
 			if ok {
-				log.Debug().Msg("matching state trie found")
 				break Inner
 			}
 
@@ -237,25 +237,38 @@ Outer:
 			// If we can't find it, the delta is probably for a pruned trie and
 			// we can discard it.
 
-			step, ok := steps[string(update.RootHash)]
+			commitBefore := flow.StateCommitment(update.RootHash)
+
+			log := log.With().Hex("commit_before", commitBefore).Logger()
+
+			step, ok := steps[string(commitBefore)]
 			if !ok {
-				log.Debug().Hex("update_commit", update.RootHash).Msg("skipping delta without corresponding trie")
+				log.Debug().Msg("skipping trie update without matching trie")
 				continue Inner
 			}
 
-			// NOTE: If we want to emulate the exact way the execution node does
-			// things, we can deduplicate and sort the changes here. However,
-			// this should not be needed, and with our approach we should not
-			// lose relevant memory space, which is our bottleneck here.
+			// Deduplicate the paths and payloads.
+			paths := make([]ledger.Path, 0, len(update.Paths))
+			lookup := make(map[string]*ledger.Payload)
+			for i, path := range update.Paths {
+				_, ok := lookup[string(path)]
+				if !ok {
+					paths = append(paths, path.DeepCopy())
+				}
+				lookup[string(path)] = update.Payloads[i]
+			}
+			sort.Slice(paths, func(i, j int) bool {
+				return bytes.Compare(paths[i], paths[j]) < 0
+			})
+			payloads := make([]ledger.Payload, 0, len(paths))
+			for _, path := range paths {
+				payloads = append(payloads, *lookup[string(path)])
+			}
 
 			// Otherwise, we can apply the delta to the tree we retrieved and
 			// get the resulting state commitment. We then create the step that
 			// tracks our changes throughout the tries in our register
-			payloads := make([]ledger.Payload, 0, len(update.Paths))
-			for _, payload := range update.Payloads {
-				payloads = append(payloads, *payload)
-			}
-			tree, err := trie.NewTrieWithUpdatedRegisters(step.Tree, update.Paths, payloads)
+			tree, err := trie.NewTrieWithUpdatedRegisters(step.Tree, paths, payloads)
 			if err != nil {
 				return fmt.Errorf("could not update trie: %w", err)
 			}
@@ -263,19 +276,18 @@ Outer:
 			// We then store the new tree along with the state commitment of its
 			// parent and the paths that were changed so we can rebuild the
 			// delta later.
-			treeCommit := flow.StateCommitment(tree.RootHash())
-			paths := make([]ledger.Path, 0, len(update.Paths))
+			commitAfter := flow.StateCommitment(tree.RootHash())
 			for _, path := range update.Paths {
 				paths = append(paths, path.DeepCopy())
 			}
 			step = &Step{
-				Commit: update.RootHash,
+				Commit: commitBefore,
 				Paths:  paths,
 				Tree:   tree,
 			}
-			steps[string(treeCommit)] = step
+			steps[string(commitAfter)] = step
 
-			log.Debug().Hex("tree_commit", treeCommit).Msg("state delta applied")
+			log.Debug().Hex("commit_after", commitAfter).Msg("trie update applied")
 		}
 
 		// At this point we have identified a step that has lead to the next
@@ -294,9 +306,9 @@ Outer:
 		// index each change for this height. As we are starting at the back, we
 		// keep track of paths already updated, so we only index the last change
 		// to the register payload.
-		commit := nextCommit
+		commit := commitNext
 		updated := make(map[string]struct{})
-		for !bytes.Equal(commit, lastCommit) {
+		for !bytes.Equal(commit, commitLast) {
 			step := steps[string(commit)]
 			payloads := step.Tree.UnsafeRead(step.Paths)
 			for i, path := range step.Paths {
@@ -320,10 +332,9 @@ Outer:
 		// At this point, we can delete any trie that does not correspond to
 		// the state that we have just reached.
 		for key := range steps {
-			if key == string(nextCommit) {
-				continue
+			if key != string(commitNext) {
+				delete(steps, key)
 			}
-			delete(steps, key)
 		}
 
 		// If we successfully indexed all of the deltas, we can index the rest
@@ -332,7 +343,7 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not index header: %w", err)
 		}
-		err = m.index.Commit(height, nextCommit)
+		err = m.index.Commit(height, commitNext)
 		if err != nil {
 			return fmt.Errorf("could not index commit: %w", err)
 		}
@@ -340,7 +351,7 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not index events: %w", err)
 		}
-		err = m.index.Last(nextCommit)
+		err = m.index.Last(commitNext)
 		if err != nil {
 			return fmt.Errorf("could not index last: %w", err)
 		}
@@ -348,7 +359,7 @@ Outer:
 		// At this point, we increase the height; we have found the full
 		// path of deltas to the current height and it is a finalized block,
 		// so we will never look at a lower height again.
-		lastCommit = nextCommit
+		commitLast = commitNext
 		height++
 
 		blockID := header.ID()
