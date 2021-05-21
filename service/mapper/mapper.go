@@ -80,14 +80,14 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		if err != nil {
 			return nil, fmt.Errorf("could not read checkpoint: %w", err)
 		}
-		tries, err := flattener.RebuildTries(checkpoint)
+		trees, err := flattener.RebuildTries(checkpoint)
 		if err != nil {
 			return nil, fmt.Errorf("could not rebuild tries: %w", err)
 		}
-		if len(tries) != 1 {
-			return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(tries))
+		if len(trees) != 1 {
+			return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
 		}
-		rootTree = tries[0]
+		rootTree = trees[0]
 	}
 
 	i := Mapper{
