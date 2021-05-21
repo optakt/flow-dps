@@ -231,6 +231,10 @@ func main() {
 		}
 		log.Info().Msg("disk mapper shutdown complete")
 	}()
+	go func() {
+		<-sig
+		os.Exit(1)
+	}()
 
 	wg.Wait()
 

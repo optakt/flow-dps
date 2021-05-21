@@ -106,20 +106,20 @@ func (m *Mapper) Run() error {
 	defer m.wg.Done()
 
 	// We start trying to map at the root height.
-	// Check that we can get a root height from chain for initialization.
 	height, err := m.chain.Root()
 	if err != nil {
 		return fmt.Errorf("could not get root height: %w", err)
 	}
 
-	// We create an empty trie as a default to start from. If a checkpoint file
-	// is provided, we replace it with the tree rebuilt from the checkpoint
-	// instead.
-	tree, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
-	if err != nil {
-		return fmt.Errorf("could not initialize empty trie: %w", err)
-	}
-	if m.checkpoint != "" {
+	// If we have no checkpoint file, we start from an empty trie; otherwise we
+	// rebuild the checkpoint and use that as the starting trie.
+	var tree *trie.MTrie
+	if m.checkpoint == "" {
+		tree, err = trie.NewEmptyMTrie(pathfinder.PathByteSize)
+		if err != nil {
+			return fmt.Errorf("could not initialize empty trie: %w", err)
+		}
+	} else {
 		file, err := os.Open(m.checkpoint)
 		if err != nil {
 			return fmt.Errorf("could not open checkpoint file: %w", err)
@@ -139,18 +139,20 @@ func (m *Mapper) Run() error {
 	}
 
 	// When trying to go from one finalized block to the next, we keep a list
-	// of intermediary tries until the connection has been made. We also need
-	// to point to the previous trie and keep the changes that were required to
-	// reach it.
+	// of intermediary tries until the full set of transitions have been
+	// identified. We keep track of these transitions as steps in this map.
 	steps := make(map[string]*Step)
 
-	// The root tree is the starting point for our mapping. It will either
-	// correspond to the state at the root block, or to a state before it, in
-	// which case we already need to map some deltas to the root block.
+	// The root block does not necessarily overlap with the first state trie.
+	// It's possible that we have to apply some of the trie updates before the
+	// root block, in which case we map them to it. We therefore have to take
+	// the initial trie's state commitment as starting point and at it to the
+	// transitions as the very first one made.
 	lastCommit := flow.StateCommitment(tree.RootHash())
 	steps[string(lastCommit)] = &Step{
-		Paths: nil, // not needed
-		Tree:  tree,
+		Commit: nil, // not needed
+		Paths:  nil, // not needed
+		Tree:   tree,
 	}
 
 	// The purpose of this function is to map state deltas from a continuous
@@ -198,14 +200,13 @@ Outer:
 
 	Inner:
 		for {
-			// We first look for a tree in our register whose state commitment
-			// corresponds for our current sentinel state commitment. If we
-			// find one, we break this loop and simply map the collected deltas
-			// and the remaining block data to the block. This also addresses
-			// the edge case of blocks without changes, which will always bypass
-			// this loop on the first iteration.
+			// We first look for a trie in our register whose state commitment
+			// corresponds to the next block's state commitment. If we find one
+			// we can break the inner loop and simply map the collected deltas
+			// and the other block data to the block.
 			_, ok := steps[string(nextCommit)]
 			if ok {
+				log.Debug().Msg("matching state trie found")
 				break Inner
 			}
 
@@ -235,8 +236,10 @@ Outer:
 			// We now try to find the trie that this delta should be applied to.
 			// If we can't find it, the delta is probably for a pruned trie and
 			// we can discard it.
+
 			step, ok := steps[string(update.RootHash)]
 			if !ok {
+				log.Debug().Hex("update_commit", update.RootHash).Msg("skipping delta without corresponding trie")
 				continue Inner
 			}
 
@@ -247,16 +250,14 @@ Outer:
 
 			// Otherwise, we can apply the delta to the tree we retrieved and
 			// get the resulting state commitment. We then create the step that
-			// tracks our changes throughout the tries in our register. We apply
-			// the updates one by one in order to reduce holding a lot of copied
-			// payloads in memory for big trie updates.
-			tree = step.Tree
-			for i, path := range update.Paths {
-				payload := update.Payloads[i]
-				tree, err = trie.NewTrieWithUpdatedRegisters(tree, []ledger.Path{path}, []ledger.Payload{*payload})
-				if err != nil {
-					return fmt.Errorf("could not update trie: %w", err)
-				}
+			// tracks our changes throughout the tries in our register
+			payloads := make([]ledger.Payload, 0, len(update.Paths))
+			for _, payload := range update.Payloads {
+				payloads = append(payloads, *payload)
+			}
+			tree, err := trie.NewTrieWithUpdatedRegisters(step.Tree, update.Paths, payloads)
+			if err != nil {
+				return fmt.Errorf("could not update trie: %w", err)
 			}
 
 			// We then store the new tree along with the state commitment of its
@@ -309,6 +310,7 @@ Outer:
 				}
 				updated[string(path)] = struct{}{}
 			}
+			commit = step.Commit
 		}
 
 		// TODO: look at performance of doing separate transactions versus
