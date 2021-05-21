@@ -333,7 +333,7 @@ Outer:
 				updated[string(path)] = struct{}{}
 			}
 			payloads := step.Tree.UnsafeRead(paths)
-			err = m.index.Payloads(height, step.Paths, payloads)
+			err = m.index.Payloads(height, paths, payloads)
 			if err != nil {
 				return fmt.Errorf("could not index payloads: %w", err)
 			}

@@ -81,6 +81,9 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 }
 
 func (i *Index) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
+	if len(paths) != len(payloads) {
+		panic(fmt.Sprintf("mismatch between paths and payloads length (%d != %d)", len(paths), len(payloads)))
+	}
 	return i.core.db.Update(func(tx *badger.Txn) error {
 		for i, path := range paths {
 			payload := payloads[i]
