@@ -149,8 +149,8 @@ func (m *Mapper) Run() error {
 	// root block, in which case we map them to it. We therefore have to take
 	// the initial trie's state commitment as starting point and at it to the
 	// transitions as the very first one made.
-	commitLast := flow.StateCommitment(tree.RootHash())
-	steps[string(commitLast)] = &Step{
+	commitPrev := flow.StateCommitment(tree.RootHash())
+	steps[string(commitPrev)] = &Step{
 		Commit: nil, // not needed
 		Paths:  nil, // not needed
 		Tree:   tree,
@@ -169,7 +169,7 @@ Outer:
 
 		log := m.log.With().
 			Uint64("height", height).
-			Hex("commit_last", commitLast).Logger()
+			Hex("commit_prev", commitPrev).Logger()
 
 		// As a first step, we retrieve the state commitment of the current
 		// block, which will serve as the sentinel value we will look for from
@@ -324,7 +324,7 @@ Outer:
 		// to the register payload.
 		commit := commitNext
 		updated := make(map[string]struct{})
-		for !bytes.Equal(commit, commitLast) {
+		for !bytes.Equal(commit, commitPrev) {
 			step := steps[string(commit)]
 			paths := make([]ledger.Path, 0, len(step.Paths))
 			for _, path := range step.Paths {
@@ -377,7 +377,7 @@ Outer:
 		// At this point, we increase the height; we have found the full
 		// path of deltas to the current height and it is a finalized block,
 		// so we will never look at a lower height again.
-		commitLast = commitNext
+		commitPrev = commitNext
 		height++
 
 		blockID := header.ID()
