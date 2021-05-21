@@ -233,21 +233,27 @@ Outer:
 				return fmt.Errorf("could not retrieve next delta: %w", err)
 			}
 
-			// We now try to find the trie that this delta should be applied to.
-			// If we can't find it, the delta is probably for a pruned trie and
-			// we can discard it.
-
-			commitBefore := flow.StateCommitment(update.RootHash)
+			// We need to copy the root hash because it's still part of the
+			// WAL record that will be overwritten on the next read.
+			commitBefore := make(flow.StateCommitment, len(update.RootHash))
+			copy(commitBefore, update.RootHash)
 
 			log := log.With().Hex("commit_before", commitBefore).Logger()
 
+			// We now try to find the trie that this delta should be applied to.
+			// If we can't find it, the delta is probably for a pruned trie and
+			// we can discard it.
 			step, ok := steps[string(commitBefore)]
 			if !ok {
 				log.Debug().Msg("skipping trie update without matching trie")
 				continue Inner
 			}
 
-			// Deduplicate the paths and payloads.
+			// Deduplicate the paths and payloads. We need to deep copy the path
+			// because we want to keep it to retrieve the payloads later, and it
+			// is still part of the WAL record that will be overwritten on the
+			// next read. We don't need to deep copy the values, as the tree
+			// internally already does this.
 			paths := make([]ledger.Path, 0, len(update.Paths))
 			lookup := make(map[string]*ledger.Payload)
 			for i, path := range update.Paths {
