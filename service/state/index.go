@@ -80,11 +80,11 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 	return nil
 }
 
-func (i *Index) Deltas(height uint64, deltas []dps.Delta) error {
+func (i *Index) Deltas(height uint64, deltas []*dps.Delta) error {
 
 	err := i.core.db.Update(func(tx *badger.Txn) error {
 		for _, delta := range deltas {
-			for _, change := range delta {
+			for _, change := range delta.Changes {
 				err := storage.SavePayload(height, change.Path, change.Payload)(tx)
 				if err != nil {
 					return fmt.Errorf("could not persist delta data: %w", err)

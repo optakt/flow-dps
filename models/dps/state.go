@@ -32,7 +32,7 @@ type State interface {
 type Index interface {
 	Header(height uint64, header *flow.Header) error
 	Commit(height uint64, commit flow.StateCommitment) error
-	Deltas(height uint64, deltas []Delta) error
+	Deltas(height uint64, deltas []*Delta) error
 	Events(height uint64, events []flow.Event) error
 	Last(commit flow.StateCommitment) error
 }

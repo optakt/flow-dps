@@ -15,9 +15,12 @@
 package mapper
 
 import (
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+
 	"github.com/awfm9/flow-dps/models/dps"
 )
 
-type Feeder interface {
-	Delta() (*dps.Delta, error)
+type Step struct {
+	Tree  *trie.MTrie
+	Delta *dps.Delta
 }
