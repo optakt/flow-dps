@@ -156,7 +156,9 @@ func (m *Mapper) Run() error {
 Outer:
 	for {
 
-		log := m.log.With().Uint64("height", height).Logger()
+		log := m.log.With().
+			Uint64("height", height).
+			Hex("last_commit", lastCommit).Logger()
 
 		// As a first step, we retrieve the state commitment of the current
 		// block, which will serve as the sentinel value we will look for from
@@ -237,12 +239,15 @@ Outer:
 			if err != nil {
 				return fmt.Errorf("could not update trie: %w", err)
 			}
+
 			treeCommit := flow.StateCommitment(tree.RootHash())
 			step = &Step{
 				Delta: delta,
 				Tree:  tree,
 			}
 			steps[string(treeCommit)] = step
+
+			log.Debug().Hex("tree_commit", treeCommit).Msg("state delta applied")
 		}
 
 		// At this point we have identified a step that has lead to the next
@@ -305,7 +310,12 @@ Outer:
 			return fmt.Errorf("could not index last: %w", err)
 		}
 
-		log.Info().Msg("block data indexed")
+		blockID := header.ID()
+		log.Info().
+			Hex("block", blockID[:]).
+			Int("num_deltas", len(deltas)).
+			Int("num_events", len(events)).
+			Msg("block data indexed")
 
 		// At this point, we increase the height; we have found the full
 		// path of deltas to the current height and it is a finalized block,
