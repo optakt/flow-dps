@@ -19,9 +19,9 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/models/dps"
 	"github.com/awfm9/flow-dps/service/storage"
 )
 
@@ -80,24 +80,8 @@ func (i *Index) Commit(height uint64, commit flow.StateCommitment) error {
 	return nil
 }
 
-func (i *Index) Deltas(height uint64, deltas []*dps.Delta) error {
-
-	err := i.core.db.Update(func(tx *badger.Txn) error {
-		for _, delta := range deltas {
-			for _, change := range delta.Changes {
-				err := storage.SavePayload(height, change.Path, change.Payload)(tx)
-				if err != nil {
-					return fmt.Errorf("could not persist delta data: %w", err)
-				}
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not index deltas: %w", err)
-	}
-
-	return nil
+func (i *Index) Payload(height uint64, path ledger.Path, payload *ledger.Payload) error {
+	return i.core.db.Update(storage.SavePayload(height, path, payload))
 }
 
 func (i *Index) Events(height uint64, events []flow.Event) error {

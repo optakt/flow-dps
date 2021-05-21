@@ -187,7 +187,7 @@ func SaveHeaderForHeight(height uint64, header *flow.Header) func(*badger.Txn) e
 	return save(encodeKey(prefixDataHeader, height), header)
 }
 
-func SavePayload(height uint64, path ledger.Path, payload ledger.Payload) func(*badger.Txn) error {
+func SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
 	return save(encodeKey(prefixDataDelta, path, height), payload)
 }
 

@@ -39,8 +39,7 @@ type Mapper struct {
 	chain      Chain
 	feed       Feeder
 	index      dps.Index
-	rootHeight uint64
-	rootTree   *trie.MTrie
+	checkpoint string
 	wg         *sync.WaitGroup
 	stop       chan struct{}
 }
@@ -59,36 +58,15 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		option(&cfg)
 	}
 
-	// Check that we can get a root height from chain for initialization.
-	rootHeight, err := chain.Root()
-	if err != nil {
-		return nil, fmt.Errorf("could not get root height: %w", err)
-	}
-
-	// We create an empty trie as a default to start from. If a checkpoint file
-	// is provided, we replace it with the tree rebuilt from the checkpoint
-	// instead.
-	rootTree, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize empty memory trie: %w", err)
-	}
+	// Check if the checkpoint file exists.
 	if cfg.CheckpointFile != "" {
-		file, err := os.Open(cfg.CheckpointFile)
+		stat, err := os.Stat(cfg.CheckpointFile)
 		if err != nil {
-			return nil, fmt.Errorf("could not open checkpoint file: %w", err)
+			return nil, fmt.Errorf("invalid checkpoint file: %w", err)
 		}
-		checkpoint, err := wal.ReadCheckpoint(file)
-		if err != nil {
-			return nil, fmt.Errorf("could not read checkpoint: %w", err)
+		if stat.IsDir() {
+			return nil, fmt.Errorf("invalid checkpoint file: directory")
 		}
-		trees, err := flattener.RebuildTries(checkpoint)
-		if err != nil {
-			return nil, fmt.Errorf("could not rebuild tries: %w", err)
-		}
-		if len(trees) != 1 {
-			return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
-		}
-		rootTree = trees[0]
 	}
 
 	i := Mapper{
@@ -96,8 +74,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		chain:      chain,
 		feed:       feed,
 		index:      index,
-		rootHeight: rootHeight,
-		rootTree:   rootTree,
+		checkpoint: cfg.CheckpointFile,
 		wg:         &sync.WaitGroup{},
 		stop:       make(chan struct{}),
 	}
@@ -129,7 +106,37 @@ func (m *Mapper) Run() error {
 	defer m.wg.Done()
 
 	// We start trying to map at the root height.
-	height := m.rootHeight
+	// Check that we can get a root height from chain for initialization.
+	height, err := m.chain.Root()
+	if err != nil {
+		return fmt.Errorf("could not get root height: %w", err)
+	}
+
+	// We create an empty trie as a default to start from. If a checkpoint file
+	// is provided, we replace it with the tree rebuilt from the checkpoint
+	// instead.
+	tree, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
+	if err != nil {
+		return fmt.Errorf("could not initialize empty trie: %w", err)
+	}
+	if m.checkpoint != "" {
+		file, err := os.Open(m.checkpoint)
+		if err != nil {
+			return fmt.Errorf("could not open checkpoint file: %w", err)
+		}
+		checkpoint, err := wal.ReadCheckpoint(file)
+		if err != nil {
+			return fmt.Errorf("could not read checkpoint: %w", err)
+		}
+		trees, err := flattener.RebuildTries(checkpoint)
+		if err != nil {
+			return fmt.Errorf("could not rebuild tries: %w", err)
+		}
+		if len(trees) != 1 {
+			return fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
+		}
+		tree = trees[0]
+	}
 
 	// When trying to go from one finalized block to the next, we keep a list
 	// of intermediary tries until the connection has been made. We also need
@@ -140,12 +147,11 @@ func (m *Mapper) Run() error {
 	// The root tree is the starting point for our mapping. It will either
 	// correspond to the state at the root block, or to a state before it, in
 	// which case we already need to map some deltas to the root block.
-	lastCommit := flow.StateCommitment(m.rootTree.RootHash())
+	lastCommit := flow.StateCommitment(tree.RootHash())
 	steps[string(lastCommit)] = &Step{
 		Paths: nil, // not needed
-		Tree:  m.rootTree,
+		Tree:  tree,
 	}
-	m.rootTree = nil
 
 	// The purpose of this function is to map state deltas from a continuous
 	// feed to specific blocks from the chain. This is necessary because the
@@ -205,7 +211,7 @@ Outer:
 
 			// If we don't find a trie for the current sentinel state commitment
 			// in our register of tries, we keep applying deltas.
-			delta, err := m.feed.Delta()
+			update, err := m.feed.Update()
 
 			// Once more, we might be on a live spork and the next delta might not
 			// be available yet. In that case, keep trying.
@@ -229,29 +235,40 @@ Outer:
 			// We now try to find the trie that this delta should be applied to.
 			// If we can't find it, the delta is probably for a pruned trie and
 			// we can discard it.
-			step, ok := steps[string(delta.Commit)]
+			step, ok := steps[string(update.RootHash)]
 			if !ok {
 				continue Inner
 			}
 
+			// NOTE: If we want to emulate the exact way the execution node does
+			// things, we can deduplicate and sort the changes here. However,
+			// this should not be needed, and with our approach we should not
+			// lose relevant memory space, which is our bottleneck here.
+
 			// Otherwise, we can apply the delta to the tree we retrieved and
 			// get the resulting state commitment. We then create the step that
-			// tracks our changes throughout the tries in our register.
-			tree, err := trie.NewTrieWithUpdatedRegisters(step.Tree, delta.Paths(), delta.Payloads())
-			if err != nil {
-				return fmt.Errorf("could not update trie: %w", err)
+			// tracks our changes throughout the tries in our register. We apply
+			// the updates one by one in order to reduce holding a lot of copied
+			// payloads in memory for big trie updates.
+			tree = step.Tree
+			for i, path := range update.Paths {
+				payload := update.Payloads[i]
+				tree, err = trie.NewTrieWithUpdatedRegisters(tree, []ledger.Path{path}, []ledger.Payload{*payload})
+				if err != nil {
+					return fmt.Errorf("could not update trie: %w", err)
+				}
 			}
 
 			// We then store the new tree along with the state commitment of its
 			// parent and the paths that were changed so we can rebuild the
 			// delta later.
 			treeCommit := flow.StateCommitment(tree.RootHash())
-			paths := make([]ledger.Path, 0, len(delta.Changes))
-			for _, path := range delta.Paths() {
+			paths := make([]ledger.Path, 0, len(update.Paths))
+			for _, path := range update.Paths {
 				paths = append(paths, path.DeepCopy())
 			}
 			step = &Step{
-				Commit: delta.Commit,
+				Commit: update.RootHash,
 				Paths:  paths,
 				Tree:   tree,
 			}
@@ -272,27 +289,26 @@ Outer:
 			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
 
-		// We use the tree and the changed paths from each step to rebuild the
-		// delta for that step and collect all of them until we reach the
-		// state commitment of the previously finalized seal.
-		var deltas []*dps.Delta
+		// We use the tree from the step and the paths that were changed to
+		// index each change for this height. As we are starting at the back, we
+		// keep track of paths already updated, so we only index the last change
+		// to the register payload.
 		commit := nextCommit
+		updated := make(map[string]struct{})
 		for !bytes.Equal(commit, lastCommit) {
 			step := steps[string(commit)]
-			delta := dps.Delta{
-				Commit:  step.Commit,
-				Changes: make([]dps.Change, 0, len(step.Paths)),
-			}
 			payloads := step.Tree.UnsafeRead(step.Paths)
 			for i, path := range step.Paths {
-				change := dps.Change{
-					Path:    path,
-					Payload: *payloads[i],
+				_, ok := updated[string(path)]
+				if ok {
+					continue
 				}
-				delta.Changes = append(delta.Changes, change)
+				err = m.index.Payload(height, path, payloads[i])
+				if err != nil {
+					return fmt.Errorf("could not index payload (height: %d, path: %x): %w", height, path, err)
+				}
+				updated[string(path)] = struct{}{}
 			}
-			deltas = append(deltas, &delta)
-			commit = step.Commit
 		}
 
 		// TODO: look at performance of doing separate transactions versus
@@ -308,8 +324,8 @@ Outer:
 			delete(steps, key)
 		}
 
-		// If we successfully collected the deltas and data, we can proceed to
-		// indexing it in our database.
+		// If we successfully indexed all of the deltas, we can index the rest
+		// of the block data.
 		err = m.index.Header(height, header)
 		if err != nil {
 			return fmt.Errorf("could not index header: %w", err)
@@ -317,10 +333,6 @@ Outer:
 		err = m.index.Commit(height, nextCommit)
 		if err != nil {
 			return fmt.Errorf("could not index commit: %w", err)
-		}
-		err = m.index.Deltas(height, deltas)
-		if err != nil {
-			return fmt.Errorf("could not index deltas: %w", err)
 		}
 		err = m.index.Events(height, events)
 		if err != nil {
@@ -340,7 +352,7 @@ Outer:
 		blockID := header.ID()
 		log.Info().
 			Hex("block", blockID[:]).
-			Int("num_deltas", len(deltas)).
+			Int("num_changes", len(updated)).
 			Int("num_events", len(events)).
 			Msg("block data indexed")
 	}

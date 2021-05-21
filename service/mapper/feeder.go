@@ -14,10 +14,8 @@
 
 package mapper
 
-import (
-	"github.com/awfm9/flow-dps/models/dps"
-)
+import "github.com/onflow/flow-go/ledger"
 
 type Feeder interface {
-	Delta() (*dps.Delta, error)
+	Update() (*ledger.TrieUpdate, error)
 }
