@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
@@ -94,10 +95,13 @@ func main() {
 	runMapper := func() error { return nil }
 	stopMapper := func(context.Context) error { return nil }
 	if flagData != "" && flagTrie != "" {
-		chain, err := chain.FromProtocolState(flagData)
+		opts := chain.DefaultOptions(flagData).WithLogger(nil)
+		db, err := badger.Open(opts)
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not initialize chain")
+			log.Fatal().Err(err).Msg("could not initialize chain db")
 		}
+		chain := chain.FromProtocolState(db)
+
 		feeder, err := feeder.FromLedgerWAL(flagTrie)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not initialize feeder")

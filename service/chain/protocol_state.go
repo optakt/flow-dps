@@ -32,9 +32,8 @@ type ProtocolState struct {
 	db *badger.DB
 }
 
-func FromProtocolState(dir string) (*ProtocolState, error) {
-
-	opts := badger.DefaultOptions(dir).
+func DefaultOptions(dir string) badger.Options {
+	return badger.DefaultOptions(dir).
 		WithMaxTableSize(256 << 20).
 		WithValueLogFileSize(64 << 20).
 		WithTableLoadingMode(options.FileIO).
@@ -48,16 +47,14 @@ func FromProtocolState(dir string) (*ProtocolState, error) {
 		WithIndexCacheSize(2000 << 20).
 		WithBlockCacheSize(0).
 		WithLogger(nil)
-	db, err := badger.Open(opts)
-	if err != nil {
-		return nil, fmt.Errorf("could not open badger database: %w", err)
-	}
+}
 
+func FromProtocolState(db *badger.DB) *ProtocolState {
 	ps := ProtocolState{
 		db: db,
 	}
 
-	return &ps, nil
+	return &ps
 }
 
 func (ps *ProtocolState) Root() (uint64, error) {
