@@ -2,7 +2,7 @@
 
 ## Description
 
-This utility binary can be used to extract a randomized set of payloads from a state trie.
+This utility binary can be used to extract a randomized set of ledger payloads from a state trie.
 It must be run on top of an execution state, with access to the corresponding protocol state.
 Upon start, it will reconstruct the state trie from the checkpoint and the write-ahead log.
 Once the final state trie has been reached, it will extract a randomized set of payloads.

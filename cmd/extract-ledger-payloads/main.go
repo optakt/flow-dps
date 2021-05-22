@@ -95,7 +95,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize codec")
 	}
-	payloads := allPayloads(tree.RootNode())
+	payloads := tree.AllPayloads()
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(payloads), func(i int, j int) {
 		payloads[i], payloads[j] = payloads[j], payloads[i]

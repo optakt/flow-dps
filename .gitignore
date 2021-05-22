@@ -1,3 +1,4 @@
+/cmd/extract-block-events/extract-block-events
 /cmd/extract-block-headers/extract-block-headers
 /cmd/extract-ledger-payloads/extract-ledger-payloads
 /data/
