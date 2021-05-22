@@ -110,7 +110,7 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not initialize mapper")
 		}
-		runMapper = mapper.Run
+		runMapper = func() error { _, err := mapper.Run(); return err }
 		stopMapper = mapper.Stop
 	}
 
