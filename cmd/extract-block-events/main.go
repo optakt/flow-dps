@@ -51,9 +51,9 @@ func main() {
 	pflag.StringVarP(&flagData, "data-dir", "d", "data", "directory for protocol state database")
 	pflag.Uint64VarP(&flagBegin, "begin-height", "b", 0, "lowest block height to include in extraction")
 	pflag.Uint64VarP(&flagFinish, "finish-height", "f", 100_000_000, "highest block height to include in extraction")
-	pflag.StringVarP(&flagOutput, "output-dir", "o", "headers", "directory for output of ledger payloads")
+	pflag.StringVarP(&flagOutput, "output-dir", "o", "events", "directory for output of ledger payloads")
 	pflag.Uint64VarP(&flagSize, "size-limit", "s", 11_264_000, "limit for total size of output files")
-	pflag.IntVarP(&flagGroup, "group-size", "g", 100, "maximum number of events to extract per block")
+	pflag.IntVarP(&flagGroup, "group-size", "g", 10, "maximum number of events to extract per block")
 
 	pflag.Parse()
 
@@ -92,9 +92,9 @@ func main() {
 	// Go through heights, try to get the block on each height until we reach
 	// the end or the maximum configured size.
 	total := uint64(0)
-	var blockID flow.Identifier
 	for index, height := range heights {
 		log := log.With().Int("index", index).Uint64("height", height).Logger()
+		var blockID flow.Identifier
 		err = db.View(operation.LookupBlockHeight(height, &blockID))
 		if errors.Is(err, storage.ErrNotFound) {
 			log.Warn().Err(err).Msg("invalid block height")

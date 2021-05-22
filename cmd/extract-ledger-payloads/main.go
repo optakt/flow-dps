@@ -49,7 +49,7 @@ func main() {
 	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "directory for execution state database")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "file containing state trie snapshot")
 	pflag.StringVarP(&flagOutput, "output-dir", "o", "payloads", "directory for output of ledger payloads")
-	pflag.Uint64VarP(&flagSize, "size-limit", "l", 11_264_000, "limit for total size of output files")
+	pflag.Uint64VarP(&flagSize, "size-limit", "s", 11_264_000, "limit for total size of output files")
 
 	pflag.Parse()
 
@@ -103,7 +103,7 @@ func main() {
 	total := uint64(0)
 	for index, payload := range payloads {
 		log := log.With().Int("index", index).Hex("key", payload.Key.CanonicalForm()).Logger()
-		data, err := codec.Marshal(payload)
+		data, err := codec.Marshal(&payload)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not encode payload")
 		}

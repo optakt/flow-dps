@@ -90,9 +90,9 @@ func main() {
 	// Go through heights, try to get the block on each height until we reach
 	// the end or the maximum configured size.
 	total := uint64(0)
-	var blockID flow.Identifier
 	for index, height := range heights {
 		log := log.With().Int("index", index).Uint64("height", height).Logger()
+		var blockID flow.Identifier
 		err = db.View(operation.LookupBlockHeight(height, &blockID))
 		if errors.Is(err, storage.ErrNotFound) {
 			log.Warn().Err(err).Msg("invalid block height")
@@ -106,7 +106,7 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not retrieve header")
 		}
-		data, err := codec.Marshal(header)
+		data, err := codec.Marshal(&header)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not encode header")
 		}
