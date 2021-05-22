@@ -1,6 +1,8 @@
+/cmd/extract-block-headers/extract-block-headers
 /cmd/extract-ledger-payloads/extract-ledger-payloads
 /data/
-/trie/
 /index/
-/root.checkpoint
+/trie/
+/dps.log
 /flow-dps
+/root.checkpoint

@@ -49,7 +49,7 @@ func main() {
 	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "directory for execution state database")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "file containing state trie snapshot")
 	pflag.StringVarP(&flagOutput, "output-dir", "o", "payloads", "directory for output of ledger payloads")
-	pflag.Uint64VarP(&flagSize, "size-limit", "l", 100*112640, "limit for total size of output files")
+	pflag.Uint64VarP(&flagSize, "size-limit", "l", 11_264_000, "limit for total size of output files")
 
 	pflag.Parse()
 
@@ -102,7 +102,7 @@ func main() {
 	})
 	total := uint64(0)
 	for index, payload := range payloads {
-		log := log.With().Int("index", index).Logger()
+		log := log.With().Int("index", index).Hex("key", payload.Key.CanonicalForm()).Logger()
 		data, err := codec.Marshal(payload)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not encode payload")
@@ -110,10 +110,10 @@ func main() {
 		name := filepath.Join(flagOutput, fmt.Sprintf("payload-%07d", index))
 		err = ioutil.WriteFile(name, data, fs.ModePerm)
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not write file")
+			log.Fatal().Err(err).Msg("could not write payload file")
 		}
 		total += uint64(len(data))
-		log.Info().Int("file_size", len(data)).Uint64("total_size", total).Msg("ledger payload extracted")
+		log.Info().Int("payload_size", len(data)).Uint64("total_size", total).Msg("ledger payload extracted")
 		if total > flagSize {
 			break
 		}
