@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
@@ -39,12 +40,16 @@ func main() {
 		flagData       string
 		flagTrie       string
 		flagCheckpoint string
+		flagOutput     string
+		flagSize       uint64
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log output level")
-	pflag.StringVarP(&flagData, "data-dir", "d", "", "protocol state database directory")
-	pflag.StringVarP(&flagTrie, "trie-dir", "t", "", "state trie write-ahead log directory")
-	pflag.StringVarP(&flagCheckpoint, "checkpoint-file", "c", "", "state trie root checkpoint file")
+	pflag.StringVarP(&flagLevel, "log-level", "l", "info", " log level for JSON logger output")
+	pflag.StringVarP(&flagData, "data-dir", "d", "data", "directory for protocol state database")
+	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "directory for execution state database")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "file containing state trie snapshot")
+	pflag.StringVarP(&flagOutput, "output-dir", "o", "payloads", "directory for output of ledger payloads")
+	pflag.Uint64VarP(&flagSize, "size-limit", "l", 100*112640, "limit for total size of output files")
 
 	pflag.Parse()
 
@@ -71,7 +76,7 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
 
-	log.Info().Msg("running disk mapper to build trie")
+	log.Info().Msg("starting disk mapper to build final state trie")
 
 	// Run the mapper to get the latest trie.
 	start := time.Now()
@@ -102,14 +107,14 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not encode payload")
 		}
-		name := fmt.Sprintf("payload-%7d", index)
+		name := filepath.Join(flagOutput, fmt.Sprintf("payload-%07d", index))
 		err = ioutil.WriteFile(name, data, fs.ModePerm)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not write file")
 		}
 		total += uint64(len(data))
-		log.Info().Int("file", len(data)).Uint64("total", total).Msg("wrote training file")
-		if total > 100*112640 {
+		log.Info().Int("file_size", len(data)).Uint64("total_size", total).Msg("ledger payload extracted")
+		if total > flagSize {
 			break
 		}
 	}

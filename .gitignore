@@ -1,4 +1,4 @@
-/cmd/training/training
+/cmd/extract-ledger-payloads/extract-ledger-payloads
 /data/
 /trie/
 /index/
