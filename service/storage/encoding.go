@@ -19,11 +19,13 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/awfm9/flow-dps/service/dictionaries"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/klauspost/compress/zstd"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/awfm9/flow-dps/service/dictionaries"
 )
 
 var (
@@ -31,7 +33,7 @@ var (
 	defaultCompressor *zstd.Encoder
 	headerCompressor  *zstd.Encoder
 	payloadCompressor *zstd.Encoder
-	eventCompressor   *zstd.Encoder
+	eventsCompressor  *zstd.Encoder
 	decompressor      *zstd.Decoder
 )
 
@@ -77,11 +79,17 @@ func init() {
 		panic(fmt.Errorf("could not initialize payload compressor: %w", err))
 	}
 
-	eventCompressor, err = zstd.NewWriter(nil,
+	eventsDict, err := hex.DecodeString(dictionaries.Events)
+	if err != nil {
+		panic(fmt.Errorf("could not decode events dictionary: %w", err))
+	}
+
+	eventsCompressor, err = zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
+		zstd.WithEncoderDict(eventsDict),
 	)
 	if err != nil {
-		panic(fmt.Errorf("could not initialize event compressor: %w", err))
+		panic(fmt.Errorf("could not initialize events compressor: %w", err))
 	}
 
 	decompressor, err = zstd.NewReader(nil,

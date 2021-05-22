@@ -201,7 +201,7 @@ func save(key []byte, value interface{}) func(*badger.Txn) error {
 		case *ledger.Payload:
 			compressor = payloadCompressor
 		case []flow.Event:
-			compressor = eventCompressor
+			compressor = eventsCompressor
 		}
 
 		val = compressor.EncodeAll(val, nil)
