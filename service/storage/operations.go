@@ -16,13 +16,11 @@ package storage
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/klauspost/compress/zstd"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
@@ -30,39 +28,6 @@ import (
 
 	"github.com/optakt/flow-dps/models/dps"
 )
-
-var (
-	codec        cbor.EncMode
-	compressor   *zstd.Encoder
-	decompressor *zstd.Decoder
-)
-
-func init() {
-	dict, err := hex.DecodeString(dps.Dictionary)
-	if err != nil {
-		panic(fmt.Errorf("could not decode dictionary"))
-	}
-
-	compressor, err = zstd.NewWriter(nil,
-		zstd.WithEncoderDict(dict),
-		zstd.WithEncoderLevel(zstd.SpeedDefault),
-	)
-	if err != nil {
-		panic(fmt.Errorf("could not initialize compressor: %w", err))
-	}
-
-	decompressor, err = zstd.NewReader(nil,
-		zstd.WithDecoderDicts(dict),
-	)
-	if err != nil {
-		panic(fmt.Errorf("could not initialize decompressor: %w", err))
-	}
-
-	codec, err = cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		panic(fmt.Errorf("could not initialize codec: %w", err))
-	}
-}
 
 func RetrieveLastCommit(commit *flow.StateCommitment) func(*badger.Txn) error {
 	return retrieve(encodeKey(prefixLastCommit), commit)
@@ -227,6 +192,16 @@ func save(key []byte, value interface{}) func(*badger.Txn) error {
 		val, err := codec.Marshal(value)
 		if err != nil {
 			return fmt.Errorf("unable to encode value: %w", err)
+		}
+
+		compressor := defaultCompressor
+		switch value.(type) {
+		case *flow.Header:
+			compressor = headerCompressor
+		case *ledger.Payload:
+			compressor = payloadCompressor
+		case []flow.Event:
+			compressor = eventCompressor
 		}
 
 		val = compressor.EncodeAll(val, nil)

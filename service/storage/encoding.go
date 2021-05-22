@@ -16,11 +16,73 @@ package storage
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
+	"github.com/awfm9/flow-dps/service/dictionaries"
+	"github.com/fxamacker/cbor/v2"
+	"github.com/klauspost/compress/zstd"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
+
+var (
+	codec             cbor.EncMode
+	defaultCompressor *zstd.Encoder
+	headerCompressor  *zstd.Encoder
+	payloadCompressor *zstd.Encoder
+	eventCompressor   *zstd.Encoder
+	decompressor      *zstd.Decoder
+)
+
+func init() {
+
+	payloadDict, err := hex.DecodeString(dictionaries.Payloads)
+	if err != nil {
+		panic(fmt.Errorf("could not decode payload dictionary: %w", err))
+	}
+
+	defaultCompressor, err = zstd.NewWriter(nil,
+		zstd.WithEncoderLevel(zstd.SpeedDefault),
+	)
+	if err != nil {
+		panic(fmt.Errorf("could not initialize default compressor: %w", err))
+	}
+
+	headerCompressor, err = zstd.NewWriter(nil,
+		zstd.WithEncoderLevel(zstd.SpeedDefault),
+	)
+	if err != nil {
+		panic(fmt.Errorf("could not initialize header compressor: %w", err))
+	}
+
+	payloadCompressor, err = zstd.NewWriter(nil,
+		zstd.WithEncoderDict(payloadDict),
+		zstd.WithEncoderLevel(zstd.SpeedDefault),
+	)
+	if err != nil {
+		panic(fmt.Errorf("could not initialize payload compressor: %w", err))
+	}
+
+	eventCompressor, err = zstd.NewWriter(nil,
+		zstd.WithEncoderLevel(zstd.SpeedDefault),
+	)
+	if err != nil {
+		panic(fmt.Errorf("could not initialize event compressor: %w", err))
+	}
+
+	decompressor, err = zstd.NewReader(nil,
+		zstd.WithDecoderDicts(payloadDict),
+	)
+	if err != nil {
+		panic(fmt.Errorf("could not initialize decompressor: %w", err))
+	}
+
+	codec, err = cbor.CanonicalEncOptions().EncMode()
+	if err != nil {
+		panic(fmt.Errorf("could not initialize codec: %w", err))
+	}
+}
 
 func encodeKey(prefix uint8, segments ...interface{}) []byte {
 	key := []byte{prefix}
