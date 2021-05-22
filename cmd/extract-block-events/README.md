@@ -1,4 +1,4 @@
-# Extract Ledger Payloads
+# Extract Block Events
 
 ## Description
 
@@ -25,7 +25,7 @@ Options:
   -f, --finish-height   highest block height to include in extraction (default: 100000000)
   -o, --output-dir      directory for output of ledger payloads (default: events)
   -s, --size-limit      limit for total size of output files (default: 11264000)
-  -g, --group-size      maximum number of events to extract per block (default: 100)
+  -g, --group-size      maximum number of events to extract per block (default: 10)
 ```
 
 ## Example

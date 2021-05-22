@@ -38,7 +38,6 @@ var (
 )
 
 func init() {
-
 	var err error
 
 	codec, err = cbor.CanonicalEncOptions().EncMode()
@@ -53,7 +52,7 @@ func init() {
 		panic(fmt.Errorf("could not initialize default compressor: %w", err))
 	}
 
-	headerDict, err := hex.DecodeString(dictionaries.Headers)
+	headerDict, err := hex.DecodeString(dictionaries.Header)
 	if err != nil {
 		panic(fmt.Errorf("could not decode header dictionary: %w", err))
 	}
@@ -66,7 +65,7 @@ func init() {
 		panic(fmt.Errorf("could not initialize header compressor: %w", err))
 	}
 
-	payloadDict, err := hex.DecodeString(dictionaries.Payloads)
+	payloadDict, err := hex.DecodeString(dictionaries.Payload)
 	if err != nil {
 		panic(fmt.Errorf("could not decode payload dictionary: %w", err))
 	}
@@ -93,7 +92,7 @@ func init() {
 	}
 
 	decompressor, err = zstd.NewReader(nil,
-		zstd.WithDecoderDicts(payloadDict),
+		zstd.WithDecoderDicts(headerDict, payloadDict, eventsDict),
 	)
 	if err != nil {
 		panic(fmt.Errorf("could not initialize decompressor: %w", err))
