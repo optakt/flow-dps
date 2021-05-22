@@ -37,9 +37,11 @@ var (
 
 func init() {
 
-	payloadDict, err := hex.DecodeString(dictionaries.Payloads)
+	var err error
+
+	codec, err = cbor.CanonicalEncOptions().EncMode()
 	if err != nil {
-		panic(fmt.Errorf("could not decode payload dictionary: %w", err))
+		panic(fmt.Errorf("could not initialize codec: %w", err))
 	}
 
 	defaultCompressor, err = zstd.NewWriter(nil,
@@ -49,16 +51,27 @@ func init() {
 		panic(fmt.Errorf("could not initialize default compressor: %w", err))
 	}
 
+	headerDict, err := hex.DecodeString(dictionaries.Headers)
+	if err != nil {
+		panic(fmt.Errorf("could not decode header dictionary: %w", err))
+	}
+
 	headerCompressor, err = zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
+		zstd.WithEncoderDict(headerDict),
 	)
 	if err != nil {
 		panic(fmt.Errorf("could not initialize header compressor: %w", err))
 	}
 
+	payloadDict, err := hex.DecodeString(dictionaries.Payloads)
+	if err != nil {
+		panic(fmt.Errorf("could not decode payload dictionary: %w", err))
+	}
+
 	payloadCompressor, err = zstd.NewWriter(nil,
-		zstd.WithEncoderDict(payloadDict),
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
+		zstd.WithEncoderDict(payloadDict),
 	)
 	if err != nil {
 		panic(fmt.Errorf("could not initialize payload compressor: %w", err))
@@ -76,11 +89,6 @@ func init() {
 	)
 	if err != nil {
 		panic(fmt.Errorf("could not initialize decompressor: %w", err))
-	}
-
-	codec, err = cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		panic(fmt.Errorf("could not initialize codec: %w", err))
 	}
 }
 
