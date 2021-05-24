@@ -27,12 +27,12 @@ type Params struct {
 
 func TestNet() Params {
 	return Params{
-		FungibleToken: flow.HexToAddress("0x9a0766d93b6608b7"),
+		FungibleToken: flow.HexToAddress("9a0766d93b6608b7"),
 	}
 }
 
 func MainNet() Params {
 	return Params{
-		FungibleToken: flow.HexToAddress("0xf233dcee88fe0abe"),
+		FungibleToken: flow.HexToAddress("f233dcee88fe0abe"),
 	}
 }

@@ -105,7 +105,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 		return nil, fmt.Errorf("could not run script: %w", err)
 	}
 	if proc.Err != nil {
-		return nil, fmt.Errorf("script execution encountered error: %w", err)
+		return nil, fmt.Errorf("script execution encountered error: %w", proc.Err)
 	}
 
 	return proc.Value, nil

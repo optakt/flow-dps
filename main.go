@@ -76,7 +76,7 @@ func main() {
 	pflag.StringVarP(&flagHostREST, "rest-host", "r", ":8080", "host URL for REST API endpoints")
 	pflag.StringVarP(&flagHostGRPC, "grpc-host", "g", ":5005", "host URL for GRPC API endpoints")
 	pflag.StringVarP(&flagHostRosetta, "rosetta-host", "a", ":8090", "host UR for Rosetta endpoints")
-	pflag.StringVarP(&flagFlowToken, "flow-token", "f", "0x7e60df042a9c0868", "address of the Flow token contract")
+	pflag.StringVarP(&flagFlowToken, "flow-token", "f", "7e60df042a9c0868", "address of the Flow token contract")
 	pflag.StringVarP(&flagChainID, "chain-id", "h", "flow-testnet", "chain to use for core token contracts")
 
 	pflag.Parse()
