@@ -65,6 +65,7 @@ func main() {
 		flagHostGRPC    string
 		flagHostRosetta string
 		flagFlowToken   string
+		flagChainID     string
 	)
 
 	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log output level")
@@ -76,6 +77,7 @@ func main() {
 	pflag.StringVarP(&flagHostGRPC, "grpc-host", "g", ":5005", "host URL for GRPC API endpoints")
 	pflag.StringVarP(&flagHostRosetta, "rosetta-host", "a", ":8090", "host UR for Rosetta endpoints")
 	pflag.StringVarP(&flagFlowToken, "flow-token", "f", "0x7e60df042a9c0868", "address of the Flow token contract")
+	pflag.StringVarP(&flagChainID, "chain-id", "h", "flow-testnet", "chain to use for core token contracts")
 
 	pflag.Parse()
 
@@ -135,9 +137,11 @@ func main() {
 	gsvr := gsvr.NewServer()
 
 	// Rosetta API initialization.
+	chainID := flow.ChainID(flagChainID).Chain()
 	contracts := contracts.New(contracts.WithToken("FLOW", flow.HexToAddress(flagFlowToken)))
 	scripts := scripts.New(scripts.WithParams(scripts.TestNet()))
-	invoke := invoker.New(log, core)
+	headers := invoker.NewHeaders(core.Chain())
+	invoke := invoker.New(log, core, chainID, headers)
 	validate := validator.New(core.Height(), contracts)
 	retrieve := retriever.New(contracts, scripts, invoke)
 	actrl := rosetta.NewData(validate, retrieve)

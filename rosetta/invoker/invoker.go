@@ -34,20 +34,24 @@ import (
 )
 
 type Invoker struct {
-	log   zerolog.Logger
-	state dps.State
-	vm    *fvm.VirtualMachine
+	log     zerolog.Logger
+	state   dps.State
+	vm      *fvm.VirtualMachine
+	network flow.Chain
+	headers fvm.Blocks
 }
 
-func New(log zerolog.Logger, state dps.State) *Invoker {
+func New(log zerolog.Logger, state dps.State, network flow.Chain, headers fvm.Blocks) *Invoker {
 
 	rt := runtime.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
 
 	i := Invoker{
-		log:   log,
-		state: state,
-		vm:    vm,
+		log:     log,
+		state:   state,
+		vm:      vm,
+		network: network,
+		headers: headers,
 	}
 
 	return &i
@@ -77,7 +81,11 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 
 	// we initialize the virtual machine context with the given block header so
 	// that parameters related to the block are available from within the script
-	ctx := fvm.NewContext(i.log, fvm.WithBlockHeader(header))
+	ctx := fvm.NewContext(i.log,
+		fvm.WithChain(i.network),
+		fvm.WithBlocks(i.headers),
+		fvm.WithBlockHeader(header),
+	)
 
 	// we initialize the view of the execution state on top of our ledger by
 	// using the read function at a specific commit
@@ -109,7 +117,8 @@ func (i *Invoker) read(commit flow.StateCommitment) delta.GetRegisterFunc {
 	return func(owner, controller, key string) (flow.RegisterValue, error) {
 
 		regID := flow.NewRegisterID(owner, controller, key)
-		if value, ok := readCache[regID]; ok {
+		value, ok := readCache[regID]
+		if ok {
 			return value.Value, nil
 		}
 
