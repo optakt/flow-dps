@@ -36,10 +36,8 @@ import (
 	"github.com/optakt/flow-dps/api/rest"
 	"github.com/optakt/flow-dps/api/rosetta"
 
-	"github.com/optakt/flow-dps/rosetta/contracts"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
-	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
 
 	"github.com/optakt/flow-dps/service/chain"
@@ -137,13 +135,10 @@ func main() {
 	gsvr := gsvr.NewServer()
 
 	// Rosetta API initialization.
-	chainID := flow.ChainID(flagChainID).Chain()
-	contracts := contracts.New(contracts.WithToken("FLOW", flow.HexToAddress(flagFlowToken)))
-	scripts := scripts.New(scripts.WithParams(scripts.TestNet()))
 	headers := invoker.NewHeaders(core.Chain())
-	invoke := invoker.New(log, core, chainID, headers)
-	validate := validator.New(core.Height(), contracts)
-	retrieve := retriever.New(contracts, scripts, invoke)
+	invoke := invoker.New(log, core, flow.ChainID(flagChainID), headers)
+	validate := validator.New(core.Height())
+	retrieve := retriever.New(invoke)
 	actrl := rosetta.NewData(validate, retrieve)
 
 	asvr := echo.New()

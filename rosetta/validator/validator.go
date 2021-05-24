@@ -23,19 +23,16 @@ import (
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/identifier"
-	"github.com/optakt/flow-dps/rosetta/retriever"
 )
 
 type Validator struct {
-	height    dps.Height
-	contracts retriever.Contracts
+	height dps.Height
 }
 
-func New(height dps.Height, contracts retriever.Contracts) *Validator {
+func New(height dps.Height) *Validator {
 
 	v := &Validator{
-		height:    height,
-		contracts: contracts,
+		height: height,
 	}
 
 	return v
@@ -104,13 +101,12 @@ func (v *Validator) Account(account identifier.Account) error {
 // => https://github.com/optakt/flow-dps/issues/52
 func (v *Validator) Currency(currency identifier.Currency) error {
 
-	if currency.Decimals != 8 {
-		return fmt.Errorf("invalid number of decimals for currency identifier (%d)", currency.Decimals)
+	if currency.Symbol != "FLOW" {
+		return fmt.Errorf("invalid token symbol for currency identifier (%s)", currency.Symbol)
 	}
 
-	_, ok := v.contracts.Token(currency.Symbol)
-	if !ok {
-		return fmt.Errorf("invalid token symbol for currency identifier (%s)", currency.Symbol)
+	if currency.Decimals != 8 {
+		return fmt.Errorf("invalid number of decimals for currency identifier (%d)", currency.Decimals)
 	}
 
 	return nil

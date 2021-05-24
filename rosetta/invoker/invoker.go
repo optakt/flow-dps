@@ -37,11 +37,11 @@ type Invoker struct {
 	log     zerolog.Logger
 	state   dps.State
 	vm      *fvm.VirtualMachine
-	network flow.Chain
+	chainID flow.ChainID
 	headers fvm.Blocks
 }
 
-func New(log zerolog.Logger, state dps.State, network flow.Chain, headers fvm.Blocks) *Invoker {
+func New(log zerolog.Logger, state dps.State, chainID flow.ChainID, headers fvm.Blocks) *Invoker {
 
 	rt := runtime.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
@@ -50,7 +50,7 @@ func New(log zerolog.Logger, state dps.State, network flow.Chain, headers fvm.Bl
 		log:     log,
 		state:   state,
 		vm:      vm,
-		network: network,
+		chainID: chainID,
 		headers: headers,
 	}
 
@@ -82,7 +82,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	// we initialize the virtual machine context with the given block header so
 	// that parameters related to the block are available from within the script
 	ctx := fvm.NewContext(i.log,
-		fvm.WithChain(i.network),
+		fvm.WithChain(i.chainID.Chain()),
 		fvm.WithBlocks(i.headers),
 		fvm.WithBlockHeader(header),
 	)
