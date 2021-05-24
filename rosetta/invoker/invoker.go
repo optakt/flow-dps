@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Invoker struct {

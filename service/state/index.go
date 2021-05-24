@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/service/storage"
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 type Index struct {
@@ -32,7 +32,7 @@ type Index struct {
 // TODO: check if there is an intermediate representation of Flow block headers
 // that contains everything we need for the access and Rosetta APIs, but drops
 // a lot of superfluous data (i.e. maybe signatures?)
-// => https://github.com/awfm9/flow-dps/issues/39
+// => https://github.com/optakt/flow-dps/issues/39
 
 func (i *Index) Header(height uint64, header *flow.Header) error {
 	err := i.core.db.Update(func(tx *badger.Txn) error {

@@ -27,13 +27,13 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/models/dps"
-	"github.com/awfm9/flow-dps/service/storage"
+	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 // TODO: improve code comments & documentation throughout the refactored
 // DPS architecture & components
-// => https://github.com/awfm9/flow-dps/issues/40
+// => https://github.com/optakt/flow-dps/issues/40
 
 type Core struct {
 	db     *badger.DB
@@ -64,7 +64,7 @@ func NewCore(dir string) (*Core, error) {
 
 	// TODO: think about refactoring this, especially in regards to the empty
 	// trie initialization, once we have switched to the new storage API
-	// => https://github.com/awfm9/flow-dps/issues/38
+	// => https://github.com/optakt/flow-dps/issues/38
 
 	var height uint64
 	var commit flow.StateCommitment

@@ -21,8 +21,8 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/models/identifier"
-	"github.com/awfm9/flow-dps/models/rosetta"
+	"github.com/optakt/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/models/rosetta"
 )
 
 type Retriever struct {
@@ -73,12 +73,12 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 
 func (r *Retriever) Block(network identifier.Network, block identifier.Block) (rosetta.Block, []identifier.Transaction, error) {
 	// TODO: implement Rosetta block retrieval
-	// => https://github.com/awfm9/flow-dps/issues/43
+	// => https://github.com/optakt/flow-dps/issues/43
 	return rosetta.Block{}, nil, fmt.Errorf("not implemented")
 }
 
 func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (rosetta.Transaction, error) {
 	// TODO: implement Rosetta transaction retrieval
-	// => https://github.com/awfm9/flow-dps/issues/44
+	// => https://github.com/optakt/flow-dps/issues/44
 	return rosetta.Transaction{}, fmt.Errorf("not implemented")
 }

@@ -20,7 +20,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 
-	"github.com/awfm9/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Ledger struct {

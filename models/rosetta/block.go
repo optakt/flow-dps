@@ -15,7 +15,7 @@
 package rosetta
 
 import (
-	"github.com/awfm9/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/models/identifier"
 )
 
 // Block contains an array of transactions that occurred at a particular block

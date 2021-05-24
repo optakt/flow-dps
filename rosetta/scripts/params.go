@@ -19,7 +19,7 @@ import (
 )
 
 // TODO: refactor network parameter and token address components
-// => https://github.com/awfm9/flow-dps/issues/42
+// => https://github.com/optakt/flow-dps/issues/42
 
 type Params struct {
 	FungibleToken flow.Address

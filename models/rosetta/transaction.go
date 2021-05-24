@@ -15,7 +15,7 @@
 package rosetta
 
 import (
-	"github.com/awfm9/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/models/identifier"
 )
 
 // Transaction contains an array of operations that are attributable to the same

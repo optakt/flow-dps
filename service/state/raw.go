@@ -17,7 +17,7 @@ package state
 import (
 	"fmt"
 
-	"github.com/awfm9/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Raw struct {

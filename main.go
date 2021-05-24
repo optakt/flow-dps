@@ -32,20 +32,20 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/api/grpc"
-	"github.com/awfm9/flow-dps/api/rest"
-	"github.com/awfm9/flow-dps/api/rosetta"
+	"github.com/optakt/flow-dps/api/grpc"
+	"github.com/optakt/flow-dps/api/rest"
+	"github.com/optakt/flow-dps/api/rosetta"
 
-	"github.com/awfm9/flow-dps/rosetta/contracts"
-	"github.com/awfm9/flow-dps/rosetta/invoker"
-	"github.com/awfm9/flow-dps/rosetta/retriever"
-	"github.com/awfm9/flow-dps/rosetta/scripts"
-	"github.com/awfm9/flow-dps/rosetta/validator"
+	"github.com/optakt/flow-dps/rosetta/contracts"
+	"github.com/optakt/flow-dps/rosetta/invoker"
+	"github.com/optakt/flow-dps/rosetta/retriever"
+	"github.com/optakt/flow-dps/rosetta/scripts"
+	"github.com/optakt/flow-dps/rosetta/validator"
 
-	"github.com/awfm9/flow-dps/service/chain"
-	"github.com/awfm9/flow-dps/service/feeder"
-	"github.com/awfm9/flow-dps/service/mapper"
-	"github.com/awfm9/flow-dps/service/state"
+	"github.com/optakt/flow-dps/service/chain"
+	"github.com/optakt/flow-dps/service/feeder"
+	"github.com/optakt/flow-dps/service/mapper"
+	"github.com/optakt/flow-dps/service/state"
 )
 
 func main() {

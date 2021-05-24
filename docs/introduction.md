@@ -237,7 +237,7 @@ Another recommended tweak is to edit the `SegmentSize` constant from `32 * 1024 
 Once you are happy with your configuration, you can run the local network by running `make start`.
 
 Now, the local network is running, but nothing is happening since there are no transactions and accounts being registered on it.
-You can then use [`flow-sim`](https://github.com/awfm9/flow-sim) to create fake activity on your test network.
+You can then use [`flow-sim`](https://github.com/optakt/flow-sim) to create fake activity on your test network.
 Simply clone the repository and run `go run main.go` and it should automatically start making transaction requests to your local network.
 
 If you just need a valid checkpoint, you can monitor the state that your test network generates by running `watch ls data/consensus/<NodeID>` and waiting until you can see a file named `checkpoint.00000001` appear.

@@ -15,7 +15,7 @@
 package rosetta
 
 import (
-	"github.com/awfm9/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/models/identifier"
 )
 
 // Operation contains all balance-changing information within a transaction. It

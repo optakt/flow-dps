@@ -14,7 +14,7 @@
 
 syntax = "proto3";
 
-option go_package = "github.com/awfm9/flow-dps/grpc";
+option go_package = "github.com/optakt/flow-dps/grpc";
 
 service API {
   rpc GetRegister (GetRegisterRequest) returns (GetRegisterResponse) {}

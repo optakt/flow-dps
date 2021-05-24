@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Mapper struct {
@@ -353,7 +353,7 @@ Outer:
 
 		// TODO: look at performance of doing separate transactions versus
 		// having an API that allows combining into a single Badger tx
-		// => https://github.com/awfm9/flow-dps/issues/36
+		// => https://github.com/optakt/flow-dps/issues/36
 
 		// If we successfully indexed all of the deltas, we can index the rest
 		// of the block data.

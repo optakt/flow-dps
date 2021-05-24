@@ -1,4 +1,4 @@
-module github.com/awfm9/flow-dps
+module github.com/optakt/flow-dps
 
 go 1.16
 

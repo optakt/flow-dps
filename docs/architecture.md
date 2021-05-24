@@ -31,22 +31,22 @@ The Chain component is responsible for reconstructing a view of the sequence of 
 It allows the consumer to step from the root block to the last sealed block, while providing data related to each height along the sequence of blocks, such as block identifier, state commitment and events.
 It is used by the [Mapper](#mapper) to map a set of deltas from the [Feeder](#feeder) to each block height.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/chain)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/chain)
 
 ### ProtocolState Chain
 
-The [Filesystem Chain](https://pkg.go.dev/github.com/awfm9/flow-dps/chain#ProtocolState) uses the execution node's on-disk key-value store for the Flow protocol state to reconstruct the block sequence.
+The [Filesystem Chain](https://pkg.go.dev/github.com/optakt/flow-dps/chain#ProtocolState) uses the execution node's on-disk key-value store for the Flow protocol state to reconstruct the block sequence.
 
 ## Feeder
 
 The Feeder component is responsible for streaming trie updates to the [Mapper](#mapper).
 It outputs a state delta for each requested state commitment, so that the [Mapper](#mapper) can follow the sequence of changes to the state trie and attribute each change to a block height.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/feeder)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/feeder)
 
 ### LedgerWAL Feeder
 
-The [LedgerWAL Feeder](https://pkg.go.dev/github.com/awfm9/flow-dps/feeder#LedgerWAL) reads trie updates directly from an on-disk write-ahead log of the execution node.
+The [LedgerWAL Feeder](https://pkg.go.dev/github.com/optakt/flow-dps/feeder#LedgerWAL) reads trie updates directly from an on-disk write-ahead log of the execution node.
 
 ## Mapper
 
@@ -55,7 +55,7 @@ In order to do that, it depends on the [Feeder](#feeder) and [Chain](#chain) com
 Generally, trie updates come in by chunk, so each block height corresponds to an arbitrary number of trie updates, from zero to many.
 Once a block height is mapped to its respective trie updates, the mapper uses the indexer to persist the information.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/mapper)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/mapper)
 
 ## Store
 
@@ -64,7 +64,7 @@ These indexes allow efficient retrieval of the state at arbitrary block heights 
 This translates to random access to state registers of the execution state at any block height.
 It combines writing and retrieving of indexes, so that an efficient caching strategy is possible.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/indexer)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/indexer)
 
 ### Database Schema
 
@@ -154,9 +154,9 @@ See the [API documentation](./api.md) for details on the different APIs that are
 
 **API Package documentation**:
 
-* [REST package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/api/rest)
-* [GRPC package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/api/grpc)
-* [Rosetta package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/api/rosetta)
+* [REST package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/api/rest)
+* [GRPC package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/api/grpc)
+* [Rosetta package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/api/rosetta)
 
 ### Rosetta API
 
@@ -167,29 +167,29 @@ The main reason for its complexity is that it needs to interact with the Flow Vi
 
 The contracts component keeps track of Flow contracts on the blockchain and provides a method to retrieve the token contract's address, if it exists, from a currency's symbol.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/contracts)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/contracts)
 
 #### Scripts
 
 The script package produces Cadence scripts with the correct imports and storage paths, depending on the configured Flow chain.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/scripts)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/scripts)
 
 #### Invoker
 
 This component, given a Cadence script, can execute it at any given height and return the value produced by the script.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/invoker)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/invoker)
 
 #### Validator
 
 The Validator component validates whether a given Rosetta identifier is valid.
 It can be used to validate blocks, networks, accounts, transactions and currencies.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/validator)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/validator)
 
 #### Retriever
 
 The retriever uses all the aforementioned components to retrieve account balances, blocks and transactions.
 
-[Package documentation](https://pkg.go.dev/github.com/awfm9/flow-dps/rosetta/retriever)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/retriever)

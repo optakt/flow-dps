@@ -21,9 +21,9 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/awfm9/flow-dps/models/dps"
-	"github.com/awfm9/flow-dps/models/identifier"
-	"github.com/awfm9/flow-dps/rosetta/retriever"
+	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/rosetta/retriever"
 )
 
 type Validator struct {
@@ -43,7 +43,7 @@ func New(height dps.Height, contracts retriever.Contracts) *Validator {
 
 // TODO: implement proper validation for network; should depend on the chain
 // configuration parameters
-// => https://github.com/awfm9/flow-dps/issues/50
+// => https://github.com/optakt/flow-dps/issues/50
 func (v *Validator) Network(network identifier.Network) error {
 
 	if network.Blockchain != "flow" {
@@ -59,7 +59,7 @@ func (v *Validator) Network(network identifier.Network) error {
 
 // TODO: implement validation for block; should distinguish between block we
 // don't know yet / haven't seen and blocks that are just mismatched
-// => https://github.com/awfm9/flow-dps/issues/51
+// => https://github.com/optakt/flow-dps/issues/51
 func (v *Validator) Block(block identifier.Block) error {
 
 	blockID, err := flow.HexStringToIdentifier(block.Hash)
@@ -94,14 +94,14 @@ func (v *Validator) Transaction(transaction identifier.Transaction) error {
 
 // TODO: implement validation for account; should use address generator to make
 // sure that it is a valid address for the configured chain
-// => https://github.com/awfm9/flow-dps/issues/53
+// => https://github.com/optakt/flow-dps/issues/53
 func (v *Validator) Account(account identifier.Account) error {
 	return nil
 }
 
 // TODO: implement validation for currency; this should probably be refactored
 // after we made tokens configurable
-// => https://github.com/awfm9/flow-dps/issues/52
+// => https://github.com/optakt/flow-dps/issues/52
 func (v *Validator) Currency(currency identifier.Currency) error {
 
 	if currency.Decimals != 8 {

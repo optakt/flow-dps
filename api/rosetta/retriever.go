@@ -15,8 +15,8 @@
 package rosetta
 
 import (
-	"github.com/awfm9/flow-dps/models/identifier"
-	"github.com/awfm9/flow-dps/models/rosetta"
+	"github.com/optakt/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/models/rosetta"
 )
 
 type Retriever interface {
