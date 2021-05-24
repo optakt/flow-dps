@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -26,12 +27,14 @@ import (
 )
 
 type Validator struct {
+	chain  flow.Chain
 	height dps.Height
 }
 
-func New(height dps.Height) *Validator {
+func New(chain flow.Chain, height dps.Height) *Validator {
 
 	v := &Validator{
+		chain:  chain,
 		height: height,
 	}
 
@@ -66,7 +69,7 @@ func (v *Validator) Block(block identifier.Block) error {
 
 	height, err := v.height.ForBlock(blockID)
 	if errors.Is(err, badger.ErrKeyNotFound) {
-		return nil
+		return fmt.Errorf("could not find block identifier: %w", err)
 	}
 	if err != nil {
 		return fmt.Errorf("could not validate block identifier: %w", err)
@@ -93,6 +96,12 @@ func (v *Validator) Transaction(transaction identifier.Transaction) error {
 // sure that it is a valid address for the configured chain
 // => https://github.com/optakt/flow-dps/issues/53
 func (v *Validator) Account(account identifier.Account) error {
+
+	ok := v.chain.IsValid(flow.HexToAddress(account.Address))
+	if !ok {
+		return fmt.Errorf("invalid account address (%s)", account.Address)
+	}
+
 	return nil
 }
 

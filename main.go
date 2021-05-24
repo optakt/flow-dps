@@ -135,9 +135,10 @@ func main() {
 	gsvr := gsvr.NewServer()
 
 	// Rosetta API initialization.
+	chain := flow.ChainID(flagChainID).Chain()
 	headers := invoker.NewHeaders(core.Chain())
-	invoke := invoker.New(log, core, flow.ChainID(flagChainID), headers)
-	validate := validator.New(core.Height())
+	invoke := invoker.New(log, core, chain, headers)
+	validate := validator.New(chain, core.Height())
 	retrieve := retriever.New(invoke)
 	actrl := rosetta.NewData(validate, retrieve)
 
