@@ -16,8 +16,10 @@ package retriever
 
 import (
 	"github.com/onflow/cadence"
+	"github.com/onflow/flow-go/model/flow"
 )
 
 type Invoker interface {
+	Balance(height uint64, address flow.Address) (uint64, error)
 	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
 }

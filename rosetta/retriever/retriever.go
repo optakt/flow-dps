@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/identifier"
@@ -47,14 +46,19 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 	// get the cadence value that is the result of the script execution
 	currency := currencies[0]
 	amounts := make([]rosetta.Amount, 0, len(currencies))
-	address := cadence.NewAddress(flow.HexToAddress(account.Address))
-	value, err := r.invoke.Script(block.Index, []byte(getBalance), []cadence.Value{address})
+	// address := cadence.NewAddress(flow.HexToAddress(account.Address))
+	// value, err := r.invoke.Script(block.Index, []byte(getBalance), []cadence.Value{address})
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not invoke script: %w", err)
+	// }
+	// balance, ok := value.ToGoValue().(uint64)
+	// if !ok {
+	// 	return nil, fmt.Errorf("could not convert balance (type: %T)", value.ToGoValue())
+	// }
+	address := flow.HexToAddress(account.Address)
+	balance, err := r.invoke.Balance(block.Index, address)
 	if err != nil {
-		return nil, fmt.Errorf("could not invoke script: %w", err)
-	}
-	balance, ok := value.ToGoValue().(uint64)
-	if !ok {
-		return nil, fmt.Errorf("could not convert balance (type: %T)", value.ToGoValue())
+		return nil, fmt.Errorf("could not retrieve balance: %w", err)
 	}
 	amount := rosetta.Amount{
 		Currency: currency,

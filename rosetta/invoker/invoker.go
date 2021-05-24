@@ -57,6 +57,47 @@ func New(log zerolog.Logger, state dps.State, chain flow.Chain, headers fvm.Bloc
 	return &i
 }
 
+func (i *Invoker) Balance(height uint64, address flow.Address) (uint64, error) {
+
+	// look up the current block and commit for the block
+	header, err := i.state.Chain().Header(height)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve header for height: %w", err)
+	}
+	commit, err := i.state.Commit().ForHeight(height)
+	if err != nil {
+		return 0, fmt.Errorf("could not look up height for commit: %w", err)
+	}
+
+	// we initialize the virtual machine context with the given block header so
+	// that parameters related to the block are available from within the script
+	ctx := fvm.NewContext(i.log,
+		fvm.WithChain(i.chain),
+		fvm.WithBlocks(i.headers),
+		fvm.WithBlockHeader(header),
+		fvm.WithTransactionProcessors(),
+		fvm.WithAccountFreezeAvailable(false),
+		fvm.WithServiceAccount(false),
+		fvm.WithRestrictedDeployment(true),
+		fvm.WithAccountStorageLimit(false),
+	)
+
+	// we initialize the view of the execution state on top of our ledger by
+	// using the read function at a specific commit
+	view := delta.NewView(i.read(commit))
+
+	// finally, we initialize an empty programs cache
+	programs := programs.NewEmptyPrograms()
+
+	// retrieve the account
+	account, err := i.vm.GetAccount(ctx, address, view, programs)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve account: %w", err)
+	}
+
+	return account.Balance, nil
+}
+
 func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value) (cadence.Value, error) {
 
 	// encode the arguments from cadence values to byte slices
