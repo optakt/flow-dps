@@ -85,6 +85,11 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 		fvm.WithChain(i.chainID.Chain()),
 		fvm.WithBlocks(i.headers),
 		fvm.WithBlockHeader(header),
+		fvm.WithTransactionProcessors(),
+		fvm.WithAccountFreezeAvailable(false),
+		fvm.WithServiceAccount(false),
+		fvm.WithRestrictedDeployment(true),
+		fvm.WithAccountStorageLimit(false),
 	)
 
 	// we initialize the view of the execution state on top of our ledger by
@@ -114,12 +119,12 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 func (i *Invoker) read(commit flow.StateCommitment) delta.GetRegisterFunc {
 
 	readCache := make(map[flow.RegisterID]flow.RegisterEntry)
-	return func(owner, controller, key string) (flow.RegisterValue, error) {
+	return func(owner string, controller string, key string) (flow.RegisterValue, error) {
 
 		regID := flow.NewRegisterID(owner, controller, key)
-		value, ok := readCache[regID]
+		entry, ok := readCache[regID]
 		if ok {
-			return value.Value, nil
+			return entry.Value, nil
 		}
 
 		lkey := state.RegisterIDToKey(regID)
@@ -132,12 +137,13 @@ func (i *Invoker) read(commit flow.StateCommitment) delta.GetRegisterFunc {
 		if err != nil {
 			return nil, fmt.Errorf("error getting register (%s) value at %x: %w", key, commit, err)
 		}
-
 		if len(values) == 0 {
 			return nil, nil
 		}
-		readCache[regID] = flow.RegisterEntry{Key: regID, Value: values[0]}
 
-		return values[0], nil
+		value := values[0]
+		readCache[regID] = flow.RegisterEntry{Key: regID, Value: value}
+
+		return value, nil
 	}
 }
