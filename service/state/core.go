@@ -15,7 +15,6 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
@@ -65,49 +64,19 @@ func NewCore(dir string) (*Core, error) {
 	// trie initialization, once we have switched to the new storage API
 	// => https://github.com/optakt/flow-dps/issues/38
 
-	var height uint64
-	var commit flow.StateCommitment
-	err = db.View(func(tx *badger.Txn) error {
-
-		// first we get the last commit
-		if err := storage.RetrieveLastCommit(&commit)(tx); err != nil {
-			return fmt.Errorf("could not retrieve last commit: %w", err)
-		}
-
-		// then we get the height associated with it
-		if err := storage.RetrieveHeightByCommit(commit, &height)(tx); err != nil {
-			return fmt.Errorf("could not retrieve height from commit: %w", err)
-		}
-		return nil
-	})
-	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
+	trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize empty trie: %w", err)
 	}
-	if errors.Is(err, badger.ErrKeyNotFound) {
 
-		// create an empty trie root hash as last commit
-		tree := trie.NewEmptyMTrie()
-		commit = flow.StateCommitment(tree.RootHash())
-
-		err = db.Update(func(tx *badger.Txn) error {
-
-			// store the empty root hash as last commit
-			err = storage.SaveLastCommit(commit)(tx)
-			if err != nil {
-				return fmt.Errorf("could not persist last commit: %w", err)
-			}
-
-			// map the last commit to zero height
-			err = storage.SaveCommitForHeight(commit, height)(tx)
-			if err != nil {
-				return fmt.Errorf("could not persist commit index: %w", err)
-			}
-
-			return nil
-		})
-		if err != nil {
-			return nil, fmt.Errorf("could not bootstrap last commit: %w", err)
-		}
+	var height uint64
+	commit := trie.RootHash()
+	err = db.Update(storage.Fallback(
+			storage.Combine(storage.RetrieveLastCommit(&commit), storage.RetrieveHeightByCommit(commit, &height)),
+			storage.Combine(storage.SaveLastCommit(commit), storage.SaveHeightForCommit(0, commit)),
+		))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve last height and commit: %w", err)
 	}
 
 	c := Core{
