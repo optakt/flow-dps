@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
@@ -71,10 +72,14 @@ func main() {
 	}
 
 	// Initialize the mapper.
-	chain, err := chain.FromProtocolState(flagData)
+	opts := chain.DefaultOptions(flagData).WithLogger(nil)
+	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize chain")
+		log.Fatal().Err(err).Msg("could not open database")
 	}
+
+	chain := chain.FromProtocolState(db)
+
 	feeder, err := feeder.FromLedgerWAL(flagTrie)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize feeder")
