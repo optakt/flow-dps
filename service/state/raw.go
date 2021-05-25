@@ -17,6 +17,7 @@ package state
 import (
 	"fmt"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -34,7 +35,12 @@ func (r *Raw) WithHeight(height uint64) dps.Raw {
 // original key information.
 func (r *Raw) Get(key []byte) ([]byte, error) {
 
-	payload, err := r.core.payload(r.height, key)
+	path, err := ledger.ToPath(key)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert key to path: %w", err)
+	}
+
+	payload, err := r.core.payload(r.height, path)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve payload: %w", err)
 	}

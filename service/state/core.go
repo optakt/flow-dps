@@ -22,7 +22,6 @@ import (
 	"github.com/dgraph-io/badger/v2/options"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
@@ -87,11 +86,8 @@ func NewCore(dir string) (*Core, error) {
 	if errors.Is(err, badger.ErrKeyNotFound) {
 
 		// create an empty trie root hash as last commit
-		trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
-		if err != nil {
-			return nil, fmt.Errorf("could not initialize empty trie: %w", err)
-		}
-		commit = trie.RootHash()
+		tree := trie.NewEmptyMTrie()
+		commit = flow.StateCommitment(tree.RootHash())
 
 		err = db.Update(func(tx *badger.Txn) error {
 

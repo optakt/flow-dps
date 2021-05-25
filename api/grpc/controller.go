@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -75,8 +76,12 @@ func (c *Controller) GetValues(_ context.Context, req *GetValuesRequest, _ ...gr
 	}
 
 	commit := c.state.Last().Commit()
-	if req.Hash != nil {
-		commit = req.Hash
+	if len(req.Hash) != 0 {
+		hash, err := flow.ToStateCommitment(req.Hash)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse state commitment: %w", err)
+		}
+		commit = hash
 	}
 
 	var keys []ledger.Key
@@ -88,7 +93,7 @@ func (c *Controller) GetValues(_ context.Context, req *GetValuesRequest, _ ...gr
 		keys = append(keys, k)
 	}
 
-	query, err := ledger.NewQuery(commit, keys)
+	query, err := ledger.NewQuery(ledger.State(commit), keys)
 	if err != nil {
 		return nil, fmt.Errorf("could not forge query in GRPC API: %w", err)
 	}

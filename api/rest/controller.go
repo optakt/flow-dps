@@ -22,6 +22,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -108,13 +109,17 @@ func (c *Controller) GetValue(ctx echo.Context) error {
 	commit := c.state.Last().Commit()
 	hashParam := ctx.QueryParam("hash")
 	if hashParam != "" {
-		commit, err = hex.DecodeString(hashParam)
+		hash, err := hex.DecodeString(hashParam)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err)
+		}
+		commit, err = flow.ToStateCommitment(hash)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err)
 		}
 	}
 
-	query, err := ledger.NewQuery(commit, keys)
+	query, err := ledger.NewQuery(ledger.State(commit), keys)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}

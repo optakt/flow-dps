@@ -19,6 +19,7 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
+	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -37,7 +38,7 @@ func (l *Ledger) Get(query *ledger.Query) ([]ledger.Value, error) {
 
 	// convert the query state commitment to a height, so we can use the core
 	// API to retrieve the payloads
-	commit := query.State()
+	commit := flow.StateCommitment(query.State())
 	height, err := l.core.Height().ForCommit(commit)
 	if err != nil {
 		return nil, fmt.Errorf("could not get height for commit (%w)", err)

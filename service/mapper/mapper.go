@@ -26,7 +26,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
@@ -119,10 +118,7 @@ func (m *Mapper) Run() error {
 	// rebuild the checkpoint and use that as the starting trie.
 	var tree *trie.MTrie
 	if m.checkpoint == "" {
-		tree, err = trie.NewEmptyMTrie(pathfinder.PathByteSize)
-		if err != nil {
-			return fmt.Errorf("could not initialize empty trie: %w", err)
-		}
+		tree = trie.NewEmptyMTrie()
 	} else {
 		file, err := os.Open(m.checkpoint)
 		if err != nil {
@@ -145,7 +141,7 @@ func (m *Mapper) Run() error {
 	// When trying to go from one finalized block to the next, we keep a list
 	// of intermediary tries until the full set of transitions have been
 	// identified. We keep track of these transitions as steps in this map.
-	steps := make(map[string]*Step)
+	steps := make(map[flow.StateCommitment]*Step)
 
 	// The root block does not necessarily overlap with the first state trie.
 	// It's possible that we have to apply some of the trie updates before the
@@ -153,9 +149,9 @@ func (m *Mapper) Run() error {
 	// the initial trie's state commitment as starting point and at it to the
 	// transitions as the very first one made.
 	commitPrev := flow.StateCommitment(tree.RootHash())
-	steps[string(commitPrev)] = &Step{
-		Commit: nil, // not needed
-		Paths:  nil, // not needed
+	steps[commitPrev] = &Step{
+		Commit: flow.StateCommitment{}, // not needed
+		Paths:  nil,                    // not needed
 		Tree:   tree,
 	}
 
@@ -172,7 +168,7 @@ Outer:
 
 		log := m.log.With().
 			Uint64("height", height).
-			Hex("commit_prev", commitPrev).Logger()
+			Hex("commit_prev", commitPrev[:]).Logger()
 
 		// As a first step, we retrieve the state commitment of the current
 		// block, which will serve as the sentinel value we will look for from
@@ -200,7 +196,7 @@ Outer:
 			return fmt.Errorf("could not retrieve next commit (height: %d): %w", height, err)
 		}
 
-		log = log.With().Hex("commit_next", commitNext).Logger()
+		log = log.With().Hex("commit_next", commitNext[:]).Logger()
 
 	Inner:
 		for {
@@ -218,7 +214,7 @@ Outer:
 			// corresponds to the next block's state commitment. If we find one
 			// we can break the inner loop and simply map the collected deltas
 			// and the other block data to the block.
-			_, ok := steps[string(commitNext)]
+			_, ok := steps[commitNext]
 			if ok {
 				break Inner
 			}
@@ -246,42 +242,40 @@ Outer:
 				return fmt.Errorf("could not retrieve next delta: %w", err)
 			}
 
-			// We need to copy the root hash because it's still part of the
-			// WAL record that will be overwritten on the next read.
-			commitBefore := make(flow.StateCommitment, len(update.RootHash))
-			copy(commitBefore, update.RootHash)
+			// We don't really need to copy this anymore, but we want to deal
+			// with a single type in our code, and the value type will be copied
+			// anyway.
+			commitBefore := flow.StateCommitment(update.RootHash)
 
-			log := log.With().Hex("commit_before", commitBefore).Logger()
+			log := log.With().Hex("commit_before", commitBefore[:]).Logger()
 
 			// We now try to find the trie that this delta should be applied to.
 			// If we can't find it, the delta is probably for a pruned trie and
 			// we can discard it.
-			step, ok := steps[string(commitBefore)]
+			step, ok := steps[commitBefore]
 			if !ok {
 				log.Debug().Msg("skipping trie update without matching trie")
 				continue Inner
 			}
 
-			// Deduplicate the paths and payloads. We need to deep copy the path
-			// because we want to keep it to retrieve the payloads later, and it
-			// is still part of the WAL record that will be overwritten on the
-			// next read. We don't need to deep copy the values, as the tree
-			// internally already does this.
+			// Deduplicate the paths and payloads. We no longer need to copy the
+			// path because it is now an array, and thus a value type, that is
+			// copied on assignment.
 			paths := make([]ledger.Path, 0, len(update.Paths))
-			lookup := make(map[string]*ledger.Payload)
+			lookup := make(map[ledger.Path]*ledger.Payload)
 			for i, path := range update.Paths {
-				_, ok := lookup[string(path)]
+				_, ok := lookup[path]
 				if !ok {
-					paths = append(paths, path.DeepCopy())
+					paths = append(paths, path)
 				}
-				lookup[string(path)] = update.Payloads[i]
+				lookup[path] = update.Payloads[i]
 			}
 			sort.Slice(paths, func(i, j int) bool {
-				return bytes.Compare(paths[i], paths[j]) < 0
+				return bytes.Compare(paths[i][:], paths[j][:]) < 0
 			})
 			payloads := make([]ledger.Payload, 0, len(paths))
 			for _, path := range paths {
-				payloads = append(payloads, *lookup[string(path)])
+				payloads = append(payloads, *lookup[path])
 			}
 
 			// Otherwise, we can apply the delta to the tree we retrieved and
@@ -304,9 +298,9 @@ Outer:
 				Paths:  paths,
 				Tree:   tree,
 			}
-			steps[string(commitAfter)] = step
+			steps[commitAfter] = step
 
-			log.Debug().Hex("commit_after", commitAfter).Msg("trie update applied")
+			log.Debug().Hex("commit_after", commitAfter[:]).Msg("trie update applied")
 		}
 
 		// At this point we have identified a step that has lead to the next
@@ -326,17 +320,17 @@ Outer:
 		// keep track of paths already updated, so we only index the last change
 		// to the register payload.
 		commit := commitNext
-		updated := make(map[string]struct{})
-		for !bytes.Equal(commit, commitPrev) {
-			step := steps[string(commit)]
+		updated := make(map[ledger.Path]struct{})
+		for commit != commitPrev {
+			step := steps[commit]
 			paths := make([]ledger.Path, 0, len(step.Paths))
 			for _, path := range step.Paths {
-				_, ok := updated[string(path)]
+				_, ok := updated[path]
 				if ok {
 					continue
 				}
 				paths = append(paths, path)
-				updated[string(path)] = struct{}{}
+				updated[path] = struct{}{}
 			}
 			payloads := step.Tree.UnsafeRead(paths)
 			err = m.index.Payloads(height, paths, payloads)
@@ -349,7 +343,7 @@ Outer:
 		// At this point, we can delete any trie that does not correspond to
 		// the state that we have just reached.
 		for key := range steps {
-			if key != string(commitNext) {
+			if key != commitNext {
 				delete(steps, key)
 			}
 		}
@@ -391,7 +385,7 @@ Outer:
 			Msg("block data indexed")
 	}
 
-	step := steps[string(commitPrev)]
+	step := steps[commitPrev]
 	m.post(step.Tree)
 
 	return nil

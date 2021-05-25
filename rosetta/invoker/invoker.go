@@ -21,7 +21,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/runtime"
 
 	"github.com/onflow/flow-go/engine/execution/state"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
@@ -41,7 +40,7 @@ type Invoker struct {
 
 func New(log zerolog.Logger, state dps.State) *Invoker {
 
-	rt := runtime.NewInterpreterRuntime()
+	rt := fvm.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
 
 	i := Invoker{
@@ -114,7 +113,7 @@ func (i *Invoker) read(commit flow.StateCommitment) delta.GetRegisterFunc {
 		}
 
 		lkey := state.RegisterIDToKey(regID)
-		query, err := ledger.NewQuery(commit, []ledger.Key{lkey})
+		query, err := ledger.NewQuery(ledger.State(commit), []ledger.Key{lkey})
 		if err != nil {
 			return nil, fmt.Errorf("could not create ledger query: %w", err)
 		}

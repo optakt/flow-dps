@@ -90,20 +90,20 @@ func (ps *ProtocolState) Commit(height uint64) (flow.StateCommitment, error) {
 	var blockID flow.Identifier
 	err := operation.LookupBlockHeight(height, &blockID)(ps.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
-		return nil, dps.ErrFinished
+		return flow.StateCommitment{}, dps.ErrFinished
 	}
 	var sealID flow.Identifier
 	err = operation.LookupBlockSeal(blockID, &sealID)(ps.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
-		return nil, dps.ErrFinished
+		return flow.StateCommitment{}, dps.ErrFinished
 	}
 	if err != nil {
-		return nil, fmt.Errorf("could not look up seal: %w", err)
+		return flow.StateCommitment{}, fmt.Errorf("could not look up seal: %w", err)
 	}
 	var seal flow.Seal
 	err = operation.RetrieveSeal(sealID, &seal)(ps.db.NewTransaction(false))
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve seal: %w", err)
+		return flow.StateCommitment{}, fmt.Errorf("could not retrieve seal: %w", err)
 	}
 	return seal.FinalState, nil
 }
