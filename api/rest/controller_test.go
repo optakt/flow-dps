@@ -36,6 +36,12 @@ import (
 )
 
 func TestController_GetRegister(t *testing.T) {
+	const (
+		keyHex   = "746573744b6579"
+		value    = "testValue"
+		valueHex = "7465737456616c7565"
+	)
+
 	tests := map[string]struct {
 		key         string
 		heightParam string
@@ -43,43 +49,40 @@ func TestController_GetRegister(t *testing.T) {
 
 		stateGet func([]byte) ([]byte, error)
 
-		wantHeightUsed uint64
-		wantStatus     int
-		wantResponse   *rest.RegisterResponse
-		wantErr        assert.ErrorAssertionFunc
+		wantStatus   int
+		wantResponse *rest.RegisterResponse
+		wantErr      assert.ErrorAssertionFunc
 	}{
 		"nominal case with heightParam": {
-			key:         "746573744b6579",
+			key:         keyHex,
 			heightParam: "425",
 			lastHeight:  312,
 
 			stateGet: func(bytes []byte) ([]byte, error) {
-				return []byte(`testValue`), nil
+				return []byte(value), nil
 			},
 
-			wantHeightUsed: 425,
-			wantStatus:     http.StatusOK,
+			wantStatus: http.StatusOK,
 			wantResponse: &rest.RegisterResponse{
 				Height: 425,
-				Key:    "746573744b6579",
-				Value:  "7465737456616c7565",
+				Key:    keyHex,
+				Value:  valueHex,
 			},
 			wantErr: assert.NoError,
 		},
 		"nominal case using last height": {
-			key:        "746573744b6579",
+			key:        keyHex,
 			lastHeight: 312,
 
 			stateGet: func(bytes []byte) ([]byte, error) {
-				return []byte(`testValue`), nil
+				return []byte(value), nil
 			},
 
-			wantHeightUsed: 312,
-			wantStatus:     http.StatusOK,
+			wantStatus: http.StatusOK,
 			wantResponse: &rest.RegisterResponse{
 				Height: 312,
-				Key:    "746573744b6579",
-				Value:  "7465737456616c7565",
+				Key:    keyHex,
+				Value:  valueHex,
 			},
 			wantErr: assert.NoError,
 		},
@@ -90,35 +93,33 @@ func TestController_GetRegister(t *testing.T) {
 			wantErr:    assert.Error,
 		},
 		"invalid heightParam (negative value)": {
-			key:         "746573744b6579",
+			key:         keyHex,
 			heightParam: "not a number",
 
 			wantStatus: http.StatusBadRequest,
 			wantErr:    assert.Error,
 		},
 		"key not found": {
-			key:        "746573744b6579",
+			key:        keyHex,
 			lastHeight: 312,
 
 			stateGet: func(bytes []byte) ([]byte, error) {
 				return nil, dps.ErrNotFound
 			},
 
-			wantHeightUsed: 312,
-			wantStatus:     http.StatusNotFound,
-			wantErr:        assert.Error,
+			wantStatus: http.StatusNotFound,
+			wantErr:    assert.Error,
 		},
 		"internal state error": {
-			key:        "746573744b6579",
+			key:        keyHex,
 			lastHeight: 312,
 
 			stateGet: func(bytes []byte) ([]byte, error) {
 				return nil, errors.New("dummy error")
 			},
 
-			wantHeightUsed: 312,
-			wantStatus:     http.StatusInternalServerError,
-			wantErr:        assert.Error,
+			wantStatus: http.StatusInternalServerError,
+			wantErr:    assert.Error,
 		},
 	}
 
@@ -129,21 +130,27 @@ func TestController_GetRegister(t *testing.T) {
 
 			// Forge echo context and insert parameters.
 			e := echo.New()
-			var path = "/registers/:key"
+
+
+			u, err := url.Parse(fmt.Sprintf("https://1.2.3.4/values/:keys"))
+			require.NoError(t, err)
+
+			q := u.Query()
 			if test.heightParam != "" {
-				path = fmt.Sprintf("%s?height=%s", path, url.PathEscape(test.heightParam))
+				q.Set("height", test.heightParam)
 			}
-			req := httptest.NewRequest(http.MethodGet, "https://1.2.3.4"+path, nil)
+			u.RawQuery = q.Encode()
+
+			req := httptest.NewRequest(http.MethodGet, u.String(), nil)
 			rec := httptest.NewRecorder()
 			ctx := e.NewContext(req, rec)
-			ctx.SetPath(path)
+			ctx.SetPath(fmt.Sprintf("%s?%s", u.Path, u.RawQuery))
 			ctx.SetParamNames("key")
 			ctx.SetParamValues(test.key)
 
 			// Create mock for state.
 			stateMock := &stateMock{
 				withHeight: func(height uint64) dps.Raw {
-					assert.Equal(t, int(test.wantHeightUsed), int(height))
 					return &stateMock{
 						get: test.stateGet,
 					}
@@ -158,7 +165,7 @@ func TestController_GetRegister(t *testing.T) {
 			// Create controller and begin test.
 			c := rest.NewController(stateMock)
 
-			err := c.GetRegister(ctx)
+			err = c.GetRegister(ctx)
 			test.wantErr(t, err)
 
 			if test.wantStatus != http.StatusOK {
@@ -185,19 +192,20 @@ func TestController_GetRegister(t *testing.T) {
 }
 
 func TestController_GetValue(t *testing.T) {
-	var (
-		validKeys   = "0.,1.,2.746573744b6579:0.,1.,2.746573744b657932"
-		invalidKeys = "non-hexadecimal value"
-		commit1     = "f61d098cfd435e79a43c574a8512275f"
-		// commit2 = "729f895ff885fa7d4117b703714c8b37"
-		hexCommit1 = "6636316430393863666434333565373961343363353734613835313232373566"
-		hexCommit2 = "3732396638393566663838356661376434313137623730333731346338623337"
+	const (
+		validKeys         = "0.,1.,2.746573744b6579:0.,1.,2.746573744b657932"
+		invalidKeys       = "non-hexadecimal value"
+		lastCommit        = "f61d098cfd435e79a43c574a8512275f"
+		lastCommitHex     = "6636316430393863666434333565373961343363353734613835313232373566"
+		customCommitParam = "3732396638393566663838356661376434313137623730333731346338623337"
+		value             = "testValue"
+		valueHex          = "7465737456616c7565"
 	)
 
 	tests := map[string]struct {
-		keys        string
-		version     string
-		commitParam string
+		keys         string
+		versionParam string
+		commitParam  string
 
 		stateGet func(*ledger.Query) ([]ledger.Value, error)
 
@@ -206,37 +214,37 @@ func TestController_GetValue(t *testing.T) {
 		wantErr      assert.ErrorAssertionFunc
 	}{
 		"nominal case with commitParam": {
-			keys:        validKeys,
-			version:     "47",
-			commitParam: hexCommit2,
+			keys:         validKeys,
+			versionParam: "47",
+			commitParam:  customCommitParam,
 
 			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
-				assert.Equal(t, hexCommit2, query.State().String())
+				assert.Equal(t, customCommitParam, query.State().String())
 				return []ledger.Value{
-					ledger.Value(`testValue`),
+					ledger.Value(value),
 				}, nil
 			},
 
 			wantStatus: http.StatusOK,
 			wantResponse: []string{
-				"7465737456616c7565",
+				valueHex,
 			},
 			wantErr: assert.NoError,
 		},
 		"nominal case without commitParam": {
-			keys:    validKeys,
-			version: "47",
+			keys:         validKeys,
+			versionParam: "47",
 
 			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
-				assert.Equal(t, hexCommit1, query.State().String())
+				assert.Equal(t, lastCommitHex, query.State().String())
 				return []ledger.Value{
-					ledger.Value(`testValue`),
+					ledger.Value(value),
 				}, nil
 			},
 
 			wantStatus: http.StatusOK,
 			wantResponse: []string{
-				"7465737456616c7565",
+				valueHex,
 			},
 			wantErr: assert.NoError,
 		},
@@ -253,7 +261,14 @@ func TestController_GetValue(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 			wantErr:    assert.Error,
 		},
-		"key not found": {
+		"invalid version param": {
+			keys:         validKeys,
+			versionParam: "not a number",
+
+			wantStatus: http.StatusBadRequest,
+			wantErr:    assert.Error,
+		},
+		"key/commit not found": {
 			keys: validKeys,
 
 			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
@@ -282,14 +297,23 @@ func TestController_GetValue(t *testing.T) {
 
 			// Forge echo context and insert parameters.
 			e := echo.New()
-			var path = "/values/:keys"
+
+			u, err := url.Parse(fmt.Sprintf("https://1.2.3.4/values/:keys"))
+			require.NoError(t, err)
+
+			q := u.Query()
 			if test.commitParam != "" {
-				path = fmt.Sprintf("%s?hash=%s", path, url.PathEscape(test.commitParam))
+				q.Set("hash", test.commitParam)
 			}
-			req := httptest.NewRequest(http.MethodGet, "https://1.2.3.4"+path, nil)
+			if test.versionParam != "" {
+				q.Set("version", test.versionParam)
+			}
+			u.RawQuery = q.Encode()
+
+			req := httptest.NewRequest(http.MethodGet, u.String(), nil)
 			rec := httptest.NewRecorder()
 			ctx := e.NewContext(req, rec)
-			ctx.SetPath(path)
+			ctx.SetPath(fmt.Sprintf("%s?%s", u.Path, u.RawQuery))
 			ctx.SetParamNames("keys")
 			ctx.SetParamValues(test.keys)
 
@@ -297,11 +321,12 @@ func TestController_GetValue(t *testing.T) {
 			stateMock := &stateMock{
 				last: lastMock{
 					commit: func() flow.StateCommitment {
-						return flow.StateCommitment(commit1)
+						return flow.StateCommitment(lastCommit)
 					},
 				},
 				ledger: ledgerMock{
 					withVersion: func(version uint8) dps.Ledger {
+						assert.Equal(t, test.versionParam, fmt.Sprint(version))
 						return &ledgerMock{
 							get: test.stateGet,
 						}
@@ -313,7 +338,7 @@ func TestController_GetValue(t *testing.T) {
 			// Create controller and begin test.
 			c := rest.NewController(stateMock)
 
-			err := c.GetValue(ctx)
+			err = c.GetValue(ctx)
 			test.wantErr(t, err)
 
 			if test.wantStatus != http.StatusOK {
@@ -350,29 +375,16 @@ func (s stateMock) Get(key []byte) ([]byte, error) {
 	return s.get(key)
 }
 
+func (s stateMock) Last() dps.Last {
+	return s.last
+}
+
 func (s stateMock) Index() dps.Index {
 	panic("implement me")
 }
 
 func (s stateMock) Chain() dps.Chain {
 	panic("implement me")
-}
-
-func (s stateMock) Last() dps.Last {
-	return s.last
-}
-
-type lastMock struct {
-	height func() uint64
-	commit func() flow.StateCommitment
-}
-
-func (l lastMock) Height() uint64 {
-	return l.height()
-}
-
-func (l lastMock) Commit() flow.StateCommitment {
-	return l.commit()
 }
 
 func (s stateMock) Height() dps.Height {
@@ -393,6 +405,19 @@ func (s stateMock) WithHeight(height uint64) dps.Raw {
 
 func (s stateMock) Ledger() dps.Ledger {
 	return s.ledger
+}
+
+type lastMock struct {
+	height func() uint64
+	commit func() flow.StateCommitment
+}
+
+func (l lastMock) Height() uint64 {
+	return l.height()
+}
+
+func (l lastMock) Commit() flow.StateCommitment {
+	return l.commit()
 }
 
 type ledgerMock struct {

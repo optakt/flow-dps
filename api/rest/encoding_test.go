@@ -114,6 +114,21 @@ func TestDecodeKey(t *testing.T) {
 			want:    state.RegisterIDToKey(flow.NewRegisterID("", "", "testKey")),
 			wantErr: assert.NoError,
 		},
+		"invalid key parts": {
+			key: "invalid key",
+
+			wantErr: assert.Error,
+		},
+		"invalid key part type": {
+			key: "invalid.invalid,invalid.invalid,invalid.invalid",
+
+			wantErr: assert.Error,
+		},
+		"invalid key part value": {
+			key: "0.invalid,1.invalid,2.invalid",
+
+			wantErr: assert.Error,
+		},
 		"empty key": {
 			key: "",
 
@@ -155,6 +170,21 @@ func TestDecodeKeys(t *testing.T) {
 				state.RegisterIDToKey(flow.NewRegisterID("", "", "testKey2")),
 			},
 			wantErr: assert.NoError,
+		},
+		"invalid key parts": {
+			keys: "invalid key:invalid key",
+
+			wantErr: assert.Error,
+		},
+		"invalid key part type": {
+			keys: "invalid.invalid,invalid.invalid,invalid.invalid:invalid.invalid,invalid.invalid,invalid.invalid",
+
+			wantErr: assert.Error,
+		},
+		"invalid key part value": {
+			keys: "0.invalid,1.invalid,2.invalid:0.invalid,1.invalid,2.invalid",
+
+			wantErr: assert.Error,
 		},
 		"empty keys": {
 			keys:    ":",
