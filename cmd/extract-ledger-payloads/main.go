@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
@@ -44,7 +45,7 @@ func main() {
 		flagSize       uint64
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", " log level for JSON logger output")
+	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log level for JSON logger output")
 	pflag.StringVarP(&flagData, "data-dir", "d", "data", "directory for protocol state database")
 	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "directory for execution state database")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "file containing state trie snapshot")
@@ -62,6 +63,12 @@ func main() {
 	}
 	log = log.Level(level)
 
+	// Set up the closure to capture the tree after processing finished.
+	var tree *trie.MTrie
+	post := func(t *trie.MTrie) {
+		tree = t
+	}
+
 	// Initialize the mapper.
 	chain, err := chain.FromProtocolState(flagData)
 	if err != nil {
@@ -71,7 +78,10 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize feeder")
 	}
-	mapper, err := mapper.New(log, chain, feeder, &Index{}, mapper.WithCheckpointFile(flagCheckpoint))
+	mapper, err := mapper.New(log, chain, feeder, &Index{},
+		mapper.WithCheckpointFile(flagCheckpoint),
+		mapper.WithPostProcessing(post),
+	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}
@@ -80,7 +90,7 @@ func main() {
 
 	// Run the mapper to get the latest trie.
 	start := time.Now()
-	tree, err := mapper.Run()
+	err = mapper.Run()
 	if err != nil {
 		log.Fatal().Err(err).Msg("disk mapper encountered error")
 	}

@@ -22,7 +22,7 @@ Options:
   -d, --data-dir        directory for protocol state database (default: data)
   -b, --begin-height    lowest block height to include in extraction (default: 0)
   -f, --finish-height   highest block height to include in extraction (default: 100000000)
-  -o, --output-dir      directory for output of ledger payloads (default: headers)
+  -o, --output-dir      directory for output of black headers (default: headers)
   -s, --size-limit      limit for total size of output files (default: 11264000) 
 ```
 

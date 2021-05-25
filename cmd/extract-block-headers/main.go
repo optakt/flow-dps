@@ -46,11 +46,11 @@ func main() {
 		flagSize   uint64
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", " log level for JSON logger output")
+	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log level for JSON logger output")
 	pflag.StringVarP(&flagData, "data-dir", "d", "data", "directory for protocol state database")
 	pflag.Uint64VarP(&flagBegin, "begin-height", "b", 0, "lowest block height to include in extraction")
 	pflag.Uint64VarP(&flagFinish, "finish-height", "f", 100_000_000, "highest block height to include in extraction")
-	pflag.StringVarP(&flagOutput, "output-dir", "o", "headers", "directory for output of ledger payloads")
+	pflag.StringVarP(&flagOutput, "output-dir", "o", "headers", "directory for output of block headers")
 	pflag.Uint64VarP(&flagSize, "size-limit", "s", 11_264_000, "limit for total size of output files")
 
 	pflag.Parse()
@@ -77,8 +77,11 @@ func main() {
 		log.Fatal().Err(err).Msg("could not initialize codec")
 	}
 
-	// Make a list of all available heights and shufftle them.
-	var heights []uint64
+	// Make a list of all available heights and shuffle them.
+	if flagBegin > flagFinish {
+		flagBegin, flagFinish = flagFinish, flagBegin
+	}
+	heights := make([]uint64, 0, flagFinish-flagBegin)
 	for height := flagBegin; height <= flagFinish; height++ {
 		heights = append(heights, height)
 	}

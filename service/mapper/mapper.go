@@ -41,6 +41,7 @@ type Mapper struct {
 	feed       Feeder
 	index      dps.Index
 	checkpoint string
+	post       func(*trie.MTrie)
 	wg         *sync.WaitGroup
 	stop       chan struct{}
 }
@@ -54,6 +55,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 	// trie registry.
 	cfg := MapperConfig{
 		CheckpointFile: "",
+		PostProcessing: PostNoop,
 	}
 	for _, option := range options {
 		option(&cfg)
@@ -76,6 +78,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		feed:       feed,
 		index:      index,
 		checkpoint: cfg.CheckpointFile,
+		post:       cfg.PostProcessing,
 		wg:         &sync.WaitGroup{},
 		stop:       make(chan struct{}),
 	}
@@ -102,14 +105,14 @@ func (m *Mapper) Stop(ctx context.Context) error {
 // run function; that would make it quite easy to resume from an arbitrary
 // point in the LedgerWAL and get rid of the related struct fields.
 
-func (m *Mapper) Run() (*trie.MTrie, error) {
+func (m *Mapper) Run() error {
 	m.wg.Add(1)
 	defer m.wg.Done()
 
 	// We start trying to map at the root height.
 	height, err := m.chain.Root()
 	if err != nil {
-		return nil, fmt.Errorf("could not get root height: %w", err)
+		return fmt.Errorf("could not get root height: %w", err)
 	}
 
 	// If we have no checkpoint file, we start from an empty trie; otherwise we
@@ -118,23 +121,23 @@ func (m *Mapper) Run() (*trie.MTrie, error) {
 	if m.checkpoint == "" {
 		tree, err = trie.NewEmptyMTrie(pathfinder.PathByteSize)
 		if err != nil {
-			return nil, fmt.Errorf("could not initialize empty trie: %w", err)
+			return fmt.Errorf("could not initialize empty trie: %w", err)
 		}
 	} else {
 		file, err := os.Open(m.checkpoint)
 		if err != nil {
-			return nil, fmt.Errorf("could not open checkpoint file: %w", err)
+			return fmt.Errorf("could not open checkpoint file: %w", err)
 		}
 		checkpoint, err := wal.ReadCheckpoint(file)
 		if err != nil {
-			return nil, fmt.Errorf("could not read checkpoint: %w", err)
+			return fmt.Errorf("could not read checkpoint: %w", err)
 		}
 		trees, err := flattener.RebuildTries(checkpoint)
 		if err != nil {
-			return nil, fmt.Errorf("could not rebuild tries: %w", err)
+			return fmt.Errorf("could not rebuild tries: %w", err)
 		}
 		if len(trees) != 1 {
-			return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
+			return fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
 		}
 		tree = trees[0]
 	}
@@ -194,7 +197,7 @@ Outer:
 
 		// Any other error should not happen and should crash explicitly.
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve next commit (height: %d): %w", height, err)
+			return fmt.Errorf("could not retrieve next commit (height: %d): %w", height, err)
 		}
 
 		log = log.With().Hex("commit_next", commitNext).Logger()
@@ -240,7 +243,7 @@ Outer:
 
 			// Other errors should fail execution as they should not happen.
 			if err != nil {
-				return nil, fmt.Errorf("could not retrieve next delta: %w", err)
+				return fmt.Errorf("could not retrieve next delta: %w", err)
 			}
 
 			// We need to copy the root hash because it's still part of the
@@ -289,7 +292,7 @@ Outer:
 			// never garbage collect any of the initial payloads.
 			tree, err = trie.NewTrieWithUpdatedRegisters(step.Tree, paths, payloads)
 			if err != nil {
-				return nil, fmt.Errorf("could not update trie: %w", err)
+				return fmt.Errorf("could not update trie: %w", err)
 			}
 
 			// We then store the new tree along with the state commitment of its
@@ -311,11 +314,11 @@ Outer:
 		// we need to fully index the block first.
 		header, err := m.chain.Header(height)
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve header: %w (height: %d)", err, height)
+			return fmt.Errorf("could not retrieve header: %w (height: %d)", err, height)
 		}
 		events, err := m.chain.Events(height)
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
+			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
 
 		// We use the tree from the step and the paths that were changed to
@@ -338,7 +341,7 @@ Outer:
 			payloads := step.Tree.UnsafeRead(paths)
 			err = m.index.Payloads(height, paths, payloads)
 			if err != nil {
-				return nil, fmt.Errorf("could not index payloads: %w", err)
+				return fmt.Errorf("could not index payloads: %w", err)
 			}
 			commit = step.Commit
 		}
@@ -359,19 +362,19 @@ Outer:
 		// of the block data.
 		err = m.index.Header(height, header)
 		if err != nil {
-			return nil, fmt.Errorf("could not index header: %w", err)
+			return fmt.Errorf("could not index header: %w", err)
 		}
 		err = m.index.Commit(height, commitNext)
 		if err != nil {
-			return nil, fmt.Errorf("could not index commit: %w", err)
+			return fmt.Errorf("could not index commit: %w", err)
 		}
 		err = m.index.Events(height, events)
 		if err != nil {
-			return nil, fmt.Errorf("could not index events: %w", err)
+			return fmt.Errorf("could not index events: %w", err)
 		}
 		err = m.index.Last(commitNext)
 		if err != nil {
-			return nil, fmt.Errorf("could not index last: %w", err)
+			return fmt.Errorf("could not index last: %w", err)
 		}
 
 		// At this point, we increase the height; we have found the full
@@ -389,6 +392,7 @@ Outer:
 	}
 
 	step := steps[string(commitPrev)]
+	m.post(step.Tree)
 
-	return step.Tree, nil
+	return nil
 }
