@@ -17,11 +17,13 @@ package rest_test
 import (
 	"testing"
 
-	exec "github.com/onflow/flow-go/engine/execution/state"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/flow-go/engine/execution/state"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/api/rest"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestEncodeKey(t *testing.T) {
@@ -30,11 +32,11 @@ func TestEncodeKey(t *testing.T) {
 		want string
 	}{
 		"nominal case": {
-			key:  exec.RegisterIDToKey(flow.NewRegisterID("testOwner", "testController", "testKey")),
+			key:  state.RegisterIDToKey(flow.NewRegisterID("testOwner", "testController", "testKey")),
 			want: "0.746573744f776e6572,1.74657374436f6e74726f6c6c6572,2.746573744b6579",
 		},
 		"empty key parts": {
-			key:  exec.RegisterIDToKey(flow.NewRegisterID("", "", "testKey")),
+			key:  state.RegisterIDToKey(flow.NewRegisterID("", "", "testKey")),
 			want: "0.,1.,2.746573744b6579",
 		},
 		"empty key": {
@@ -56,29 +58,29 @@ func TestEncodeKey(t *testing.T) {
 
 func TestEncodeKeys(t *testing.T) {
 	tests := map[string]struct {
-		keys  []ledger.Key
+		keys []ledger.Key
 		want string
 	}{
 		"nominal case": {
-			keys:  []ledger.Key{
-				exec.RegisterIDToKey(flow.NewRegisterID("testOwner", "testController", "testKey")),
-				exec.RegisterIDToKey(flow.NewRegisterID("testOwner2", "testController2", "testKey2")),
+			keys: []ledger.Key{
+				state.RegisterIDToKey(flow.NewRegisterID("testOwner", "testController", "testKey")),
+				state.RegisterIDToKey(flow.NewRegisterID("testOwner2", "testController2", "testKey2")),
 			},
 			want: "0.746573744f776e6572,1.74657374436f6e74726f6c6c6572,2.746573744b6579:0.746573744f776e657232,1.74657374436f6e74726f6c6c657232,2.746573744b657932",
 		},
 		"empty key parts": {
-			keys:  []ledger.Key{
-				exec.RegisterIDToKey(flow.NewRegisterID("", "", "testKey")),
-				exec.RegisterIDToKey(flow.NewRegisterID("", "", "testKey2")),
+			keys: []ledger.Key{
+				state.RegisterIDToKey(flow.NewRegisterID("", "", "testKey")),
+				state.RegisterIDToKey(flow.NewRegisterID("", "", "testKey2")),
 			},
 			want: "0.,1.,2.746573744b6579:0.,1.,2.746573744b657932",
 		},
 		"empty keys": {
-			keys:  []ledger.Key{{}, {}},
+			keys: []ledger.Key{{}, {}},
 			want: ":",
 		},
 		"no keys": {
-			keys:  []ledger.Key{},
+			keys: []ledger.Key{},
 			want: "",
 		},
 	}
@@ -103,13 +105,13 @@ func TestDecodeKey(t *testing.T) {
 		"nominal case": {
 			key: "0.746573744f776e6572,1.74657374436f6e74726f6c6c6572,2.746573744b6579",
 
-			want:    exec.RegisterIDToKey(flow.NewRegisterID("testOwner", "testController", "testKey")),
+			want:    state.RegisterIDToKey(flow.NewRegisterID("testOwner", "testController", "testKey")),
 			wantErr: assert.NoError,
 		},
 		"empty key parts": {
 			key: "0.,1.,2.746573744b6579",
 
-			want:    exec.RegisterIDToKey(flow.NewRegisterID("", "", "testKey")),
+			want:    state.RegisterIDToKey(flow.NewRegisterID("", "", "testKey")),
 			wantErr: assert.NoError,
 		},
 		"empty key": {
@@ -124,6 +126,51 @@ func TestDecodeKey(t *testing.T) {
 		t.Run(desc, func(t *testing.T) {
 			t.Parallel()
 			got, err := rest.DecodeKey(test.key)
+			test.wantErr(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestDecodeKeys(t *testing.T) {
+	tests := map[string]struct {
+		keys    string
+		want    []ledger.Key
+		wantErr assert.ErrorAssertionFunc
+	}{
+		"nominal case": {
+			keys: "0.746573744f776e6572,1.74657374436f6e74726f6c6c6572,2.746573744b6579:0.746573744f776e657232,1.74657374436f6e74726f6c6c657232,2.746573744b657932",
+
+			want: []ledger.Key{
+				state.RegisterIDToKey(flow.NewRegisterID("testOwner", "testController", "testKey")),
+				state.RegisterIDToKey(flow.NewRegisterID("testOwner2", "testController2", "testKey2")),
+			},
+			wantErr: assert.NoError,
+		},
+		"empty key parts": {
+			keys: "0.,1.,2.746573744b6579:0.,1.,2.746573744b657932",
+
+			want: []ledger.Key{
+				state.RegisterIDToKey(flow.NewRegisterID("", "", "testKey")),
+				state.RegisterIDToKey(flow.NewRegisterID("", "", "testKey2")),
+			},
+			wantErr: assert.NoError,
+		},
+		"empty keys": {
+			keys:    ":",
+			wantErr: assert.Error,
+		},
+		"no keys": {
+			keys:    "",
+			wantErr: assert.Error,
+		},
+	}
+
+	for desc, test := range tests {
+		test := test
+		t.Run(desc, func(t *testing.T) {
+			t.Parallel()
+			got, err := rest.DecodeKeys(test.keys)
 			test.wantErr(t, err)
 			assert.Equal(t, test.want, got)
 		})

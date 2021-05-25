@@ -111,10 +111,7 @@ func main() {
 	}
 
 	// REST API initialization.
-	rctrl, err := rest.NewController(core)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize REST controller")
-	}
+	rctrl := rest.NewController(core)
 
 	rsvr := echo.New()
 	rsvr.HideBanner = true
