@@ -41,6 +41,7 @@ type Mapper struct {
 	feed       Feeder
 	index      dps.Index
 	checkpoint string
+	post       func(*trie.MTrie)
 	wg         *sync.WaitGroup
 	stop       chan struct{}
 }
@@ -54,6 +55,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 	// trie registry.
 	cfg := MapperConfig{
 		CheckpointFile: "",
+		PostProcessing: PostNoop,
 	}
 	for _, option := range options {
 		option(&cfg)
@@ -76,6 +78,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		feed:       feed,
 		index:      index,
 		checkpoint: cfg.CheckpointFile,
+		post:       cfg.PostProcessing,
 		wg:         &sync.WaitGroup{},
 		stop:       make(chan struct{}),
 	}
@@ -387,6 +390,9 @@ Outer:
 			Int("num_events", len(events)).
 			Msg("block data indexed")
 	}
+
+	step := steps[string(commitPrev)]
+	m.post(step.Tree)
 
 	return nil
 }
