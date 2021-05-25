@@ -27,6 +27,7 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/prometheus/tsdb/wal"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	gsvr "google.golang.org/grpc"
@@ -36,18 +37,15 @@ import (
 	"github.com/optakt/flow-dps/api/grpc"
 	"github.com/optakt/flow-dps/api/rest"
 	"github.com/optakt/flow-dps/api/rosetta"
-
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
-
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/state"
-
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 func main() {
@@ -97,7 +95,11 @@ func main() {
 	}
 
 	// Initialize the index core state.
-	core, err := state.NewCore(flagIndex)
+	index, err := badger.Open(dps.DefaultOptions(flagIndex))
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not open index DB")
+	}
+	core, err := state.NewCore(index)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize ledger")
 	}
@@ -106,14 +108,17 @@ func main() {
 	runMapper := func() error { return nil }
 	stopMapper := func(context.Context) error { return nil }
 	if flagData != "" && flagTrie != "" {
-		opts := dps.DefaultOptions(flagData).WithLogger(nil)
-		db, err := badger.Open(opts)
+		protocol, err := badger.Open(dps.DefaultOptions(flagData))
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not open blockchain database")
 		}
-		chain := chain.FromProtocolState(db)
+		chain := chain.FromProtocolState(protocol)
 
-		feeder, err := feeder.FromLedgerWAL(flagTrie)
+		segments, err := wal.NewSegmentsReader(flagTrie)
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not open segments reader")
+		}
+		feeder, err := feeder.FromLedgerWAL(wal.NewReader(segments))
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not initialize feeder")
 		}
