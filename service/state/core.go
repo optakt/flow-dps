@@ -64,17 +64,13 @@ func NewCore(dir string) (*Core, error) {
 	// trie initialization, once we have switched to the new storage API
 	// => https://github.com/optakt/flow-dps/issues/38
 
-	trie, err := trie.NewEmptyMTrie(pathfinder.PathByteSize)
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize empty trie: %w", err)
-	}
+	commit := flow.StateCommitment(trie.NewEmptyMTrie().RootHash())
 
 	var height uint64
-	commit := trie.RootHash()
 	err = db.Update(storage.Fallback(
-			storage.Combine(storage.RetrieveLastCommit(&commit), storage.RetrieveHeightByCommit(commit, &height)),
-			storage.Combine(storage.SaveLastCommit(commit), storage.SaveHeightForCommit(0, commit)),
-		))
+		storage.Combine(storage.RetrieveLastCommit(&commit), storage.RetrieveHeightByCommit(commit, &height)),
+		storage.Combine(storage.SaveLastCommit(commit), storage.SaveHeightForCommit(0, commit)),
+	))
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve last height and commit: %w", err)
 	}
