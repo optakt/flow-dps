@@ -25,6 +25,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
@@ -72,7 +73,7 @@ func main() {
 	}
 
 	// Initialize the mapper.
-	opts := chain.DefaultOptions(flagData).WithLogger(nil)
+	opts := dps.DefaultOptions(flagData).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not open database")
