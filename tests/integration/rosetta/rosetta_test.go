@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -46,10 +47,30 @@ var rosettaSvc *rosetta.Data
 
 func TestMain(m *testing.M) {
 
-	const testDB = "testdata"
+	const testDbBackupFile = "rosetta-get-balance-test.db"
+	opts := badger.DefaultOptions("").
+		WithInMemory(true).
+		WithReadOnly(true).
+		WithLogger(nil)
 
-	// TODO: currently test files are loaded from disk; think of a nice way to use/generate test DB
-	core, err := state.NewCore(testDB)
+	db, err := badger.Open(opts)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	dbSnapshot, err := os.Open(testDbBackupFile)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	defer dbSnapshot.Close()
+
+	err = db.Load(dbSnapshot, 10)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	core, err := state.NewCoreFromDB(db)
 	if err != nil {
 		os.Exit(1)
 	}

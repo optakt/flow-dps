@@ -62,13 +62,18 @@ func NewCore(dir string) (*Core, error) {
 		return nil, fmt.Errorf("could not open database: %w", err)
 	}
 
+	return NewCoreFromDB(db)
+}
+
+func NewCoreFromDB(db *badger.DB) (*Core, error) {
+
 	// TODO: think about refactoring this, especially in regards to the empty
 	// trie initialization, once we have switched to the new storage API
 	// => https://github.com/optakt/flow-dps/issues/38
 
 	var height uint64
 	var commit flow.StateCommitment
-	err = db.View(func(tx *badger.Txn) error {
+	err := db.View(func(tx *badger.Txn) error {
 
 		// first we get the last commit
 		if err := storage.RetrieveLastCommit(&commit)(tx); err != nil {
