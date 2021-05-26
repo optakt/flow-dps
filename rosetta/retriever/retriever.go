@@ -26,17 +26,13 @@ import (
 )
 
 type Retriever struct {
-	contracts Contracts
-	scripts   Scripts
-	invoke    Invoker
+	invoke Invoker
 }
 
-func New(contracts Contracts, scripts Scripts, invoke Invoker) *Retriever {
+func New(invoke Invoker) *Retriever {
 
 	r := Retriever{
-		contracts: contracts,
-		scripts:   scripts,
-		invoke:    invoke,
+		invoke: invoke,
 	}
 
 	return &r
@@ -48,12 +44,7 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 	amounts := make([]rosetta.Amount, 0, len(currencies))
 	address := cadence.NewAddress(flow.HexToAddress(account.Address))
 	for _, currency := range currencies {
-		token, ok := r.contracts.Token(currency.Symbol)
-		if !ok {
-			return nil, fmt.Errorf("could not find token contract (symbol: %s)", currency.Symbol)
-		}
-		script := r.scripts.GetBalance(token)
-		value, err := r.invoke.Script(block.Index, script, []cadence.Value{address})
+		value, err := r.invoke.Script(block.Index, []byte(getBalance), []cadence.Value{address})
 		if err != nil {
 			return nil, fmt.Errorf("could not invoke script: %w", err)
 		}

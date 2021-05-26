@@ -20,7 +20,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
@@ -59,7 +61,7 @@ func (c *Controller) GetRegister(ctx echo.Context) error {
 	state = state.WithHeight(height)
 
 	value, err := state.Get(key)
-	if errors.Is(err, dps.ErrNotFound) {
+	if errors.Is(err, badger.ErrKeyNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
 	if err != nil {
@@ -129,7 +131,7 @@ func (c *Controller) GetValue(ctx echo.Context) error {
 	}
 
 	values, err := state.Get(query)
-	if errors.Is(err, dps.ErrNotFound) {
+	if errors.Is(err, badger.ErrKeyNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
 	if err != nil {

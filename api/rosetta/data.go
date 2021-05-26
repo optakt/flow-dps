@@ -40,21 +40,21 @@ func (d *Data) Block(ctx echo.Context) error {
 	var req BlockRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, nil)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	err = d.validate.Network(req.NetworkID)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, nil)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 	err = d.validate.Block(req.BlockID)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, nil)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	block, transactions, err := d.retrieve.Block(req.NetworkID, req.BlockID)
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, nil)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	res := BlockResponse{
@@ -72,25 +72,25 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	var req TransactionRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, nil)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	err = d.validate.Network(req.NetworkID)
 	if err != nil {
-		return ctx.JSON(http.StatusUnprocessableEntity, nil)
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, err)
 	}
 	err = d.validate.Block(req.BlockID)
 	if err != nil {
-		return ctx.JSON(http.StatusUnprocessableEntity, nil)
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, err)
 	}
 	err = d.validate.Transaction(req.TransactionID)
 	if err != nil {
-		return ctx.JSON(http.StatusUnprocessableEntity, nil)
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, err)
 	}
 
 	transaction, err := d.retrieve.Transaction(req.NetworkID, req.BlockID, req.TransactionID)
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, nil)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	res := TransactionResponse{
@@ -107,31 +107,31 @@ func (d *Data) Balance(ctx echo.Context) error {
 	var req BalanceRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, nil)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	err = d.validate.Network(req.NetworkID)
 	if err != nil {
-		return ctx.JSON(http.StatusUnprocessableEntity, nil)
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, err)
 	}
 	err = d.validate.Block(req.BlockID)
 	if err != nil {
-		return ctx.JSON(http.StatusUnprocessableEntity, nil)
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, err)
 	}
 	err = d.validate.Account(req.AccountID)
 	if err != nil {
-		return ctx.JSON(http.StatusUnprocessableEntity, nil)
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, err)
 	}
 	for _, currency := range req.Currencies {
 		err = d.validate.Currency(currency)
 		if err != nil {
-			return ctx.JSON(http.StatusUnprocessableEntity, nil)
+			return echo.NewHTTPError(http.StatusUnprocessableEntity, err)
 		}
 	}
 
 	balances, err := d.retrieve.Balances(req.NetworkID, req.BlockID, req.AccountID, req.Currencies)
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, nil)
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	res := BalanceResponse{

@@ -15,8 +15,10 @@
 package invoker
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/cadence"
@@ -96,7 +98,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 		return nil, fmt.Errorf("could not run script: %w", err)
 	}
 	if proc.Err != nil {
-		return nil, fmt.Errorf("script execution encountered error: %w", err)
+		return nil, fmt.Errorf("script execution encountered error: %w", proc.Err)
 	}
 
 	return proc.Value, nil
@@ -105,10 +107,11 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 func (i *Invoker) read(commit flow.StateCommitment) delta.GetRegisterFunc {
 
 	readCache := make(map[flow.RegisterID]flow.RegisterEntry)
-	return func(owner, controller, key string) (flow.RegisterValue, error) {
+	return func(owner string, controller string, key string) (flow.RegisterValue, error) {
 
 		regID := flow.NewRegisterID(owner, controller, key)
-		if value, ok := readCache[regID]; ok {
+		value, ok := readCache[regID]
+		if ok {
 			return value.Value, nil
 		}
 
@@ -119,13 +122,13 @@ func (i *Invoker) read(commit flow.StateCommitment) delta.GetRegisterFunc {
 		}
 
 		values, err := i.state.Ledger().Get(query)
+		if errors.Is(err, badger.ErrKeyNotFound) || len(values) == 0 {
+			return nil, nil
+		}
 		if err != nil {
 			return nil, fmt.Errorf("error getting register (%s) value at %x: %w", key, commit, err)
 		}
 
-		if len(values) == 0 {
-			return nil, nil
-		}
 		readCache[regID] = flow.RegisterEntry{Key: regID, Value: values[0]}
 
 		return values[0], nil

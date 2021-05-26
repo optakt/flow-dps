@@ -26,8 +26,6 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
-
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Fallback goes through the provided operations until one of them succeeds.
@@ -148,7 +146,7 @@ func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) f
 
 		it.Seek(key)
 		if !it.Valid() {
-			return dps.ErrNotFound
+			return badger.ErrKeyNotFound
 		}
 
 		err := it.Item().Value(func(val []byte) error {

@@ -134,5 +134,9 @@ func (c *Core) payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
 	err := c.db.View(storage.RetrievePayload(height, path, &payload))
-	return &payload, err
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve payload: %w", err)
+	}
+
+	return &payload, nil
 }
