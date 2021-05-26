@@ -202,12 +202,13 @@ func TestController_GetValue(t *testing.T) {
 	const (
 		validKeys         = "0.,1.,2.746573744b6579:0.,1.,2.746573744b657932"
 		invalidKeys       = "non-hexadecimal value"
-		lastCommit        = "f61d098cfd435e79a43c574a8512275f"
-		lastCommitHex     = "6636316430393863666434333565373961343363353734613835313232373566"
+		lastCommitHex     = "0102030405060708090a0102030405060708090a0102030405060708090a0102"
 		customCommitParam = "3732396638393566663833126661376434313137623730333731346338623337"
 		value             = "testValue"
 		valueHex          = "7465737456616c7565"
 	)
+
+	var lastCommit = flow.StateCommitment{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2}
 
 	tests := []struct {
 		desc string
