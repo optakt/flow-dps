@@ -27,6 +27,7 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	gsvr "google.golang.org/grpc"
@@ -95,7 +96,7 @@ func main() {
 	runMapper := func() error { return nil }
 	stopMapper := func(context.Context) error { return nil }
 	if flagData != "" && flagTrie != "" {
-		opts := chain.DefaultOptions(flagData).WithLogger(nil)
+		opts := dps.DefaultOptions(flagData).WithLogger(nil)
 		db, err := badger.Open(opts)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not initialize chain db")
