@@ -21,6 +21,7 @@ import (
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/hashicorp/go-multierror"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
@@ -28,6 +29,39 @@ import (
 
 	"github.com/optakt/flow-dps/models/dps"
 )
+
+// Fallback goes through the provided operations until one of them succeeds.
+// If all of them fail, a multi-error with all errors is returned.
+func Fallback(ops ...func(*badger.Txn) error) func(*badger.Txn) error {
+	return func(tx *badger.Txn) error {
+		var errs error
+		for _, op := range ops {
+			err := op(tx)
+			if err == nil {
+				return nil
+			}
+
+			errs = multierror.Append(errs, err)
+		}
+
+		return errs
+	}
+}
+
+// Combine goes through the provided operations until one of them fails.
+// When the first one fails, the related error is returned.
+func Combine(ops ...func(*badger.Txn) error) func(*badger.Txn) error {
+	return func(tx *badger.Txn) error {
+		for _, op := range ops {
+			err := op(tx)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+}
 
 func RetrieveLastCommit(commit *flow.StateCommitment) func(*badger.Txn) error {
 	return retrieve(encodeKey(prefixLastCommit), commit)
