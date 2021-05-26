@@ -61,8 +61,13 @@ func NewCore(dir string) (*Core, error) {
 		return nil, fmt.Errorf("could not open database: %w", err)
 	}
 
+	return NewCoreFromDB(db)
+}
+
+func NewCoreFromDB(db *badger.DB) (*Core, error) {
+
 	var commit flow.StateCommitment
-	err = db.View(storage.RetrieveLastCommit(&commit))
+	err := db.View(storage.RetrieveLastCommit(&commit))
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
 	}
