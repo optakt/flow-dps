@@ -40,9 +40,11 @@ func TestController_GetRegister(t *testing.T) {
 		keyHex   = "746573744b6579"
 		value    = "testValue"
 		valueHex = "7465737456616c7565"
+		lastHeight = 835
 	)
 
-	tests := map[string]struct {
+	tests := []struct {
+		desc        string
 		key         string
 		heightParam string
 		lastHeight  uint64
@@ -53,10 +55,11 @@ func TestController_GetRegister(t *testing.T) {
 		wantResponse *rest.RegisterResponse
 		wantErr      assert.ErrorAssertionFunc
 	}{
-		"nominal case with heightParam": {
+		{
+			desc:        "nominal case with heightParam",
 			key:         keyHex,
 			heightParam: "425",
-			lastHeight:  312,
+			lastHeight:  lastHeight,
 
 			stateGet: func(bytes []byte) ([]byte, error) {
 				return []byte(value), nil
@@ -70,9 +73,10 @@ func TestController_GetRegister(t *testing.T) {
 			},
 			wantErr: assert.NoError,
 		},
-		"nominal case using last height": {
+		{
+			desc:       "nominal case using last height",
 			key:        keyHex,
-			lastHeight: 312,
+			lastHeight: lastHeight,
 
 			stateGet: func(bytes []byte) ([]byte, error) {
 				return []byte(value), nil
@@ -80,28 +84,31 @@ func TestController_GetRegister(t *testing.T) {
 
 			wantStatus: http.StatusOK,
 			wantResponse: &rest.RegisterResponse{
-				Height: 312,
+				Height: lastHeight,
 				Key:    keyHex,
 				Value:  valueHex,
 			},
 			wantErr: assert.NoError,
 		},
-		"invalid key in ctx parameters": {
-			key: "not-hexadecimal",
+		{
+			desc: "invalid key in ctx parameters",
+			key:  "not-hexadecimal",
 
 			wantStatus: http.StatusBadRequest,
 			wantErr:    assert.Error,
 		},
-		"invalid heightParam (negative value)": {
+		{
+			desc:        "invalid heightParam (negative value)",
 			key:         keyHex,
 			heightParam: "not a number",
 
 			wantStatus: http.StatusBadRequest,
 			wantErr:    assert.Error,
 		},
-		"key not found": {
+		{
+			desc:       "key not found",
 			key:        keyHex,
-			lastHeight: 312,
+			lastHeight: lastHeight,
 
 			stateGet: func(bytes []byte) ([]byte, error) {
 				return nil, dps.ErrNotFound
@@ -110,9 +117,10 @@ func TestController_GetRegister(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 			wantErr:    assert.Error,
 		},
-		"internal state error": {
+		{
+			desc:       "internal state error",
 			key:        keyHex,
-			lastHeight: 312,
+			lastHeight: lastHeight,
 
 			stateGet: func(bytes []byte) ([]byte, error) {
 				return nil, errors.New("dummy error")
@@ -123,14 +131,13 @@ func TestController_GetRegister(t *testing.T) {
 		},
 	}
 
-	for desc, test := range tests {
+	for _, test := range tests {
 		test := test
-		t.Run(desc, func(t *testing.T) {
+		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
 			// Forge echo context and insert parameters.
 			e := echo.New()
-
 
 			u, err := url.Parse(fmt.Sprintf("https://1.2.3.4/values/:keys"))
 			require.NoError(t, err)
@@ -197,12 +204,14 @@ func TestController_GetValue(t *testing.T) {
 		invalidKeys       = "non-hexadecimal value"
 		lastCommit        = "f61d098cfd435e79a43c574a8512275f"
 		lastCommitHex     = "6636316430393863666434333565373961343363353734613835313232373566"
-		customCommitParam = "3732396638393566663838356661376434313137623730333731346338623337"
+		customCommitParam = "3732396638393566663833126661376434313137623730333731346338623337"
 		value             = "testValue"
 		valueHex          = "7465737456616c7565"
 	)
 
-	tests := map[string]struct {
+	tests := []struct {
+		desc string
+
 		keys         string
 		versionParam string
 		commitParam  string
@@ -213,7 +222,8 @@ func TestController_GetValue(t *testing.T) {
 		wantResponse []string
 		wantErr      assert.ErrorAssertionFunc
 	}{
-		"nominal case with commitParam": {
+		{
+			desc:         "nominal case with commitParam",
 			keys:         validKeys,
 			versionParam: "47",
 			commitParam:  customCommitParam,
@@ -231,7 +241,8 @@ func TestController_GetValue(t *testing.T) {
 			},
 			wantErr: assert.NoError,
 		},
-		"nominal case without commitParam": {
+		{
+			desc:         "nominal case without commitParam",
 			keys:         validKeys,
 			versionParam: "47",
 
@@ -248,27 +259,31 @@ func TestController_GetValue(t *testing.T) {
 			},
 			wantErr: assert.NoError,
 		},
-		"invalid keys": {
+		{
+			desc: "invalid keys",
 			keys: invalidKeys,
 
 			wantStatus: http.StatusBadRequest,
 			wantErr:    assert.Error,
 		},
-		"invalid commit param": {
+		{
+			desc:        "invalid commit param",
 			keys:        validKeys,
 			commitParam: "non-hexadecimal value",
 
 			wantStatus: http.StatusBadRequest,
 			wantErr:    assert.Error,
 		},
-		"invalid version param": {
+		{
+			desc:         "invalid version param",
 			keys:         validKeys,
 			versionParam: "not a number",
 
 			wantStatus: http.StatusBadRequest,
 			wantErr:    assert.Error,
 		},
-		"key/commit not found": {
+		{
+			desc: "key/commit not found",
 			keys: validKeys,
 
 			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
@@ -278,7 +293,8 @@ func TestController_GetValue(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 			wantErr:    assert.Error,
 		},
-		"internal state error": {
+		{
+			desc: "internal state error",
 			keys: validKeys,
 
 			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
@@ -290,9 +306,9 @@ func TestController_GetValue(t *testing.T) {
 		},
 	}
 
-	for desc, test := range tests {
+	for _, test := range tests {
 		test := test
-		t.Run(desc, func(t *testing.T) {
+		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
 			// Forge echo context and insert parameters.
