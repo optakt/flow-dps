@@ -47,14 +47,11 @@ The final version of the previous execution state remains available through a le
 Most current blockchains are built as a homogenous system comprised of *full nodes*.
 Each full node is expected to collect and choose the transactions to be included in the next block, execute the block, come to a consensus over the output of the block with other full nodes, and finally sign the block and append it to the chain.
 
-Existing blockchain architectures have well documented throughput limitations. There are two main approaches to combat this:
-
-1. Layer-2 networks
-2. Sharding
+Existing blockchain architectures have well documented throughput limitations. Two approaches to mitigate this are layer-2 networks and sharding.
 
 Layer-2 solutions include include networks like Bitcoin's Lightning and Ethereum's Plasma — these networks work off the main chain.
 
-Sharding is a technique where a network is broken up into many interconnected networks.
+Sharding is a technique where a network is broken up into several interconnected networks.
 Sharding significantly increases the complexity of the programming model by breaking ACID guarantees (Atomicity, Consistency, Isolation and Durability), increasing the cost and time for application development.
 
 Flow was designed to provide a blockchain that can scale while preserving composability in a single blockchain state.
@@ -69,7 +66,8 @@ We recognize the following roles in the Flow architecture.
 
 Using those [node roles](#flow-node-roles), each type of node can be optimized according to the tasks it performs.
 For instance, execution nodes are compute-optimized nodes, leveraging large-scale data centers, while collection nodes are highly bandwidth-optimized.
-Consensus and verification nodes have moderate hardware requirements, allowing for a high degree of participation, requiring only a high-end consumer internet connection.
+Goal for the Flow blockchain is to allow a high degree of participation for the consensus and verification nodes by having only moderate hardware requirements.
+These nodes would only require a high-end consumer internet connection.
 
 ### Rules
 
@@ -113,10 +111,13 @@ Flow differentiates between two sorts of states:
 2. Protocol state (network infrastructure state)
 
 Execution and protocol states are maintained and updated independently. Execution state is maintained and updated by the execution nodes, while the protocol state is maintained and updated by the consensus nodes.
+Only execution nodes have access to the execution state within the Flow system.
 
-The execution state contains the register values which are modified by the transaction execution. Updates to the execution states are done by the execution nodes but their integrity is governed by the verification process.
+The execution state contains the register values which are modified by the transaction execution.
+Updates to the execution states are done by the execution nodes but their integrity is governed by the verification process.
 
 The protocol state keeps track of the system related features like staked nodes, node roles, public keys, network addresses and staking amounts.
+The protocol state also tracks the chain of blocks by creating consensus amongst network participants on what the objective pre-determined order of transactions is (which is done implicitly by ordering collections and a deterministic algorithm to then determine the transaction order within the blocks).
 It is updated when the nodes are slashed, join the system via staking or leave the system by unstaking.
 Consensus nodes publish updates on the protocol state directly as part of the blocks they generate.
 Consensus protocol guarantees the integrity of the protocol state.
@@ -182,7 +183,7 @@ Collection node must store all the transactions of all guaranteed collections, a
 The consensus nodes work with transaction batches - [_collections_](#collection-nodes), submitted by the collection nodes.
 They form blocks from collections, are in charge of sealing those blocks, and adjudicate slashing requests from other nodes (for example, claims that an execution node has produced incorrect outputs.)
 
-Since the responsibility to maintain a large state is delegated to specialized nodes, hardware requirements for consensus nodes remain moderate even for high-throughput blockchains.
+Since the responsibility to maintain a large state is delegated to specialized nodes, it is Flow's goal to keep only moderate hardware requirements for consensus nodes even for high-throughput blockchains.
 As opposed to other node roles, consensus nodes deal with subjective problems, where there is no single correct answer.
 Instead, one answer must be selected through mutual agreement, which is why it is critical for consensus nodes to be numerous and decentralized, and less so for other nodes.
 This design increases decentralization by allowing for higher levels of participation in consensus by individuals with suitable consumer hardware on home internet connections.
@@ -193,6 +194,7 @@ A block specifies the included collections as well as the other inputs (randomne
 It is worth noting that a block in Flow does not include the resulting execution state of the block execution.
 
 In order for consensus nodes to seal blocks, they must commit to the execution result of a block after it is executed and verified.
+A block can be sealed after it has been executed by the execution nodes and the execution result has been verified by a sufficient number of verification nodes.
 
 #### Block Formation
 
@@ -208,7 +210,7 @@ Block formation is a continuous process performed by the consensus nodes to form
 5. Publishing protocol state updates
     - staking, unstaking and slashing
     - whenever a nodes stake changes, consensus nodes include that update in the next block
-6. Providing a state of randomness
+6. Providing a seed of randomness
 
 If there are no guaranteed collections, consensus nodes will continue block formation with an empty set of collections — block formation is never blocked.
 
@@ -229,6 +231,7 @@ Conservative execution nodes only process finalized blocks to avoid wasting reso
 An execution node can be optimistic — they are allowed to work on unfinalized blocks.
 This can, however, lead to waste or resources if a block is abandoned later.
 Also, validity of unfinalized blocks is not guaranteed — execution node may be processing an invalid block.
+Execution nodes are by default optimistic at this moment.
 
 Execution nodes:
 - receive a finalized block
@@ -243,8 +246,10 @@ During the execution process the following operations occur:
 
 #### Collection retrieval
 
-Blocks being executed contain a number of guaranteed collections. Guaranteed collections only include a hash of the set of transactions, not their full texts.
+Blocks being executed contain a number of guaranteed collections.
+Guaranteed collections only include a hash of the set of transactions, not their full texts.
 Execution nodes retrieve the collection text from the appropriate cluster, and reconstruct the collection hash from the transaction text to verify data consistency.
+The consensus nodes never have access to the full transactions.
 Transactions are processed in order.
 
 #### Block Execution
