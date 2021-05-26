@@ -37,9 +37,9 @@ import (
 
 func TestController_GetRegister(t *testing.T) {
 	const (
-		keyHex   = "746573744b6579"
-		value    = "testValue"
-		valueHex = "7465737456616c7565"
+		keyHex     = "746573744b6579"
+		value      = "testValue"
+		valueHex   = "7465737456616c7565"
 		lastHeight = 835
 	)
 
