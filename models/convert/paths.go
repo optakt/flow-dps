@@ -15,8 +15,6 @@
 package convert
 
 import (
-	"fmt"
-
 	"github.com/onflow/flow-go/ledger"
 )
 
@@ -33,10 +31,7 @@ func PathsToBytes(paths []ledger.Path) [][]byte {
 func BytesToPaths(bb [][]byte) ([]ledger.Path, error) {
 	paths := make([]ledger.Path, 0, len(bb))
 	for _, b := range bb {
-		path, err := ledger.ToPath(b)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert path (%x): %w", b, err)
-		}
+		path := ledger.Path(b)
 		paths = append(paths, path)
 	}
 	return paths, nil

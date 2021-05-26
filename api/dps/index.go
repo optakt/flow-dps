@@ -101,10 +101,7 @@ func (i *Index) Commit(height uint64) (flow.StateCommitment, error) {
 		return flow.StateCommitment{}, fmt.Errorf("could not get commit: %w", err)
 	}
 
-	commit, err := flow.ToStateCommitment(res.Commit)
-	if err != nil {
-		return flow.StateCommitment{}, fmt.Errorf("could not convert commit: %w", err)
-	}
+	commit := flow.StateCommitment(res.Commit)
 
 	return commit, nil
 }

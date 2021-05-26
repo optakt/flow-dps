@@ -115,7 +115,7 @@ func encodeKey(prefix uint8, segments ...interface{}) []byte {
 		case ledger.Path:
 			val = s[:]
 		case flow.StateCommitment:
-			val = s[:]
+			val = s
 		default:
 			panic(fmt.Sprintf("unknown type (%T)", segment))
 		}
