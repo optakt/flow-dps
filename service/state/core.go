@@ -15,6 +15,7 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
@@ -60,19 +61,27 @@ func NewCore(dir string) (*Core, error) {
 		return nil, fmt.Errorf("could not open database: %w", err)
 	}
 
-	// TODO: think about refactoring this, especially in regards to the empty
-	// trie initialization, once we have switched to the new storage API
-	// => https://github.com/optakt/flow-dps/issues/38
-
-	commit := flow.StateCommitment(trie.NewEmptyMTrie().RootHash())
+	var commit flow.StateCommitment
+	err = db.View(storage.RetrieveLastCommit(&commit))
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		tree := trie.NewEmptyMTrie()
+		commit = flow.StateCommitment(tree.RootHash())
+		err = db.Update(storage.Combine(
+			storage.SaveLastCommit(commit),
+			storage.SaveHeightForCommit(0, commit),
+		))
+		if err != nil {
+			return nil, fmt.Errorf("could not bootstrap last commit & height: %w", err)
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
+	}
 
 	var height uint64
-	err = db.Update(storage.Fallback(
-		storage.Combine(storage.RetrieveLastCommit(&commit), storage.RetrieveHeightByCommit(commit, &height)),
-		storage.Combine(storage.SaveLastCommit(commit), storage.SaveHeightForCommit(0, commit)),
-	))
+	err = db.View(storage.RetrieveHeightByCommit(commit, &height))
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve last height and commit: %w", err)
+		return nil, fmt.Errorf("could not retrieve last height: %w", err)
 	}
 
 	c := Core{
@@ -134,6 +143,9 @@ func (c *Core) payload(height uint64, path ledger.Path) (*ledger.Payload, error)
 	// requested height and should thus be the payload we care about.
 	var payload ledger.Payload
 	err := c.db.View(storage.RetrievePayload(height, path, &payload))
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		return ledger.EmptyPayload(), nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve payload: %w", err)
 	}

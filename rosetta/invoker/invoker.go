@@ -15,10 +15,8 @@
 package invoker
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/cadence"
@@ -122,11 +120,12 @@ func (i *Invoker) read(commit flow.StateCommitment) delta.GetRegisterFunc {
 		}
 
 		values, err := i.state.Ledger().Get(query)
-		if errors.Is(err, badger.ErrKeyNotFound) || len(values) == 0 {
-			return nil, nil
-		}
 		if err != nil {
-			return nil, fmt.Errorf("error getting register (%s) value at %x: %w", key, commit, err)
+			fmt.Println(err)
+			return nil, fmt.Errorf("could not get ledger register: %w", err)
+		}
+		if len(values) == 0 {
+			return nil, nil
 		}
 
 		readCache[regID] = flow.RegisterEntry{Key: regID, Value: values[0]}

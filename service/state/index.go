@@ -121,6 +121,5 @@ func (i *Index) Events(height uint64, events []flow.Event) error {
 }
 
 func (i *Index) Last(commit flow.StateCommitment) error {
-	err := i.core.db.Update(storage.SaveLastCommit(commit))
-	return err
+	return i.core.db.Update(storage.SaveLastCommit(commit))
 }
