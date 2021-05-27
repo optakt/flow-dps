@@ -33,11 +33,11 @@ type Controller struct {
 	state dps.State
 }
 
-func NewController(state dps.State) (*Controller, error) {
+func NewController(state dps.State) *Controller {
 	c := &Controller{
 		state: state,
 	}
-	return c, nil
+	return c
 }
 
 // TODO: integration testing of GetRegister endpoint
