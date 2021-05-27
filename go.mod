@@ -10,8 +10,8 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/klauspost/compress v1.12.2
 	github.com/labstack/echo/v4 v4.3.0
-	github.com/onflow/cadence v0.10.4-hamt-update
-	github.com/onflow/flow-go v0.13.1-patch.7
+	github.com/onflow/cadence v0.10.2
+	github.com/onflow/flow-go v0.12.6
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rs/zerolog v1.22.0
 	github.com/spf13/pflag v1.0.5
