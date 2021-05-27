@@ -106,26 +106,18 @@ func TestMain(m *testing.M) {
 func TestGetBalance(t *testing.T) {
 
 	tests := []struct {
-		name           string
+		name string
+
+		request rosetta.BalanceRequest
+
 		wantStatusCode int
-		request        rosetta.BalanceRequest
 		wantBalance    string
 		wantHandlerErr assert.ErrorAssertionFunc
 	}{
 		// TODO: use a different 'valid balance request' - one that has an actual, non-zero balance
 		{
-			name: "valid balance request",
-			request: rosetta.BalanceRequest{
-				NetworkID: getDefaultNetworkID(),
-				AccountID: identifier.Account{
-					Address: "8c5303eaa26202d6",
-				},
-				BlockID: identifier.Block{
-					Index: 0,
-					Hash:  "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333",
-				},
-				Currencies: getDefaultCurrencySpec(),
-			},
+			name:           "valid balance request",
+			request:        getBalanceRequest("8c5303eaa26202d6", 0, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
 			wantBalance:    "0",
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
@@ -137,34 +129,14 @@ func TestGetBalance(t *testing.T) {
 			wantHandlerErr: assert.Error,
 		},
 		{
-			name: "block hash and height mismatch",
-			request: rosetta.BalanceRequest{
-				NetworkID: getDefaultNetworkID(),
-				AccountID: identifier.Account{
-					Address: "8c5303eaa26202d6",
-				},
-				BlockID: identifier.Block{
-					Index: 99,
-					Hash:  "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333",
-				},
-				Currencies: getDefaultCurrencySpec(),
-			},
+			name:           "block hash and height mismatch",
+			request:        getBalanceRequest("8c5303eaa26202d6", 99, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
 			wantStatusCode: http.StatusUnprocessableEntity,
 			wantHandlerErr: assert.Error,
 		},
 		{
-			name: "invalid account address",
-			request: rosetta.BalanceRequest{
-				NetworkID: getDefaultNetworkID(),
-				AccountID: identifier.Account{
-					Address: "invalid_address",
-				},
-				BlockID: identifier.Block{
-					Index: 0,
-					Hash:  "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333",
-				},
-				Currencies: getDefaultCurrencySpec(),
-			},
+			name:           "invalid account address",
+			request:        getBalanceRequest("invalid_address", 0, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
 			wantStatusCode: http.StatusUnprocessableEntity,
 			wantHandlerErr: assert.Error,
 		},
@@ -172,7 +144,10 @@ func TestGetBalance(t *testing.T) {
 
 	for _, test := range tests {
 
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
 
 			// prepare request payload (JSON)
 			enc, err := json.Marshal(test.request)
@@ -217,11 +192,14 @@ func TestGetBalance(t *testing.T) {
 			// verify that we have at least one balance in the response
 			assert.Len(t, balanceResponse.Balances, 1)
 
-			// verify the balance data - both the value and that the output matches the input spec
-			balance := balanceResponse.Balances[0]
-			assert.Equal(t, test.request.Currencies[0].Symbol, balance.Currency.Symbol)
-			assert.Equal(t, test.request.Currencies[0].Decimals, balance.Currency.Decimals)
-			assert.Equal(t, test.wantBalance, balance.Value)
+			if len(balanceResponse.Balances) > 0 {
+
+				// verify the balance data - both the value and that the output matches the input spec
+				balance := balanceResponse.Balances[0]
+				assert.Equal(t, test.request.Currencies[0].Symbol, balance.Currency.Symbol)
+				assert.Equal(t, test.request.Currencies[0].Decimals, balance.Currency.Decimals)
+				assert.Equal(t, test.wantBalance, balance.Value)
+			}
 		})
 	}
 }
@@ -247,6 +225,22 @@ func TestGetBalanceBadRequest(t *testing.T) {
 	e, ok := err.(*echo.HTTPError)
 	require.True(t, ok)
 	assert.Equal(t, http.StatusBadRequest, e.Code)
+}
+
+// getBalanceRequest will generate a BalanceRequest with the specified parameters.
+func getBalanceRequest(address string, blockIndex uint64, blockHash string) rosetta.BalanceRequest {
+
+	return rosetta.BalanceRequest{
+		NetworkID: getDefaultNetworkID(),
+		AccountID: identifier.Account{
+			Address: address,
+		},
+		BlockID: identifier.Block{
+			Index: blockIndex,
+			Hash:  blockHash,
+		},
+		Currencies: getDefaultCurrencySpec(),
+	}
 }
 
 // getDefaultNetworkID returns the Network identifier common for all requests.
