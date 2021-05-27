@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -40,8 +41,13 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
+	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
+
+const testChainID = "flow-testnet"
 
 // initialize the rosetta Data HTTP handler once and reuse for all tests.
 var rosettaSvc *rosetta.Data
@@ -73,11 +79,15 @@ func setupDB() (*rosetta.Data, *badger.DB, error) {
 	}
 
 	// setup scaffolding for minimal server we need for the tests
-	chain := flow.ChainID("flow-testnet").Chain()
-	validate := validator.New(chain, core.Height())
-	headers := invoker.NewHeaders(core.Chain())
-	invoke := invoker.New(zerolog.Nop(), core, chain, headers)
-	retrieve := retriever.New(invoke)
+	params, ok := dps.FlowParams[flow.ChainID(testChainID)]
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid chain")
+	}
+
+	generator := scripts.NewGenerator(params)
+	invoke := invoker.New(zerolog.Nop(), core)
+	validate := validator.New(params, core.Height())
+	retrieve := retriever.New(generator, invoke)
 
 	svc := rosetta.NewData(validate, retrieve)
 
@@ -109,11 +119,17 @@ func TestGetBalance(t *testing.T) {
 		wantBalance    string
 		wantHandlerErr assert.ErrorAssertionFunc
 	}{
-		// TODO: use a different 'valid balance request' - one that has an actual, non-zero balance
 		{
 			name:           "valid balance request",
-			request:        getBalanceRequest("8c5303eaa26202d6", 0, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
-			wantBalance:    "0",
+			request:        getBalanceRequest("631e88ae7f1d7c20", 106, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
+			wantBalance:    "10000100004",
+			wantStatusCode: http.StatusOK,
+			wantHandlerErr: assert.NoError,
+		},
+		{
+			name:           "valid balance request 2",
+			request:        getBalanceRequest("754aed9de6197641", 106, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
+			wantBalance:    "10000099999",
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
 		},
@@ -125,13 +141,13 @@ func TestGetBalance(t *testing.T) {
 		},
 		{
 			name:           "block hash and height mismatch",
-			request:        getBalanceRequest("8c5303eaa26202d6", 99, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
+			request:        getBalanceRequest("8c5303eaa26202d6", 1, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
 			wantStatusCode: http.StatusUnprocessableEntity,
 			wantHandlerErr: assert.Error,
 		},
 		{
 			name:           "invalid account address",
-			request:        getBalanceRequest("invalid_address", 0, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
+			request:        getBalanceRequest("invalid_address", 106, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
 			wantStatusCode: http.StatusUnprocessableEntity,
 			wantHandlerErr: assert.Error,
 		},
@@ -184,7 +200,7 @@ func TestGetBalance(t *testing.T) {
 			assert.Equal(t, test.request.BlockID.Index, balanceResponse.BlockID.Index)
 			assert.Equal(t, test.request.BlockID.Hash, balanceResponse.BlockID.Hash)
 
-			// verify that we have at least one balance in the response
+			// verify that we have precisely one balance in the response
 			if assert.Len(t, balanceResponse.Balances, 1) {
 
 				// verify the balance data - both the value and that the output matches the input spec
@@ -240,7 +256,7 @@ func getBalanceRequest(address string, blockIndex uint64, blockHash string) rose
 func getDefaultNetworkID() identifier.Network {
 	return identifier.Network{
 		Blockchain: "flow",
-		Network:    "testnet",
+		Network:    "flow-testnet",
 	}
 }
 
