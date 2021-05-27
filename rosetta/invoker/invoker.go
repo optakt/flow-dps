@@ -21,10 +21,10 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/runtime"
 
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
-	"github.com/onflow/flow-go/fvm/programs"
 
 	"github.com/optakt/flow-dps/models/index"
 )
@@ -41,8 +41,8 @@ type Invoker struct {
 
 func New(index index.Reader) *Invoker {
 
-	rt := fvm.NewInterpreterRuntime()
-	vm := fvm.NewVirtualMachine(rt)
+	rt := runtime.NewInterpreterRuntime()
+	vm := fvm.New(rt)
 
 	i := Invoker{
 		index: index,
@@ -95,7 +95,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	proc := fvm.Script(script).WithArguments(args...)
 
 	// finally, we initialize an empty programs cache
-	programs := programs.NewEmptyPrograms()
+	programs := fvm.NewEmptyPrograms()
 
 	// the script procedure is then run using the Flow virtual machine and all
 	// of the constructed contextual parameters
