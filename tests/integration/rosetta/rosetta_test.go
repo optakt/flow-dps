@@ -18,11 +18,11 @@ package rosetta_test
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -59,16 +59,11 @@ func setupDB() (*rosetta.Data, *badger.DB, error) {
 		return nil, nil, err
 	}
 
-	dbSnapshot, err := os.Open(testDbBackupFile)
-	if err != nil {
-		return nil, nil, err
-
-	}
+	dbSnapshot := hex.NewDecoder(strings.NewReader(getDBSnapshot()))
 
 	err = db.Load(dbSnapshot, 10)
 	if err != nil {
 		return nil, nil, err
-
 	}
 
 	core, err := state.NewCoreFromDB(db)
@@ -190,9 +185,7 @@ func TestGetBalance(t *testing.T) {
 			assert.Equal(t, test.request.BlockID.Hash, balanceResponse.BlockID.Hash)
 
 			// verify that we have at least one balance in the response
-			assert.Len(t, balanceResponse.Balances, 1)
-
-			if len(balanceResponse.Balances) > 0 {
+			if assert.Len(t, balanceResponse.Balances, 1) {
 
 				// verify the balance data - both the value and that the output matches the input spec
 				balance := balanceResponse.Balances[0]
