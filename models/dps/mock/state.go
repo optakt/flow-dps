@@ -13,7 +13,7 @@ type State struct {
 	mock.Mock
 
 	IndexState  *Index
-	ChainState  *Chain
+	DataState   *Data
 	LastState   *Last
 	HeightState *Height
 	CommitState *Commit
@@ -24,7 +24,7 @@ type State struct {
 func NewState() *State {
 	state := State{
 		IndexState:  &Index{},
-		ChainState:  &Chain{},
+		DataState:   &Data{},
 		LastState:   &Last{},
 		HeightState: &Height{},
 		CommitState: &Commit{},
@@ -39,8 +39,8 @@ func (s *State) Index() dps.Index {
 	return s.IndexState
 }
 
-func (s *State) Chain() dps.Chain {
-	return s.ChainState
+func (s *State) Data() dps.Data {
+	return s.DataState
 }
 
 func (s *State) Last() dps.Last {
@@ -92,16 +92,16 @@ func (i *Index) Last(commit flow.StateCommitment) error {
 	return args.Error(0)
 }
 
-type Chain struct {
+type Data struct {
 	mock.Mock
 }
 
-func (c *Chain) Header(height uint64) (*flow.Header, error) {
+func (c *Data) Header(height uint64) (*flow.Header, error) {
 	args := c.Called(height)
 	return args.Get(0).(*flow.Header), args.Error(1)
 }
 
-func (c *Chain) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+func (c *Data) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 	args := c.Called(height, types)
 	return args.Get(0).([]flow.Event), args.Error(1)
 }
