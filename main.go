@@ -136,10 +136,7 @@ func main() {
 	rsvr.GET("/values/:keys", rctrl.GetValue)
 
 	// GRPC API initialization.
-	gctrl, err := grpc.NewController(core)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize GRPC controller")
-	}
+	gctrl := grpc.NewController(core)
 	gsvr := gsvr.NewServer()
 
 	// Rosetta API initialization.

@@ -31,11 +31,11 @@ type Controller struct {
 }
 
 // NewController creates a controller using the given state store.
-func NewController(state dps.State) (*Controller, error) {
+func NewController(state dps.State) *Controller {
 	c := &Controller{
 		state: state,
 	}
-	return c, nil
+	return c
 }
 
 // GetRegister gets a single register from a given key. Block height can also be given as an optional parameter.
