@@ -19,6 +19,7 @@ package rosetta_test
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -45,7 +46,7 @@ import (
 // initialize the rosetta Data HTTP handler once and reuse for all tests.
 var rosettaSvc *rosetta.Data
 
-func TestMain(m *testing.M) {
+func setupDB() (*rosetta.Data, *badger.DB, error) {
 
 	const testDbBackupFile = "rosetta-get-balance-test.db"
 	opts := badger.DefaultOptions("").
@@ -55,24 +56,25 @@ func TestMain(m *testing.M) {
 
 	db, err := badger.Open(opts)
 	if err != nil {
-		os.Exit(1)
+		return nil, nil, err
 	}
 
 	dbSnapshot, err := os.Open(testDbBackupFile)
 	if err != nil {
-		os.Exit(1)
-	}
+		return nil, nil, err
 
-	defer dbSnapshot.Close()
+	}
 
 	err = db.Load(dbSnapshot, 10)
 	if err != nil {
-		os.Exit(1)
+		return nil, nil, err
+
 	}
 
 	core, err := state.NewCoreFromDB(db)
 	if err != nil {
-		os.Exit(1)
+		return nil, nil, err
+
 	}
 
 	// setup scaffolding for minimal server we need for the tests
@@ -82,9 +84,23 @@ func TestMain(m *testing.M) {
 	invoke := invoker.New(zerolog.Nop(), core, chain, headers)
 	retrieve := retriever.New(invoke)
 
-	rosettaSvc = rosetta.NewData(validate, retrieve)
+	svc := rosetta.NewData(validate, retrieve)
 
-	os.Exit(m.Run())
+	return svc, db, err
+}
+
+func TestMain(m *testing.M) {
+
+	svc, db, err := setupDB()
+	if err != nil {
+		log.Fatalf("could not perform setup for test: %v", err)
+	}
+
+	rosettaSvc = svc
+
+	defer db.Close()
+
+	m.Run()
 }
 
 func TestGetBalance(t *testing.T) {
