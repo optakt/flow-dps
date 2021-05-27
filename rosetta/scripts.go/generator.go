@@ -38,27 +38,14 @@ func NewGenerator(params dps.Params) *Generator {
 }
 
 func (g *Generator) GetBalance(symbol string) ([]byte, error) {
-	token, ok := g.params.Tokens[symbol]
-	if !ok {
-		return nil, fmt.Errorf("invalid token symbol (%s)", symbol)
-	}
-	data := struct {
-		Params dps.Params
-		Token  dps.Token
-	}{
-		Params: g.params,
-		Token:  token,
-	}
-	buf := &bytes.Buffer{}
-	err := g.getBalance.Execute(buf, data)
-	if err != nil {
-		return nil, fmt.Errorf("could not execute template: %w", err)
-	}
-	script := buf.Bytes()
-	return script, nil
+	return g.compile(g.getBalance, symbol)
 }
 
 func (g *Generator) TransferTokens(symbol string) ([]byte, error) {
+	return g.compile(g.transferTokens, symbol)
+}
+
+func (g *Generator) compile(template *template.Template, symbol string) ([]byte, error) {
 	token, ok := g.params.Tokens[symbol]
 	if !ok {
 		return nil, fmt.Errorf("invalid token symbol (%s)", symbol)
@@ -71,7 +58,7 @@ func (g *Generator) TransferTokens(symbol string) ([]byte, error) {
 		Token:  token,
 	}
 	buf := &bytes.Buffer{}
-	err := g.transferTokens.Execute(buf, data)
+	err := template.Execute(buf, data)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute template: %w", err)
 	}
