@@ -39,7 +39,7 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
-	"github.com/optakt/flow-dps/rosetta/scripts.go"
+	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
 
 	"github.com/optakt/flow-dps/service/chain"
