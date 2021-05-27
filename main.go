@@ -27,7 +27,6 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/optakt/flow-dps/models/dps"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	gsvr "google.golang.org/grpc"
@@ -44,6 +43,8 @@ import (
 	"github.com/optakt/flow-dps/service/feeder"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/state"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 func main() {
@@ -99,7 +100,7 @@ func main() {
 		opts := dps.DefaultOptions(flagData).WithLogger(nil)
 		db, err := badger.Open(opts)
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not initialize chain db")
+			log.Fatal().Err(err).Msg("could not open blockchain database")
 		}
 		chain := chain.FromProtocolState(db)
 

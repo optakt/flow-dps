@@ -26,13 +26,14 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/optakt/flow-dps/models/dps"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 func main() {
@@ -71,7 +72,7 @@ func main() {
 	opts := dps.DefaultOptions(flagData).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open database")
+		log.Fatal().Err(err).Msg("could not open blockchain database")
 	}
 
 	// Initialize the codec we use for the data.
