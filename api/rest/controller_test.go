@@ -26,22 +26,26 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
+
 	"github.com/stretchr/testify/assert"
+	tmock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/api/rest"
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/dps/mock"
 )
 
 func TestController_GetRegister(t *testing.T) {
+	var testKey = []byte{0x74, 0x65, 0x73, 0x74, 0x4b, 0x65, 0x79}
 	const (
-		keyHex     = "746573744b6579"
-		value      = "testValue"
-		valueHex   = "7465737456616c7565"
-		lastHeight = 835
+		keyHex            = "746573744b6579"
+		testValue         = "testValue"
+		valueHex          = "7465737456616c7565"
+		testHeight uint64 = 425
+		lastHeight uint64 = 835
 	)
 
 	tests := []struct {
@@ -50,8 +54,10 @@ func TestController_GetRegister(t *testing.T) {
 		heightParam string
 		lastHeight  uint64
 
-		stateGet func([]byte) ([]byte, error)
+		mockValue []byte
+		mockErr   error
 
+		wantHeight   uint64
 		wantStatus   int
 		wantResponse *rest.RegisterResponse
 		wantErr      assert.ErrorAssertionFunc
@@ -59,16 +65,15 @@ func TestController_GetRegister(t *testing.T) {
 		{
 			desc:        "nominal case with heightParam",
 			key:         keyHex,
-			heightParam: "425",
+			heightParam: fmt.Sprint(testHeight),
 			lastHeight:  lastHeight,
 
-			stateGet: func(bytes []byte) ([]byte, error) {
-				return []byte(value), nil
-			},
+			mockValue: []byte(testValue),
 
+			wantHeight: testHeight,
 			wantStatus: http.StatusOK,
 			wantResponse: &rest.RegisterResponse{
-				Height: 425,
+				Height: testHeight,
 				Key:    keyHex,
 				Value:  valueHex,
 			},
@@ -79,10 +84,9 @@ func TestController_GetRegister(t *testing.T) {
 			key:        keyHex,
 			lastHeight: lastHeight,
 
-			stateGet: func(bytes []byte) ([]byte, error) {
-				return []byte(value), nil
-			},
+			mockValue: []byte(testValue),
 
+			wantHeight: lastHeight,
 			wantStatus: http.StatusOK,
 			wantResponse: &rest.RegisterResponse{
 				Height: lastHeight,
@@ -95,6 +99,7 @@ func TestController_GetRegister(t *testing.T) {
 			desc: "invalid key in ctx parameters",
 			key:  "not-hexadecimal",
 
+			wantHeight: lastHeight,
 			wantStatus: http.StatusBadRequest,
 			wantErr:    assert.Error,
 		},
@@ -103,6 +108,7 @@ func TestController_GetRegister(t *testing.T) {
 			key:         keyHex,
 			heightParam: "not a number",
 
+			wantHeight: lastHeight,
 			wantStatus: http.StatusBadRequest,
 			wantErr:    assert.Error,
 		},
@@ -111,10 +117,9 @@ func TestController_GetRegister(t *testing.T) {
 			key:        keyHex,
 			lastHeight: lastHeight,
 
-			stateGet: func(bytes []byte) ([]byte, error) {
-				return nil, badger.ErrKeyNotFound
-			},
+			mockErr: badger.ErrKeyNotFound,
 
+			wantHeight: lastHeight,
 			wantStatus: http.StatusNotFound,
 			wantErr:    assert.Error,
 		},
@@ -123,10 +128,9 @@ func TestController_GetRegister(t *testing.T) {
 			key:        keyHex,
 			lastHeight: lastHeight,
 
-			stateGet: func(bytes []byte) ([]byte, error) {
-				return nil, errors.New("dummy error")
-			},
+			mockErr: errors.New("dummy error"),
 
+			wantHeight: lastHeight,
 			wantStatus: http.StatusInternalServerError,
 			wantErr:    assert.Error,
 		},
@@ -157,21 +161,13 @@ func TestController_GetRegister(t *testing.T) {
 			ctx.SetParamValues(test.key)
 
 			// Create mock for state.
-			stateMock := &stateMock{
-				withHeight: func(height uint64) dps.Raw {
-					return &stateMock{
-						get: test.stateGet,
-					}
-				},
-				last: lastMock{
-					height: func() uint64 {
-						return test.lastHeight
-					},
-				},
-			}
+			m := mock.NewState()
+			m.LastState.On("Height").Return(lastHeight).Once()
+			m.RawState.On("WithHeight", test.wantHeight).Return(m.RawState).Once()
+			m.RawState.On("Get", testKey).Return(test.mockValue, test.mockErr)
 
 			// Create controller and begin test.
-			c := rest.NewController(stateMock)
+			c := rest.NewController(m)
 
 			err = c.GetRegister(ctx)
 			test.wantErr(t, err)
@@ -203,12 +199,11 @@ func TestController_GetValue(t *testing.T) {
 	const (
 		validKeys         = "0.,1.,2.746573744b6579:0.,1.,2.746573744b657932"
 		invalidKeys       = "non-hexadecimal value"
-		lastCommitHex     = "0102030405060708090a0102030405060708090a0102030405060708090a0102"
 		customCommitParam = "3732396638393566663833126661376434313137623730333731346338623337"
 		value             = "testValue"
 		valueHex          = "7465737456616c7565"
 	)
-
+	var testValues = []ledger.Value{ledger.Value(value)}
 	var lastCommit = flow.StateCommitment{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2}
 
 	tests := []struct {
@@ -218,7 +213,8 @@ func TestController_GetValue(t *testing.T) {
 		versionParam string
 		commitParam  string
 
-		stateGet func(*ledger.Query) ([]ledger.Value, error)
+		mockValues []ledger.Value
+		mockErr    error
 
 		wantStatus   int
 		wantResponse []string
@@ -230,12 +226,7 @@ func TestController_GetValue(t *testing.T) {
 			versionParam: "47",
 			commitParam:  customCommitParam,
 
-			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
-				assert.Equal(t, customCommitParam, query.State().String())
-				return []ledger.Value{
-					ledger.Value(value),
-				}, nil
-			},
+			mockValues: testValues,
 
 			wantStatus: http.StatusOK,
 			wantResponse: []string{
@@ -248,12 +239,7 @@ func TestController_GetValue(t *testing.T) {
 			keys:         validKeys,
 			versionParam: "47",
 
-			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
-				assert.Equal(t, lastCommitHex, query.State().String())
-				return []ledger.Value{
-					ledger.Value(value),
-				}, nil
-			},
+			mockValues: testValues,
 
 			wantStatus: http.StatusOK,
 			wantResponse: []string{
@@ -288,9 +274,7 @@ func TestController_GetValue(t *testing.T) {
 			desc: "key/commit not found",
 			keys: validKeys,
 
-			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
-				return nil, badger.ErrKeyNotFound
-			},
+			mockErr: badger.ErrKeyNotFound,
 
 			wantStatus: http.StatusNotFound,
 			wantErr:    assert.Error,
@@ -299,9 +283,7 @@ func TestController_GetValue(t *testing.T) {
 			desc: "internal state error",
 			keys: validKeys,
 
-			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
-				return nil, errors.New("dummy error")
-			},
+			mockErr: errors.New("dummy error"),
 
 			wantStatus: http.StatusInternalServerError,
 			wantErr:    assert.Error,
@@ -336,25 +318,15 @@ func TestController_GetValue(t *testing.T) {
 			ctx.SetParamValues(test.keys)
 
 			// Create mock for state.
-			stateMock := &stateMock{
-				last: lastMock{
-					commit: func() flow.StateCommitment {
-						return flow.StateCommitment(lastCommit)
-					},
-				},
-				ledger: ledgerMock{
-					withVersion: func(version uint8) dps.Ledger {
-						assert.Equal(t, test.versionParam, fmt.Sprint(version))
-						return &ledgerMock{
-							get: test.stateGet,
-						}
-					},
-					get: test.stateGet,
-				},
+			m := mock.NewState()
+			m.LastState.On("Commit").Return(lastCommit).Once()
+			m.LedgerState.On("Get", tmock.Anything).Return(test.mockValues, test.mockErr).Once()
+			if test.versionParam != "" {
+				m.LedgerState.On("WithVersion", tmock.Anything).Return(m.LedgerState).Once()
 			}
 
 			// Create controller and begin test.
-			c := rest.NewController(stateMock)
+			c := rest.NewController(m)
 
 			err = c.GetValue(ctx)
 			test.wantErr(t, err)
@@ -380,73 +352,4 @@ func TestController_GetValue(t *testing.T) {
 			}
 		})
 	}
-}
-
-type stateMock struct {
-	last       lastMock
-	ledger     ledgerMock
-	get        func([]byte) ([]byte, error)
-	withHeight func(uint64) dps.Raw
-}
-
-func (s stateMock) Get(key []byte) ([]byte, error) {
-	return s.get(key)
-}
-
-func (s stateMock) Last() dps.Last {
-	return s.last
-}
-
-func (s stateMock) Index() dps.Index {
-	panic("implement me")
-}
-
-func (s stateMock) Data() dps.Data {
-	panic("implement me")
-}
-
-func (s stateMock) Height() dps.Height {
-	panic("implement me")
-}
-
-func (s stateMock) Commit() dps.Commit {
-	panic("implement me")
-}
-
-func (s stateMock) Raw() dps.Raw {
-	return s
-}
-
-func (s stateMock) WithHeight(height uint64) dps.Raw {
-	return s.withHeight(height)
-}
-
-func (s stateMock) Ledger() dps.Ledger {
-	return s.ledger
-}
-
-type lastMock struct {
-	height func() uint64
-	commit func() flow.StateCommitment
-}
-
-func (l lastMock) Height() uint64 {
-	return l.height()
-}
-
-func (l lastMock) Commit() flow.StateCommitment {
-	return l.commit()
-}
-
-type ledgerMock struct {
-	get         func(*ledger.Query) ([]ledger.Value, error)
-	withVersion func(uint8) dps.Ledger
-}
-
-func (l ledgerMock) WithVersion(version uint8) dps.Ledger {
-	return l.withVersion(version)
-}
-
-func (l ledgerMock) Get(query *ledger.Query) ([]ledger.Value, error) {
-	return l.get(query)
 }
