@@ -9,8 +9,8 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/klauspost/compress v1.12.2
 	github.com/labstack/echo/v4 v4.3.0
-	github.com/onflow/cadence v0.16.0
-	github.com/onflow/flow-go v0.17.3
+	github.com/onflow/cadence v0.16.1
+	github.com/onflow/flow-go v0.17.4
 	github.com/prometheus/client_golang v1.10.0 // indirect
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rs/zerolog v1.22.0
