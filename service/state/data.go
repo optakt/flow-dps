@@ -22,26 +22,26 @@ import (
 	"github.com/optakt/flow-dps/service/storage"
 )
 
-type Chain struct {
+type Data struct {
 	core *Core
 }
 
-func (c *Chain) Header(height uint64) (*flow.Header, error) {
+func (d *Data) Header(height uint64) (*flow.Header, error) {
 	var header flow.Header
-	err := c.core.db.View(storage.RetrieveHeader(height, &header))
+	err := d.core.db.View(storage.RetrieveHeader(height, &header))
 	return &header, err
 }
 
-func (c *Chain) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+func (d *Data) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 	// Make sure that the request is for a height below the currently active
 	// sentinel height; otherwise, we haven't indexed yet and we might return
 	// false information.
-	if height > c.core.height {
-		return nil, fmt.Errorf("unknown height (current: %d, requested: %d)", c.core.height, height)
+	if height > d.core.height {
+		return nil, fmt.Errorf("unknown height (current: %d, requested: %d)", d.core.height, height)
 	}
 
 	// Iterate over all keys within the events index which are prefixed with the right block height.
 	var events []flow.Event
-	err := c.core.db.View(storage.RetrieveEvents(height, types, &events))
+	err := d.core.db.View(storage.RetrieveEvents(height, types, &events))
 	return events, err
 }

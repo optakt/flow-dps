@@ -18,20 +18,27 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-var Networks map[flow.ChainID]Network
+const (
+	FlowBlockchain = "flow"
+	FlowDecimals   = 8
+)
 
-type Network struct {
+var FlowParams map[flow.ChainID]Params
+
+type Params struct {
+	ChainID          flow.ChainID
 	FungibleToken    flow.Address
 	FlowFees         flow.Address
 	StakingTable     flow.Address
 	LockedTokens     flow.Address
 	StakingProxy     flow.Address
 	NonFungibleToken flow.Address
-	Tokens           map[flow.Address]Token
+	Tokens           map[string]Token
 }
 
 type Token struct {
 	Symbol   string
+	Address  flow.Address
 	Vault    string
 	Receiver string
 }
@@ -42,37 +49,42 @@ func init() {
 	// https://github.com/onflow/flow-core-contracts/blob/master/contracts/FlowToken.cdc
 	flowToken := Token{
 		Symbol:   "FLOW",
+		Address:  flow.EmptyAddress,
 		Vault:    "/storage/flowTokenVault",
 		Receiver: "/public/flowTokenReceiver",
 	}
 
 	// Hard-code test network parameters from:
 	// https://docs.onflow.org/core-contracts
-	testnet := Network{
+	flowToken.Address = flow.HexToAddress("7e60df042a9c0868")
+	testnet := Params{
+		ChainID:          flow.Testnet,
 		FungibleToken:    flow.HexToAddress("9a0766d93b6608b7"),
 		FlowFees:         flow.HexToAddress("912d5440f7e3769e"),
 		StakingTable:     flow.HexToAddress("9eca2b38b18b5dfe"),
 		LockedTokens:     flow.HexToAddress("95e019a17d0e23d7"),
 		StakingProxy:     flow.HexToAddress("7aad92e5a0715d21"),
 		NonFungibleToken: flow.HexToAddress("631e88ae7f1d7c20"),
-		Tokens: map[flow.Address]Token{
-			flow.HexToAddress("7e60df042a9c0868"): flowToken,
+		Tokens: map[string]Token{
+			flowToken.Symbol: flowToken,
 		},
 	}
-	Networks[flow.Testnet] = testnet
+	FlowParams[testnet.ChainID] = testnet
 
 	// Hard-code main network parameters from:
 	// https://docs.onflow.org/core-contracts
-	mainnet := Network{
+	flowToken.Address = flow.HexToAddress("1654653399040a61")
+	mainnet := Params{
+		ChainID:          flow.Mainnet,
 		FungibleToken:    flow.HexToAddress("f233dcee88fe0abe"),
 		FlowFees:         flow.HexToAddress("f919ee77447b7497"),
 		StakingTable:     flow.HexToAddress("8624b52f9ddcd04a"),
 		LockedTokens:     flow.HexToAddress("8d0e87b65159ae63"),
 		StakingProxy:     flow.HexToAddress("62430cf28c26d095"),
 		NonFungibleToken: flow.HexToAddress("1d7e57aa55817448"),
-		Tokens: map[flow.Address]Token{
-			flow.HexToAddress("1654653399040a61"): flowToken,
+		Tokens: map[string]Token{
+			flowToken.Symbol: flowToken,
 		},
 	}
-	Networks[flow.Mainnet] = mainnet
+	FlowParams[mainnet.ChainID] = mainnet
 }

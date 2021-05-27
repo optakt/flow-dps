@@ -97,8 +97,8 @@ func (c *Core) Index() dps.Index {
 	return &Index{core: c}
 }
 
-func (c *Core) Chain() dps.Chain {
-	return &Chain{core: c}
+func (c *Core) Data() dps.Data {
+	return &Data{core: c}
 }
 
 func (c *Core) Last() dps.Last {

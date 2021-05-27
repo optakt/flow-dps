@@ -21,7 +21,7 @@ import (
 
 type State interface {
 	Index() Index
-	Chain() Chain
+	Data() Data
 	Last() Last
 	Height() Height
 	Commit() Commit
@@ -37,7 +37,7 @@ type Index interface {
 	Last(commit flow.StateCommitment) error
 }
 
-type Chain interface {
+type Data interface {
 	Header(height uint64) (*flow.Header, error)
 	Events(height uint64, types ...flow.EventType) ([]flow.Event, error)
 }
