@@ -460,7 +460,10 @@ Outer:
 					end = len(paths)
 				}
 				batch := paths[start:end]
-				payloads := step.Tree.UnsafeRead(batch)
+				payloads, err := step.Tree.UnsafeRead(batch)
+				if err != nil {
+					return fmt.Errorf("could not read payloads: %w", err)
+				}
 				err = m.index.Payloads(height, batch, payloads)
 				if err != nil {
 					return fmt.Errorf("could not index payloads: %w", err)

@@ -94,12 +94,9 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	// cadence parameters
 	proc := fvm.Script(script).WithArguments(args...)
 
-	// finally, we initialize an empty programs cache
-	programs := fvm.NewEmptyPrograms()
-
 	// the script procedure is then run using the Flow virtual machine and all
 	// of the constructed contextual parameters
-	err = i.vm.Run(ctx, proc, view, programs)
+	err = i.vm.Run(ctx, proc, view)
 	if err != nil {
 		return nil, fmt.Errorf("could not run script: %w", err)
 	}
