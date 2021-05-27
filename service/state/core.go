@@ -63,6 +63,9 @@ func NewCore(dir string) (*Core, error) {
 
 	var commit flow.StateCommitment
 	err = db.View(storage.RetrieveLastCommit(&commit))
+	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
+	}
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		tree := trie.NewEmptyMTrie()
 		commit = flow.StateCommitment(tree.RootHash())
@@ -73,9 +76,6 @@ func NewCore(dir string) (*Core, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not bootstrap last commit & height: %w", err)
 		}
-	}
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve last commit: %w", err)
 	}
 
 	var height uint64
