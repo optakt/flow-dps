@@ -23,7 +23,7 @@ const (
 	FlowDecimals   = 8
 )
 
-var FlowParams map[flow.ChainID]Params
+var FlowParams = make(map[flow.ChainID]Params)
 
 type Params struct {
 	ChainID          flow.ChainID
@@ -39,8 +39,10 @@ type Params struct {
 type Token struct {
 	Symbol   string
 	Address  flow.Address
+	Type     string
 	Vault    string
 	Receiver string
+	Balance  string
 }
 
 func init() {
@@ -50,8 +52,10 @@ func init() {
 	flowToken := Token{
 		Symbol:   "FLOW",
 		Address:  flow.EmptyAddress,
+		Type:     "FlowToken",
 		Vault:    "/storage/flowTokenVault",
 		Receiver: "/public/flowTokenReceiver",
+		Balance:  "/public/flowTokenBalance",
 	}
 
 	// Hard-code test network parameters from:

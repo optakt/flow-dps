@@ -39,6 +39,7 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
+	"github.com/optakt/flow-dps/rosetta/scripts.go"
 	"github.com/optakt/flow-dps/rosetta/validator"
 
 	"github.com/optakt/flow-dps/service/chain"
@@ -142,9 +143,10 @@ func main() {
 	gsvr := gsvr.NewServer()
 
 	// Rosetta API initialization.
+	generator := scripts.NewGenerator(params)
 	invoke := invoker.New(log, core)
 	validate := validator.New(params, core.Height())
-	retrieve := retriever.New(invoke)
+	retrieve := retriever.New(generator, invoke)
 	actrl := rosetta.NewData(validate, retrieve)
 
 	asvr := echo.New()
