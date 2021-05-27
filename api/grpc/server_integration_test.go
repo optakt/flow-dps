@@ -90,10 +90,12 @@ func TestNewServer(t *testing.T) {
 
 func TestServer_GetRegister(t *testing.T) {
 	ctx := context.Background()
+
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
 	require.NoError(t, err)
 
 	defer conn.Close()
+
 	client := api.NewAPIClient(conn)
 
 	got, err := client.GetRegister(ctx, &api.GetRegisterRequest{
@@ -114,10 +116,12 @@ func TestServer_GetRegister(t *testing.T) {
 
 func TestServer_GetValues(t *testing.T) {
 	ctx := context.Background()
+
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
 	require.NoError(t, err)
 
 	defer conn.Close()
+
 	client := api.NewAPIClient(conn)
 
 	got, err := client.GetValues(ctx, &api.GetValuesRequest{})

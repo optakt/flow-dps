@@ -51,8 +51,9 @@ func TestController_GetRegister(t *testing.T) {
 		mockValue []byte
 		mockErr   error
 
-		wantResp *GetRegisterResponse
-		wantErr  assert.ErrorAssertionFunc
+		wantHeight uint64
+		wantResp   *GetRegisterResponse
+		wantErr    assert.ErrorAssertionFunc
 	}{
 		{
 			desc: "nominal case, height given",
@@ -62,6 +63,7 @@ func TestController_GetRegister(t *testing.T) {
 
 			mockValue: testValue,
 
+			wantHeight: testHeight,
 			wantResp: &GetRegisterResponse{
 				Height: testHeight,
 				Key:    testKey,
@@ -76,6 +78,7 @@ func TestController_GetRegister(t *testing.T) {
 
 			mockValue: testValue,
 
+			wantHeight: lastHeight,
 			wantResp: &GetRegisterResponse{
 				Height: lastHeight,
 				Key:    testKey,
@@ -90,8 +93,9 @@ func TestController_GetRegister(t *testing.T) {
 
 			mockErr: errors.New("dummy error"),
 
-			wantResp: nil,
-			wantErr:  assert.Error,
+			wantHeight: lastHeight,
+			wantResp:   nil,
+			wantErr:    assert.Error,
 		},
 	}
 
@@ -101,14 +105,8 @@ func TestController_GetRegister(t *testing.T) {
 			t.Parallel()
 
 			m := mock.NewState()
-
-			if test.reqHeight != nil {
-				m.RawState.On("WithHeight", *test.reqHeight).Return(m.RawState).Once()
-			} else {
-				m.RawState.On("WithHeight", lastHeight).Return(m.RawState).Once()
-			}
-
 			m.LastState.On("Height").Return(lastHeight).Once()
+			m.RawState.On("WithHeight", test.wantHeight).Return(m.RawState).Once()
 			m.RawState.On("Get", test.reqKey).Return(test.mockValue, test.mockErr)
 
 			c := &Controller{
@@ -133,7 +131,6 @@ func TestController_GetRegister(t *testing.T) {
 }
 
 func TestController_GetValues(t *testing.T) {
-	var testVersion uint64 = 42
 	var (
 		testKeys = []*Key{
 			{
@@ -153,12 +150,11 @@ func TestController_GetValues(t *testing.T) {
 				},
 			},
 		}
-		testValue  = []byte(`testValue`)
-		testValues = []ledger.Value{ledger.Value(testValue)}
-		testCommit = flow.StateCommitment{32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
-		// testCommitHex = hex.EncodeToString(testCommit[:])
-		lastCommit = flow.StateCommitment{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2}
-		// lastCommitHex = hex.EncodeToString(lastCommit[:])
+		testVersion uint64 = 42
+		testValue          = []byte(`testValue`)
+		testValues         = []ledger.Value{ledger.Value(testValue)}
+		testCommit         = flow.StateCommitment{32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+		lastCommit         = flow.StateCommitment{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2}
 	)
 
 	tests := []struct {
@@ -240,7 +236,6 @@ func TestController_GetValues(t *testing.T) {
 			m := mock.NewState()
 			m.LastState.On("Commit").Return(lastCommit).Once()
 			m.LedgerState.On("Get", tmock.Anything).Return(test.mockValues, test.mockErr).Once()
-
 			if test.reqVersion != nil {
 				m.LedgerState.On("WithVersion", uint8(*test.reqVersion)).Return(m.LedgerState).Once()
 			}
