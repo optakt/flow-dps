@@ -32,6 +32,8 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 func main() {
@@ -65,10 +67,10 @@ func main() {
 	log = log.Level(level)
 
 	// Initialize the protocol state database we will use.
-	opts := badger.DefaultOptions(flagData).WithLogger(nil)
+	opts := dps.DefaultOptions(flagData).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open database")
+		log.Fatal().Err(err).Msg("could not open blockchain database")
 	}
 
 	// Initialize the codec we use for the data.

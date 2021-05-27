@@ -19,8 +19,6 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/dgraph-io/badger/v2/options"
-
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
@@ -32,32 +30,12 @@ type ProtocolState struct {
 	db *badger.DB
 }
 
-func FromProtocolState(dir string) (*ProtocolState, error) {
-
-	opts := badger.DefaultOptions(dir).
-		WithMaxTableSize(256 << 20).
-		WithValueLogFileSize(64 << 20).
-		WithTableLoadingMode(options.FileIO).
-		WithValueLogLoadingMode(options.FileIO).
-		WithNumMemtables(1).
-		WithKeepL0InMemory(false).
-		WithCompactL0OnClose(false).
-		WithNumLevelZeroTables(1).
-		WithNumLevelZeroTablesStall(2).
-		WithLoadBloomsOnOpen(false).
-		WithIndexCacheSize(2000 << 20).
-		WithBlockCacheSize(0).
-		WithLogger(nil)
-	db, err := badger.Open(opts)
-	if err != nil {
-		return nil, fmt.Errorf("could not open badger database: %w", err)
-	}
-
+func FromProtocolState(db *badger.DB) *ProtocolState {
 	ps := ProtocolState{
 		db: db,
 	}
 
-	return &ps, nil
+	return &ps
 }
 
 func (ps *ProtocolState) Root() (uint64, error) {
