@@ -131,13 +131,9 @@ func (m *Mapper) Run() error {
 		tree = empty
 	} else {
 		m.log.Info().Msg("checkpoint rebuild starting")
-		file, err := os.Open(m.checkpoint)
+		checkpoint, err := wal.LoadCheckpoint(m.checkpoint)
 		if err != nil {
-			return fmt.Errorf("could not open checkpoint file: %w", err)
-		}
-		checkpoint, err := wal.ReadCheckpoint(file)
-		if err != nil {
-			return fmt.Errorf("could not read checkpoint: %w", err)
+			return fmt.Errorf("could not load checkpoint: %w", err)
 		}
 		trees, err := flattener.RebuildTries(checkpoint)
 		if err != nil {
