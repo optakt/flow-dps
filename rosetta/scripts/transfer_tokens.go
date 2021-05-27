@@ -25,7 +25,7 @@ const transferTokens = `// This transaction is a template for a transaction that
 // would be the parameters to the transaction
 
 import FungibleToken from 0x{{.Params.FungibleToken}}
-import FlowToken from 0x{{.Token.Address}}
+import {{.Token.Type}} from 0x{{.Token.Address}}
 
 transaction(amount: UFix64, to: Address) {
 

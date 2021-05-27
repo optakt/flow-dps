@@ -20,7 +20,7 @@ package scripts
 const getBalance = `// This script reads the balance field of an account's FlowToken Balance
 
 import FungibleToken from 0x{{.Params.FungibleToken}}
-import FlowToken from 0x{{.Token.Address}}
+import {{.Token.Type}} from 0x{{.Token.Address}}
 
 pub fun main(account: Address): UFix64 {
 
