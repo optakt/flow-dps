@@ -31,12 +31,15 @@ import (
 	"github.com/spf13/pflag"
 	gsvr "google.golang.org/grpc"
 
+	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/api/grpc"
 	"github.com/optakt/flow-dps/api/rest"
 	"github.com/optakt/flow-dps/api/rosetta"
 
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
+	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
 
 	"github.com/optakt/flow-dps/service/chain"
@@ -63,7 +66,7 @@ func main() {
 		flagHostREST    string
 		flagHostGRPC    string
 		flagHostRosetta string
-		flagFlowToken   string
+		flagChainID     string
 	)
 
 	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log output level")
@@ -74,7 +77,7 @@ func main() {
 	pflag.StringVarP(&flagHostREST, "rest-host", "r", ":8080", "host URL for REST API endpoints")
 	pflag.StringVarP(&flagHostGRPC, "grpc-host", "g", ":5005", "host URL for GRPC API endpoints")
 	pflag.StringVarP(&flagHostRosetta, "rosetta-host", "a", ":8090", "host UR for Rosetta endpoints")
-	pflag.StringVarP(&flagFlowToken, "flow-token", "f", "0x7e60df042a9c0868", "address of the Flow token contract")
+	pflag.StringVarP(&flagChainID, "chain-id", "f", "flow-testnet", "specify chain ID for Flow network")
 
 	pflag.Parse()
 
@@ -86,6 +89,12 @@ func main() {
 		log.Fatal().Err(err)
 	}
 	log = log.Level(level)
+
+	// Check if the configured chain ID is valid.
+	params, ok := dps.FlowParams[flow.ChainID(flagChainID)]
+	if !ok {
+		log.Fatal().Str("chain", flagChainID).Msg("invalid chain ID for params")
+	}
 
 	// Initialize the index core state.
 	core, err := state.NewCore(flagIndex)
@@ -134,9 +143,10 @@ func main() {
 	gsvr := gsvr.NewServer()
 
 	// Rosetta API initialization.
+	generator := scripts.NewGenerator(params)
 	invoke := invoker.New(log, core)
-	validate := validator.New(core.Height())
-	retrieve := retriever.New(invoke)
+	validate := validator.New(params, core.Height())
+	retrieve := retriever.New(generator, invoke)
 	actrl := rosetta.NewData(validate, retrieve)
 
 	asvr := echo.New()

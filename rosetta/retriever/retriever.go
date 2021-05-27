@@ -26,13 +26,15 @@ import (
 )
 
 type Retriever struct {
-	invoke Invoker
+	generator Generator
+	invoke    Invoker
 }
 
-func New(invoke Invoker) *Retriever {
+func New(generator Generator, invoke Invoker) *Retriever {
 
 	r := Retriever{
-		invoke: invoke,
+		generator: generator,
+		invoke:    invoke,
 	}
 
 	return &r
@@ -44,7 +46,11 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 	amounts := make([]rosetta.Amount, 0, len(currencies))
 	address := cadence.NewAddress(flow.HexToAddress(account.Address))
 	for _, currency := range currencies {
-		value, err := r.invoke.Script(block.Index, []byte(getBalance), []cadence.Value{address})
+		getBalance, err := r.generator.GetBalance(currency.Symbol)
+		if err != nil {
+			return nil, fmt.Errorf("could not generate script: %w", err)
+		}
+		value, err := r.invoke.Script(block.Index, getBalance, []cadence.Value{address})
 		if err != nil {
 			return nil, fmt.Errorf("could not invoke script: %w", err)
 		}

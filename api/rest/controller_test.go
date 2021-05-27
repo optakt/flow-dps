@@ -140,7 +140,7 @@ func TestController_GetRegister(t *testing.T) {
 			// Forge echo context and insert parameters.
 			e := echo.New()
 
-			u, err := url.Parse(fmt.Sprintf("https://1.2.3.4/values/:keys"))
+			u, err := url.Parse("https://1.2.3.4/values/:keys")
 			require.NoError(t, err)
 
 			q := u.Query()
@@ -316,7 +316,7 @@ func TestController_GetValue(t *testing.T) {
 			// Forge echo context and insert parameters.
 			e := echo.New()
 
-			u, err := url.Parse(fmt.Sprintf("https://1.2.3.4/values/:keys"))
+			u, err := url.Parse("https://1.2.3.4/values/:keys")
 			require.NoError(t, err)
 
 			q := u.Query()
@@ -401,7 +401,7 @@ func (s stateMock) Index() dps.Index {
 	panic("implement me")
 }
 
-func (s stateMock) Chain() dps.Chain {
+func (s stateMock) Data() dps.Data {
 	panic("implement me")
 }
 

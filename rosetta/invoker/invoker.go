@@ -65,7 +65,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	// look up the current block and commit for the block
-	header, err := i.state.Chain().Header(height)
+	header, err := i.state.Data().Header(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve header for height: %w", err)
 	}
