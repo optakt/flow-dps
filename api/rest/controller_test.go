@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -111,7 +112,7 @@ func TestController_GetRegister(t *testing.T) {
 			lastHeight: lastHeight,
 
 			stateGet: func(bytes []byte) ([]byte, error) {
-				return nil, dps.ErrNotFound
+				return nil, badger.ErrKeyNotFound
 			},
 
 			wantStatus: http.StatusNotFound,
@@ -288,7 +289,7 @@ func TestController_GetValue(t *testing.T) {
 			keys: validKeys,
 
 			stateGet: func(query *ledger.Query) ([]ledger.Value, error) {
-				return nil, dps.ErrNotFound
+				return nil, badger.ErrKeyNotFound
 			},
 
 			wantStatus: http.StatusNotFound,
