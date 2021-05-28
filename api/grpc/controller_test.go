@@ -20,17 +20,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	tmock "github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/dps/mock"
+	"github.com/optakt/flow-dps/models/dps/mocks"
 )
 
 func TestNewController(t *testing.T) {
-	c := NewController(nil)
+	m := mocks.NewState()
+
+	c := NewController(m)
 	assert.NotNil(t, c)
+	assert.Equal(t, m, c.state)
 }
 
 func TestController_GetRegister(t *testing.T) {
@@ -104,7 +108,7 @@ func TestController_GetRegister(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			m := mock.NewState()
+			m := mocks.NewState()
 			m.LastState.On("Height").Return(lastHeight).Once()
 			m.RawState.On("WithHeight", test.wantHeight).Return(m.RawState).Once()
 			m.RawState.On("Get", test.reqKey).Return(test.mockValue, test.mockErr)
@@ -132,30 +136,32 @@ func TestController_GetRegister(t *testing.T) {
 
 func TestController_GetValues(t *testing.T) {
 	var (
-		testKeys = []*Key{
-			{
-				Parts: []*KeyPart{
-					{
-						Type:  0,
-						Value: []byte(`testOwner`),
-					},
-					{
-						Type:  1,
-						Value: []byte(`testController`),
-					},
-					{
-						Type:  2,
-						Value: []byte(`testKey`),
-					},
+		testKey = &Key{
+			Parts: []*KeyPart{
+				{
+					Type:  0,
+					Value: []byte(`testOwner`),
+				},
+				{
+					Type:  1,
+					Value: []byte(`testController`),
+				},
+				{
+					Type:  2,
+					Value: []byte(`testKey`),
 				},
 			},
 		}
-		testVersion uint64 = 42
-		testValue          = []byte(`testValue`)
-		testValues         = []ledger.Value{ledger.Value(testValue)}
-		testCommit         = flow.StateCommitment{32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
-		lastCommit         = flow.StateCommitment{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2}
+		testKeys    = []*Key{testKey}
+		testVersion = uint64(42)
+		testValue   = []byte(`testValue`)
+		testValues  = []ledger.Value{ledger.Value(testValue)}
 	)
+
+	testCommit, err := flow.ToStateCommitment([]byte("0d339afb6de1aa21b7afbcef3278c8ee"))
+	require.NoError(t, err)
+	lastCommit, err := flow.ToStateCommitment([]byte("25026807db966e6464d17d99b780b9f3"))
+	require.NoError(t, err)
 
 	tests := []struct {
 		desc string
@@ -210,6 +216,30 @@ func TestController_GetValues(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
+			desc: "nominal case, three keys given",
+
+			reqKeys: []*Key{testKey, testKey, testKey},
+
+			mockValues: testValues,
+
+			wantResp: &GetValuesResponse{
+				Values: [][]byte{testValue},
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			desc: "no keys given",
+
+			reqKeys: []*Key{},
+
+			mockValues: testValues,
+
+			wantResp: &GetValuesResponse{
+				Values: [][]byte{testValue},
+			},
+			wantErr: assert.NoError,
+		},
+		{
 			desc: "invalid commit hash in request",
 
 			reqKeys:   testKeys,
@@ -233,9 +263,9 @@ func TestController_GetValues(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			m := mock.NewState()
+			m := mocks.NewState()
 			m.LastState.On("Commit").Return(lastCommit).Once()
-			m.LedgerState.On("Get", tmock.Anything).Return(test.mockValues, test.mockErr).Once()
+			m.LedgerState.On("Get", mock.Anything).Return(test.mockValues, test.mockErr).Once()
 			if test.reqVersion != nil {
 				m.LedgerState.On("WithVersion", uint8(*test.reqVersion)).Return(m.LedgerState).Once()
 			}

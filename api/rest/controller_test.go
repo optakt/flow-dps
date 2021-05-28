@@ -28,14 +28,14 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/stretchr/testify/assert"
-	tmock "github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/api/rest"
-	"github.com/optakt/flow-dps/models/dps/mock"
+	"github.com/optakt/flow-dps/models/dps/mocks"
 )
 
 func TestController_GetRegister(t *testing.T) {
@@ -161,7 +161,7 @@ func TestController_GetRegister(t *testing.T) {
 			ctx.SetParamValues(test.key)
 
 			// Create mock for state.
-			m := mock.NewState()
+			m := mocks.NewState()
 			m.LastState.On("Height").Return(lastHeight).Once()
 			m.RawState.On("WithHeight", test.wantHeight).Return(m.RawState).Once()
 			m.RawState.On("Get", testKey).Return(test.mockValue, test.mockErr)
@@ -197,14 +197,15 @@ func TestController_GetRegister(t *testing.T) {
 
 func TestController_GetValue(t *testing.T) {
 	const (
-		validKeys         = "0.,1.,2.746573744b6579:0.,1.,2.746573744b657932"
+		validKeys         = "0.,1.,2.746573744b6579:0.,1.,2.746573744b657932:0.,1.,2.746573744b343947"
 		invalidKeys       = "non-hexadecimal value"
 		customCommitParam = "3732396638393566663833126661376434313137623730333731346338623337"
 		value             = "testValue"
 		valueHex          = "7465737456616c7565"
 	)
 	var testValues = []ledger.Value{ledger.Value(value)}
-	var lastCommit = flow.StateCommitment{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2}
+	lastCommit, err := flow.ToStateCommitment([]byte("0d339afb6de1aa21b7afbcef3278c8ee"))
+	require.NoError(t, err)
 
 	tests := []struct {
 		desc string
@@ -246,6 +247,13 @@ func TestController_GetValue(t *testing.T) {
 				valueHex,
 			},
 			wantErr: assert.NoError,
+		},
+		{
+			desc: "no keys",
+			keys: "",
+
+			wantStatus: http.StatusBadRequest,
+			wantErr:    assert.Error,
 		},
 		{
 			desc: "invalid keys",
@@ -318,11 +326,11 @@ func TestController_GetValue(t *testing.T) {
 			ctx.SetParamValues(test.keys)
 
 			// Create mock for state.
-			m := mock.NewState()
+			m := mocks.NewState()
 			m.LastState.On("Commit").Return(lastCommit).Once()
-			m.LedgerState.On("Get", tmock.Anything).Return(test.mockValues, test.mockErr).Once()
+			m.LedgerState.On("Get", mock.Anything).Return(test.mockValues, test.mockErr).Once()
 			if test.versionParam != "" {
-				m.LedgerState.On("WithVersion", tmock.Anything).Return(m.LedgerState).Once()
+				m.LedgerState.On("WithVersion", mock.Anything).Return(m.LedgerState).Once()
 			}
 
 			// Create controller and begin test.

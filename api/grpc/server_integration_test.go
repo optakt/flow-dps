@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	api "github.com/optakt/flow-dps/api/grpc"
-	"github.com/optakt/flow-dps/models/dps/mock"
+	"github.com/optakt/flow-dps/models/dps/mocks"
 )
 
 const bufSize = 1024 * 1024
@@ -43,13 +43,18 @@ var (
 	lastHeight uint64 = 256
 	testValue         = []byte(`testValue`)
 	testKey           = []byte(`testKey`)
-	lastCommit        = flow.StateCommitment{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2}
 
 	testValues = []ledger.Value{ledger.Value(`testValue`)}
 )
 
 func TestMain(m *testing.M) {
-	mock := mock.NewState()
+	lastCommit, err := flow.ToStateCommitment([]byte("0d339afb6de1aa21b7afbcef3278c8ee"))
+	if err != nil {
+		println("unable to parse state commitment")
+		os.Exit(1)
+	}
+
+	mock := mocks.NewState()
 
 	// GetRegister
 	mock.LastState.On("Height").Return(lastHeight)
