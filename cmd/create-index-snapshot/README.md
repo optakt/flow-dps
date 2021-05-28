@@ -14,9 +14,9 @@ Usage of ./create-index-snapshot:
   -l, --log-level string   log level for JSON logger (default "info")
 ```
 
-## Example program that restores a database
+## Example Program That Restores a Database
 
-Program below opens a read-only in-memory badger database and restores the state from the created backup. Error handling is omitted for brevity.
+The program below opens a read-only in-memory badger database and restores the state from the created backup. Error handling is omitted for brevity.
 
 ```go
 opts := badger.DefaultOptions("").WithInMemory(true).WithReadOnly(true).WithLogger(nil)
