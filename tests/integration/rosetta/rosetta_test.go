@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/klauspost/compress/zstd"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -65,7 +66,12 @@ func setupDB() (*rosetta.Data, *badger.DB, error) {
 		return nil, nil, err
 	}
 
-	dbSnapshot := hex.NewDecoder(strings.NewReader(getDBSnapshot()))
+	dbSnapshot, err := zstd.NewReader(hex.NewDecoder(strings.NewReader(getCompressedDBSnapshot())))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer dbSnapshot.Close()
 
 	err = db.Load(dbSnapshot, 10)
 	if err != nil {
