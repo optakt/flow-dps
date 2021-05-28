@@ -1,4 +1,4 @@
-// build +integration
+// +build integration
 
 // Copyright 2021 Alvalor S.A.
 //
