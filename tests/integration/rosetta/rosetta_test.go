@@ -65,7 +65,7 @@ func setupDB() (*rosetta.Data, *badger.DB, error) {
 		return nil, nil, err
 	}
 
-	dbSnapshot, err := zstd.NewReader(hex.NewDecoder(strings.NewReader(getCompressedDBSnapshot())))
+	dbSnapshot, err := zstd.NewReader(hex.NewDecoder(strings.NewReader(compressedDBSnapshot())))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -126,14 +126,14 @@ func TestGetBalance(t *testing.T) {
 	}{
 		{
 			name:           "valid balance request",
-			request:        getBalanceRequest("631e88ae7f1d7c20", 106, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
+			request:        balanceRequest("631e88ae7f1d7c20", 106, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
 			wantBalance:    "10000100004",
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
 		},
 		{
 			name:           "valid balance request 2",
-			request:        getBalanceRequest("754aed9de6197641", 106, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
+			request:        balanceRequest("754aed9de6197641", 106, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
 			wantBalance:    "10000099999",
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
@@ -146,13 +146,13 @@ func TestGetBalance(t *testing.T) {
 		},
 		{
 			name:           "block hash and height mismatch",
-			request:        getBalanceRequest("8c5303eaa26202d6", 1, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
+			request:        balanceRequest("8c5303eaa26202d6", 1, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
 			wantStatusCode: http.StatusUnprocessableEntity,
 			wantHandlerErr: assert.Error,
 		},
 		{
 			name:           "invalid account address",
-			request:        getBalanceRequest("invalid_address", 106, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
+			request:        balanceRequest("invalid_address", 106, "f085d04da7786eb02c16577d8741626c8906cbaece1486b9e3b289d8e2089ae7"),
 			wantStatusCode: http.StatusUnprocessableEntity,
 			wantHandlerErr: assert.Error,
 		},
@@ -181,8 +181,6 @@ func TestGetBalance(t *testing.T) {
 			err = rosettaSvc.Balance(ctx)
 			test.wantHandlerErr(t, err)
 
-			// validate response data
-
 			// validate status code
 			if test.wantStatusCode != http.StatusOK {
 
@@ -196,6 +194,8 @@ func TestGetBalance(t *testing.T) {
 			}
 
 			assert.Equal(t, test.wantStatusCode, rec.Result().StatusCode)
+
+			// validate response data
 
 			// unpack response
 			var balanceResponse rosetta.BalanceResponse
@@ -241,11 +241,11 @@ func TestGetBalanceBadRequest(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 }
 
-// getBalanceRequest will generate a BalanceRequest with the specified parameters.
-func getBalanceRequest(address string, blockIndex uint64, blockHash string) rosetta.BalanceRequest {
+// balanceRequest will generate a BalanceRequest with the specified parameters.
+func balanceRequest(address string, blockIndex uint64, blockHash string) rosetta.BalanceRequest {
 
 	return rosetta.BalanceRequest{
-		NetworkID: getDefaultNetworkID(),
+		NetworkID: defaultNetworkID(),
 		AccountID: identifier.Account{
 			Address: address,
 		},
@@ -253,21 +253,21 @@ func getBalanceRequest(address string, blockIndex uint64, blockHash string) rose
 			Index: blockIndex,
 			Hash:  blockHash,
 		},
-		Currencies: getDefaultCurrencySpec(),
+		Currencies: defaultCurrencySpec(),
 	}
 }
 
-// getDefaultNetworkID returns the Network identifier common for all requests.
-func getDefaultNetworkID() identifier.Network {
+// defaultNetworkID returns the Network identifier common for all requests.
+func defaultNetworkID() identifier.Network {
 	return identifier.Network{
 		Blockchain: "flow",
 		Network:    "flow-testnet",
 	}
 }
 
-// getDefaultCurrencySpec returns the Currency spec common for all requests.
+// defaultCurrencySpec returns the Currency spec common for all requests.
 // At the moment only get the FLOW tokens, perhaps in the future it will support multiple.
-func getDefaultCurrencySpec() []identifier.Currency {
+func defaultCurrencySpec() []identifier.Currency {
 	return []identifier.Currency{
 		{
 			Symbol:   "FLOW",
