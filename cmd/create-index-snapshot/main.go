@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/rs/zerolog"
-
 	"github.com/dgraph-io/badger/v2"
+	"github.com/klauspost/compress/zstd"
+	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 )
 
@@ -47,9 +47,23 @@ func main() {
 	defer db.Close()
 
 	var buf bytes.Buffer
-	_, err = db.Backup(&buf, 0)
+
+	compressor, err := zstd.NewWriter(&buf)
 	if err != nil {
+		log.Fatal().Err(err).Msg("could not initialize zstd compression")
+	}
+
+	_, err = db.Backup(compressor, 0)
+	if err != nil {
+		// clean up the encoder resources; OS would do it anyway but no harm in being explicit
+		compressor.Close()
+
 		log.Fatal().Err(err).Msg("could not backup badger db")
+	}
+
+	err = compressor.Close()
+	if err != nil {
+		log.Warn().Err(err).Msg("could not close compression writer")
 	}
 
 	fmt.Printf("%s", hex.EncodeToString(buf.Bytes()))
