@@ -16,8 +16,38 @@ package main
 
 import (
 	"os"
+	"os/signal"
+	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/spf13/pflag"
 )
 
 func main() {
+
+	// Signal catching for clean shutdown.
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+
+	// Command line parameter initialization.
+	var (
+		flagLevel string
+		flagHost  uint16
+	)
+
+	pflag.StringVarP(&flagLevel, "log", "l", "info", "log output level")
+	pflag.Uint16VarP(&flagHost, "host", "g", 5005, "port of GRPC API server")
+
+	pflag.Parse()
+
+	// Logger initialization.
+	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
+	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
+	level, err := zerolog.ParseLevel(flagLevel)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	log = log.Level(level)
+
 	os.Exit(0)
 }

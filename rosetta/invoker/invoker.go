@@ -22,29 +22,25 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 
-	"github.com/onflow/flow-go/engine/execution/state"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/programs"
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
-
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Invoker struct {
-	state dps.State
-	vm    *fvm.VirtualMachine
+	lookup LookupFunc
+	read   ReadFunc
+	vm     *fvm.VirtualMachine
 }
 
-func New(state dps.State) *Invoker {
+func New(lookup LookupFunc, read ReadFunc) *Invoker {
 
 	rt := fvm.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
 
 	i := Invoker{
-		state: state,
-		vm:    vm,
+		read: read,
+		vm:   vm,
 	}
 
 	return &i
@@ -63,13 +59,9 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	// look up the current block and commit for the block
-	header, err := i.state.Data().Header(height)
+	header, commit, err := i.lookup(height)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve header for height: %w", err)
-	}
-	commit, err := i.state.Commit().ForHeight(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not look up height for commit: %w", err)
+		return nil, fmt.Errorf("could not look up header and commit: %w", err)
 	}
 
 	// we initialize the virtual machine context with the given block header so
@@ -98,36 +90,4 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	return proc.Value, nil
-}
-
-func (i *Invoker) read(commit flow.StateCommitment) delta.GetRegisterFunc {
-
-	readCache := make(map[flow.RegisterID]flow.RegisterEntry)
-	return func(owner string, controller string, key string) (flow.RegisterValue, error) {
-
-		regID := flow.NewRegisterID(owner, controller, key)
-		value, ok := readCache[regID]
-		if ok {
-			return value.Value, nil
-		}
-
-		lkey := state.RegisterIDToKey(regID)
-		query, err := ledger.NewQuery(ledger.State(commit), []ledger.Key{lkey})
-		if err != nil {
-			return nil, fmt.Errorf("could not create ledger query: %w", err)
-		}
-
-		values, err := i.state.Ledger().Get(query)
-		if err != nil {
-			fmt.Println(err)
-			return nil, fmt.Errorf("could not get ledger register: %w", err)
-		}
-		if len(values) == 0 {
-			return nil, nil
-		}
-
-		readCache[regID] = flow.RegisterEntry{Key: regID, Value: values[0]}
-
-		return values[0], nil
-	}
 }

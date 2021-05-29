@@ -16,6 +16,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -41,14 +42,14 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLevel    string
-		flagIndex    string
-		flagHostGRPC string
+		flagLevel string
+		flagIndex string
+		flagPort  uint16
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log output level")
-	pflag.StringVarP(&flagIndex, "index-dir", "i", "index", "database directory for state index")
-	pflag.StringVarP(&flagHostGRPC, "grpc-host", "g", ":5005", "host URL for GRPC API endpoint")
+	pflag.StringVarP(&flagLevel, "log", "l", "info", "log output level")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
 
 	pflag.Parse()
 
@@ -80,9 +81,9 @@ func main() {
 	// interrupt signal in order to proceed with the next section.
 	go func() {
 		log.Info().Msg("starting GRPC API server")
-		lis, err := net.Listen("tcp", flagHostGRPC)
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", flagPort))
 		if err != nil {
-			log.Fatal().Err(err).Str("host", flagHostGRPC).Msg("could not listen")
+			log.Fatal().Err(err).Uint16("port", flagPort).Msg("could not listen")
 		}
 		grpc.RegisterAPIServer(gsvr, grpc.NewServer(gctrl))
 		err = gsvr.Serve(lis)

@@ -19,6 +19,8 @@ option go_package = "github.com/optakt/flow-dps/grpc";
 service API {
   rpc GetRegister (GetRegisterRequest) returns (GetRegisterResponse) {}
   rpc GetValues (GetValuesRequest) returns (GetValuesResponse) {}
+  rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
+  rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
 }
 
 message GetRegisterRequest {
@@ -49,4 +51,21 @@ message KeyPart {
 
 message GetValuesResponse {
   repeated bytes values = 1;
+}
+
+message GetHeaderRequest {
+  uint64 height = 1;
+}
+
+message GetHeaderResponse {
+  uint64 height = 1;
+}
+
+message GetCommitRequest {
+  uint64 height = 1;
+}
+
+message GetCommitResponse {
+  uint64 height = 1;
+  bytes commit = 2;
 }

@@ -48,11 +48,11 @@ func main() {
 		flagCheckpoint string
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log output level")
-	pflag.StringVarP(&flagData, "data-dir", "d", "", "database directory for protocol data")
-	pflag.StringVarP(&flagTrie, "trie-dir", "t", "", "data directory for state ledger")
-	pflag.StringVarP(&flagCheckpoint, "checkpoint-file", "c", "", "checkpoint file for state trie")
-	pflag.StringVarP(&flagIndex, "index-dir", "i", "index", "database directory for state index")
+	pflag.StringVarP(&flagLevel, "log", "l", "info", "log output level")
+	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
+	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 
 	pflag.Parse()
 
