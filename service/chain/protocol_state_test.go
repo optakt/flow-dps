@@ -39,11 +39,63 @@ var (
 	testSealID  = flow.Identifier{32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 )
 
-func inMemoryChain(t *testing.T) *chain.ProtocolState {
+func TestProtocolState_Root(t *testing.T) {
+	db := inMemoryDB(t)
+	defer db.Close()
+	c := chain.FromProtocolState(db)
+
+	root, err := c.Root()
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(testHeight), root)
+}
+
+func TestProtocolState_Header(t *testing.T) {
+	db := inMemoryDB(t)
+	defer db.Close()
+	c := chain.FromProtocolState(db)
+
+	header, err := c.Header(testHeight)
+	assert.NoError(t, err)
+
+	require.NotNil(t, header)
+	assert.Equal(t, testChainID, header.ChainID)
+
+	header, err = c.Header(math.MaxUint64)
+	assert.Error(t, err)
+}
+
+func TestProtocolState_Commit(t *testing.T) {
+	db := inMemoryDB(t)
+	defer db.Close()
+	c := chain.FromProtocolState(db)
+
+	commit, err := c.Commit(testHeight)
+	assert.NoError(t, err)
+	assert.Equal(t, testCommit, commit)
+
+	commit, err = c.Commit(math.MaxUint64)
+	assert.Error(t, err)
+}
+
+func TestProtocolState_Events(t *testing.T) {
+	db := inMemoryDB(t)
+	defer db.Close()
+	c := chain.FromProtocolState(db)
+
+	events, err := c.Events(testHeight)
+	assert.NoError(t, err)
+	assert.Len(t, events, 2)
+
+	_, err = c.Events(math.MaxUint64)
+	assert.Error(t, err)
+}
+
+func inMemoryDB(t *testing.T) *badger.DB {
 	t.Helper()
 
 	opts := badger.DefaultOptions("")
 	opts.InMemory = true
+	opts.Logger = nil
 
 	db, err := badger.Open(opts)
 	require.NoError(t, err)
@@ -102,49 +154,5 @@ func inMemoryChain(t *testing.T) *chain.ProtocolState {
 	})
 	require.NoError(t, err)
 
-	return chain.FromProtocolState(db)
-}
-
-func TestProtocolState_Root(t *testing.T) {
-	c := inMemoryChain(t)
-
-	root, err := c.Root()
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(testHeight), root)
-}
-
-func TestProtocolState_Header(t *testing.T) {
-	c := inMemoryChain(t)
-
-	header, err := c.Header(testHeight)
-	assert.NoError(t, err)
-
-	require.NotNil(t, header)
-	assert.Equal(t, testChainID, header.ChainID)
-
-	header, err = c.Header(math.MaxUint64)
-	assert.Error(t, err)
-}
-
-func TestProtocolState_Commit(t *testing.T) {
-	c := inMemoryChain(t)
-
-	commit, err := c.Commit(testHeight)
-	assert.NoError(t, err)
-	assert.Equal(t, testCommit, commit)
-
-	commit, err = c.Commit(math.MaxUint64)
-	assert.Error(t, err)
-}
-
-func TestProtocolState_Events(t *testing.T) {
-	c := inMemoryChain(t)
-
-	events, err := c.Events(testHeight)
-	assert.NoError(t, err)
-	// TODO: Get a state with events to be able to test this.
-	assert.Len(t, events, 2)
-
-	_, err = c.Events(math.MaxUint64)
-	assert.Error(t, err)
+	return db
 }
