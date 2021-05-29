@@ -33,18 +33,16 @@ import (
 )
 
 type Invoker struct {
-	log   zerolog.Logger
 	state dps.State
 	vm    *fvm.VirtualMachine
 }
 
-func New(log zerolog.Logger, state dps.State) *Invoker {
+func New(state dps.State) *Invoker {
 
 	rt := fvm.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
 
 	i := Invoker{
-		log:   log,
 		state: state,
 		vm:    vm,
 	}
@@ -76,7 +74,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 
 	// we initialize the virtual machine context with the given block header so
 	// that parameters related to the block are available from within the script
-	ctx := fvm.NewContext(i.log, fvm.WithBlockHeader(header))
+	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
 
 	// we initialize the view of the execution state on top of our ledger by
 	// using the read function at a specific commit

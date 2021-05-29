@@ -25,6 +25,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/prometheus/tsdb/wal"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
@@ -82,7 +83,11 @@ func main() {
 
 	chain := chain.FromProtocolState(db)
 
-	feeder, err := feeder.FromLedgerWAL(flagTrie)
+	segments, err := wal.NewSegmentsReader(flagTrie)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not open segments reader")
+	}
+	feeder, err := feeder.FromLedgerWAL(wal.NewReader(segments))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize feeder")
 	}

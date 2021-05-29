@@ -31,15 +31,10 @@ type LedgerWAL struct {
 
 // FromLedgerWAL creates a trie update feeder that sources state deltas
 // directly from an execution node's trie directory.
-func FromLedgerWAL(dir string) (*LedgerWAL, error) {
-
-	segments, err := pwal.NewSegmentsReader(dir)
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize segments reader: %w", err)
-	}
+func FromLedgerWAL(reader *pwal.Reader) (*LedgerWAL, error) {
 
 	l := LedgerWAL{
-		reader: pwal.NewReader(segments),
+		reader: reader,
 	}
 
 	return &l, nil

@@ -20,6 +20,9 @@ import (
 
 const (
 	FlowBlockchain = "flow"
+	FlowMainnet    = flow.Mainnet
+	FlowTestnet    = flow.Testnet
+	FlowSymbol     = "FLOW"
 	FlowDecimals   = 8
 )
 
@@ -50,7 +53,7 @@ func init() {
 	// Hard-code the Flow token storage paths from here:
 	// https://github.com/onflow/flow-core-contracts/blob/master/contracts/FlowToken.cdc
 	flowToken := Token{
-		Symbol:   "FLOW",
+		Symbol:   FlowSymbol,
 		Address:  flow.EmptyAddress,
 		Type:     "FlowToken",
 		Vault:    "/storage/flowTokenVault",
@@ -62,7 +65,7 @@ func init() {
 	// https://docs.onflow.org/core-contracts
 	flowToken.Address = flow.HexToAddress("7e60df042a9c0868")
 	testnet := Params{
-		ChainID:          flow.Testnet,
+		ChainID:          FlowTestnet,
 		FungibleToken:    flow.HexToAddress("9a0766d93b6608b7"),
 		FlowFees:         flow.HexToAddress("912d5440f7e3769e"),
 		StakingTable:     flow.HexToAddress("9eca2b38b18b5dfe"),
@@ -79,7 +82,7 @@ func init() {
 	// https://docs.onflow.org/core-contracts
 	flowToken.Address = flow.HexToAddress("1654653399040a61")
 	mainnet := Params{
-		ChainID:          flow.Mainnet,
+		ChainID:          FlowMainnet,
 		FungibleToken:    flow.HexToAddress("f233dcee88fe0abe"),
 		FlowFees:         flow.HexToAddress("f919ee77447b7497"),
 		StakingTable:     flow.HexToAddress("8624b52f9ddcd04a"),

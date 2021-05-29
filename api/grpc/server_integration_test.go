@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	api "github.com/optakt/flow-dps/api/grpc"
-	"github.com/optakt/flow-dps/models/dps/mocks"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 const bufSize = 1024 * 1024

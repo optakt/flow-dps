@@ -35,7 +35,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/api/rest"
-	"github.com/optakt/flow-dps/models/dps/mocks"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestController_GetRegister(t *testing.T) {
