@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/dps/mocks"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestNewController(t *testing.T) {

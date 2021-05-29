@@ -20,85 +20,65 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/flow-go/model/flow"
-
 	"github.com/optakt/flow-dps/api/rosetta"
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/identifier"
-	"github.com/optakt/flow-dps/service/state"
-
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
+	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
+	"github.com/optakt/flow-dps/service/state"
+	"github.com/optakt/flow-dps/testing/snapshots"
 )
 
-// initialize the rosetta Data HTTP handler once and reuse for all tests.
-var rosettaSvc *rosetta.Data
+func setupDB(t *testing.T) *badger.DB {
+	t.Helper()
 
-func setupDB() (*rosetta.Data, *badger.DB, error) {
-
-	const testDbBackupFile = "rosetta-get-balance-test.db"
 	opts := badger.DefaultOptions("").
 		WithInMemory(true).
-		WithReadOnly(true).
 		WithLogger(nil)
 
 	db, err := badger.Open(opts)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 
-	dbSnapshot := hex.NewDecoder(strings.NewReader(getDBSnapshot()))
+	reader := hex.NewDecoder(strings.NewReader(snapshots.Rosetta))
 
-	err = db.Load(dbSnapshot, 10)
-	if err != nil {
-		return nil, nil, err
-	}
+	err = db.Load(reader, runtime.GOMAXPROCS(0))
+	require.NoError(t, err)
 
-	core, err := state.NewCoreFromDB(db)
-	if err != nil {
-		return nil, nil, err
-
-	}
-
-	// setup scaffolding for minimal server we need for the tests
-	chain := flow.ChainID("flow-testnet").Chain()
-	validate := validator.New(chain, core.Height())
-	headers := invoker.NewHeaders(core.Chain())
-	invoke := invoker.New(zerolog.Nop(), core, chain, headers)
-	retrieve := retriever.New(invoke)
-
-	svc := rosetta.NewData(validate, retrieve)
-
-	return svc, db, err
+	return db
 }
 
-func TestMain(m *testing.M) {
+func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
+	t.Helper()
 
-	svc, db, err := setupDB()
-	if err != nil {
-		log.Fatalf("could not perform setup for test: %v", err)
-	}
+	core, err := state.NewCore(db)
+	require.NoError(t, err)
 
-	rosettaSvc = svc
+	params := dps.FlowParams[dps.FlowTestnet]
+	generator := scripts.NewGenerator(params)
+	invoke := invoker.New(core)
+	validate := validator.New(params, core.Height())
+	retrieve := retriever.New(generator, invoke)
+	controller := rosetta.NewData(validate, retrieve)
 
-	defer db.Close()
-
-	m.Run()
+	return controller
 }
-
 func TestGetBalance(t *testing.T) {
+
+	db := setupDB(t)
+	api := setupAPI(t, db)
 
 	tests := []struct {
 		name string
@@ -157,7 +137,7 @@ func TestGetBalance(t *testing.T) {
 			ctx := echo.New().NewContext(req, rec)
 
 			// execute the request
-			err = rosettaSvc.Balance(ctx)
+			err = api.Balance(ctx)
 			test.wantHandlerErr(t, err)
 
 			// validate response data
@@ -200,6 +180,9 @@ func TestGetBalance(t *testing.T) {
 // TestGetBalanceBadRequest tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
 func TestGetBalanceBadRequest(t *testing.T) {
 
+	db := setupDB(t)
+	api := setupAPI(t, db)
+
 	// JSON with an invalid structure (integer instead of string for network name)
 	payload := `{ "network_identifier": { "blockchain": "flow", "network": 99} }`
 
@@ -212,7 +195,7 @@ func TestGetBalanceBadRequest(t *testing.T) {
 	ctx := echo.New().NewContext(req, rec)
 
 	// execute the request
-	err := rosettaSvc.Balance(ctx)
+	err := api.Balance(ctx)
 	assert.Error(t, err)
 
 	e, ok := err.(*echo.HTTPError)
@@ -239,8 +222,8 @@ func getBalanceRequest(address string, blockIndex uint64, blockHash string) rose
 // getDefaultNetworkID returns the Network identifier common for all requests.
 func getDefaultNetworkID() identifier.Network {
 	return identifier.Network{
-		Blockchain: "flow",
-		Network:    "testnet",
+		Blockchain: dps.FlowBlockchain,
+		Network:    dps.FlowTestnet.String(),
 	}
 }
 
@@ -249,8 +232,8 @@ func getDefaultNetworkID() identifier.Network {
 func getDefaultCurrencySpec() []identifier.Currency {
 	return []identifier.Currency{
 		{
-			Symbol:   "FLOW",
-			Decimals: 8,
+			Symbol:   dps.FlowSymbol,
+			Decimals: dps.FlowDecimals,
 		},
 	}
 }

@@ -75,7 +75,7 @@ func main() {
 	pflag.StringVarP(&flagHostREST, "rest-host", "r", ":8080", "host URL for REST API endpoints")
 	pflag.StringVarP(&flagHostGRPC, "grpc-host", "g", ":5005", "host URL for GRPC API endpoints")
 	pflag.StringVarP(&flagHostRosetta, "rosetta-host", "a", ":8090", "host UR for Rosetta endpoints")
-	pflag.StringVarP(&flagChainID, "chain-id", "f", "flow-testnet", "specify chain ID for Flow network")
+	pflag.StringVarP(&flagChainID, "chain-id", "f", dps.FlowTestnet.String(), "specify chain ID for Flow network")
 
 	pflag.Parse()
 
@@ -146,7 +146,7 @@ func main() {
 
 	// Rosetta API initialization.
 	generator := scripts.NewGenerator(params)
-	invoke := invoker.New(log, core)
+	invoke := invoker.New(core)
 	validate := validator.New(params, core.Height())
 	retrieve := retriever.New(generator, invoke)
 	actrl := rosetta.NewData(validate, retrieve)

@@ -60,7 +60,7 @@ func TestProtocolState_Header(t *testing.T) {
 	require.NotNil(t, header)
 	assert.Equal(t, testChainID, header.ChainID)
 
-	header, err = c.Header(math.MaxUint64)
+	_, err = c.Header(math.MaxUint64)
 	assert.Error(t, err)
 }
 
@@ -73,7 +73,7 @@ func TestProtocolState_Commit(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, testCommit, commit)
 
-	commit, err = c.Commit(math.MaxUint64)
+	_, err = c.Commit(math.MaxUint64)
 	assert.Error(t, err)
 }
 
