@@ -27,10 +27,10 @@ import (
 
 type Validator struct {
 	params dps.Params
-	height dps.Height
+	height HeightFunc
 }
 
-func New(params dps.Params, height dps.Height) *Validator {
+func New(params dps.Params, height HeightFunc) *Validator {
 
 	v := &Validator{
 		params: params,
@@ -71,7 +71,7 @@ func (v *Validator) Block(block identifier.Block) error {
 		return fmt.Errorf("could not parse block identifier hash: %w", err)
 	}
 
-	height, err := v.height.ForBlock(blockID)
+	height, err := v.height(blockID)
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		return nil
 	}
