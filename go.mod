@@ -11,6 +11,7 @@ require (
 	github.com/labstack/echo/v4 v4.3.0
 	github.com/onflow/cadence v0.16.1
 	github.com/onflow/flow-go v0.17.4
+	github.com/onflow/flow-go-sdk v0.20.0 // indirect
 	github.com/prometheus/client_golang v1.10.0 // indirect
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rs/zerolog v1.22.0
