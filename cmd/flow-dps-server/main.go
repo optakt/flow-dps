@@ -27,7 +27,7 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
-	gsvr "google.golang.org/grpc"
+	svr "google.golang.org/grpc"
 
 	"github.com/optakt/flow-dps/api/grpc"
 	"github.com/optakt/flow-dps/models/dps"
@@ -63,7 +63,7 @@ func main() {
 	log = log.Level(level)
 
 	// Initialize the index core state.
-	index, err := badger.Open(dps.DefaultOptions(flagIndex))
+	index, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not open index DB")
 	}
@@ -73,20 +73,20 @@ func main() {
 	}
 
 	// GRPC API initialization.
-	gctrl := grpc.NewController(core)
-	gsvr := gsvr.NewServer()
+	controller := grpc.NewController(core)
+	server := svr.NewServer()
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
 	go func() {
 		log.Info().Msg("starting GRPC API server")
-		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", flagPort))
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", flagPort))
 		if err != nil {
 			log.Fatal().Err(err).Uint16("port", flagPort).Msg("could not listen")
 		}
-		grpc.RegisterAPIServer(gsvr, grpc.NewServer(gctrl))
-		err = gsvr.Serve(lis)
+		grpc.RegisterAPIServer(server, grpc.NewServer(controller))
+		err = server.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("GRPC API encountered error")
 		}
@@ -106,7 +106,7 @@ func main() {
 	go func() {
 		log.Info().Msg("shutting down GRPC API")
 		defer wg.Done()
-		gsvr.GracefulStop()
+		server.GracefulStop()
 		log.Info().Msg("GRPC API shutdown complete")
 	}()
 	go func() {
