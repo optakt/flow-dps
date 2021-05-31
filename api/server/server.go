@@ -12,9 +12,11 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package grpc
+package server
 
-import "context"
+import (
+	"context"
+)
 
 // Server is a simple implementation of the generated APIServer interface.
 // It simply forwards requests to its controller directly without any extra logic.
@@ -23,8 +25,8 @@ type Server struct {
 	ctrl *Controller
 }
 
-// NewServer creates a Server given a Controller pointer.
-func NewServer(ctrl *Controller) *Server {
+// New creates a Server given a Controller pointer.
+func New(ctrl *Controller) *Server {
 	return &Server{
 		ctrl: ctrl,
 	}

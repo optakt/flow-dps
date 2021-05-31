@@ -14,7 +14,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package grpc_test
+package server_test
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	api "github.com/optakt/flow-dps/api/grpc"
+	"github.com/optakt/flow-dps/api/server"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -67,12 +67,12 @@ func TestMain(m *testing.M) {
 	testQuery, _ := ledger.NewQuery(ledger.State(lastCommit), nil)
 	mock.LedgerState.On("Get", testQuery).Return(testValues, nil)
 
-	controller := api.NewController(mock)
-	server := api.NewServer(controller)
+	controller := server.NewController(mock)
+	svr := server.New(controller)
 
 	lis = bufconn.Listen(bufSize)
 	s := grpc.NewServer()
-	api.RegisterAPIServer(s, server)
+	server.RegisterAPIServer(s, svr)
 
 	go func() {
 		if err := s.Serve(lis); err != nil {
@@ -88,8 +88,8 @@ func TestMain(m *testing.M) {
 	os.Exit(0)
 }
 
-func TestNewServer(t *testing.T) {
-	s := api.NewServer(nil)
+func TestNew(t *testing.T) {
+	s := server.New(nil)
 	assert.NotNil(t, s)
 }
 
@@ -101,15 +101,15 @@ func TestServer_GetRegister(t *testing.T) {
 
 	defer conn.Close()
 
-	client := api.NewAPIClient(conn)
+	client := server.NewAPIClient(conn)
 
-	got, err := client.GetRegister(ctx, &api.GetRegisterRequest{
+	got, err := client.GetRegister(ctx, &server.GetRegisterRequest{
 		Height: &wantHeight,
 		Key:    []byte(`testKey`),
 	})
 	assert.NoError(t, err)
 
-	want := &api.GetRegisterResponse{
+	want := &server.GetRegisterResponse{
 		Height: wantHeight,
 		Key:    []byte(`testKey`),
 		Value:  []byte(`testValue`),
@@ -127,12 +127,12 @@ func TestServer_GetValues(t *testing.T) {
 
 	defer conn.Close()
 
-	client := api.NewAPIClient(conn)
+	client := server.NewAPIClient(conn)
 
-	got, err := client.GetValues(ctx, &api.GetValuesRequest{})
+	got, err := client.GetValues(ctx, &server.GetValuesRequest{})
 	assert.NoError(t, err)
 
-	want := &api.GetValuesResponse{
+	want := &server.GetValuesResponse{
 		Values: [][]byte{testValue},
 	}
 	assert.Equal(t, want.Values, got.Values)

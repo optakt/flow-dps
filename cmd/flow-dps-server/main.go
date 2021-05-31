@@ -27,9 +27,9 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
-	svr "google.golang.org/grpc"
+	"google.golang.org/grpc"
 
-	"github.com/optakt/flow-dps/api/grpc"
+	"github.com/optakt/flow-dps/api/server"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/state"
 )
@@ -73,8 +73,8 @@ func main() {
 	}
 
 	// GRPC API initialization.
-	controller := grpc.NewController(core)
-	server := svr.NewServer()
+	controller := server.NewController(core)
+	svr := grpc.NewServer()
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
@@ -85,8 +85,8 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Uint16("port", flagPort).Msg("could not listen")
 		}
-		grpc.RegisterAPIServer(server, grpc.NewServer(controller))
-		err = server.Serve(listener)
+		server.RegisterAPIServer(svr, server.New(controller))
+		err = svr.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("GRPC API encountered error")
 		}
@@ -106,7 +106,7 @@ func main() {
 	go func() {
 		log.Info().Msg("shutting down GRPC API")
 		defer wg.Done()
-		server.GracefulStop()
+		svr.GracefulStop()
 		log.Info().Msg("GRPC API shutdown complete")
 	}()
 	go func() {

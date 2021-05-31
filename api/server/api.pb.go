@@ -18,7 +18,7 @@
 // 	protoc        v3.17.0
 // source: api.proto
 
-package grpc
+package server
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

@@ -17,7 +17,7 @@ package client
 import (
 	"github.com/onflow/cadence"
 
-	"github.com/optakt/flow-dps/api/grpc"
+	"github.com/optakt/flow-dps/api/server"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/lookup"
 	"github.com/optakt/flow-dps/rosetta/read"
@@ -28,7 +28,7 @@ type Client struct {
 	invoke retriever.Invoker
 }
 
-func NewClient(client grpc.APIClient) *Client {
+func NewClient(client server.APIClient) *Client {
 
 	c := Client{
 		invoke: invoker.New(

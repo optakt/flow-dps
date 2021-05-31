@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/api/grpc"
+	grpc "github.com/optakt/flow-dps/api/server"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 )
 
