@@ -15,12 +15,23 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
+	"google.golang.org/grpc"
+
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
+
+	"github.com/optakt/flow-dps/api/server"
+	"github.com/optakt/flow-dps/rosetta/invoker"
+	"github.com/optakt/flow-dps/rosetta/lookup"
+	"github.com/optakt/flow-dps/rosetta/read"
 )
 
 func main() {
@@ -31,12 +42,18 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLog string
-		flagAPI string
+		flagAPI    string
+		flagHeight uint64
+		flagLog    string
+		flagParams string
+		flagScript string
 	)
 
-	pflag.StringVarP(&flagLog, "log", "l", "info", "log output level")
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host for GRPC API server")
+	pflag.Uint64VarP(&flagHeight, "height", "h", 0, "block height to execute the script at")
+	pflag.StringVarP(&flagLog, "log", "l", "info", "log output level")
+	pflag.StringVarP(&flagParams, "params", "p", "", "JSON encoded Cadence parameters for the script")
+	pflag.StringVarP(&flagScript, "script", "s", "script.cdc", "path to the Cadence script file to be executed")
 
 	pflag.Parse()
 
@@ -48,6 +65,46 @@ func main() {
 		log.Fatal().Err(err)
 	}
 	log = log.Level(level)
+
+	// Initialize the API client.
+	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not dial API host")
+	}
+	client := server.NewAPIClient(conn)
+
+	// Read the script.
+	script, err := ioutil.ReadFile(flagScript)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not read script")
+	}
+
+	// Decode the arguments
+	var args []cadence.Value
+	if flagParams != "" {
+		val, err := json.Decode([]byte(flagParams))
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not decode parameters")
+		}
+		array, ok := val.(cadence.Array)
+		if !ok {
+			log.Fatal().Str("type", fmt.Sprintf("%T", val)).Msg("invalid type for parameters")
+		}
+		args = array.Values
+	}
+
+	// Execute the script using remote lookup and read.
+	invoke := invoker.New(lookup.FromDPS(client), read.FromDPS(client))
+	result, err := invoke.Script(flagHeight, script, args)
+	if err != nil {
+		log.Error().Err(err).Msg("could not execute script")
+	}
+	output, err := json.Encode(result)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not encode result")
+	}
+
+	fmt.Println(string(output))
 
 	os.Exit(0)
 }
