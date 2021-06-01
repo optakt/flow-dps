@@ -1,3 +1,4 @@
+/cmd/execute-cadence-script/execute-cadence-script
 /cmd/create-index-snapshot/create-index-snapshot
 /cmd/extract-block-events/extract-block-events
 /cmd/extract-block-headers/extract-block-headers
