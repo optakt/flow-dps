@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
@@ -80,7 +79,7 @@ func main() {
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
 	go func() {
-		log.Info().Msg("starting GRPC API server")
+		log.Info().Msg("Flow DPS Server starting")
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", flagPort))
 		if err != nil {
 			log.Fatal().Err(err).Uint16("port", flagPort).Msg("could not listen")
@@ -90,32 +89,22 @@ func main() {
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("GRPC API encountered error")
 		}
-		log.Info().Msg("GRPC API server stopped")
+		log.Info().Msg("Flow DPS Server stopped")
 	}()
 
 	<-sig
-
-	log.Info().Msg("startup complete")
+	log.Info().Msg("Flow DPS Server stopping")
+	go func() {
+		<-sig
+		log.Warn().Msg("forcing exit")
+		os.Exit(1)
+	}()
 
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the
 	// allocated shutdown time. Otherwise, we will force the shutdown and log
 	// an error. We then wait for shutdown on each component to complete.
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		log.Info().Msg("shutting down GRPC API")
-		defer wg.Done()
-		svr.GracefulStop()
-		log.Info().Msg("GRPC API shutdown complete")
-	}()
-	go func() {
-		<-sig
-		log.Info().Msg("forcing exit")
-		os.Exit(1)
-	}()
-
-	wg.Wait()
+	svr.GracefulStop()
 
 	os.Exit(0)
 }

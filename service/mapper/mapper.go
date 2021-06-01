@@ -43,6 +43,7 @@ type Mapper struct {
 	post       func(*trie.MTrie)
 	wg         *sync.WaitGroup
 	stop       chan struct{}
+	done       chan struct{}
 }
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
@@ -80,6 +81,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		post:       cfg.PostProcessing,
 		wg:         &sync.WaitGroup{},
 		stop:       make(chan struct{}),
+		done:       make(chan struct{}),
 	}
 
 	return &i, nil
@@ -98,6 +100,10 @@ func (m *Mapper) Stop(ctx context.Context) error {
 	case <-done:
 		return nil
 	}
+}
+
+func (m *Mapper) Done() <-chan struct{} {
+	return m.done
 }
 
 // NOTE: We might want to move height and tree (checkpoint) to parameters of the
@@ -387,6 +393,8 @@ Outer:
 
 	step := steps[commitPrev]
 	m.post(step.Tree)
+
+	close(m.done)
 
 	return nil
 }

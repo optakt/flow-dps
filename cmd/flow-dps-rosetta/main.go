@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -106,16 +105,21 @@ func main() {
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
 	go func() {
+		log.Info().Msg("Flow DPS Rosetta starting")
 		err := svr.Start(fmt.Sprintf(":%d", flagPort))
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("Rosetta API encountered error")
 		}
-		log.Info().Msg("Rosetta API execution complete")
+		log.Info().Msg("Flow DPS Rosetta stopped")
 	}()
 
 	<-sig
-
-	log.Info().Msg("startup complete")
+	log.Info().Msg("Flow DPS Rosetta stopping")
+	go func() {
+		<-sig
+		log.Warn().Msg("forcing exit")
+		os.Exit(1)
+	}()
 
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the
@@ -123,24 +127,10 @@ func main() {
 	// an error. We then wait for shutdown on each component to complete.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	wg := &sync.WaitGroup{}
-	wg.Add(4)
-	go func() {
-		defer wg.Done()
-		err := svr.Shutdown(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("could not shut down Rosetta API")
-		}
-		log.Info().Msg("Rosetta API shutdown complete")
-	}()
-	go func() {
-		<-sig
-		os.Exit(1)
-	}()
-
-	wg.Wait()
-
-	log.Info().Msg("shutdown complete")
+	err = svr.Shutdown(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("could not shut down Rosetta API")
+	}
 
 	os.Exit(0)
 }

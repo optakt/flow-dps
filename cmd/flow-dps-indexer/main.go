@@ -18,7 +18,6 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
@@ -99,17 +98,27 @@ func main() {
 	// interrupt signal in order to proceed with the next section.
 	go func() {
 		start := time.Now()
-		log.Info().Time("start", start).Msg("starting state indexer")
+		log.Info().Time("start", start).Msg("Flow DPS Indexer starting")
 		err := mapper.Run()
 		if err != nil {
 			log.Error().Err(err).Msg("disk mapper encountered error")
 		}
 		finish := time.Now()
 		duration := finish.Sub(start)
-		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("state indexer stopped")
+		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
 	}()
 
-	<-sig
+	select {
+	case <-sig:
+		log.Info().Msg("Flow DPS Indexer stopping")
+	case <-mapper.Done():
+		log.Info().Msg("Flow DPS Indexer done")
+	}
+	go func() {
+		<-sig
+		log.Warn().Msg("forcing exit")
+		os.Exit(1)
+	}()
 
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the
@@ -117,24 +126,10 @@ func main() {
 	// an error. We then wait for shutdown on each component to complete.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		log.Info().Msg("shutting down state indexer")
-		defer wg.Done()
-		err := mapper.Stop(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("could not stop indexer")
-		}
-		log.Info().Msg("state indexer shutdown complete")
-	}()
-	go func() {
-		<-sig
-		log.Info().Msg("forcing exit")
-		os.Exit(1)
-	}()
-
-	wg.Wait()
+	err = mapper.Stop(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("could not stop indexer")
+	}
 
 	os.Exit(0)
 }
