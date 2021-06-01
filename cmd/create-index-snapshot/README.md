@@ -9,9 +9,19 @@ This output can be used to restore a database from a previous snapshot.
 ## Usage
 
 ```sh
-Usage of create-index-snapshot:
-  -d, --dir string         path to badger database
-  -l, --log-level string   log level for JSON logger (default "info")
+Usage of ./create-index-snapshot:
+  -d, --dir string   path to badger database (required)
+  -h, --hex          use hex output
+  -l, --log string   log level for JSON logger (default: "info")
+  -o, --out string   output file to write to (overwrites existing)
+```
+
+## Examples
+
+```console
+$ ./create-index-snapshot -d /path/to/index -o file.bin       # write snapshot to file (binary)
+$ ./create-index-snapshot -d /path/to/index -o file.txt --hex # write snapshot to file (hex)
+$ ./create-index-snapshot -d /path/to/index                   # writes snapshot to stdout (hex)
 ```
 
 ## Example

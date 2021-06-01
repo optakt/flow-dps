@@ -31,12 +31,16 @@ import (
 func main() {
 
 	var (
-		flagIndex string
-		flagLevel string
+		flagDir      string
+		flagLogLevel string
+		flagOutput   string
+		flagHex      bool
 	)
 
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to badger database for index")
-	pflag.StringVarP(&flagLevel, "level", "l", "info", "log level for JSON logger")
+	pflag.StringVarP(&flagDir, "dir", "d", "", "path to badger database")
+	pflag.StringVarP(&flagLogLevel, "log", "l", "info", "log level for JSON logger")
+	pflag.StringVarP(&flagOutput, "out", "o", "", "output file to write to (overwrites existing)")
+	pflag.BoolVarP(&flagHex, "hex", "h", false, "use hex output")
 
 	pflag.Parse()
 
@@ -67,7 +71,32 @@ func main() {
 		log.Fatal().Err(err).Msg("could not backup badger db")
 	}
 
-	fmt.Printf("%s", hex.EncodeToString(buf.Bytes()))
+	err = compressor.Close()
+	if err != nil {
+		log.Warn().Err(err).Msg("could not close compression writer")
+	}
 
-	os.Exit(0)
+	// if we're not writing to a file, just write hex (no binary output to stdout)
+	if flagOutput == "" {
+		fmt.Printf("%s", hex.EncodeToString(buf.Bytes()))
+		return
+	}
+
+	// open output file - create/truncate existing
+	out, err := os.OpenFile(flagOutput, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Fatal().Err(err).Str("path", flagOutput).Msg("could not open output file")
+	}
+
+	defer out.Close()
+
+	if flagHex {
+		_, err = out.WriteString(hex.EncodeToString(buf.Bytes()))
+	} else {
+		_, err = out.Write(buf.Bytes())
+	}
+
+	if err != nil {
+		log.Fatal().Err(err).Str("path", flagOutput).Msg("could not write to output")
+	}
 }
