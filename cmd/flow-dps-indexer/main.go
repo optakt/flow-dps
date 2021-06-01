@@ -41,25 +41,25 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLevel      string
-		flagData       string
-		flagTrie       string
-		flagIndex      string
 		flagCheckpoint string
+		flagData       string
+		flagIndex      string
+		flagLog        string
+		flagTrie       string
 	)
 
-	pflag.StringVarP(&flagLevel, "log", "l", "info", "log output level")
-	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
-	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
+	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.StringVarP(&flagLog, "log", "l", "info", "log output level")
+	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
 	pflag.Parse()
 
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLevel)
+	level, err := zerolog.ParseLevel(flagLog)
 	if err != nil {
 		log.Fatal().Err(err)
 	}

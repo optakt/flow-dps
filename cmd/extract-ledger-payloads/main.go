@@ -42,27 +42,27 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLevel      string
-		flagData       string
-		flagTrie       string
 		flagCheckpoint string
+		flagData       string
+		flagLog        string
 		flagOutput     string
 		flagSize       uint64
+		flagTrie       string
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log level for JSON logger output")
-	pflag.StringVarP(&flagData, "data-dir", "d", "data", "directory for protocol state database")
-	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "directory for execution state database")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "file containing state trie snapshot")
-	pflag.StringVarP(&flagOutput, "output-dir", "o", "payloads", "directory for output of ledger payloads")
-	pflag.Uint64VarP(&flagSize, "size-limit", "s", 11_264_000, "limit for total size of output files")
+	pflag.StringVarP(&flagData, "data", "d", "data", "directory for protocol state database")
+	pflag.StringVarP(&flagLog, "log", "l", "info", "log level for JSON logger output")
+	pflag.StringVarP(&flagOutput, "output", "o", "payloads", "directory for output of ledger payloads")
+	pflag.Uint64VarP(&flagSize, "size", "s", 11_264_000, "limit for total size of output files")
+	pflag.StringVarP(&flagTrie, "trie", "t", "trie", "directory for execution state database")
 
 	pflag.Parse()
 
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLevel)
+	level, err := zerolog.ParseLevel(flagLog)
 	if err != nil {
 		log.Fatal().Err(err)
 	}

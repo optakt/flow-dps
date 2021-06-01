@@ -31,19 +31,19 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLevel string
-		flagHost  uint16
+		flagLog string
+		flagAPI string
 	)
 
-	pflag.StringVarP(&flagLevel, "log", "l", "info", "log output level")
-	pflag.Uint16VarP(&flagHost, "host", "g", 5005, "port of GRPC API server")
+	pflag.StringVarP(&flagLog, "log", "l", "info", "log output level")
+	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host for GRPC API server")
 
 	pflag.Parse()
 
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLevel)
+	level, err := zerolog.ParseLevel(flagLog)
 	if err != nil {
 		log.Fatal().Err(err)
 	}

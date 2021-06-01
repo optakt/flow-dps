@@ -40,27 +40,27 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLevel  string
-		flagData   string
 		flagBegin  uint64
+		flagData   string
 		flagFinish uint64
+		flagLog    string
 		flagOutput string
 		flagSize   uint64
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log level for JSON logger output")
-	pflag.StringVarP(&flagData, "data-dir", "d", "data", "directory for protocol state database")
-	pflag.Uint64VarP(&flagBegin, "begin-height", "b", 0, "lowest block height to include in extraction")
-	pflag.Uint64VarP(&flagFinish, "finish-height", "f", 100_000_000, "highest block height to include in extraction")
-	pflag.StringVarP(&flagOutput, "output-dir", "o", "headers", "directory for output of block headers")
-	pflag.Uint64VarP(&flagSize, "size-limit", "s", 11_264_000, "limit for total size of output files")
+	pflag.Uint64VarP(&flagBegin, "begin", "b", 0, "lowest block height to include in extraction")
+	pflag.StringVarP(&flagData, "data", "d", "data", "directory for protocol state database")
+	pflag.Uint64VarP(&flagFinish, "finish", "f", 100_000_000, "highest block height to include in extraction")
+	pflag.StringVarP(&flagLog, "log", "l", "info", "log level for JSON logger output")
+	pflag.StringVarP(&flagOutput, "output", "o", "headers", "directory for output of block headers")
+	pflag.Uint64VarP(&flagSize, "size", "s", 11_264_000, "limit for total size of output files")
 
 	pflag.Parse()
 
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLevel)
+	level, err := zerolog.ParseLevel(flagLog)
 	if err != nil {
 		log.Fatal().Err(err)
 	}

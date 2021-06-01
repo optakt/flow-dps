@@ -52,25 +52,23 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLevel string
-		flagIndex string
 		flagAPI   string
-		flagPort  uint16
 		flagChain string
+		flagLog   string
+		flagPort  uint16
 	)
 
-	pflag.StringVarP(&flagLevel, "log", "l", "info", "log output level")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "state ledger index directory")
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
-	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
 	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowTestnet.String(), "specify chain ID for Flow network")
+	pflag.StringVarP(&flagLog, "log", "l", "info", "log output level")
+	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
 
 	pflag.Parse()
 
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLevel)
+	level, err := zerolog.ParseLevel(flagLog)
 	if err != nil {
 		log.Fatal().Err(err)
 	}

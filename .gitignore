@@ -3,6 +3,10 @@
 /cmd/extract-block-events/extract-block-events
 /cmd/extract-block-headers/extract-block-headers
 /cmd/extract-ledger-payloads/extract-ledger-payloads
+/cmd/flow-dps-client/flow-dps-client
+/cmd/flow-dps-indexer/flow-dps-indexer
+/cmd/flow-dps-rosetta/flow-dps-rosetta
+/cmd/flow-dps-server/flow-dps-server
 /data/
 /index/
 /trie/
