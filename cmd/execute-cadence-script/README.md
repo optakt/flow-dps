@@ -2,20 +2,21 @@
 
 ## Description
 
-This utility binary can be used to execute a Cadence script against a running Flow network. By default, access nodes are expected on localhost:3569. Script can be executed on an arbitrary block height.
+This utility binary can be used to execute a Cadence script against a running Flow network. By default, access nodes are expected on `127.0.0.1:3569`. Scripts can be executed on any arbitrary block height.
 
 ## Usage
 
 ```sh
 Usage of ./execute-cadence-script:
-  -a, --api string           access node API address (default "localhost:3569")
+  -a, --api string           access node API address (default: "127.0.0.1:3569")
   -h, --height int           height on which to execute script (default -1)
-  -l, --log-level string     log level for JSON logger (default "info")
-  -s, --script-file string   cadence script to execute
+  -l, --log string           log level for JSON logger (default: "info")
+  -s, --script string        cadence script to execute (required)
 ```
+
 ## Example
 
-The example executes a Cadence script to retrieve the balance of an account '0x631e88ae7f1d7c20' at two different block heights.
+The following example executes a Cadence script to retrieve the balance of the account '0x631e88ae7f1d7c20' at two different block heights.
 
 ```console
 $ ./execute-cadence-script -s get_balance.ca
@@ -32,16 +33,16 @@ import FlowToken from 0x7e60df042a9c0868
 
 pub fun main(): UFix64 {
 
-    // note that the account address is currently 
-    // in the script itself, provided to the util
-    var account: Address = 0x631e88ae7f1d7c20
+  // note that the account address is currently 
+  // in the script itself, provided to the util
+  var account: Address = 0x631e88ae7f1d7c20
 
-        let vaultRef = getAccount(account)
-        .getCapability(/public/flowTokenBalance)
-        .borrow<&FlowToken.Vault{FungibleToken.Balance}>()
-        ?? panic("Could not borrow Balance reference to the Vault")
+  let vaultRef = getAccount(account)
+    .getCapability(/public/flowTokenBalance)
+    .borrow<&FlowToken.Vault{FungibleToken.Balance}>()
+    ?? panic("Could not borrow Balance reference to the Vault")
 
-        return vaultRef.balance
+  return vaultRef.balance
 }
 ```
 

@@ -7,12 +7,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/onflow/cadence"
-	"github.com/onflow/flow-go-sdk/client"
-
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
+
+	"github.com/onflow/cadence"
+	"github.com/onflow/flow-go-sdk/client"
 )
 
 func main() {
@@ -26,9 +26,9 @@ func main() {
 
 	// TODO: mismatch between block height type - using int64 instead of uint64
 
-	pflag.StringVarP(&flagScriptFile, "script-file", "s", "", "cadence script to execute")
-	pflag.StringVarP(&flagAPI, "api", "a", "localhost:3569", "access node API address")
-	pflag.StringVarP(&flagLogLevel, "log-level", "l", "info", "log level for JSON logger")
+	pflag.StringVarP(&flagScriptFile, "script", "s", "", "cadence script to execute")
+	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:3569", "access node API address")
+	pflag.StringVarP(&flagLogLevel, "log", "l", "info", "log level for JSON logger")
 	pflag.Int64VarP(&flagHeight, "height", "h", -1, "height on which to execute script")
 
 	pflag.Parse()
@@ -37,7 +37,7 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLogLevel)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Err(err).Str("log_level_flag", flagLogLevel).Msg("could not parse log level")
 	}
 
 	log = log.Level(level)
@@ -60,10 +60,8 @@ func main() {
 	}
 
 	if err != nil {
-		log.Error().Err(err).Msg("cadence script execution failed")
-		return
+		log.Fatal().Err(err).Msg("cadence script execution failed")
 	}
 
 	fmt.Printf("%s\n", value.String())
-
 }
