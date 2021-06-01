@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 
-	"github.com/optakt/flow-dps/api/server"
+	"github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/lookup"
 	"github.com/optakt/flow-dps/rosetta/read"
@@ -71,7 +71,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not dial API host")
 	}
-	client := server.NewAPIClient(conn)
+	client := dps.NewAPIClient(conn)
 
 	// Read the script.
 	script, err := ioutil.ReadFile(flagScript)

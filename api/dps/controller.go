@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package server
+package dps
 
 import (
 	"context"
@@ -116,4 +116,10 @@ func (c *Controller) GetValues(_ context.Context, req *GetValuesRequest, _ ...gr
 	return &res, nil
 }
 
-// TODO: implement GetHeader and GetCommit
+func (c *Controller) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (c *Controller) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
+	return nil, fmt.Errorf("not implemented")
+}

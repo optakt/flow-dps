@@ -14,7 +14,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package server_test
+package dps_test
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/api/server"
+	"github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -67,12 +67,12 @@ func TestMain(m *testing.M) {
 	testQuery, _ := ledger.NewQuery(ledger.State(lastCommit), nil)
 	mock.LedgerState.On("Get", testQuery).Return(testValues, nil)
 
-	controller := server.NewController(mock)
-	svr := server.New(controller)
+	controller := dps.NewController(mock)
+	server := dps.New(controller)
 
 	lis = bufconn.Listen(bufSize)
 	s := grpc.NewServer()
-	server.RegisterAPIServer(s, svr)
+	dps.RegisterAPIServer(s, server)
 
 	go func() {
 		if err := s.Serve(lis); err != nil {
@@ -89,7 +89,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNew(t *testing.T) {
-	s := server.New(nil)
+	s := dps.New(nil)
 	assert.NotNil(t, s)
 }
 
@@ -101,15 +101,15 @@ func TestServer_GetRegister(t *testing.T) {
 
 	defer conn.Close()
 
-	client := server.NewAPIClient(conn)
+	client := dps.NewAPIClient(conn)
 
-	got, err := client.GetRegister(ctx, &server.GetRegisterRequest{
+	got, err := client.GetRegister(ctx, &dps.GetRegisterRequest{
 		Height: &wantHeight,
 		Key:    []byte(`testKey`),
 	})
 	assert.NoError(t, err)
 
-	want := &server.GetRegisterResponse{
+	want := &dps.GetRegisterResponse{
 		Height: wantHeight,
 		Key:    []byte(`testKey`),
 		Value:  []byte(`testValue`),
@@ -127,12 +127,12 @@ func TestServer_GetValues(t *testing.T) {
 
 	defer conn.Close()
 
-	client := server.NewAPIClient(conn)
+	client := dps.NewAPIClient(conn)
 
-	got, err := client.GetValues(ctx, &server.GetValuesRequest{})
+	got, err := client.GetValues(ctx, &dps.GetValuesRequest{})
 	assert.NoError(t, err)
 
-	want := &server.GetValuesResponse{
+	want := &dps.GetValuesResponse{
 		Values: [][]byte{testValue},
 	}
 	assert.Equal(t, want.Values, got.Values)

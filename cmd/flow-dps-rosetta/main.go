@@ -31,9 +31,9 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/api/rosetta"
-	"github.com/optakt/flow-dps/api/server"
-	"github.com/optakt/flow-dps/models/dps"
+	config "github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/height"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/lookup"
@@ -58,7 +58,7 @@ func main() {
 	)
 
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
-	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowTestnet.String(), "specify chain ID for Flow network")
+	pflag.StringVarP(&flagChain, "chain", "c", config.FlowTestnet.String(), "specify chain ID for Flow network")
 	pflag.StringVarP(&flagLog, "log", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
 
@@ -74,7 +74,7 @@ func main() {
 	log = log.Level(level)
 
 	// Check if the configured chain ID is valid.
-	params, ok := dps.FlowParams[flow.ChainID(flagChain)]
+	params, ok := config.FlowParams[flow.ChainID(flagChain)]
 	if !ok {
 		log.Fatal().Str("chain", flagChain).Msg("invalid chain ID for params")
 	}
@@ -84,7 +84,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not dial API host")
 	}
-	client := server.NewAPIClient(conn)
+	client := dps.NewAPIClient(conn)
 
 	// Rosetta API initialization.
 	generator := scripts.NewGenerator(params)
@@ -93,20 +93,20 @@ func main() {
 	retrieve := retriever.New(generator, invoke)
 	ctrl := rosetta.NewData(validate, retrieve)
 
-	svr := echo.New()
-	svr.HideBanner = true
-	svr.HidePort = true
-	svr.Use(middleware.Logger())
-	svr.POST("/account/balance", ctrl.Balance)
-	svr.POST("/block", ctrl.Block)
-	svr.POST("/block/transaction", ctrl.Transaction)
+	server := echo.New()
+	server.HideBanner = true
+	server.HidePort = true
+	server.Use(middleware.Logger())
+	server.POST("/account/balance", ctrl.Balance)
+	server.POST("/block", ctrl.Block)
+	server.POST("/block/transaction", ctrl.Transaction)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
 	go func() {
 		log.Info().Msg("Flow DPS Rosetta starting")
-		err := svr.Start(fmt.Sprintf(":%d", flagPort))
+		err := server.Start(fmt.Sprintf(":%d", flagPort))
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("Rosetta API encountered error")
 		}
@@ -127,7 +127,7 @@ func main() {
 	// an error. We then wait for shutdown on each component to complete.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	err = svr.Shutdown(ctx)
+	err = server.Shutdown(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("could not shut down Rosetta API")
 	}

@@ -18,10 +18,10 @@ import (
 	"fmt"
 
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/api/server"
+	"github.com/optakt/flow-dps/api/dps"
 )
 
-func FromDPS(client server.APIClient) func(flow.Identifier) (uint64, error) {
+func FromDPS(client dps.APIClient) func(flow.Identifier) (uint64, error) {
 	return func(blockID flow.Identifier) (uint64, error) {
 		return 0, fmt.Errorf("not implemented")
 	}

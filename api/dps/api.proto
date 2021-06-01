@@ -14,7 +14,7 @@
 
 syntax = "proto3";
 
-option go_package = "github.com/optakt/flow-dps/grpc";
+option go_package = "github.com/optakt/flow-dps/dps";
 
 service API {
   rpc GetRegister (GetRegisterRequest) returns (GetRegisterResponse) {}
@@ -59,6 +59,7 @@ message GetHeaderRequest {
 
 message GetHeaderResponse {
   uint64 height = 1;
+  bytes data = 2;
 }
 
 message GetCommitRequest {

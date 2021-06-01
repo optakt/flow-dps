@@ -22,11 +22,11 @@ import (
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/api/server"
+	"github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 )
 
-func FromDPS(client server.APIClient) invoker.ReadFunc {
+func FromDPS(client dps.APIClient) invoker.ReadFunc {
 	return func(commit flow.StateCommitment) delta.GetRegisterFunc {
 		readCache := make(map[flow.RegisterID]flow.RegisterValue)
 		return func(owner string, controller string, key string) (flow.RegisterValue, error) {
@@ -37,25 +37,25 @@ func FromDPS(client server.APIClient) invoker.ReadFunc {
 				return value, nil
 			}
 
-			part1 := server.KeyPart{
+			part1 := dps.KeyPart{
 				Type:  uint64(state.KeyPartOwner),
 				Value: []byte(owner),
 			}
-			part2 := server.KeyPart{
+			part2 := dps.KeyPart{
 				Type:  uint64(state.KeyPartController),
 				Value: []byte(controller),
 			}
-			part3 := server.KeyPart{
+			part3 := dps.KeyPart{
 				Type:  uint64(state.KeyPartKey),
 				Value: []byte(key),
 			}
-			reqKey := server.Key{
-				Parts: []*server.KeyPart{&part1, &part2, &part3},
+			reqKey := dps.Key{
+				Parts: []*dps.KeyPart{&part1, &part2, &part3},
 			}
-			req := server.GetValuesRequest{
+			req := dps.GetValuesRequest{
 				Hash:    commit[:],
 				Version: nil, // use default pathfinder version
-				Keys:    []*server.Key{&reqKey},
+				Keys:    []*dps.Key{&reqKey},
 			}
 
 			res, err := client.GetValues(context.Background(), &req)

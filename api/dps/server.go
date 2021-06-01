@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package server
+package dps
 
 import (
 	"context"
@@ -40,4 +40,14 @@ func (s *Server) GetRegister(ctx context.Context, req *GetRegisterRequest) (*Get
 // GetValues calls the server's controller with the GetValues method.
 func (s *Server) GetValues(ctx context.Context, req *GetValuesRequest) (*GetValuesResponse, error) {
 	return s.ctrl.GetValues(ctx, req)
+}
+
+// GetCommit calls the server's controller with the GetCommit method.
+func (s *Server) GetCommit(ctx context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
+	return s.ctrl.GetCommit(ctx, req)
+}
+
+// GetHeader calls the server's controller with the GetHeader method.
+func (s *Server) GetHeader(ctx context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
+	return s.ctrl.GetHeader(ctx, req)
 }
