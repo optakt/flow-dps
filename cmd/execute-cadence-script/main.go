@@ -24,12 +24,10 @@ func main() {
 		flagHeight     int64
 	)
 
-	// TODO: mismatch between block height type - using int64 instead of uint64
-
 	pflag.StringVarP(&flagScriptFile, "script", "s", "", "cadence script to execute")
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:3569", "access node API address")
 	pflag.StringVarP(&flagLogLevel, "log", "l", "info", "log level for JSON logger")
-	pflag.Int64VarP(&flagHeight, "height", "h", -1, "height on which to execute script")
+	pflag.Int64VarP(&flagHeight, "height", "h", -1, "height on which to execute script, -1 for last indexed height")
 
 	pflag.Parse()
 

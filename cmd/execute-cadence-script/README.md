@@ -9,7 +9,7 @@ This utility binary can be used to execute a Cadence script against a running Fl
 ```sh
 Usage of ./execute-cadence-script:
   -a, --api string           access node API address (default: "127.0.0.1:3569")
-  -h, --height int           height on which to execute script (default -1)
+  -h, --height int           height on which to execute script, -1 for last indexed height (default: -1)
   -l, --log string           log level for JSON logger (default: "info")
   -s, --script string        cadence script to execute (required)
 ```
