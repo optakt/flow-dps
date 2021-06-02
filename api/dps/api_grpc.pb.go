@@ -19,7 +19,9 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type APIClient interface {
 	GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
-	ReadRegisters(ctx context.Context, in *ReadRegistersRequest, opts ...grpc.CallOption) (*ReadRegistersResponse, error)
+	GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
+	GetEvents(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
+	GetRegisters(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
 }
 
 type aPIClient struct {
@@ -39,9 +41,27 @@ func (c *aPIClient) GetHeader(ctx context.Context, in *GetHeaderRequest, opts ..
 	return out, nil
 }
 
-func (c *aPIClient) ReadRegisters(ctx context.Context, in *ReadRegistersRequest, opts ...grpc.CallOption) (*ReadRegistersResponse, error) {
-	out := new(ReadRegistersResponse)
-	err := c.cc.Invoke(ctx, "/API/ReadRegisters", in, out, opts...)
+func (c *aPIClient) GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error) {
+	out := new(GetCommitResponse)
+	err := c.cc.Invoke(ctx, "/API/GetCommit", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aPIClient) GetEvents(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error) {
+	out := new(GetEventsResponse)
+	err := c.cc.Invoke(ctx, "/API/GetEvents", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aPIClient) GetRegisters(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error) {
+	out := new(GetRegistersResponse)
+	err := c.cc.Invoke(ctx, "/API/GetRegisters", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +73,9 @@ func (c *aPIClient) ReadRegisters(ctx context.Context, in *ReadRegistersRequest,
 // for forward compatibility
 type APIServer interface {
 	GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error)
-	ReadRegisters(context.Context, *ReadRegistersRequest) (*ReadRegistersResponse, error)
+	GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error)
+	GetEvents(context.Context, *GetEventsRequest) (*GetEventsResponse, error)
+	GetRegisters(context.Context, *GetRegistersRequest) (*GetRegistersResponse, error)
 }
 
 // UnimplementedAPIServer should be embedded to have forward compatible implementations.
@@ -63,8 +85,14 @@ type UnimplementedAPIServer struct {
 func (UnimplementedAPIServer) GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetHeader not implemented")
 }
-func (UnimplementedAPIServer) ReadRegisters(context.Context, *ReadRegistersRequest) (*ReadRegistersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReadRegisters not implemented")
+func (UnimplementedAPIServer) GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCommit not implemented")
+}
+func (UnimplementedAPIServer) GetEvents(context.Context, *GetEventsRequest) (*GetEventsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEvents not implemented")
+}
+func (UnimplementedAPIServer) GetRegisters(context.Context, *GetRegistersRequest) (*GetRegistersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRegisters not implemented")
 }
 
 // UnsafeAPIServer may be embedded to opt out of forward compatibility for this service.
@@ -96,20 +124,56 @@ func _API_GetHeader_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_ReadRegisters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReadRegistersRequest)
+func _API_GetCommit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCommitRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).ReadRegisters(ctx, in)
+		return srv.(APIServer).GetCommit(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/API/ReadRegisters",
+		FullMethod: "/API/GetCommit",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).ReadRegisters(ctx, req.(*ReadRegistersRequest))
+		return srv.(APIServer).GetCommit(ctx, req.(*GetCommitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _API_GetEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/GetEvents",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetEvents(ctx, req.(*GetEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _API_GetRegisters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRegistersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetRegisters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/GetRegisters",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetRegisters(ctx, req.(*GetRegistersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -126,8 +190,16 @@ var API_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _API_GetHeader_Handler,
 		},
 		{
-			MethodName: "ReadRegisters",
-			Handler:    _API_ReadRegisters_Handler,
+			MethodName: "GetCommit",
+			Handler:    _API_GetCommit_Handler,
+		},
+		{
+			MethodName: "GetEvents",
+			Handler:    _API_GetEvents_Handler,
+		},
+		{
+			MethodName: "GetRegisters",
+			Handler:    _API_GetRegisters_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

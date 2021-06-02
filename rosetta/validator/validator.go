@@ -15,10 +15,8 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -27,14 +25,12 @@ import (
 
 type Validator struct {
 	params dps.Params
-	height HeightFunc
 }
 
-func New(params dps.Params, height HeightFunc) *Validator {
+func New(params dps.Params) *Validator {
 
 	v := &Validator{
 		params: params,
-		height: height,
 	}
 
 	return v
@@ -65,23 +61,6 @@ func (v *Validator) Network(network identifier.Network) error {
 // don't know yet / haven't seen and blocks that are just mismatched
 // => https://github.com/optakt/flow-dps/issues/51
 func (v *Validator) Block(block identifier.Block) error {
-
-	blockID, err := flow.HexStringToIdentifier(block.Hash)
-	if err != nil {
-		return fmt.Errorf("could not parse block identifier hash: %w", err)
-	}
-
-	height, err := v.height(blockID)
-	if errors.Is(err, badger.ErrKeyNotFound) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("could not validate block identifier: %w", err)
-	}
-
-	if height != block.Index {
-		return fmt.Errorf("could not match block identifier index to height (%d != %d)", block.Index, height)
-	}
 
 	return nil
 }

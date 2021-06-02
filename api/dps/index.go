@@ -12,17 +12,40 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package height
+package dps
 
 import (
 	"fmt"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/api/dps"
 )
 
-func FromDPS(client dps.APIClient) func(flow.Identifier) (uint64, error) {
-	return func(blockID flow.Identifier) (uint64, error) {
-		return 0, fmt.Errorf("not implemented")
+type Index struct {
+	client APIClient
+}
+
+func IndexFromAPI(client APIClient) *Index {
+
+	i := Index{
+		client: client,
 	}
+
+	return &i
+}
+
+func (i *Index) Header(height uint64) (*flow.Header, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (i *Index) Commit(height uint64) (flow.StateCommitment, error) {
+	return flow.StateCommitment{}, fmt.Errorf("not implemented")
+}
+
+func (i *Index) Events(height uint64) ([]flow.Event, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (i *Index) Register(height uint64, path ledger.Path) (ledger.Value, error) {
+	return nil, fmt.Errorf("not implemented")
 }

@@ -28,9 +28,9 @@ import (
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 
-	"github.com/optakt/flow-dps/api/dps"
-	config "github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/state"
+	api "github.com/optakt/flow-dps/api/dps"
+	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/service/index"
 )
 
 func main() {
@@ -62,19 +62,15 @@ func main() {
 	log = log.Level(level)
 
 	// Initialize the index core state.
-	index, err := badger.Open(config.DefaultOptions(flagIndex).WithReadOnly(true))
+	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not open index DB")
 	}
-	core, err := state.NewCore(index)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize ledger")
-	}
+	index := index.NewReader(db)
 
 	// GRPC API initialization.
 	gsvr := grpc.NewServer()
-	controller := dps.NewController(core)
-	server, err := dps.NewServer(controller)
+	server, err := api.NewServer(index)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize DPS server")
 	}
@@ -88,7 +84,7 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Uint16("port", flagPort).Msg("could not listen")
 		}
-		dps.RegisterAPIServer(gsvr, server)
+		api.RegisterAPIServer(gsvr, server)
 		err = gsvr.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("GRPC API encountered error")

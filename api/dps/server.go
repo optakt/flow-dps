@@ -20,6 +20,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/flow-go/ledger"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 // TODO: Add additional layer for API client that makes native Go
@@ -27,24 +28,24 @@ import (
 // redo the state interfaces and implement some of them in both GRPC
 // and in native Go on top of Badger.
 
+// TODO: Create a central interface declaration for encoding/decoding that we
+// can re-use across components, and add the compression to GRPC.
+
 // Server is a simple implementation of the generated APIServer interface.
 // It simply forwards requests to its controller directly without any extra logic.
 // It could be used later on to specify GRPC options specifically for certain routes.
 type Server struct {
-	ctrl  *Controller
+	index dps.IndexReader
 	codec cbor.EncMode
 }
 
 // NewServer creates a Server given a Controller pointer.
-func NewServer(ctrl *Controller) (*Server, error) {
+func NewServer(index dps.IndexReader) (*Server, error) {
 
-	codec, err := cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize encoder: %w", err)
-	}
+	codec, _ := cbor.CanonicalEncOptions().EncMode()
 
 	s := Server{
-		ctrl:  ctrl,
+		index: index,
 		codec: codec,
 	}
 
@@ -54,7 +55,7 @@ func NewServer(ctrl *Controller) (*Server, error) {
 // GetHeader calls the server's controller with the GetHeader method.
 func (s *Server) GetHeader(ctx context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
 
-	header, height, err := s.ctrl.GetHeader(req.Height)
+	header, err := s.index.Header(req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("could not get header: %w", err)
 	}
@@ -65,51 +66,69 @@ func (s *Server) GetHeader(ctx context.Context, req *GetHeaderRequest) (*GetHead
 	}
 
 	res := GetHeaderResponse{
-		Height: height,
+		Height: req.Height,
 		Data:   data,
 	}
 
 	return &res, nil
 }
 
-// ReadRegisters calls the server's controller with the ReadRegisters method.
-func (s *Server) ReadRegisters(ctx context.Context, req *ReadRegistersRequest) (*ReadRegistersResponse, error) {
+func (s *Server) GetCommit(ctx context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
 
-	paths, err := toPaths(req.Paths)
+	commit, err := s.index.Commit(req.Height)
 	if err != nil {
-		return nil, fmt.Errorf("could not convert paths: %w", err)
+		return nil, fmt.Errorf("could not get commit: %w", err)
 	}
 
-	values, height, err := s.ctrl.ReadRegisters(req.Height, paths)
-	if err != nil {
-		return nil, fmt.Errorf("could not read registers: %w", err)
-	}
-
-	res := ReadRegistersResponse{
-		Height: height,
-		Paths:  req.Paths,
-		Values: toBytes(values),
+	res := GetCommitResponse{
+		Height: req.Height,
+		Commit: commit[:],
 	}
 
 	return &res, nil
 }
 
-func toPaths(bb [][]byte) ([]ledger.Path, error) {
-	paths := make([]ledger.Path, 0, len(bb))
-	for _, b := range bb {
-		path, err := ledger.ToPath(b)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert path (%x): %w", b, err)
-		}
-		paths = append(paths, path)
+func (s *Server) GetEvents(ctx context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
+
+	events, err := s.index.Events(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get events: %w", err)
 	}
-	return paths, nil
+
+	data, err := s.codec.Marshal(events)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode events: %w", err)
+	}
+
+	res := GetEventsResponse{
+		Height: req.Height,
+		Data:   data,
+	}
+
+	return &res, nil
 }
 
-func toBytes(values []ledger.Value) [][]byte {
-	bb := make([][]byte, 0, len(values))
-	for _, value := range values {
-		bb = append(bb, value[:])
+// GetRegisters calls the server's controller with the GetRegisters method.
+func (s *Server) GetRegisters(ctx context.Context, req *GetRegistersRequest) (*GetRegistersResponse, error) {
+
+	values := make([][]byte, 0, len(req.Paths))
+	for _, bytes := range req.Paths {
+		path, err := ledger.ToPath(bytes)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert path (%x): %w", path, err)
+		}
+		value, err := s.index.Register(req.Height, path)
+		if err != nil {
+			return nil, fmt.Errorf("could not read register (%x): %w", path, err)
+		}
+		values = append(values, value)
 	}
-	return bb
+
+	res := GetRegistersResponse{
+		Height: req.Height,
+		Paths:  req.Paths,
+		Values: values,
+	}
+
+	return &res, nil
 }

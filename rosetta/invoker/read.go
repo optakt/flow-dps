@@ -15,7 +15,38 @@
 package invoker
 
 import (
+	"fmt"
+
+	"github.com/onflow/flow-go/engine/execution/state"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
+	"github.com/onflow/flow-go/ledger/common/pathfinder"
+	"github.com/onflow/flow-go/ledger/complete"
+	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
-type ReadFunc func(height uint64) delta.GetRegisterFunc
+func readRegister(index dps.IndexReader, height uint64) delta.GetRegisterFunc {
+	readCache := make(map[flow.RegisterID]flow.RegisterValue)
+	return func(owner string, controller string, key string) (flow.RegisterValue, error) {
+
+		regID := flow.NewRegisterID(owner, controller, key)
+		value, ok := readCache[regID]
+		if ok {
+			return value, nil
+		}
+
+		path, err := pathfinder.KeyToPath(state.RegisterIDToKey(regID), complete.DefaultPathFinderVersion)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert key to path: %w", err)
+		}
+
+		value, err = index.Register(height, path)
+		if err != nil {
+			return nil, fmt.Errorf("could not read register: %w", err)
+		}
+
+		readCache[regID] = value
+
+		return value, nil
+	}
+}

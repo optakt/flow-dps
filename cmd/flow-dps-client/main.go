@@ -30,8 +30,6 @@ import (
 
 	"github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/rosetta/invoker"
-	"github.com/optakt/flow-dps/rosetta/lookup"
-	"github.com/optakt/flow-dps/rosetta/read"
 )
 
 func main() {
@@ -94,7 +92,7 @@ func main() {
 	}
 
 	// Execute the script using remote lookup and read.
-	invoke := invoker.New(lookup.FromDPS(client), read.FromDPS(client))
+	invoke := invoker.New(dps.IndexFromAPI(client))
 	result, err := invoke.Script(flagHeight, script, args)
 	if err != nil {
 		log.Error().Err(err).Msg("could not execute script")

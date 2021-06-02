@@ -25,22 +25,28 @@ import (
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/programs"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
+// TODO: Create read cache outside of the `GetRegisterFunc` closure, so we can
+// manage the space taken up by it.
+
 type Invoker struct {
-	lookup LookupFunc
-	read   ReadFunc
-	vm     *fvm.VirtualMachine
+	index dps.IndexReader
+	vm    *fvm.VirtualMachine
+	reads map[uint64]delta.GetRegisterFunc
 }
 
-func New(lookup LookupFunc, read ReadFunc) *Invoker {
+func New(index dps.IndexReader) *Invoker {
 
 	rt := fvm.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
 
 	i := Invoker{
-		read: read,
-		vm:   vm,
+		index: index,
+		vm:    vm,
+		reads: make(map[uint64]delta.GetRegisterFunc),
 	}
 
 	return &i
@@ -59,7 +65,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	// look up the current block and commit for the block
-	header, err := i.lookup(height)
+	header, err := i.index.Header(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not look up header and commit: %w", err)
 	}
@@ -68,9 +74,16 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	// that parameters related to the block are available from within the script
 	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
 
+	// get the read function, if it was already initialized, to use the cache
+	read, ok := i.reads[height]
+	if !ok {
+		read = readRegister(i.index, height)
+		i.reads[height] = read
+	}
+
 	// we initialize the view of the execution state on top of our ledger by
 	// using the read function at a specific commit
-	view := delta.NewView(i.read(height))
+	view := delta.NewView(read)
 
 	// we initialize the procedure using the script bytes and the encoded
 	// cadence parameters
