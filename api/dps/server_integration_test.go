@@ -41,10 +41,8 @@ var lis *bufconn.Listener
 var (
 	wantHeight uint64 = 128
 	lastHeight uint64 = 256
-	testValue         = []byte(`testValue`)
-	testKey           = []byte(`testKey`)
-
-	testValues = []ledger.Value{ledger.Value(`testValue`)}
+	testValues        = [][]byte{{0x1, 0x2}, {0x3, 0x4}}
+	testPaths         = [][]byte{{0x5, 0x6}, {0x7, 0x8}}
 )
 
 func TestMain(m *testing.M) {
@@ -56,10 +54,12 @@ func TestMain(m *testing.M) {
 
 	mock := mocks.NewState()
 
-	// GetRegister
+	// ReadRegisters
 	mock.LastState.On("Height").Return(lastHeight)
 	mock.RawState.On("WithHeight", wantHeight).Return(mock.RawState)
-	mock.RawState.On("Get", testKey).Return(testValue, nil)
+	for i, path := range testPaths {
+		mock.RawState.On("Get", path).Return(testValues[i], nil)
+	}
 
 	// GetValues
 	mock.LastState.On("Commit").Return(lastCommit)
@@ -68,7 +68,7 @@ func TestMain(m *testing.M) {
 	mock.LedgerState.On("Get", testQuery).Return(testValues, nil)
 
 	controller := dps.NewController(mock)
-	server := dps.New(controller)
+	server, _ := dps.NewServer(controller)
 
 	lis = bufconn.Listen(bufSize)
 	s := grpc.NewServer()
@@ -88,12 +88,7 @@ func TestMain(m *testing.M) {
 	os.Exit(0)
 }
 
-func TestNew(t *testing.T) {
-	s := dps.New(nil)
-	assert.NotNil(t, s)
-}
-
-func TestServer_GetRegister(t *testing.T) {
+func TestServer_ReadRegisters(t *testing.T) {
 	ctx := context.Background()
 
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
@@ -103,39 +98,20 @@ func TestServer_GetRegister(t *testing.T) {
 
 	client := dps.NewAPIClient(conn)
 
-	got, err := client.GetRegister(ctx, &dps.GetRegisterRequest{
+	got, err := client.ReadRegisters(ctx, &dps.ReadRegistersRequest{
 		Height: &wantHeight,
-		Key:    []byte(`testKey`),
+		Paths:  testPaths,
 	})
 	assert.NoError(t, err)
 
-	want := &dps.GetRegisterResponse{
+	want := &dps.ReadRegistersResponse{
 		Height: wantHeight,
-		Key:    []byte(`testKey`),
-		Value:  []byte(`testValue`),
-	}
-	assert.Equal(t, want.Value, got.Value)
-	assert.Equal(t, want.Key, got.Key)
-	assert.Equal(t, want.Height, got.Height)
-}
-
-func TestServer_GetValues(t *testing.T) {
-	ctx := context.Background()
-
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
-	require.NoError(t, err)
-
-	defer conn.Close()
-
-	client := dps.NewAPIClient(conn)
-
-	got, err := client.GetValues(ctx, &dps.GetValuesRequest{})
-	assert.NoError(t, err)
-
-	want := &dps.GetValuesResponse{
-		Values: [][]byte{testValue},
+		Paths:  testPaths,
+		Values: testValues,
 	}
 	assert.Equal(t, want.Values, got.Values)
+	assert.Equal(t, want.Paths, got.Paths)
+	assert.Equal(t, want.Height, got.Height)
 }
 
 func bufDialer(context.Context, string) (net.Conn, error) {

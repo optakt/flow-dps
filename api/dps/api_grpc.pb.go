@@ -18,10 +18,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type APIClient interface {
-	GetRegister(ctx context.Context, in *GetRegisterRequest, opts ...grpc.CallOption) (*GetRegisterResponse, error)
-	GetValues(ctx context.Context, in *GetValuesRequest, opts ...grpc.CallOption) (*GetValuesResponse, error)
 	GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
 	GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
+	ReadRegisters(ctx context.Context, in *ReadRegistersRequest, opts ...grpc.CallOption) (*ReadRegistersResponse, error)
 }
 
 type aPIClient struct {
@@ -30,24 +29,6 @@ type aPIClient struct {
 
 func NewAPIClient(cc grpc.ClientConnInterface) APIClient {
 	return &aPIClient{cc}
-}
-
-func (c *aPIClient) GetRegister(ctx context.Context, in *GetRegisterRequest, opts ...grpc.CallOption) (*GetRegisterResponse, error) {
-	out := new(GetRegisterResponse)
-	err := c.cc.Invoke(ctx, "/API/GetRegister", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aPIClient) GetValues(ctx context.Context, in *GetValuesRequest, opts ...grpc.CallOption) (*GetValuesResponse, error) {
-	out := new(GetValuesResponse)
-	err := c.cc.Invoke(ctx, "/API/GetValues", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *aPIClient) GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error) {
@@ -68,31 +49,36 @@ func (c *aPIClient) GetCommit(ctx context.Context, in *GetCommitRequest, opts ..
 	return out, nil
 }
 
+func (c *aPIClient) ReadRegisters(ctx context.Context, in *ReadRegistersRequest, opts ...grpc.CallOption) (*ReadRegistersResponse, error) {
+	out := new(ReadRegistersResponse)
+	err := c.cc.Invoke(ctx, "/API/ReadRegisters", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // APIServer is the server API for API service.
 // All implementations should embed UnimplementedAPIServer
 // for forward compatibility
 type APIServer interface {
-	GetRegister(context.Context, *GetRegisterRequest) (*GetRegisterResponse, error)
-	GetValues(context.Context, *GetValuesRequest) (*GetValuesResponse, error)
 	GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error)
 	GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error)
+	ReadRegisters(context.Context, *ReadRegistersRequest) (*ReadRegistersResponse, error)
 }
 
 // UnimplementedAPIServer should be embedded to have forward compatible implementations.
 type UnimplementedAPIServer struct {
 }
 
-func (UnimplementedAPIServer) GetRegister(context.Context, *GetRegisterRequest) (*GetRegisterResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetRegister not implemented")
-}
-func (UnimplementedAPIServer) GetValues(context.Context, *GetValuesRequest) (*GetValuesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetValues not implemented")
-}
 func (UnimplementedAPIServer) GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetHeader not implemented")
 }
 func (UnimplementedAPIServer) GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCommit not implemented")
+}
+func (UnimplementedAPIServer) ReadRegisters(context.Context, *ReadRegistersRequest) (*ReadRegistersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadRegisters not implemented")
 }
 
 // UnsafeAPIServer may be embedded to opt out of forward compatibility for this service.
@@ -104,42 +90,6 @@ type UnsafeAPIServer interface {
 
 func RegisterAPIServer(s grpc.ServiceRegistrar, srv APIServer) {
 	s.RegisterService(&API_ServiceDesc, srv)
-}
-
-func _API_GetRegister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRegisterRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(APIServer).GetRegister(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/API/GetRegister",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetRegister(ctx, req.(*GetRegisterRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _API_GetValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetValuesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(APIServer).GetValues(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/API/GetValues",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetValues(ctx, req.(*GetValuesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _API_GetHeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -178,6 +128,24 @@ func _API_GetCommit_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_ReadRegisters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadRegistersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).ReadRegisters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/ReadRegisters",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).ReadRegisters(ctx, req.(*ReadRegistersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // API_ServiceDesc is the grpc.ServiceDesc for API service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -186,20 +154,16 @@ var API_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*APIServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetRegister",
-			Handler:    _API_GetRegister_Handler,
-		},
-		{
-			MethodName: "GetValues",
-			Handler:    _API_GetValues_Handler,
-		},
-		{
 			MethodName: "GetHeader",
 			Handler:    _API_GetHeader_Handler,
 		},
 		{
 			MethodName: "GetCommit",
 			Handler:    _API_GetCommit_Handler,
+		},
+		{
+			MethodName: "ReadRegisters",
+			Handler:    _API_ReadRegisters_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

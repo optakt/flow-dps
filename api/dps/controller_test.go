@@ -15,16 +15,11 @@
 package dps
 
 import (
-	"context"
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/optakt/flow-dps/testing/mocks"
 )
@@ -42,63 +37,60 @@ func TestController_GetRegister(t *testing.T) {
 		testHeight uint64 = 128
 		lastHeight uint64 = 256
 
-		testKey   = []byte(`testKey`)
-		testValue = []byte(`testValue`)
+		testPaths  = []ledger.Path{{0x1, 0x2}, {0x3, 0x4}}
+		testValues = []ledger.Value{{0x5, 0x6}, {0x7, 0x8}}
 	)
 
 	tests := []struct {
 		desc string
 
 		reqHeight *uint64
-		reqKey    []byte
+		reqPaths  []ledger.Path
 
-		mockValue []byte
-		mockErr   error
+		mockValues []ledger.Value
+		mockErr    error
 
+		wantValues []ledger.Value
 		wantHeight uint64
-		wantResp   *GetRegisterResponse
 		wantErr    assert.ErrorAssertionFunc
 	}{
 		{
 			desc: "nominal case, height given",
 
 			reqHeight: &testHeight,
-			reqKey:    testKey,
+			reqPaths:  testPaths,
 
-			mockValue: testValue,
+			mockValues: testValues,
+			mockErr:    nil,
 
+			wantValues: testValues,
 			wantHeight: testHeight,
-			wantResp: &GetRegisterResponse{
-				Height: testHeight,
-				Key:    testKey,
-				Value:  testValue,
-			},
-			wantErr: assert.NoError,
+			wantErr:    assert.NoError,
 		},
 		{
 			desc: "nominal case, no height given",
 
-			reqKey: testKey,
+			reqHeight: nil,
+			reqPaths:  testPaths,
 
-			mockValue: testValue,
+			mockValues: testValues,
+			mockErr:    nil,
 
+			wantValues: testValues,
 			wantHeight: lastHeight,
-			wantResp: &GetRegisterResponse{
-				Height: lastHeight,
-				Key:    testKey,
-				Value:  testValue,
-			},
-			wantErr: assert.NoError,
+			wantErr:    assert.NoError,
 		},
 		{
 			desc: "state error",
 
-			reqKey: testKey,
+			reqHeight: &testHeight,
+			reqPaths:  testPaths,
 
-			mockErr: errors.New("dummy error"),
+			mockValues: testValues,
+			mockErr:    errors.New("dummy error"),
 
-			wantHeight: lastHeight,
-			wantResp:   nil,
+			wantValues: nil,
+			wantHeight: 0,
 			wantErr:    assert.Error,
 		},
 	}
@@ -111,180 +103,20 @@ func TestController_GetRegister(t *testing.T) {
 			m := mocks.NewState()
 			m.LastState.On("Height").Return(lastHeight).Once()
 			m.RawState.On("WithHeight", test.wantHeight).Return(m.RawState).Once()
-			m.RawState.On("Get", test.reqKey).Return(test.mockValue, test.mockErr)
-
-			c := &Controller{
-				state: m,
-			}
-
-			req := &GetRegisterRequest{
-				Height: test.reqHeight,
-				Key:    test.reqKey,
-			}
-
-			got, err := c.GetRegister(context.Background(), req)
-			test.wantErr(t, err)
-
-			if test.wantResp != nil {
-				assert.Equal(t, test.wantResp, got)
-			}
-
-			m.AssertExpectations(t)
-		})
-	}
-}
-
-func TestController_GetValues(t *testing.T) {
-	var (
-		testKey = &Key{
-			Parts: []*KeyPart{
-				{
-					Type:  0,
-					Value: []byte(`testOwner`),
-				},
-				{
-					Type:  1,
-					Value: []byte(`testController`),
-				},
-				{
-					Type:  2,
-					Value: []byte(`testKey`),
-				},
-			},
-		}
-		testKeys    = []*Key{testKey}
-		testVersion = uint64(42)
-		testValue   = []byte(`testValue`)
-		testValues  = []ledger.Value{ledger.Value(testValue)}
-	)
-
-	testCommit, err := flow.ToStateCommitment([]byte("0d339afb6de1aa21b7afbcef3278c8ee"))
-	require.NoError(t, err)
-	lastCommit, err := flow.ToStateCommitment([]byte("25026807db966e6464d17d99b780b9f3"))
-	require.NoError(t, err)
-
-	tests := []struct {
-		desc string
-
-		reqCommit  []byte
-		reqVersion *uint64
-		reqKeys    []*Key
-
-		mockValues []ledger.Value
-		mockErr    error
-
-		wantResp *GetValuesResponse
-		wantErr  assert.ErrorAssertionFunc
-	}{
-		{
-			desc: "nominal case, version and commit hash given",
-
-			reqKeys:    testKeys,
-			reqCommit:  testCommit[:],
-			reqVersion: &testVersion,
-
-			mockValues: testValues,
-
-			wantResp: &GetValuesResponse{
-				Values: [][]byte{testValue},
-			},
-			wantErr: assert.NoError,
-		},
-		{
-			desc: "nominal case, version given, using latest commit",
-
-			reqKeys:    testKeys,
-			reqVersion: &testVersion,
-
-			mockValues: testValues,
-
-			wantResp: &GetValuesResponse{
-				Values: [][]byte{testValue},
-			},
-			wantErr: assert.NoError,
-		},
-		{
-			desc: "nominal case, no version or commit hash given",
-
-			reqKeys: testKeys,
-
-			mockValues: testValues,
-
-			wantResp: &GetValuesResponse{
-				Values: [][]byte{testValue},
-			},
-			wantErr: assert.NoError,
-		},
-		{
-			desc: "nominal case, three keys given",
-
-			reqKeys: []*Key{testKey, testKey, testKey},
-
-			mockValues: testValues,
-
-			wantResp: &GetValuesResponse{
-				Values: [][]byte{testValue},
-			},
-			wantErr: assert.NoError,
-		},
-		{
-			desc: "no keys given",
-
-			reqKeys: []*Key{},
-
-			mockValues: testValues,
-
-			wantResp: &GetValuesResponse{
-				Values: [][]byte{testValue},
-			},
-			wantErr: assert.NoError,
-		},
-		{
-			desc: "invalid commit hash in request",
-
-			reqKeys:   testKeys,
-			reqCommit: []byte(`not a hexadecimal value`),
-
-			wantErr: assert.Error,
-		},
-		{
-			desc: "state get returns an error",
-
-			reqKeys: testKeys,
-
-			mockErr: errors.New("dummy error"),
-
-			wantErr: assert.Error,
-		},
-	}
-
-	for _, test := range tests {
-		test := test
-		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
-
-			m := mocks.NewState()
-			m.LastState.On("Commit").Return(lastCommit).Once()
-			m.LedgerState.On("Get", mock.Anything).Return(test.mockValues, test.mockErr).Once()
-			if test.reqVersion != nil {
-				m.LedgerState.On("WithVersion", uint8(*test.reqVersion)).Return(m.LedgerState).Once()
+			for i, path := range test.reqPaths {
+				m.RawState.On("Get", path).Return(test.mockValues[i], test.mockErr)
 			}
 
 			c := &Controller{
 				state: m,
 			}
 
-			req := &GetValuesRequest{
-				Keys:    test.reqKeys,
-				Hash:    test.reqCommit,
-				Version: test.reqVersion,
-			}
-
-			got, err := c.GetValues(context.Background(), req)
+			gotValues, gotHeight, err := c.ReadRegisters(test.reqHeight, test.reqPaths)
 			test.wantErr(t, err)
 
-			if test.wantResp != nil {
-				assert.Equal(t, test.wantResp, got)
+			if err == nil {
+				assert.Equal(t, test.wantValues, gotValues)
+				assert.Equal(t, test.wantHeight, gotHeight)
 			}
 
 			m.AssertExpectations(t)

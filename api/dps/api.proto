@@ -17,44 +17,13 @@ syntax = "proto3";
 option go_package = "github.com/optakt/flow-dps/dps";
 
 service API {
-  rpc GetRegister (GetRegisterRequest) returns (GetRegisterResponse) {}
-  rpc GetValues (GetValuesRequest) returns (GetValuesResponse) {}
   rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
   rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
-}
-
-message GetRegisterRequest {
-  optional uint64 height = 1;
-  bytes key = 2;
-}
-
-message GetRegisterResponse {
-  uint64 height = 1;
-  bytes key = 2;
-  bytes value = 3;
-}
-
-message GetValuesRequest {
-  optional bytes hash = 1;
-  optional uint64 version = 2;
-  repeated Key keys = 3;
-}
-
-message Key {
-  repeated KeyPart parts = 1;
-}
-
-message KeyPart {
-  uint64 type = 1;
-  bytes value = 2;
-}
-
-message GetValuesResponse {
-  repeated bytes values = 1;
+  rpc ReadRegisters (ReadRegistersRequest) returns (ReadRegistersResponse) {}
 }
 
 message GetHeaderRequest {
-  uint64 height = 1;
+  optional uint64 height = 1;
 }
 
 message GetHeaderResponse {
@@ -63,10 +32,21 @@ message GetHeaderResponse {
 }
 
 message GetCommitRequest {
-  uint64 height = 1;
+  optional uint64 height = 1;
 }
 
 message GetCommitResponse {
   uint64 height = 1;
   bytes commit = 2;
+}
+
+message ReadRegistersRequest {
+  optional uint64 height = 1;
+  repeated bytes paths = 2;
+}
+
+message ReadRegistersResponse {
+  uint64 height = 1;
+  repeated bytes paths = 2;
+  repeated bytes values = 3;
 }

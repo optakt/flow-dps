@@ -16,38 +16,111 @@ package dps
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/fxamacker/cbor/v2"
+	"github.com/onflow/flow-go/ledger"
 )
 
 // Server is a simple implementation of the generated APIServer interface.
 // It simply forwards requests to its controller directly without any extra logic.
 // It could be used later on to specify GRPC options specifically for certain routes.
 type Server struct {
-	ctrl *Controller
+	ctrl  *Controller
+	codec cbor.EncMode
 }
 
-// New creates a Server given a Controller pointer.
-func New(ctrl *Controller) *Server {
-	return &Server{
-		ctrl: ctrl,
+// NewServer creates a Server given a Controller pointer.
+func NewServer(ctrl *Controller) (*Server, error) {
+
+	codec, err := cbor.CanonicalEncOptions().EncMode()
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize encoder: %w", err)
 	}
-}
 
-// GetRegister calls the server's controller with the GetRegister method.
-func (s *Server) GetRegister(ctx context.Context, req *GetRegisterRequest) (*GetRegisterResponse, error) {
-	return s.ctrl.GetRegister(ctx, req)
-}
+	s := Server{
+		ctrl:  ctrl,
+		codec: codec,
+	}
 
-// GetValues calls the server's controller with the GetValues method.
-func (s *Server) GetValues(ctx context.Context, req *GetValuesRequest) (*GetValuesResponse, error) {
-	return s.ctrl.GetValues(ctx, req)
-}
-
-// GetCommit calls the server's controller with the GetCommit method.
-func (s *Server) GetCommit(ctx context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
-	return s.ctrl.GetCommit(ctx, req)
+	return &s, nil
 }
 
 // GetHeader calls the server's controller with the GetHeader method.
 func (s *Server) GetHeader(ctx context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
-	return s.ctrl.GetHeader(ctx, req)
+
+	header, height, err := s.ctrl.GetHeader(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get header: %w", err)
+	}
+
+	data, err := s.codec.Marshal(header)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode header: %w", err)
+	}
+
+	res := GetHeaderResponse{
+		Height: height,
+		Data:   data,
+	}
+
+	return &res, nil
+}
+
+// GetCommit calls the server's controller with the GetCommit method.
+func (s *Server) GetCommit(ctx context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
+
+	commit, height, err := s.ctrl.GetCommit(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get commit: %w", err)
+	}
+
+	res := GetCommitResponse{
+		Height: height,
+		Commit: commit[:],
+	}
+
+	return &res, nil
+}
+
+// ReadRegisters calls the server's controller with the ReadRegisters method.
+func (s *Server) ReadRegisters(ctx context.Context, req *ReadRegistersRequest) (*ReadRegistersResponse, error) {
+
+	paths, err := toPaths(req.Paths)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert paths: %w", err)
+	}
+
+	values, height, err := s.ctrl.ReadRegisters(req.Height, paths)
+	if err != nil {
+		return nil, fmt.Errorf("could not read registers: %w", err)
+	}
+
+	res := ReadRegistersResponse{
+		Height: height,
+		Paths:  req.Paths,
+		Values: toBytes(values),
+	}
+
+	return &res, nil
+}
+
+func toPaths(bb [][]byte) ([]ledger.Path, error) {
+	paths := make([]ledger.Path, 0, len(bb))
+	for _, b := range bb {
+		path, err := ledger.ToPath(b)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert path (%x): %w", b, err)
+		}
+		paths = append(paths, path)
+	}
+	return paths, nil
+}
+
+func toBytes(values []ledger.Value) [][]byte {
+	bb := make([][]byte, 0, len(values))
+	for _, value := range values {
+		bb = append(bb, value[:])
+	}
+	return bb
 }

@@ -20,6 +20,8 @@ import (
 
 	"github.com/onflow/flow-go/engine/execution/state"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
+	"github.com/onflow/flow-go/ledger/common/pathfinder"
+	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/api/dps"
@@ -27,38 +29,42 @@ import (
 )
 
 func FromDPS(client dps.APIClient) invoker.ReadFunc {
+	heightCache := make(map[flow.StateCommitment]uint64)
 	return func(commit flow.StateCommitment) delta.GetRegisterFunc {
 		readCache := make(map[flow.RegisterID]flow.RegisterValue)
 		return func(owner string, controller string, key string) (flow.RegisterValue, error) {
 
+			// If we have already cached the register at this commit, return the
+			// value immediately.
 			regID := flow.NewRegisterID(owner, controller, key)
 			value, ok := readCache[regID]
 			if ok {
 				return value, nil
 			}
 
-			part1 := dps.KeyPart{
-				Type:  uint64(state.KeyPartOwner),
-				Value: []byte(owner),
-			}
-			part2 := dps.KeyPart{
-				Type:  uint64(state.KeyPartController),
-				Value: []byte(controller),
-			}
-			part3 := dps.KeyPart{
-				Type:  uint64(state.KeyPartKey),
-				Value: []byte(key),
-			}
-			reqKey := dps.Key{
-				Parts: []*dps.KeyPart{&part1, &part2, &part3},
-			}
-			req := dps.GetValuesRequest{
-				Hash:    commit[:],
-				Version: nil, // use default pathfinder version
-				Keys:    []*dps.Key{&reqKey},
+			// Next, we check if we already have a height in our height cache so
+			// we can avoid doing an extra request over the network.
+			height, ok := heightCache[commit]
+			if !ok {
+				_ = ok
+				// FIXME: have a way to get the height from the commit
 			}
 
-			res, err := client.GetValues(context.Background(), &req)
+			path, err := pathfinder.KeyToPath(state.RegisterIDToKey(regID), complete.DefaultPathFinderVersion)
+			if err != nil {
+				return nil, fmt.Errorf("could not convert key to path: %w", err)
+			}
+
+			// TODO: Add additional layer for API client that makes native Go
+			// function calls instead of the GRPC structs. We should probably
+			// redo the state interfaces and implement some of them in both GRPC
+			// and in native Go on top of Badger.
+
+			req := dps.ReadRegistersRequest{
+				Height: &height,
+				Paths:  [][]byte{path[:]},
+			}
+			res, err := client.ReadRegisters(context.Background(), &req)
 			if err != nil {
 				return nil, fmt.Errorf("could not get get ledger register: %w", err)
 			}

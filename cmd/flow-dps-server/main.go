@@ -72,8 +72,12 @@ func main() {
 	}
 
 	// GRPC API initialization.
+	gsvr := grpc.NewServer()
 	controller := dps.NewController(core)
-	server := grpc.NewServer()
+	server, err := dps.NewServer(controller)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not initialize DPS server")
+	}
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
@@ -84,8 +88,8 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Uint16("port", flagPort).Msg("could not listen")
 		}
-		dps.RegisterAPIServer(server, dps.New(controller))
-		err = server.Serve(listener)
+		dps.RegisterAPIServer(gsvr, server)
+		err = gsvr.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("GRPC API encountered error")
 		}
@@ -104,7 +108,7 @@ func main() {
 	// sure that the main executing components are shutting down within the
 	// allocated shutdown time. Otherwise, we will force the shutdown and log
 	// an error. We then wait for shutdown on each component to complete.
-	server.GracefulStop()
+	gsvr.GracefulStop()
 
 	os.Exit(0)
 }
