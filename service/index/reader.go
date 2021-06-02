@@ -15,7 +15,7 @@
 package index
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
 
@@ -64,13 +64,23 @@ func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, e
 	return events, err
 }
 
-func (r *Reader) Register(height uint64, path ledger.Path) (ledger.Value, error) {
+func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 	// TODO: Introduce a height check here that doesn't need to know about
 	// current indexing progress.
-	var payload ledger.Payload
-	err := r.db.View(storage.RetrievePayload(height, path, &payload))
-	if errors.Is(err, badger.ErrKeyNotFound) {
-		return nil, nil
+	values := make([]ledger.Value, 0, len(paths))
+	err := r.db.View(func(tx *badger.Txn) error {
+		for _, path := range paths {
+			var payload ledger.Payload
+			err := storage.RetrievePayload(height, path, &payload)(tx)
+			if err != nil {
+				return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
+			}
+			values = append(values, payload.Value)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return payload.Value, nil
+	return values, nil
 }

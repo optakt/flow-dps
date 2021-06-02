@@ -132,23 +132,29 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 // GetRegisters calls the server's controller with the GetRegisters method.
 func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*GetRegistersResponse, error) {
 
-	values := make([][]byte, 0, len(req.Paths))
-	for _, bytes := range req.Paths {
-		path, err := ledger.ToPath(bytes)
+	paths := make([]ledger.Path, 0, len(req.Paths))
+	for _, p := range req.Paths {
+		path, err := ledger.ToPath(p)
 		if err != nil {
-			return nil, fmt.Errorf("could not convert path (%x): %w", path, err)
+			return nil, fmt.Errorf("could not convert path (%x): %w", p, err)
 		}
-		value, err := s.index.Register(req.Height, path)
-		if err != nil {
-			return nil, fmt.Errorf("could not read register (%x): %w", path, err)
-		}
-		values = append(values, value)
+		paths = append(paths, path)
+	}
+
+	values, err := s.index.Registers(req.Height, paths)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve registers: %w", err)
+	}
+
+	vv := make([][]byte, 0, len(values))
+	for _, value := range values {
+		vv = append(vv, value[:])
 	}
 
 	res := GetRegistersResponse{
 		Height: req.Height,
 		Paths:  req.Paths,
-		Values: values,
+		Values: vv,
 	}
 
 	return &res, nil

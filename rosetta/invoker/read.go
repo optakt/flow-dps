@@ -19,6 +19,7 @@ import (
 
 	"github.com/onflow/flow-go/engine/execution/state"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/model/flow"
@@ -40,11 +41,12 @@ func readRegister(index dps.IndexReader, height uint64) delta.GetRegisterFunc {
 			return nil, fmt.Errorf("could not convert key to path: %w", err)
 		}
 
-		value, err = index.Register(height, path)
+		values, err := index.Registers(height, []ledger.Path{path})
 		if err != nil {
 			return nil, fmt.Errorf("could not read register: %w", err)
 		}
 
+		value = flow.RegisterValue(values[0])
 		readCache[regID] = value
 
 		return value, nil

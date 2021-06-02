@@ -60,7 +60,7 @@ message GetEventsResponse {
   bytes data = 3;
 }
 
-message GetRegistersRequest {
+message GetRegisterRequest {
   uint64 height = 1;
   repeated bytes paths = 2;
 }
