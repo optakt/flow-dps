@@ -22,6 +22,11 @@ import (
 	"github.com/onflow/flow-go/ledger"
 )
 
+// TODO: Add additional layer for API client that makes native Go
+// function calls instead of the GRPC structs. We should probably
+// redo the state interfaces and implement some of them in both GRPC
+// and in native Go on top of Badger.
+
 // Server is a simple implementation of the generated APIServer interface.
 // It simply forwards requests to its controller directly without any extra logic.
 // It could be used later on to specify GRPC options specifically for certain routes.
@@ -62,22 +67,6 @@ func (s *Server) GetHeader(ctx context.Context, req *GetHeaderRequest) (*GetHead
 	res := GetHeaderResponse{
 		Height: height,
 		Data:   data,
-	}
-
-	return &res, nil
-}
-
-// GetCommit calls the server's controller with the GetCommit method.
-func (s *Server) GetCommit(ctx context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
-
-	commit, height, err := s.ctrl.GetCommit(req.Height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get commit: %w", err)
-	}
-
-	res := GetCommitResponse{
-		Height: height,
-		Commit: commit[:],
 	}
 
 	return &res, nil

@@ -16,7 +16,6 @@ package invoker
 
 import (
 	"github.com/onflow/flow-go/engine/execution/state/delta"
-	"github.com/onflow/flow-go/model/flow"
 )
 
-type ReadFunc func(flow.StateCommitment) delta.GetRegisterFunc
+type ReadFunc func(height uint64) delta.GetRegisterFunc

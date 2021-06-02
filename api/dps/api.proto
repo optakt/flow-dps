@@ -18,7 +18,6 @@ option go_package = "github.com/optakt/flow-dps/dps";
 
 service API {
   rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
-  rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
   rpc ReadRegisters (ReadRegistersRequest) returns (ReadRegistersResponse) {}
 }
 
@@ -29,15 +28,6 @@ message GetHeaderRequest {
 message GetHeaderResponse {
   uint64 height = 1;
   bytes data = 2;
-}
-
-message GetCommitRequest {
-  optional uint64 height = 1;
-}
-
-message GetCommitResponse {
-  uint64 height = 1;
-  bytes commit = 2;
 }
 
 message ReadRegistersRequest {

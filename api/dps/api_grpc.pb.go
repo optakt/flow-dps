@@ -19,7 +19,6 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type APIClient interface {
 	GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
-	GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
 	ReadRegisters(ctx context.Context, in *ReadRegistersRequest, opts ...grpc.CallOption) (*ReadRegistersResponse, error)
 }
 
@@ -40,15 +39,6 @@ func (c *aPIClient) GetHeader(ctx context.Context, in *GetHeaderRequest, opts ..
 	return out, nil
 }
 
-func (c *aPIClient) GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error) {
-	out := new(GetCommitResponse)
-	err := c.cc.Invoke(ctx, "/API/GetCommit", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *aPIClient) ReadRegisters(ctx context.Context, in *ReadRegistersRequest, opts ...grpc.CallOption) (*ReadRegistersResponse, error) {
 	out := new(ReadRegistersResponse)
 	err := c.cc.Invoke(ctx, "/API/ReadRegisters", in, out, opts...)
@@ -63,7 +53,6 @@ func (c *aPIClient) ReadRegisters(ctx context.Context, in *ReadRegistersRequest,
 // for forward compatibility
 type APIServer interface {
 	GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error)
-	GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error)
 	ReadRegisters(context.Context, *ReadRegistersRequest) (*ReadRegistersResponse, error)
 }
 
@@ -73,9 +62,6 @@ type UnimplementedAPIServer struct {
 
 func (UnimplementedAPIServer) GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetHeader not implemented")
-}
-func (UnimplementedAPIServer) GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetCommit not implemented")
 }
 func (UnimplementedAPIServer) ReadRegisters(context.Context, *ReadRegistersRequest) (*ReadRegistersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReadRegisters not implemented")
@@ -110,24 +96,6 @@ func _API_GetHeader_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_GetCommit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCommitRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(APIServer).GetCommit(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/API/GetCommit",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetCommit(ctx, req.(*GetCommitRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _API_ReadRegisters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReadRegistersRequest)
 	if err := dec(in); err != nil {
@@ -156,10 +124,6 @@ var API_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetHeader",
 			Handler:    _API_GetHeader_Handler,
-		},
-		{
-			MethodName: "GetCommit",
-			Handler:    _API_GetCommit_Handler,
 		},
 		{
 			MethodName: "ReadRegisters",

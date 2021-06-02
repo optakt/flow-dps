@@ -59,7 +59,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	// look up the current block and commit for the block
-	header, commit, err := i.lookup(height)
+	header, err := i.lookup(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not look up header and commit: %w", err)
 	}
@@ -70,7 +70,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 
 	// we initialize the view of the execution state on top of our ledger by
 	// using the read function at a specific commit
-	view := delta.NewView(i.read(commit))
+	view := delta.NewView(i.read(height))
 
 	// we initialize the procedure using the script bytes and the encoded
 	// cadence parameters

@@ -34,18 +34,6 @@ func NewController(state dps.State) *Controller {
 	return c
 }
 
-func (c *Controller) GetCommit(optional *uint64) (flow.StateCommitment, uint64, error) {
-	height := c.state.Last().Height()
-	if optional != nil {
-		height = *optional
-	}
-	commit, err := c.state.Commit().ForHeight(height)
-	if err != nil {
-		return flow.StateCommitment{}, 0, fmt.Errorf("could not retrieve commit: %w", err)
-	}
-	return commit, height, nil
-}
-
 func (c *Controller) GetHeader(optional *uint64) (*flow.Header, uint64, error) {
 	height := c.state.Last().Height()
 	if optional != nil {

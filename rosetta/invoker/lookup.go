@@ -18,4 +18,4 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type LookupFunc func(height uint64) (*flow.Header, flow.StateCommitment, error)
+type LookupFunc func(height uint64) (*flow.Header, error)

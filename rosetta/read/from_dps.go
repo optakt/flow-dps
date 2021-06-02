@@ -29,8 +29,7 @@ import (
 )
 
 func FromDPS(client dps.APIClient) invoker.ReadFunc {
-	heightCache := make(map[flow.StateCommitment]uint64)
-	return func(commit flow.StateCommitment) delta.GetRegisterFunc {
+	return func(height uint64) delta.GetRegisterFunc {
 		readCache := make(map[flow.RegisterID]flow.RegisterValue)
 		return func(owner string, controller string, key string) (flow.RegisterValue, error) {
 
@@ -42,23 +41,10 @@ func FromDPS(client dps.APIClient) invoker.ReadFunc {
 				return value, nil
 			}
 
-			// Next, we check if we already have a height in our height cache so
-			// we can avoid doing an extra request over the network.
-			height, ok := heightCache[commit]
-			if !ok {
-				_ = ok
-				// FIXME: have a way to get the height from the commit
-			}
-
 			path, err := pathfinder.KeyToPath(state.RegisterIDToKey(regID), complete.DefaultPathFinderVersion)
 			if err != nil {
 				return nil, fmt.Errorf("could not convert key to path: %w", err)
 			}
-
-			// TODO: Add additional layer for API client that makes native Go
-			// function calls instead of the GRPC structs. We should probably
-			// redo the state interfaces and implement some of them in both GRPC
-			// and in native Go on top of Badger.
 
 			req := dps.ReadRegistersRequest{
 				Height: &height,

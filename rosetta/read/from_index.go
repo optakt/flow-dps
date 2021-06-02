@@ -19,7 +19,8 @@ import (
 
 	"github.com/onflow/flow-go/engine/execution/state"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
-	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/pathfinder"
+	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -27,7 +28,7 @@ import (
 )
 
 func FromIndex(core dps.State) invoker.ReadFunc {
-	return func(commit flow.StateCommitment) delta.GetRegisterFunc {
+	return func(height uint64) delta.GetRegisterFunc {
 		readCache := make(map[flow.RegisterID]flow.RegisterValue)
 		return func(owner string, controller string, key string) (flow.RegisterValue, error) {
 
@@ -37,25 +38,23 @@ func FromIndex(core dps.State) invoker.ReadFunc {
 				return value, nil
 			}
 
-			lkey := state.RegisterIDToKey(regID)
-			query, err := ledger.NewQuery(ledger.State(commit), []ledger.Key{lkey})
+			// TODO: Update the state interactions to provide a single function
+			// to provide values for paths. No more ledger versions in the core
+			// DPS code, and no more raw bytes.
+
+			path, err := pathfinder.KeyToPath(state.RegisterIDToKey(regID), complete.DefaultPathFinderVersion)
 			if err != nil {
-				return nil, fmt.Errorf("could not create ledger query: %w", err)
+				return nil, fmt.Errorf("could not convert key to path: %w", err)
 			}
 
-			values, err := core.Ledger().Get(query)
+			value, err = core.Raw().Get(path[:])
 			if err != nil {
-				fmt.Println(err)
-				return nil, fmt.Errorf("could not get ledger register: %w", err)
-			}
-			if len(values) == 0 {
-				return nil, nil
+				return nil, fmt.Errorf("could not get get register: %w", err)
 			}
 
-			value = flow.RegisterValue(values[0])
 			readCache[regID] = value
 
-			return values[0], nil
+			return value, nil
 		}
 	}
 }
