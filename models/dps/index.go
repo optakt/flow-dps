@@ -20,9 +20,10 @@ import (
 )
 
 type IndexReader interface {
+	Last() (uint64, error)
 	Header(height uint64) (*flow.Header, error)
 	Commit(height uint64) (flow.StateCommitment, error)
-	Events(height uint64) ([]flow.Event, error)
+	Events(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	Register(height uint64, path ledger.Path) (ledger.Value, error)
 }
 
@@ -30,5 +31,6 @@ type IndexWriter interface {
 	Header(height uint64, header *flow.Header) error
 	Commit(height uint64, commit flow.StateCommitment) error
 	Events(height uint64, events []flow.Event) error
-	Register(height uint64, path ledger.Path, value ledger.Value) error
+	Payloads(height uint64, path []ledger.Path, value []*ledger.Payload) error
+	Last(height uint64) error
 }

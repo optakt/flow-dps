@@ -18,8 +18,11 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 type Writer struct {
@@ -35,18 +38,78 @@ func NewWriter(db *badger.DB) *Writer {
 	return &w
 }
 
+func (w *Writer) Last(height uint64) error {
+	return w.db.Update(storage.SaveLastHeight(height))
+}
+
 func (w *Writer) Header(height uint64, header *flow.Header) error {
-	return fmt.Errorf("not implemented")
+	err := w.db.Update(func(tx *badger.Txn) error {
+		err := storage.SaveHeaderForHeight(height, header)(tx)
+		if err != nil {
+			return fmt.Errorf("could not persist header data: %w", err)
+		}
+		err = storage.SaveHeightForBlock(header.ID(), height)(tx)
+		if err != nil {
+			return fmt.Errorf("could not persist block index: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("could not index header: %w", err)
+	}
+	return nil
 }
 
 func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
-	return fmt.Errorf("not implemented")
+	err := w.db.Update(func(tx *badger.Txn) error {
+		err := storage.SaveCommitForHeight(commit, height)(tx)
+		if err != nil {
+			return fmt.Errorf("could not persist commit index: %w", err)
+		}
+		err = storage.SaveHeightForCommit(height, commit)(tx)
+		if err != nil {
+			return fmt.Errorf("could not persist height index: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("could not index commit: %w", err)
+	}
+	return nil
 }
 
 func (w *Writer) Events(height uint64, events []flow.Event) error {
-	return fmt.Errorf("not implemented")
+	err := w.db.Update(func(tx *badger.Txn) error {
+		buckets := make(map[flow.EventType][]flow.Event)
+		for _, event := range events {
+			buckets[event.Type] = append(buckets[event.Type], event)
+		}
+		for typ, evts := range buckets {
+			err := storage.SaveEvents(height, typ, evts)(tx)
+			if err != nil {
+				return fmt.Errorf("could not persist events: %w", err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("could not index events: %w", err)
+	}
+	return nil
 }
 
-func (w *Writer) Register(height uint64, path ledger.Path, value ledger.Value) error {
-	return fmt.Errorf("not implemented")
+func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
+	return w.db.Update(func(tx *badger.Txn) error {
+		if len(paths) != len(payloads) {
+			return fmt.Errorf("mismatch between paths and payloads counts")
+		}
+		for i, path := range paths {
+			payload := payloads[i]
+			err := storage.SavePayload(height, path, payload)(tx)
+			if err != nil {
+				return fmt.Errorf("could not save payload (path: %x): %w", path, err)
+			}
+		}
+		return nil
+	})
 }

@@ -38,7 +38,7 @@ type Mapper struct {
 	log        zerolog.Logger
 	chain      Chain
 	feed       Feeder
-	index      dps.Index
+	index      dps.IndexWriter
 	checkpoint string
 	post       func(*trie.MTrie)
 	wg         *sync.WaitGroup
@@ -48,7 +48,7 @@ type Mapper struct {
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
 // and then passes on the details to the indexer for indexing.
-func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options ...func(*MapperConfig)) (*Mapper, error) {
+func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.IndexWriter, options ...func(*MapperConfig)) (*Mapper, error) {
 
 	// We don't use a checkpoint by default. The options can set one, in which
 	// case we will add the checkpoint as a finalized state commitment in our
@@ -372,7 +372,7 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not index events: %w", err)
 		}
-		err = m.index.Last(commitNext)
+		err = m.index.Last(height)
 		if err != nil {
 			return fmt.Errorf("could not index last: %w", err)
 		}

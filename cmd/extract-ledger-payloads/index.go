@@ -37,6 +37,6 @@ func (*Index) Events(height uint64, events []flow.Event) error {
 	return nil
 }
 
-func (*Index) Last(commit flow.StateCommitment) error {
+func (*Index) Last(height uint64) error {
 	return nil
 }

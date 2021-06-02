@@ -15,7 +15,7 @@
 package storage
 
 const (
-	prefixLastCommit          = 1
+	prefixLastHeight          = 1
 	prefixIndexBlockToHeight  = 2
 	prefixIndexCommitToHeight = 3
 	prefixIndexHeightToCommit = 4

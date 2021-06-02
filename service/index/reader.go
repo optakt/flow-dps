@@ -15,11 +15,14 @@
 package index
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/dgraph-io/badger/v2"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 type Reader struct {
@@ -35,18 +38,39 @@ func NewReader(db *badger.DB) *Reader {
 	return &r
 }
 
+func (r *Reader) Last() (uint64, error) {
+	var height uint64
+	err := r.db.View(storage.RetrieveLastHeight(&height))
+	return height, err
+}
+
 func (r *Reader) Header(height uint64) (*flow.Header, error) {
-	return nil, fmt.Errorf("not implemented")
+	var header flow.Header
+	err := r.db.View(storage.RetrieveHeader(height, &header))
+	return &header, err
 }
 
 func (r *Reader) Commit(height uint64) (flow.StateCommitment, error) {
-	return flow.StateCommitment{}, fmt.Errorf("not implemented")
+	var commit flow.StateCommitment
+	err := r.db.View(storage.RetrieveCommitByHeight(height, &commit))
+	return commit, err
 }
 
-func (r *Reader) Events(height uint64) ([]flow.Event, error) {
-	return nil, fmt.Errorf("not implemented")
+func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+	// TODO: Introduce a height check here that doesn't need to know about
+	// current indexing progress.
+	var events []flow.Event
+	err := r.db.View(storage.RetrieveEvents(height, types, &events))
+	return events, err
 }
 
-func (r *Reader) Register(height uint64, paths ledger.Path) (ledger.Value, error) {
-	return nil, fmt.Errorf("not implemented")
+func (r *Reader) Register(height uint64, path ledger.Path) (ledger.Value, error) {
+	// TODO: Introduce a height check here that doesn't need to know about
+	// current indexing progress.
+	var payload ledger.Payload
+	err := r.db.View(storage.RetrievePayload(height, path, &payload))
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		return nil, nil
+	}
+	return payload.Value, nil
 }

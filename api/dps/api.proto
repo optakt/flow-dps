@@ -17,10 +17,18 @@ syntax = "proto3";
 option go_package = "github.com/optakt/flow-dps/dps";
 
 service API {
+  rpc GetLast (GetLastRequest) returns (GetLastResponse) {}
   rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
   rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
   rpc GetEvents (GetEventsRequest) returns (GetEventsResponse) {}
   rpc GetRegisters (GetRegistersRequest) returns (GetRegistersResponse) {}
+}
+
+message GetLastRequest {
+}
+
+message GetLastResponse {
+  uint64 height = 1;
 }
 
 message GetHeaderRequest {
@@ -43,11 +51,13 @@ message GetCommitResponse {
 
 message GetEventsRequest {
   uint64 height = 1;
+  repeated string types = 2;
 }
 
 message GetEventsResponse {
   uint64 height = 1;
-  bytes data = 2;
+  repeated string types = 2;
+  bytes data = 3;
 }
 
 message GetRegistersRequest {

@@ -20,6 +20,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -52,8 +53,22 @@ func NewServer(index dps.IndexReader) (*Server, error) {
 	return &s, nil
 }
 
+func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse, error) {
+
+	height, err := s.index.Last()
+	if err != nil {
+		return nil, fmt.Errorf("could not get last height: %w", err)
+	}
+
+	res := GetLastResponse{
+		Height: height,
+	}
+
+	return &res, nil
+}
+
 // GetHeader calls the server's controller with the GetHeader method.
-func (s *Server) GetHeader(ctx context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
+func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
 
 	header, err := s.index.Header(req.Height)
 	if err != nil {
@@ -73,7 +88,7 @@ func (s *Server) GetHeader(ctx context.Context, req *GetHeaderRequest) (*GetHead
 	return &res, nil
 }
 
-func (s *Server) GetCommit(ctx context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
+func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
 
 	commit, err := s.index.Commit(req.Height)
 	if err != nil {
@@ -88,9 +103,14 @@ func (s *Server) GetCommit(ctx context.Context, req *GetCommitRequest) (*GetComm
 	return &res, nil
 }
 
-func (s *Server) GetEvents(ctx context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
+func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
 
-	events, err := s.index.Events(req.Height)
+	types := make([]flow.EventType, 0, len(req.Types))
+	for _, typ := range req.Types {
+		types = append(types, flow.EventType(typ))
+	}
+
+	events, err := s.index.Events(req.Height, types...)
 	if err != nil {
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
@@ -102,6 +122,7 @@ func (s *Server) GetEvents(ctx context.Context, req *GetEventsRequest) (*GetEven
 
 	res := GetEventsResponse{
 		Height: req.Height,
+		Types:  req.Types,
 		Data:   data,
 	}
 
@@ -109,7 +130,7 @@ func (s *Server) GetEvents(ctx context.Context, req *GetEventsRequest) (*GetEven
 }
 
 // GetRegisters calls the server's controller with the GetRegisters method.
-func (s *Server) GetRegisters(ctx context.Context, req *GetRegistersRequest) (*GetRegistersResponse, error) {
+func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*GetRegistersResponse, error) {
 
 	values := make([][]byte, 0, len(req.Paths))
 	for _, bytes := range req.Paths {

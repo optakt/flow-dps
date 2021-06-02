@@ -28,8 +28,8 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
+	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/mapper"
-	"github.com/optakt/flow-dps/service/state"
 )
 
 func main() {
@@ -65,14 +65,11 @@ func main() {
 	log = log.Level(level)
 
 	// Initialize the index core state.
-	index, err := badger.Open(dps.DefaultOptions(flagIndex))
+	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not open index DB")
 	}
-	core, err := state.NewCore(index)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize ledger")
-	}
+	index := index.NewWriter(db)
 
 	// Initialize indexer components.
 	data, err := badger.Open(dps.DefaultOptions(flagData))
@@ -88,7 +85,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize feeder")
 	}
-	mapper, err := mapper.New(log, chain, feeder, core.Index(), mapper.WithCheckpointFile(flagCheckpoint))
+	mapper, err := mapper.New(log, chain, feeder, index, mapper.WithCheckpointFile(flagCheckpoint))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize mapper")
 	}

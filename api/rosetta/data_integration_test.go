@@ -34,14 +34,11 @@ import (
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/identifier"
-	"github.com/optakt/flow-dps/rosetta/height"
 	"github.com/optakt/flow-dps/rosetta/invoker"
-	"github.com/optakt/flow-dps/rosetta/lookup"
-	"github.com/optakt/flow-dps/rosetta/read"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
-	"github.com/optakt/flow-dps/service/state"
+	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/testing/snapshots"
 )
 
@@ -50,6 +47,7 @@ func setupDB(t *testing.T) *badger.DB {
 
 	opts := badger.DefaultOptions("").
 		WithInMemory(true).
+		WithReadOnly(true).
 		WithLogger(nil)
 
 	db, err := badger.Open(opts)
@@ -66,13 +64,12 @@ func setupDB(t *testing.T) *badger.DB {
 func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	t.Helper()
 
-	core, err := state.NewCore(db)
-	require.NoError(t, err)
+	index := index.NewReader(db)
 
 	params := dps.FlowParams[dps.FlowTestnet]
 	generator := scripts.NewGenerator(params)
-	invoke := invoker.New(lookup.FromIndex(core), read.FromIndex(core))
-	validate := validator.New(params, height.FromIndex(core))
+	invoke := invoker.New(index)
+	validate := validator.New(params)
 	retrieve := retriever.New(generator, invoke)
 	controller := rosetta.NewData(validate, retrieve)
 

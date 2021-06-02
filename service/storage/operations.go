@@ -61,8 +61,8 @@ func Combine(ops ...func(*badger.Txn) error) func(*badger.Txn) error {
 	}
 }
 
-func RetrieveLastCommit(commit *flow.StateCommitment) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixLastCommit), commit)
+func RetrieveLastHeight(height *uint64) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixLastHeight), height)
 }
 
 func RetrieveHeightByCommit(commit flow.StateCommitment, height *uint64) func(*badger.Txn) error {
@@ -164,8 +164,8 @@ func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) f
 	}
 }
 
-func SaveLastCommit(commit flow.StateCommitment) func(*badger.Txn) error {
-	return save(encodeKey(prefixLastCommit), commit)
+func SaveLastHeight(height uint64) func(*badger.Txn) error {
+	return save(encodeKey(prefixLastHeight), height)
 }
 
 func SaveHeightForCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error {

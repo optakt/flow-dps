@@ -54,7 +54,7 @@ func TestMain(m *testing.M) {
 
 	mock := mocks.NewState()
 
-	// ReadRegisters
+	// GetRegisters
 	mock.LastState.On("Height").Return(lastHeight)
 	mock.RawState.On("WithHeight", wantHeight).Return(mock.RawState)
 	for i, path := range testPaths {
@@ -67,8 +67,7 @@ func TestMain(m *testing.M) {
 	testQuery, _ := ledger.NewQuery(ledger.State(lastCommit), nil)
 	mock.LedgerState.On("Get", testQuery).Return(testValues, nil)
 
-	controller := dps.NewController(mock)
-	server, _ := dps.NewServer(controller)
+	server, _ := dps.NewServer(nil)
 
 	lis = bufconn.Listen(bufSize)
 	s := grpc.NewServer()
@@ -88,7 +87,7 @@ func TestMain(m *testing.M) {
 	os.Exit(0)
 }
 
-func TestServer_ReadRegisters(t *testing.T) {
+func TestServer_GetRegisters(t *testing.T) {
 	ctx := context.Background()
 
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
@@ -98,13 +97,13 @@ func TestServer_ReadRegisters(t *testing.T) {
 
 	client := dps.NewAPIClient(conn)
 
-	got, err := client.ReadRegisters(ctx, &dps.ReadRegistersRequest{
-		Height: &wantHeight,
+	got, err := client.GetRegisters(ctx, &dps.GetRegistersRequest{
+		Height: wantHeight,
 		Paths:  testPaths,
 	})
 	assert.NoError(t, err)
 
-	want := &dps.ReadRegistersResponse{
+	want := &dps.GetRegistersResponse{
 		Height: wantHeight,
 		Paths:  testPaths,
 		Values: testValues,

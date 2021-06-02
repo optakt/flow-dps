@@ -34,6 +34,10 @@ func IndexFromAPI(client APIClient) *Index {
 	return &i
 }
 
+func (i *Index) Last() (uint64, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+
 func (i *Index) Header(height uint64) (*flow.Header, error) {
 	return nil, fmt.Errorf("not implemented")
 }
@@ -42,7 +46,7 @@ func (i *Index) Commit(height uint64) (flow.StateCommitment, error) {
 	return flow.StateCommitment{}, fmt.Errorf("not implemented")
 }
 
-func (i *Index) Events(height uint64) ([]flow.Event, error) {
+func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
