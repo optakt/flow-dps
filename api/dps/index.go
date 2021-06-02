@@ -15,10 +15,11 @@
 package dps
 
 import (
-	context "context"
+	"context"
 	"fmt"
 
 	"github.com/fxamacker/cbor/v2"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )

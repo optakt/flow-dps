@@ -19,8 +19,10 @@ import (
 	"fmt"
 
 	"github.com/fxamacker/cbor/v2"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/models/dps"
 )
 

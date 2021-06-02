@@ -43,39 +43,11 @@ func (w *Writer) Last(height uint64) error {
 }
 
 func (w *Writer) Header(height uint64, header *flow.Header) error {
-	err := w.db.Update(func(tx *badger.Txn) error {
-		err := storage.SaveHeaderForHeight(height, header)(tx)
-		if err != nil {
-			return fmt.Errorf("could not persist header data: %w", err)
-		}
-		err = storage.SaveHeightForBlock(header.ID(), height)(tx)
-		if err != nil {
-			return fmt.Errorf("could not persist block index: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not index header: %w", err)
-	}
-	return nil
+	return w.db.Update(storage.SaveHeaderForHeight(height, header))
 }
 
 func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
-	err := w.db.Update(func(tx *badger.Txn) error {
-		err := storage.SaveCommitForHeight(commit, height)(tx)
-		if err != nil {
-			return fmt.Errorf("could not persist commit index: %w", err)
-		}
-		err = storage.SaveHeightForCommit(height, commit)(tx)
-		if err != nil {
-			return fmt.Errorf("could not persist height index: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not index commit: %w", err)
-	}
-	return nil
+	return w.db.Update(storage.SaveCommitForHeight(commit, height))
 }
 
 func (w *Writer) Events(height uint64, events []flow.Event) error {

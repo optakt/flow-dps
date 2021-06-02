@@ -14,7 +14,7 @@
 
 syntax = "proto3";
 
-option go_package = "github.com/optakt/flow-dps/dps";
+option go_package = "github.com/optakt/flow-dps/api/dps";
 
 service API {
   rpc GetLast (GetLastRequest) returns (GetLastResponse) {}
@@ -60,7 +60,7 @@ message GetEventsResponse {
   bytes data = 3;
 }
 
-message GetRegisterRequest {
+message GetRegistersRequest {
   uint64 height = 1;
   repeated bytes paths = 2;
 }
