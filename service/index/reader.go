@@ -15,6 +15,7 @@
 package index
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
@@ -72,6 +73,10 @@ func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, 
 		for _, path := range paths {
 			var payload ledger.Payload
 			err := storage.RetrievePayload(height, path, &payload)(tx)
+			if errors.Is(err, badger.ErrKeyNotFound) {
+				values = append(values, nil)
+				continue
+			}
 			if err != nil {
 				return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
 			}

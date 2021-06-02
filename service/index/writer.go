@@ -51,11 +51,11 @@ func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
 }
 
 func (w *Writer) Events(height uint64, events []flow.Event) error {
+	buckets := make(map[flow.EventType][]flow.Event)
+	for _, event := range events {
+		buckets[event.Type] = append(buckets[event.Type], event)
+	}
 	err := w.db.Update(func(tx *badger.Txn) error {
-		buckets := make(map[flow.EventType][]flow.Event)
-		for _, event := range events {
-			buckets[event.Type] = append(buckets[event.Type], event)
-		}
 		for typ, evts := range buckets {
 			err := storage.SaveEvents(height, typ, evts)(tx)
 			if err != nil {
@@ -71,10 +71,10 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 }
 
 func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
+	if len(paths) != len(payloads) {
+		return fmt.Errorf("mismatch between paths and payloads counts")
+	}
 	return w.db.Update(func(tx *badger.Txn) error {
-		if len(paths) != len(payloads) {
-			return fmt.Errorf("mismatch between paths and payloads counts")
-		}
 		for i, path := range paths {
 			payload := payloads[i]
 			err := storage.SavePayload(height, path, payload)(tx)
