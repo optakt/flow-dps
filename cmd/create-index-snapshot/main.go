@@ -33,14 +33,12 @@ func main() {
 	var (
 		flagDir      string
 		flagLogLevel string
-		flagOutput   string
-		flagHex      bool
+		flagRaw      string
 	)
 
 	pflag.StringVarP(&flagDir, "dir", "d", "", "path to badger database")
 	pflag.StringVarP(&flagLogLevel, "log", "l", "info", "log level for JSON logger")
-	pflag.StringVarP(&flagOutput, "out", "o", "", "output file to write to (overwrites existing)")
-	pflag.BoolVarP(&flagHex, "hex", "h", false, "use hex output")
+	pflag.StringVarP(&flagRaw, "raw", "r", "", "target file for raw output (overwrites existing)")
 
 	pflag.Parse()
 
@@ -76,27 +74,22 @@ func main() {
 		log.Warn().Err(err).Msg("could not close compression writer")
 	}
 
-	// if we're not writing to a file, just write hex (no binary output to stdout)
-	if flagOutput == "" {
+	// if we don't want binary output, just write to stdout and we're done
+	if flagRaw == "" {
 		fmt.Printf("%s", hex.EncodeToString(buf.Bytes()))
 		return
 	}
 
 	// open output file - create/truncate existing
-	out, err := os.OpenFile(flagOutput, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	out, err := os.OpenFile(flagRaw, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		log.Fatal().Err(err).Str("path", flagOutput).Msg("could not open output file")
+		log.Fatal().Err(err).Str("path", flagRaw).Msg("could not open output file")
 	}
 
 	defer out.Close()
 
-	if flagHex {
-		_, err = out.WriteString(hex.EncodeToString(buf.Bytes()))
-	} else {
-		_, err = out.Write(buf.Bytes())
-	}
-
+	_, err = out.Write(buf.Bytes())
 	if err != nil {
-		log.Fatal().Err(err).Str("path", flagOutput).Msg("could not write to output")
+		log.Fatal().Err(err).Str("path", flagRaw).Msg("could not write to output")
 	}
 }
