@@ -72,7 +72,7 @@ func main() {
 	defer db.Close()
 
 	// Open protocol state database.
-	data, err := badger.Open(dps.DefaultOptions(flagData).WithReadOnly(true))
+	data, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not open blockchain database")
 	}

@@ -107,16 +107,16 @@ func main() {
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
 	go func() {
-		log.Info().Msg("Flow DPS Rosetta starting")
+		log.Info().Msg("Flow Rosetta Server starting")
 		err := server.Start(fmt.Sprint(":", flagPort))
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Uint16("port", flagPort).Err(err).Msg("Rosetta API encountered error")
 		}
-		log.Info().Msg("Flow DPS Rosetta stopped")
+		log.Info().Msg("Flow Rosetta Server stopped")
 	}()
 
 	<-sig
-	log.Info().Msg("Flow DPS Rosetta stopping")
+	log.Info().Msg("Flow Rosetta Server stopping")
 	go func() {
 		<-sig
 		log.Warn().Msg("forcing exit")

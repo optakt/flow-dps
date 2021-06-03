@@ -23,6 +23,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/klauspost/compress/zstd"
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 )
@@ -48,8 +49,7 @@ func main() {
 
 	log = log.Level(level)
 
-	opts := badger.DefaultOptions(flagIndex).WithReadOnly(true)
-	db, err := badger.Open(opts)
+	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
 		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open badger db")
 	}
