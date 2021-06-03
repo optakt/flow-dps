@@ -26,23 +26,17 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-// TODO: Add additional layer for API client that makes native Go
-// function calls instead of the GRPC structs. We should probably
-// redo the state interfaces and implement some of them in both GRPC
-// and in native Go on top of Badger.
-
-// TODO: Create a central interface declaration for encoding/decoding that we
-// can re-use across components, and add the compression to GRPC.
-
-// Server is a simple implementation of the generated APIServer interface.
-// It simply forwards requests to its controller directly without any extra logic.
-// It could be used later on to specify GRPC options specifically for certain routes.
+// Server is a simple implementation of the generated APIServer interface. It
+// uses an index reader interface as the backend to retrieve the desired data.
+// This will generally be an on-disk interface, but it could be a GRPC-based
+// index as well, in which case there would be a double redirection.
 type Server struct {
 	index dps.IndexReader
 	codec cbor.EncMode
 }
 
-// NewServer creates a Server given a Controller pointer.
+// NewServer creates a new server, using the provided index reader as a backend
+// for data retrieval.
 func NewServer(index dps.IndexReader) (*Server, error) {
 
 	codec, _ := cbor.CanonicalEncOptions().EncMode()
@@ -55,6 +49,7 @@ func NewServer(index dps.IndexReader) (*Server, error) {
 	return &s, nil
 }
 
+// GetLast implements the `GetLast` function of the generated GRPC server.
 func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse, error) {
 
 	height, err := s.index.Last()
@@ -69,7 +64,7 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
-// GetHeader calls the server's controller with the GetHeader method.
+// GetHeader implements the `GetHeader` function of the generated GRPC server.
 func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
 
 	header, err := s.index.Header(req.Height)
@@ -77,6 +72,7 @@ func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeader
 		return nil, fmt.Errorf("could not get header: %w", err)
 	}
 
+	// The header is encoded using CBOR with canonical encoding options.
 	data, err := s.codec.Marshal(header)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode header: %w", err)
@@ -90,6 +86,7 @@ func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeader
 	return &res, nil
 }
 
+// GetCommit implements the `GetCommit` function of the generated GRPC server.
 func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
 
 	commit, err := s.index.Commit(req.Height)
@@ -105,6 +102,7 @@ func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommit
 	return &res, nil
 }
 
+// GetEvents implements the `GetEvents` function of the generated GRPC server.
 func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
 
 	types := make([]flow.EventType, 0, len(req.Types))
@@ -117,6 +115,7 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
+	// The events are encoded using CBOR with canonical encoding options.
 	data, err := s.codec.Marshal(events)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode events: %w", err)
@@ -131,7 +130,8 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 	return &res, nil
 }
 
-// GetRegisters calls the server's controller with the GetRegisters method.
+// GetRegisters implements the `GetRegisters` function of the generated GRPC
+// server.
 func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*GetRegistersResponse, error) {
 
 	paths := make([]ledger.Path, 0, len(req.Paths))

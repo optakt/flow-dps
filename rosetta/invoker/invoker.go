@@ -54,6 +54,7 @@ func New(index dps.IndexReader) *Invoker {
 
 // TODO: Find a way to batch up register requests for Cadence execution so we
 // don't have to request them one by one over GRPC.
+// => https://github.com/optakt/flow-dps/issues/119
 
 func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value) (cadence.Value, error) {
 

@@ -28,6 +28,11 @@ import (
 	"github.com/optakt/flow-dps/service/dictionaries"
 )
 
+// TODO: Extract all encoding/decoding and compression code into a single
+// component that can be used across all other components (i.e. GRPC API,
+// storage, live mapper pub/sub and req/rep sockets).
+// => https://github.com/optakt/flow-dps/issues/120
+
 var (
 	codec             cbor.EncMode
 	defaultCompressor *zstd.Encoder
