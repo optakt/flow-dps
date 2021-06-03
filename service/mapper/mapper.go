@@ -32,13 +32,14 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/index"
 )
 
 type Mapper struct {
 	log        zerolog.Logger
 	chain      Chain
 	feed       Feeder
-	index      dps.IndexWriter
+	index      index.Writer
 	checkpoint string
 	post       func(*trie.MTrie)
 	wg         *sync.WaitGroup
@@ -48,7 +49,7 @@ type Mapper struct {
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
 // and then passes on the details to the indexer for indexing.
-func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.IndexWriter, options ...func(*MapperConfig)) (*Mapper, error) {
+func New(log zerolog.Logger, chain Chain, feed Feeder, index index.Writer, options ...func(*MapperConfig)) (*Mapper, error) {
 
 	// We don't use a checkpoint by default. The options can set one, in which
 	// case we will add the checkpoint as a finalized state commitment in our

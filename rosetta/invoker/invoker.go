@@ -26,19 +26,19 @@ import (
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/programs"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/index"
 )
 
 // TODO: Create read cache outside of the `GetRegisterFunc` closure, so we can
 // manage the space taken up by it.
 
 type Invoker struct {
-	index dps.IndexReader
+	index index.Reader
 	vm    *fvm.VirtualMachine
 	reads map[uint64]delta.GetRegisterFunc
 }
 
-func New(index dps.IndexReader) *Invoker {
+func New(index index.Reader) *Invoker {
 
 	rt := fvm.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)

@@ -24,10 +24,10 @@ import (
 	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/index"
 )
 
-func readRegister(index dps.IndexReader, height uint64) delta.GetRegisterFunc {
+func readRegister(index index.Reader, height uint64) delta.GetRegisterFunc {
 	readCache := make(map[flow.RegisterID]flow.RegisterValue)
 	return func(owner string, controller string, key string) (flow.RegisterValue, error) {
 

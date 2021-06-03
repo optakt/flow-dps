@@ -12,25 +12,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package dps
+package index
 
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type IndexReader interface {
+type Reader interface {
 	Last() (uint64, error)
 	Header(height uint64) (*flow.Header, error)
 	Commit(height uint64) (flow.StateCommitment, error)
 	Events(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error)
-}
-
-type IndexWriter interface {
-	Header(height uint64, header *flow.Header) error
-	Commit(height uint64, commit flow.StateCommitment) error
-	Events(height uint64, events []flow.Event) error
-	Payloads(height uint64, paths []ledger.Path, value []*ledger.Payload) error
-	Last(height uint64) error
 }

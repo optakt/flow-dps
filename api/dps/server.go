@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/index"
 )
 
 // Server is a simple implementation of the generated APIServer interface. It
@@ -31,13 +31,13 @@ import (
 // This will generally be an on-disk interface, but it could be a GRPC-based
 // index as well, in which case there would be a double redirection.
 type Server struct {
-	index dps.IndexReader
+	index index.Reader
 	codec cbor.EncMode
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index dps.IndexReader) *Server {
+func NewServer(index index.Reader) *Server {
 
 	codec, _ := cbor.CanonicalEncOptions().EncMode()
 
