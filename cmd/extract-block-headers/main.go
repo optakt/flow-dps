@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -40,20 +39,20 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLevel  string
-		flagData   string
 		flagBegin  uint64
+		flagData   string
 		flagFinish uint64
+		flagLevel  string
 		flagOutput string
 		flagSize   uint64
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log level for JSON logger output")
-	pflag.StringVarP(&flagData, "data-dir", "d", "data", "directory for protocol state database")
-	pflag.Uint64VarP(&flagBegin, "begin-height", "b", 0, "lowest block height to include in extraction")
-	pflag.Uint64VarP(&flagFinish, "finish-height", "f", 100_000_000, "highest block height to include in extraction")
-	pflag.StringVarP(&flagOutput, "output-dir", "o", "headers", "directory for output of block headers")
-	pflag.Uint64VarP(&flagSize, "size-limit", "s", 11_264_000, "limit for total size of output files")
+	pflag.Uint64VarP(&flagBegin, "begin", "b", 0, "lowest block height to include in extraction")
+	pflag.StringVarP(&flagData, "data", "d", "data", "directory for protocol state database")
+	pflag.Uint64VarP(&flagFinish, "finish", "f", 100_000_000, "highest block height to include in extraction")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log level for JSON logger output")
+	pflag.StringVarP(&flagOutput, "output", "o", "headers", "directory for output of block headers")
+	pflag.Uint64VarP(&flagSize, "size", "s", 11_264_000, "limit for total size of output files")
 
 	pflag.Parse()
 
@@ -62,7 +61,7 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
 	}
 	log = log.Level(level)
 
@@ -70,14 +69,12 @@ func main() {
 	opts := dps.DefaultOptions(flagData).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open blockchain database")
+		log.Fatal().Str("data", flagData).Err(err).Msg("could not open blockchain database")
 	}
+	defer db.Close()
 
 	// Initialize the codec we use for the data.
-	codec, err := cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize codec")
-	}
+	codec, _ := cbor.CanonicalEncOptions().EncMode()
 
 	// Make a list of all available heights and shuffle them.
 	if flagBegin > flagFinish {
@@ -116,7 +113,7 @@ func main() {
 			log.Fatal().Err(err).Msg("could not encode header")
 		}
 		name := filepath.Join(flagOutput, fmt.Sprintf("header-%07d", index))
-		err = ioutil.WriteFile(name, data, fs.ModePerm)
+		err = os.WriteFile(name, data, fs.ModePerm)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not write header file")
 		}

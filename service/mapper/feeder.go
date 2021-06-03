@@ -14,7 +14,9 @@
 
 package mapper
 
-import "github.com/onflow/flow-go/ledger"
+import (
+	"github.com/onflow/flow-go/ledger"
+)
 
 type Feeder interface {
 	Update() (*ledger.TrieUpdate, error)

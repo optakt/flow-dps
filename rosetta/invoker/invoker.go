@@ -22,33 +22,40 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 
-	"github.com/onflow/flow-go/engine/execution/state"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/programs"
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/index"
 )
 
+// TODO: Create read cache outside of the `GetRegisterFunc` closure, so we can
+// manage the used space:
+// => https://github.com/optakt/flow-dps/issues/122
+
 type Invoker struct {
-	state dps.State
+	index index.Reader
 	vm    *fvm.VirtualMachine
+	reads map[uint64]delta.GetRegisterFunc
 }
 
-func New(state dps.State) *Invoker {
+func New(index index.Reader) *Invoker {
 
 	rt := fvm.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
 
 	i := Invoker{
-		state: state,
+		index: index,
 		vm:    vm,
+		reads: make(map[uint64]delta.GetRegisterFunc),
 	}
 
 	return &i
 }
+
+// TODO: Find a way to batch up register requests for Cadence execution so we
+// don't have to request them one by one over GRPC.
+// => https://github.com/optakt/flow-dps/issues/119
 
 func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value) (cadence.Value, error) {
 
@@ -63,22 +70,25 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	// look up the current block and commit for the block
-	header, err := i.state.Data().Header(height)
+	header, err := i.index.Header(height)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve header for height: %w", err)
-	}
-	commit, err := i.state.Commit().ForHeight(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not look up height for commit: %w", err)
+		return nil, fmt.Errorf("could not look up header and commit: %w", err)
 	}
 
 	// we initialize the virtual machine context with the given block header so
 	// that parameters related to the block are available from within the script
 	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
 
+	// get the read function, if it was already initialized, to use the cache
+	read, ok := i.reads[height]
+	if !ok {
+		read = readRegister(i.index, height)
+		i.reads[height] = read
+	}
+
 	// we initialize the view of the execution state on top of our ledger by
 	// using the read function at a specific commit
-	view := delta.NewView(i.read(commit))
+	view := delta.NewView(read)
 
 	// we initialize the procedure using the script bytes and the encoded
 	// cadence parameters
@@ -98,36 +108,4 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	return proc.Value, nil
-}
-
-func (i *Invoker) read(commit flow.StateCommitment) delta.GetRegisterFunc {
-
-	readCache := make(map[flow.RegisterID]flow.RegisterEntry)
-	return func(owner string, controller string, key string) (flow.RegisterValue, error) {
-
-		regID := flow.NewRegisterID(owner, controller, key)
-		value, ok := readCache[regID]
-		if ok {
-			return value.Value, nil
-		}
-
-		lkey := state.RegisterIDToKey(regID)
-		query, err := ledger.NewQuery(ledger.State(commit), []ledger.Key{lkey})
-		if err != nil {
-			return nil, fmt.Errorf("could not create ledger query: %w", err)
-		}
-
-		values, err := i.state.Ledger().Get(query)
-		if err != nil {
-			fmt.Println(err)
-			return nil, fmt.Errorf("could not get ledger register: %w", err)
-		}
-		if len(values) == 0 {
-			return nil, nil
-		}
-
-		readCache[regID] = flow.RegisterEntry{Key: regID, Value: values[0]}
-
-		return values[0], nil
-	}
 }

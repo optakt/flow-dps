@@ -12,31 +12,6 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package main
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative  --go-grpc_opt=require_unimplemented_servers=false ./api.proto
 
-import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
-)
-
-type Index struct{}
-
-func (*Index) Header(height uint64, header *flow.Header) error {
-	return nil
-}
-
-func (*Index) Commit(height uint64, commit flow.StateCommitment) error {
-	return nil
-}
-
-func (*Index) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
-	return nil
-}
-
-func (*Index) Events(height uint64, events []flow.Event) error {
-	return nil
-}
-
-func (*Index) Last(height uint64) error {
-	return nil
-}
+package dps

@@ -17,7 +17,6 @@ package main
 import (
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -42,20 +41,20 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLevel      string
-		flagData       string
-		flagTrie       string
 		flagCheckpoint string
+		flagData       string
+		flagLevel      string
 		flagOutput     string
 		flagSize       uint64
+		flagTrie       string
 	)
 
-	pflag.StringVarP(&flagLevel, "log-level", "l", "info", "log level for JSON logger output")
-	pflag.StringVarP(&flagData, "data-dir", "d", "data", "directory for protocol state database")
-	pflag.StringVarP(&flagTrie, "trie-dir", "t", "trie", "directory for execution state database")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "file containing state trie snapshot")
-	pflag.StringVarP(&flagOutput, "output-dir", "o", "payloads", "directory for output of ledger payloads")
-	pflag.Uint64VarP(&flagSize, "size-limit", "s", 11_264_000, "limit for total size of output files")
+	pflag.StringVarP(&flagData, "data", "d", "data", "directory for protocol state database")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log level for JSON logger output")
+	pflag.StringVarP(&flagOutput, "output", "o", "payloads", "directory for output of ledger payloads")
+	pflag.Uint64VarP(&flagSize, "size", "s", 11_264_000, "limit for total size of output files")
+	pflag.StringVarP(&flagTrie, "trie", "t", "trie", "directory for execution state database")
 
 	pflag.Parse()
 
@@ -64,7 +63,7 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
 	}
 	log = log.Level(level)
 
@@ -78,18 +77,19 @@ func main() {
 	opts := dps.DefaultOptions(flagData).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open blockchain database")
+		log.Fatal().Str("data", flagData).Err(err).Msg("could not open blockchain database")
 	}
+	defer db.Close()
 
 	chain := chain.FromProtocolState(db)
 
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open segments reader")
+		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
 	}
 	feeder, err := feeder.FromLedgerWAL(wal.NewReader(segments))
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize feeder")
+		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 	}
 	mapper, err := mapper.New(log, chain, feeder, &Index{},
 		mapper.WithCheckpointFile(flagCheckpoint),
@@ -114,10 +114,7 @@ func main() {
 
 	// Now, we got the full trie and we can write random payloads to disk until
 	// we have enough data for the dictionary creator.
-	codec, err := cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize codec")
-	}
+	codec, _ := cbor.CanonicalEncOptions().EncMode()
 	payloads := tree.AllPayloads()
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(payloads), func(i int, j int) {
@@ -131,7 +128,7 @@ func main() {
 			log.Fatal().Err(err).Msg("could not encode payload")
 		}
 		name := filepath.Join(flagOutput, fmt.Sprintf("payload-%07d", index))
-		err = ioutil.WriteFile(name, data, fs.ModePerm)
+		err = os.WriteFile(name, data, fs.ModePerm)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not write payload file")
 		}

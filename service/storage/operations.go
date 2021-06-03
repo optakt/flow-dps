@@ -61,20 +61,12 @@ func Combine(ops ...func(*badger.Txn) error) func(*badger.Txn) error {
 	}
 }
 
-func RetrieveLastCommit(commit *flow.StateCommitment) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixLastCommit), commit)
-}
-
-func RetrieveHeightByCommit(commit flow.StateCommitment, height *uint64) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixIndexCommitToHeight, commit), height)
-}
-
-func RetrieveHeightByBlock(blockID flow.Identifier, height *uint64) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixIndexBlockToHeight, blockID), height)
+func RetrieveLastHeight(height *uint64) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixLastHeight), height)
 }
 
 func RetrieveCommitByHeight(height uint64, commit *flow.StateCommitment) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixIndexHeightToCommit, height), commit)
+	return retrieve(encodeKey(prefixIndexCommit, height), commit)
 }
 
 func RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error {
@@ -164,20 +156,12 @@ func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) f
 	}
 }
 
-func SaveLastCommit(commit flow.StateCommitment) func(*badger.Txn) error {
-	return save(encodeKey(prefixLastCommit), commit)
-}
-
-func SaveHeightForCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error {
-	return save(encodeKey(prefixIndexCommitToHeight, commit), height)
-}
-
-func SaveHeightForBlock(blockID flow.Identifier, height uint64) func(*badger.Txn) error {
-	return save(encodeKey(prefixIndexBlockToHeight, blockID), height)
+func SaveLastHeight(height uint64) func(*badger.Txn) error {
+	return save(encodeKey(prefixLastHeight), height)
 }
 
 func SaveCommitForHeight(commit flow.StateCommitment, height uint64) func(*badger.Txn) error {
-	return save(encodeKey(prefixIndexHeightToCommit, height), commit)
+	return save(encodeKey(prefixIndexCommit, height), commit)
 }
 
 func SaveHeaderForHeight(height uint64, header *flow.Header) func(*badger.Txn) error {

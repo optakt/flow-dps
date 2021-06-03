@@ -32,22 +32,24 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/index"
 )
 
 type Mapper struct {
 	log        zerolog.Logger
 	chain      Chain
 	feed       Feeder
-	index      dps.Index
+	index      index.Writer
 	checkpoint string
 	post       func(*trie.MTrie)
 	wg         *sync.WaitGroup
 	stop       chan struct{}
+	done       chan struct{}
 }
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
 // and then passes on the details to the indexer for indexing.
-func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options ...func(*MapperConfig)) (*Mapper, error) {
+func New(log zerolog.Logger, chain Chain, feed Feeder, index index.Writer, options ...func(*MapperConfig)) (*Mapper, error) {
 
 	// We don't use a checkpoint by default. The options can set one, in which
 	// case we will add the checkpoint as a finalized state commitment in our
@@ -80,6 +82,7 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index dps.Index, options 
 		post:       cfg.PostProcessing,
 		wg:         &sync.WaitGroup{},
 		stop:       make(chan struct{}),
+		done:       make(chan struct{}),
 	}
 
 	return &i, nil
@@ -98,6 +101,10 @@ func (m *Mapper) Stop(ctx context.Context) error {
 	case <-done:
 		return nil
 	}
+}
+
+func (m *Mapper) Done() <-chan struct{} {
+	return m.done
 }
 
 // NOTE: We might want to move height and tree (checkpoint) to parameters of the
@@ -366,7 +373,7 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not index events: %w", err)
 		}
-		err = m.index.Last(commitNext)
+		err = m.index.Last(height)
 		if err != nil {
 			return fmt.Errorf("could not index last: %w", err)
 		}
@@ -387,6 +394,8 @@ Outer:
 
 	step := steps[commitPrev]
 	m.post(step.Tree)
+
+	close(m.done)
 
 	return nil
 }

@@ -1,0 +1,72 @@
+// Copyright 2021 Alvalor S.A.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not
+// use this file except in compliance with the License. You may obtain a copy of
+// the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations under
+// the License.
+
+syntax = "proto3";
+
+option go_package = "github.com/optakt/flow-dps/api/dps";
+
+service API {
+  rpc GetLast (GetLastRequest) returns (GetLastResponse) {}
+  rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
+  rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
+  rpc GetEvents (GetEventsRequest) returns (GetEventsResponse) {}
+  rpc GetRegisters (GetRegistersRequest) returns (GetRegistersResponse) {}
+}
+
+message GetLastRequest {
+}
+
+message GetLastResponse {
+  uint64 height = 1;
+}
+
+message GetHeaderRequest {
+  uint64 height = 1;
+}
+
+message GetHeaderResponse {
+  uint64 height = 1;
+  bytes data = 2;
+}
+
+message GetCommitRequest {
+  uint64 height = 1;
+}
+
+message GetCommitResponse {
+  uint64 height = 1;
+  bytes commit = 2;
+}
+
+message GetEventsRequest {
+  uint64 height = 1;
+  repeated string types = 2;
+}
+
+message GetEventsResponse {
+  uint64 height = 1;
+  repeated string types = 2;
+  bytes data = 3;
+}
+
+message GetRegistersRequest {
+  uint64 height = 1;
+  repeated bytes paths = 2;
+}
+
+message GetRegistersResponse {
+  uint64 height = 1;
+  repeated bytes paths = 2;
+  repeated bytes values = 3;
+}

@@ -64,8 +64,8 @@ jobs:
 
       # This check makes sure that we can compile the binary as a pure Go binary
       # without CGO support.
-      - name: Verify binary compilation
-        run: CGO_ENABLED=0 go build
+      - name: Verify compilation
+        run: CGO_ENABLED=0 go build ./...
 
       # This check runs all test with verbose output and ensures that all of the
       # tests pass successfully.

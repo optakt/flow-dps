@@ -12,31 +12,32 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package main
+package convert
 
 import (
+	"fmt"
+
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
 )
 
-type Index struct{}
-
-func (*Index) Header(height uint64, header *flow.Header) error {
-	return nil
+func PathsToBytes(paths []ledger.Path) [][]byte {
+	bb := make([][]byte, 0, len(paths))
+	for _, path := range paths {
+		b := make([]byte, len(path))
+		copy(b, path[:])
+		bb = append(bb, b)
+	}
+	return bb
 }
 
-func (*Index) Commit(height uint64, commit flow.StateCommitment) error {
-	return nil
-}
-
-func (*Index) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
-	return nil
-}
-
-func (*Index) Events(height uint64, events []flow.Event) error {
-	return nil
-}
-
-func (*Index) Last(height uint64) error {
-	return nil
+func BytesToPaths(bb [][]byte) ([]ledger.Path, error) {
+	paths := make([]ledger.Path, 0, len(bb))
+	for _, b := range bb {
+		path, err := ledger.ToPath(b)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert path (%x): %w", b, err)
+		}
+		paths = append(paths, path)
+	}
+	return paths, nil
 }

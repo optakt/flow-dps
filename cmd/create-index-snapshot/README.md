@@ -9,12 +9,12 @@ This output can be used to restore a database from a previous snapshot.
 ## Usage
 
 ```sh
-Usage of ./create-index-snapshot:
+Usage of create-index-snapshot:
   -d, --dir string         path to badger database
   -l, --log-level string   log level for JSON logger (default "info")
 ```
 
-## Example Program That Restores a Database
+## Example
 
 The program below opens a read-only in-memory badger database and restores the state from the created backup. Error handling is omitted for brevity.
 

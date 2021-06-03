@@ -1,5 +1,3 @@
-// +build integration
-
 // Copyright 2021 Alvalor S.A.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -13,6 +11,8 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations under
 // the License.
+
+// +build integration
 
 package rosetta_test
 
@@ -38,7 +38,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
-	"github.com/optakt/flow-dps/service/state"
+	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/testing/snapshots"
 )
 
@@ -47,6 +47,7 @@ func setupDB(t *testing.T) *badger.DB {
 
 	opts := badger.DefaultOptions("").
 		WithInMemory(true).
+		WithReadOnly(true).
 		WithLogger(nil)
 
 	db, err := badger.Open(opts)
@@ -63,13 +64,12 @@ func setupDB(t *testing.T) *badger.DB {
 func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	t.Helper()
 
-	core, err := state.NewCore(db)
-	require.NoError(t, err)
+	index := index.NewReader(db)
 
 	params := dps.FlowParams[dps.FlowTestnet]
 	generator := scripts.NewGenerator(params)
-	invoke := invoker.New(core)
-	validate := validator.New(params, core.Height())
+	invoke := invoker.New(index)
+	validate := validator.New(params)
 	retrieve := retriever.New(generator, invoke)
 	controller := rosetta.NewData(validate, retrieve)
 

@@ -28,6 +28,11 @@ import (
 	"github.com/optakt/flow-dps/service/dictionaries"
 )
 
+// TODO: Extract all encoding/decoding and compression code into a single
+// component that can be used across all other components (i.e. GRPC API,
+// storage, live mapper pub/sub and req/rep sockets).
+// => https://github.com/optakt/flow-dps/issues/120
+
 var (
 	codec             cbor.EncMode
 	defaultCompressor *zstd.Encoder
@@ -40,10 +45,7 @@ var (
 func init() {
 	var err error
 
-	codec, err = cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		panic(fmt.Errorf("could not initialize codec: %w", err))
-	}
+	codec, _ = cbor.CanonicalEncOptions().EncMode()
 
 	defaultCompressor, err = zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),

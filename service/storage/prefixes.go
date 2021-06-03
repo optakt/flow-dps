@@ -15,11 +15,9 @@
 package storage
 
 const (
-	prefixLastCommit          = 1
-	prefixIndexBlockToHeight  = 2
-	prefixIndexCommitToHeight = 3
-	prefixIndexHeightToCommit = 4
-	prefixDataHeader          = 5
-	prefixDataDelta           = 6
-	prefixDataEvents          = 7
+	prefixLastHeight  = 1
+	prefixIndexCommit = 2
+	prefixDataHeader  = 3
+	prefixDataDelta   = 4
+	prefixDataEvents  = 5
 )

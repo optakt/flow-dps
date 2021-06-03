@@ -12,31 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package main
+package convert
 
 import (
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type Index struct{}
-
-func (*Index) Header(height uint64, header *flow.Header) error {
-	return nil
-}
-
-func (*Index) Commit(height uint64, commit flow.StateCommitment) error {
-	return nil
-}
-
-func (*Index) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
-	return nil
-}
-
-func (*Index) Events(height uint64, events []flow.Event) error {
-	return nil
-}
-
-func (*Index) Last(height uint64) error {
-	return nil
+func TypesToStrings(types []flow.EventType) []string {
+	ss := make([]string, 0, len(types))
+	for _, typ := range types {
+		ss = append(ss, string(typ))
+	}
+	return ss
 }

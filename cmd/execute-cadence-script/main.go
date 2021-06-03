@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -18,36 +17,36 @@ import (
 func main() {
 
 	var (
-		flagAPI        string
-		flagScriptFile string
-		flagLogLevel   string
-		flagHeight     int64
+		flagAPI    string
+		flagScript string
+		flagLevel  string
+		flagHeight int64
 	)
 
-	pflag.StringVarP(&flagScriptFile, "script", "s", "", "cadence script to execute")
+	pflag.StringVarP(&flagScript, "script", "s", "", "cadence script to execute")
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:3569", "access node API address")
-	pflag.StringVarP(&flagLogLevel, "log", "l", "info", "log level for JSON logger")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log level for JSON logger")
 	pflag.Int64VarP(&flagHeight, "height", "h", -1, "height on which to execute script, -1 for last indexed height")
 
 	pflag.Parse()
 
 	zerolog.TimestampFunc = func() time.Time { return time.Now() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLogLevel)
+	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err).Str("log_level_flag", flagLogLevel).Msg("could not parse log level")
+		log.Fatal().Err(err).Str("level", flagLevel).Msg("could not parse log level")
 	}
 
 	log = log.Level(level)
 
 	cli, err := client.New(flagAPI, grpc.WithInsecure())
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not connect to the access node")
+		log.Fatal().Str("api", flagAPI).Err(err).Msg("could not connect to the access node")
 	}
 
-	script, err := ioutil.ReadFile(flagScriptFile)
+	script, err := os.ReadFile(flagScript)
 	if err != nil {
-		log.Fatal().Err(err).Str("file", flagScriptFile).Msg("could not read script file")
+		log.Fatal().Err(err).Str("script", flagScript).Msg("could not read script file")
 	}
 
 	var value cadence.Value
@@ -62,4 +61,6 @@ func main() {
 	}
 
 	fmt.Printf("%s\n", value.String())
+
+	os.Exit(0)
 }
