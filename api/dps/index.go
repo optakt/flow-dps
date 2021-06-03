@@ -24,10 +24,16 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Index implements the `dps.IndexReader` interface on top of the DPS server's
+// GRPC API. It can substitute for the on-disk index reader when executing
+// scripts, such that script invoker and execution state are on two different
+// machines across a network.
 type Index struct {
 	client APIClient
 }
 
+// IndexAPI creates a new instance of an index reader that uses the provided
+// GRPC API client to retrieve state from the index.
 func IndexFromAPI(client APIClient) *Index {
 
 	i := Index{
@@ -37,6 +43,7 @@ func IndexFromAPI(client APIClient) *Index {
 	return &i
 }
 
+// Last returns the height of the last finalized block that was indexed.
 func (i *Index) Last() (uint64, error) {
 
 	req := GetLastRequest{}
@@ -48,6 +55,7 @@ func (i *Index) Last() (uint64, error) {
 	return res.Height, nil
 }
 
+// Header returns the header for the finalized block at the given height.
 func (i *Index) Header(height uint64) (*flow.Header, error) {
 
 	req := GetHeaderRequest{
@@ -67,6 +75,8 @@ func (i *Index) Header(height uint64) (*flow.Header, error) {
 	return &header, nil
 }
 
+// Commit returns the commitment of the execution state as it was after the
+// execution of the finalized block at the given height.
 func (i *Index) Commit(height uint64) (flow.StateCommitment, error) {
 
 	req := GetCommitRequest{
@@ -85,6 +95,9 @@ func (i *Index) Commit(height uint64) (flow.StateCommitment, error) {
 	return commit, nil
 }
 
+// Events returns the events of all transactions that were part of the
+// finalized block at the given height. It can optionally filter them by event
+// type; if no event types are given, all events are returned.
 func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 
 	tt := make([]string, 0, len(types))
@@ -110,9 +123,10 @@ func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, er
 	return events, nil
 }
 
-// TODO: Find a way to batch up register requests for Cadence execution so we
-// don't have to request them one by one over GRPC.
-
+// Registers returns the Ledger values of the execution state at the given paths
+// as they were after the execution of the finalized block at the given height.
+// For compatibility with existing Flow execution node code, a path that is not
+// found within the indexed execution state returns a nil value without error.
 func (i *Index) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 
 	pp := make([][]byte, 0, len(paths))

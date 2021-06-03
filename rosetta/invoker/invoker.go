@@ -52,6 +52,9 @@ func New(index dps.IndexReader) *Invoker {
 	return &i
 }
 
+// TODO: Find a way to batch up register requests for Cadence execution so we
+// don't have to request them one by one over GRPC.
+
 func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value) (cadence.Value, error) {
 
 	// encode the arguments from cadence values to byte slices

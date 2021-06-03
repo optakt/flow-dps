@@ -26,10 +26,15 @@ import (
 	"github.com/optakt/flow-dps/service/storage"
 )
 
+// Reader implements the `dps.IndexReader` interface on top of the DPS server's
+// Badger database index.
 type Reader struct {
 	db *badger.DB
 }
 
+// NewReader creates a new `dps.IndexReader`, using the given database as the
+// underlying state repository. It is recommended to provide a read-only Badger
+// database.
 func NewReader(db *badger.DB) *Reader {
 
 	r := Reader{
@@ -39,37 +44,58 @@ func NewReader(db *badger.DB) *Reader {
 	return &r
 }
 
+// Last returns the height of the last finalized block that was indexed.
 func (r *Reader) Last() (uint64, error) {
 	var height uint64
 	err := r.db.View(storage.RetrieveLastHeight(&height))
 	return height, err
 }
 
+// Header returns the header for the finalized block at the given height.
 func (r *Reader) Header(height uint64) (*flow.Header, error) {
 	var header flow.Header
 	err := r.db.View(storage.RetrieveHeader(height, &header))
 	return &header, err
 }
 
+// Commit returns the commitment of the execution state as it was after the
+// execution of the finalized block at the given height.
 func (r *Reader) Commit(height uint64) (flow.StateCommitment, error) {
 	var commit flow.StateCommitment
 	err := r.db.View(storage.RetrieveCommitByHeight(height, &commit))
 	return commit, err
 }
 
+// Events returns the events of all transactions that were part of the
+// finalized block at the given height. It can optionally filter them by event
+// type; if no event types are given, all events are returned.
 func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-	// TODO: Introduce a height check here that doesn't need to know about
-	// current indexing progress.
+	last, err := r.Last()
+	if err != nil {
+		return nil, fmt.Errorf("could not check last height: %w", err)
+	}
+	if height > last {
+		return nil, fmt.Errorf("given height is above last finalized height (given: %d, last: %d)", height, last)
+	}
 	var events []flow.Event
-	err := r.db.View(storage.RetrieveEvents(height, types, &events))
+	err = r.db.View(storage.RetrieveEvents(height, types, &events))
 	return events, err
 }
 
+// Registers returns the Ledger values of the execution state at the given paths
+// as they were after the execution of the finalized block at the given height.
+// For compatibility with existing Flow execution node code, a path that is not
+// found within the indexed execution state returns a nil value without error.
 func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
-	// TODO: Introduce a height check here that doesn't need to know about
-	// current indexing progress.
+	last, err := r.Last()
+	if err != nil {
+		return nil, fmt.Errorf("could not check last height: %w", err)
+	}
+	if height > last {
+		return nil, fmt.Errorf("given height is above last finalized height (given: %d, last: %d)", height, last)
+	}
 	values := make([]ledger.Value, 0, len(paths))
-	err := r.db.View(func(tx *badger.Txn) error {
+	err = r.db.View(func(tx *badger.Txn) error {
 		for _, path := range paths {
 			var payload ledger.Payload
 			err := storage.RetrievePayload(height, path, &payload)(tx)
@@ -84,8 +110,5 @@ func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, 
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return values, nil
+	return values, err
 }

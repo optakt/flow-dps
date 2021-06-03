@@ -95,7 +95,7 @@ func main() {
 	invoke := invoker.New(dps.IndexFromAPI(client))
 	result, err := invoke.Script(flagHeight, script, args)
 	if err != nil {
-		log.Error().Err(err).Msg("could not execute script")
+		log.Fatal().Err(err).Msg("could not invoke script")
 	}
 	output, err := json.Encode(result)
 	if err != nil {
