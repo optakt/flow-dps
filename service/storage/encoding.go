@@ -45,10 +45,7 @@ var (
 func init() {
 	var err error
 
-	codec, err = cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		panic(fmt.Errorf("could not initialize codec: %w", err))
-	}
+	codec, _ = cbor.CanonicalEncOptions().EncMode()
 
 	defaultCompressor, err = zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),

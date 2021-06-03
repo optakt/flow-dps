@@ -74,10 +74,7 @@ func main() {
 	defer db.Close()
 
 	// Initialize the codec we use for the data.
-	codec, err := cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize codec")
-	}
+	codec, _ := cbor.CanonicalEncOptions().EncMode()
 
 	// Make a list of all available heights and shuffle them.
 	if flagBegin > flagFinish {

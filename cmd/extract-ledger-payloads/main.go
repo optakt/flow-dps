@@ -114,10 +114,7 @@ func main() {
 
 	// Now, we got the full trie and we can write random payloads to disk until
 	// we have enough data for the dictionary creator.
-	codec, err := cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize codec")
-	}
+	codec, _ := cbor.CanonicalEncOptions().EncMode()
 	payloads := tree.AllPayloads()
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(payloads), func(i int, j int) {

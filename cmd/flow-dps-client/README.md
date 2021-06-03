@@ -2,7 +2,7 @@
 
 ## Description
 
-The Flow DPS Client provides access to a Flow DPS Server's index throught the command line. 
+The Flow DPS Client provides access to a Flow DPS Server's index through the command line. 
 It can be used to execute Cadence scripts at an arbitrary block height of a fork.
 It uses the Flow DPS Server's GRPC API as the backend to query the required data.
 
