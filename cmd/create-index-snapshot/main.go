@@ -31,13 +31,13 @@ import (
 func main() {
 
 	var (
-		flagDir      string
-		flagLogLevel string
-		flagRaw      string
+		flagIndex string
+		flagLevel string
+		flagRaw   string
 	)
 
-	pflag.StringVarP(&flagDir, "dir", "d", "", "path to badger database")
-	pflag.StringVarP(&flagLogLevel, "log", "l", "info", "log level for JSON logger")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to badger database for index")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log level for JSON logger")
 	pflag.StringVarP(&flagRaw, "raw", "r", "", "target file for raw output (overwrites existing)")
 
 	pflag.Parse()
@@ -69,11 +69,6 @@ func main() {
 		log.Fatal().Err(err).Msg("could not backup badger db")
 	}
 
-	err = compressor.Close()
-	if err != nil {
-		log.Warn().Err(err).Msg("could not close compression writer")
-	}
-
 	// if we don't want binary output, just write to stdout and we're done
 	if flagRaw == "" {
 		fmt.Printf("%s", hex.EncodeToString(buf.Bytes()))
@@ -92,4 +87,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Str("path", flagRaw).Msg("could not write to output")
 	}
+
+	os.Exit(0)
 }
