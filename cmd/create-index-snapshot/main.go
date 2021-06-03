@@ -60,15 +60,11 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize zstd compression")
 	}
+	defer compressor.Close()
 
 	_, err = db.Backup(compressor, 0)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not backup badger db")
-	}
-
-	err = compressor.Close()
-	if err != nil {
-		log.Warn().Err(err).Msg("could not close compression writer")
 	}
 
 	fmt.Printf("%s", hex.EncodeToString(buf.Bytes()))
