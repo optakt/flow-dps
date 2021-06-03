@@ -44,7 +44,7 @@ func main() {
 	var (
 		flagCheckpoint string
 		flagData       string
-		flagLog        string
+		flagLevel      string
 		flagOutput     string
 		flagSize       uint64
 		flagTrie       string
@@ -52,7 +52,7 @@ func main() {
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "file containing state trie snapshot")
 	pflag.StringVarP(&flagData, "data", "d", "data", "directory for protocol state database")
-	pflag.StringVarP(&flagLog, "log", "l", "info", "log level for JSON logger output")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log level for JSON logger output")
 	pflag.StringVarP(&flagOutput, "output", "o", "payloads", "directory for output of ledger payloads")
 	pflag.Uint64VarP(&flagSize, "size", "s", 11_264_000, "limit for total size of output files")
 	pflag.StringVarP(&flagTrie, "trie", "t", "trie", "directory for execution state database")
@@ -62,9 +62,9 @@ func main() {
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLog)
+	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
 	}
 	log = log.Level(level)
 
@@ -78,18 +78,19 @@ func main() {
 	opts := dps.DefaultOptions(flagData).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open blockchain database")
+		log.Fatal().Str("data", flagData).Err(err).Msg("could not open blockchain database")
 	}
+	defer db.Close()
 
 	chain := chain.FromProtocolState(db)
 
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open segments reader")
+		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
 	}
 	feeder, err := feeder.FromLedgerWAL(wal.NewReader(segments))
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize feeder")
+		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 	}
 	mapper, err := mapper.New(log, chain, feeder, &Index{},
 		mapper.WithCheckpointFile(flagCheckpoint),

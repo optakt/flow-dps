@@ -41,13 +41,13 @@ func main() {
 
 	// Command line parameter initialization.
 	var (
-		flagLog   string
+		flagLevel string
 		flagIndex string
 		flagPort  uint16
 	)
 
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
-	pflag.StringVarP(&flagLog, "log", "l", "info", "log output level")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
 
 	pflag.Parse()
@@ -55,34 +55,32 @@ func main() {
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLog)
+	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
 	}
 	log = log.Level(level)
 
 	// Initialize the index core state.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open index DB")
+		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open index DB")
 	}
-	index := index.NewReader(db)
+	defer db.Close()
 
 	// GRPC API initialization.
 	gsvr := grpc.NewServer()
-	server, err := api.NewServer(index)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize DPS server")
-	}
+	index := index.NewReader(db)
+	server := api.NewServer(index)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
 	go func() {
 		log.Info().Msg("Flow DPS Server starting")
-		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", flagPort))
+		listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
 		if err != nil {
-			log.Fatal().Err(err).Uint16("port", flagPort).Msg("could not listen")
+			log.Fatal().Uint16("port", flagPort).Err(err).Msg("could not listen")
 		}
 		api.RegisterAPIServer(gsvr, server)
 		err = gsvr.Serve(listener)

@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"time"
@@ -42,39 +41,39 @@ func main() {
 	var (
 		flagAPI    string
 		flagHeight uint64
-		flagLog    string
+		flagLevel  string
 		flagParams string
 		flagScript string
 	)
 
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host for GRPC API server")
 	pflag.Uint64VarP(&flagHeight, "height", "h", 0, "block height to execute the script at")
-	pflag.StringVarP(&flagLog, "log", "l", "info", "log output level")
-	pflag.StringVarP(&flagParams, "params", "p", "", "JSON encoded Cadence parameters for the script")
-	pflag.StringVarP(&flagScript, "script", "s", "script.cdc", "path to the Cadence script file to be executed")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.StringVarP(&flagParams, "params", "p", "", "JSON encoded Cadence parameters for script execution")
+	pflag.StringVarP(&flagScript, "script", "s", "script.cdc", "path to Cadence script file")
 
 	pflag.Parse()
 
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLog)
+	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
 	}
 	log = log.Level(level)
 
 	// Initialize the API client.
 	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not dial API host")
+		log.Fatal().Str("api", flagAPI).Err(err).Msg("could not dial API host")
 	}
-	client := dps.NewAPIClient(conn)
+	defer conn.Close()
 
 	// Read the script.
-	script, err := ioutil.ReadFile(flagScript)
+	script, err := os.ReadFile(flagScript)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not read script")
+		log.Fatal().Str("script", flagScript).Err(err).Msg("could not read script")
 	}
 
 	// Decode the arguments
@@ -92,6 +91,7 @@ func main() {
 	}
 
 	// Execute the script using remote lookup and read.
+	client := dps.NewAPIClient(conn)
 	invoke := invoker.New(dps.IndexFromAPI(client))
 	result, err := invoke.Script(flagHeight, script, args)
 	if err != nil {
@@ -99,7 +99,7 @@ func main() {
 	}
 	output, err := json.Encode(result)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not encode result")
+		log.Fatal().Uint64("height", flagHeight).Err(err).Msg("could not encode result")
 	}
 
 	fmt.Println(string(output))

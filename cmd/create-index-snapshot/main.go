@@ -30,38 +30,32 @@ import (
 func main() {
 
 	var (
-		flagDir      string
-		flagLogLevel string
+		flagIndex string
+		flagLevel string
 	)
 
-	pflag.StringVarP(&flagDir, "dir", "d", "", "path to badger database")
-	pflag.StringVarP(&flagLogLevel, "log-level", "l", "info", "log level for JSON logger")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to badger database for index")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log level for JSON logger")
 
 	pflag.Parse()
 
 	zerolog.TimestampFunc = func() time.Time { return time.Now() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLogLevel)
+	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
 	}
 
 	log = log.Level(level)
 
-	if flagDir == "" {
-		log.Fatal().Msg("path to badger database is required")
-	}
-
-	opts := badger.DefaultOptions(flagDir).WithReadOnly(true)
+	opts := badger.DefaultOptions(flagIndex).WithReadOnly(true)
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open badger db")
+		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open badger db")
 	}
-
 	defer db.Close()
 
 	var buf bytes.Buffer
-
 	compressor, err := zstd.NewWriter(&buf)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize zstd compression")
@@ -69,9 +63,6 @@ func main() {
 
 	_, err = db.Backup(compressor, 0)
 	if err != nil {
-		// clean up the encoder resources; OS would do it anyway but no harm in being explicit
-		compressor.Close()
-
 		log.Fatal().Err(err).Msg("could not backup badger db")
 	}
 

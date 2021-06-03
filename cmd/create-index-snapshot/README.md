@@ -14,7 +14,7 @@ Usage of create-index-snapshot:
   -l, --log-level string   log level for JSON logger (default "info")
 ```
 
-## Exampl
+## Example
 
 The program below opens a read-only in-memory badger database and restores the state from the created backup. Error handling is omitted for brevity.
 

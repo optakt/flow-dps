@@ -37,7 +37,7 @@ type Server struct {
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index dps.IndexReader) (*Server, error) {
+func NewServer(index dps.IndexReader) *Server {
 
 	codec, _ := cbor.CanonicalEncOptions().EncMode()
 
@@ -46,7 +46,7 @@ func NewServer(index dps.IndexReader) (*Server, error) {
 		codec: codec,
 	}
 
-	return &s, nil
+	return &s
 }
 
 // GetLast implements the `GetLast` function of the generated GRPC server.

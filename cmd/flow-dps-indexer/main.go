@@ -43,14 +43,14 @@ func main() {
 		flagCheckpoint string
 		flagData       string
 		flagIndex      string
-		flagLog        string
+		flagLevel      string
 		flagTrie       string
 	)
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
-	pflag.StringVarP(&flagLog, "log", "l", "info", "log output level")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
 	pflag.Parse()
@@ -58,36 +58,40 @@ func main() {
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLog)
+	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
 	}
 	log = log.Level(level)
 
-	// Initialize the index core state.
+	// Open index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open index DB")
+		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open index DB")
 	}
-	index := index.NewWriter(db)
+	defer db.Close()
 
-	// Initialize indexer components.
-	data, err := badger.Open(dps.DefaultOptions(flagData))
+	// Open protocol state database.
+	data, err := badger.Open(dps.DefaultOptions(flagData).WithReadOnly(true))
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not open blockchain database")
 	}
+	defer data.Close()
+
+	// Initialize mapper.
 	chain := chain.FromProtocolState(data)
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open segments reader")
+		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
 	}
 	feeder, err := feeder.FromLedgerWAL(wal.NewReader(segments))
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize feeder")
+		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 	}
+	index := index.NewWriter(db)
 	mapper, err := mapper.New(log, chain, feeder, index, mapper.WithCheckpointFile(flagCheckpoint))
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize mapper")
+		log.Fatal().Str("checkpoint", flagCheckpoint).Err(err).Msg("could not initialize mapper")
 	}
 
 	// This section launches the main executing components in their own

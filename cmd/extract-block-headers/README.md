@@ -2,7 +2,7 @@
 
 ## Description
 
-Th Extract Block Headers utility binary can be used to extract a randomized set of block headers from a protocol state.
+The Extract Block Headers utility binary can be used to extract a randomized set of block headers from a protocol state.
 Upon start, it will extract random headers from the protocol state within the provided height range from the database.
 The headers will be written to one file each, until the configured total size is reached.
 

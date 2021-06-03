@@ -19,7 +19,7 @@ Usage of flow-dps-server:
 
 ## Example
 
-The below command line starts the DPS GRPC API server to serve requests on port 5005.
+The following command line starts the DPS GRPC API server to serve requests on port 5005.
 
 ```sh
 ./flow-dps-server -i /var/flow/data/index -p 5005

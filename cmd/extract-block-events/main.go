@@ -44,7 +44,7 @@ func main() {
 		flagData   string
 		flagFinish uint64
 		flagGroup  int
-		flagLog    string
+		flagLevel  string
 		flagOutput string
 		flagSize   uint64
 	)
@@ -53,7 +53,7 @@ func main() {
 	pflag.StringVarP(&flagData, "data", "d", "data", "directory for protocol state database")
 	pflag.Uint64VarP(&flagFinish, "finish", "f", 100_000_000, "highest block height to include in extraction")
 	pflag.IntVarP(&flagGroup, "group", "g", 10, "maximum number of events to extract per block")
-	pflag.StringVarP(&flagLog, "log", "l", "info", "log level for JSON logger output")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log level for JSON logger output")
 	pflag.StringVarP(&flagOutput, "output", "o", "events", "directory for output of black events")
 	pflag.Uint64VarP(&flagSize, "size", "s", 11_264_000, "limit for total size of output files")
 
@@ -62,9 +62,9 @@ func main() {
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLog)
+	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
 	}
 	log = log.Level(level)
 
@@ -72,14 +72,12 @@ func main() {
 	opts := dps.DefaultOptions(flagData).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open blockchain database")
+		log.Fatal().Str("data", flagData).Err(err).Msg("could not open blockchain database")
 	}
+	defer db.Close()
 
 	// Initialize the codec we use for the data.
-	codec, err := cbor.CanonicalEncOptions().EncMode()
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize codec")
-	}
+	codec, _ := cbor.CanonicalEncOptions().EncMode()
 
 	// Make a list of all available heights and shuffle them.
 	if flagBegin > flagFinish {
