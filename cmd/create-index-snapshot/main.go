@@ -68,4 +68,6 @@ func main() {
 	}
 
 	fmt.Printf("%s", hex.EncodeToString(buf.Bytes()))
+
+	os.Exit(0)
 }

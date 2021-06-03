@@ -62,4 +62,6 @@ func main() {
 	}
 
 	fmt.Printf("%s\n", value.String())
+
+	os.Exit(0)
 }
