@@ -72,7 +72,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	// look up the current block and commit for the block
 	header, err := i.index.Header(height)
 	if err != nil {
-		return nil, fmt.Errorf("could not look up header and commit: %w", err)
+		return nil, fmt.Errorf("could not get header: %w", err)
 	}
 
 	// we initialize the virtual machine context with the given block header so
