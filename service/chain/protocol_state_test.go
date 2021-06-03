@@ -36,7 +36,6 @@ const (
 var (
 	testCommit  = flow.StateCommitment{132, 131, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 19, 18, 17, 16, 15, 14, 13, 12, 11}
 	testBlockID = flow.Identifier{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
-	testSealID  = flow.Identifier{32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 )
 
 func TestProtocolState_Root(t *testing.T) {
@@ -100,31 +99,23 @@ func inMemoryDB(t *testing.T) *badger.DB {
 	db, err := badger.Open(opts)
 	require.NoError(t, err)
 
-	err = db.Update(func(txn *badger.Txn) error {
-		err = operation.InsertRootHeight(testHeight)(txn)
+	err = db.Update(func(tx *badger.Txn) error {
+		err = operation.InsertRootHeight(testHeight)(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.InsertHeader(testBlockID, &flow.Header{ChainID: testChainID})(txn)
+		err = operation.InsertHeader(testBlockID, &flow.Header{ChainID: testChainID})(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.IndexBlockHeight(testHeight, testBlockID)(txn)
+		err = operation.IndexBlockHeight(testHeight, testBlockID)(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.IndexBlockSeal(testBlockID, testSealID)(txn)
-		if err != nil {
-			return err
-		}
-
-		seal := &flow.Seal{
-			FinalState: testCommit,
-		}
-		err = operation.InsertSeal(testSealID, seal)(txn)
+		err = operation.IndexStateCommitment(testBlockID, testCommit)(tx)
 		if err != nil {
 			return err
 		}
@@ -141,11 +132,11 @@ func inMemoryDB(t *testing.T) *badger.DB {
 				EventIndex:       4,
 			},
 		}
-		err = operation.InsertEvent(testBlockID, events[0])(txn)
+		err = operation.InsertEvent(testBlockID, events[0])(tx)
 		if err != nil {
 			return err
 		}
-		err = operation.InsertEvent(testBlockID, events[1])(txn)
+		err = operation.InsertEvent(testBlockID, events[1])(tx)
 		if err != nil {
 			return err
 		}

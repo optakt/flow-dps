@@ -70,20 +70,12 @@ func (ps *ProtocolState) Commit(height uint64) (flow.StateCommitment, error) {
 	if errors.Is(err, storage.ErrNotFound) {
 		return flow.StateCommitment{}, dps.ErrFinished
 	}
-	var sealID flow.Identifier
-	err = operation.LookupBlockSeal(blockID, &sealID)(ps.db.NewTransaction(false))
+	var commit flow.StateCommitment
+	err = operation.LookupStateCommitment(blockID, &commit)(ps.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
 		return flow.StateCommitment{}, dps.ErrFinished
 	}
-	if err != nil {
-		return flow.StateCommitment{}, fmt.Errorf("could not look up seal: %w", err)
-	}
-	var seal flow.Seal
-	err = operation.RetrieveSeal(sealID, &seal)(ps.db.NewTransaction(false))
-	if err != nil {
-		return flow.StateCommitment{}, fmt.Errorf("could not retrieve seal: %w", err)
-	}
-	return seal.FinalState, nil
+	return commit, nil
 }
 
 func (ps *ProtocolState) Events(height uint64) ([]flow.Event, error) {
