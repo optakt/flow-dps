@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -45,7 +44,7 @@ func main() {
 		log.Fatal().Str("api", flagAPI).Err(err).Msg("could not connect to the access node")
 	}
 
-	script, err := ioutil.ReadFile(flagScript)
+	script, err := os.ReadFile(flagScript)
 	if err != nil {
 		log.Fatal().Err(err).Str("script", flagScript).Msg("could not read script file")
 	}

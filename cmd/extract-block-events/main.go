@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -125,7 +124,7 @@ func main() {
 			log.Fatal().Err(err).Msg("could not encode events")
 		}
 		name := filepath.Join(flagOutput, fmt.Sprintf("events-%07d", index))
-		err = ioutil.WriteFile(name, data, fs.ModePerm)
+		err = os.WriteFile(name, data, fs.ModePerm)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not write events file")
 		}
