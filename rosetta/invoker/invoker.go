@@ -30,7 +30,8 @@ import (
 )
 
 // TODO: Create read cache outside of the `GetRegisterFunc` closure, so we can
-// manage the space taken up by it.
+// manage the used space:
+// => https://github.com/optakt/flow-dps/issues/122
 
 type Invoker struct {
 	index index.Reader

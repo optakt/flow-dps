@@ -25,10 +25,14 @@ import (
 	"github.com/optakt/flow-dps/service/storage"
 )
 
+// Writer implements the `index.Writer` interface to write indexing data to
+// an underlying Badger database.
 type Writer struct {
 	db *badger.DB
 }
 
+// NewWriter creates a new index writer that writes new indexing data to the
+// given Badger database.
 func NewWriter(db *badger.DB) *Writer {
 
 	w := Writer{
@@ -38,18 +42,24 @@ func NewWriter(db *badger.DB) *Writer {
 	return &w
 }
 
+// Last indexes the height of the last finalized block.
 func (w *Writer) Last(height uint64) error {
 	return w.db.Update(storage.SaveLastHeight(height))
 }
 
+// Header indexes the given header of a finalized block at the given height.
 func (w *Writer) Header(height uint64, header *flow.Header) error {
 	return w.db.Update(storage.SaveHeaderForHeight(height, header))
 }
 
+// Commit indexes the given commitment of the execution state as it was after
+// the execution of the finalized block at the given height.
 func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
 	return w.db.Update(storage.SaveCommitForHeight(commit, height))
 }
 
+// Events indexes the events, which should represent all events of the finalized
+// block at the given height.
 func (w *Writer) Events(height uint64, events []flow.Event) error {
 	buckets := make(map[flow.EventType][]flow.Event)
 	for _, event := range events {
@@ -70,6 +80,9 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 	return nil
 }
 
+// Payloads indexes the given payloads, which should represent a trie update
+// of the execution state contained within the finalized block at the given
+// height.
 func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
 	if len(paths) != len(payloads) {
 		return fmt.Errorf("mismatch between paths and payloads counts")

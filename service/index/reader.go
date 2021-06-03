@@ -26,13 +26,13 @@ import (
 	"github.com/optakt/flow-dps/service/storage"
 )
 
-// Reader implements the `dps.IndexReader` interface on top of the DPS server's
+// Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
 type Reader struct {
 	db *badger.DB
 }
 
-// NewReader creates a new `dps.IndexReader`, using the given database as the
+// NewReader creates a new index reader, using the given database as the
 // underlying state repository. It is recommended to provide a read-only Badger
 // database.
 func NewReader(db *badger.DB) *Reader {

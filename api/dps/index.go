@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-// Index implements the `dps.IndexReader` interface on top of the DPS server's
+// Index implements the `index.Reader` interface on top of the DPS server's
 // GRPC API. It can substitute for the on-disk index reader when executing
 // scripts, such that script invoker and execution state are on two different
 // machines across a network.
