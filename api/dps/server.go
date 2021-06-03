@@ -20,9 +20,9 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/index"
 )
 
@@ -134,13 +134,9 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 // server.
 func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*GetRegistersResponse, error) {
 
-	paths := make([]ledger.Path, 0, len(req.Paths))
-	for _, p := range req.Paths {
-		path, err := ledger.ToPath(p)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert path (%x): %w", p, err)
-		}
-		paths = append(paths, path)
+	paths, err := convert.BytesToPaths(req.Paths)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert paths: %w", err)
 	}
 
 	values, err := s.index.Registers(req.Height, paths)
@@ -148,15 +144,10 @@ func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*Get
 		return nil, fmt.Errorf("could not retrieve registers: %w", err)
 	}
 
-	vv := make([][]byte, 0, len(values))
-	for _, value := range values {
-		vv = append(vv, value[:])
-	}
-
 	res := GetRegistersResponse{
 		Height: req.Height,
 		Paths:  req.Paths,
-		Values: vv,
+		Values: convert.ValuesToBytes(values),
 	}
 
 	return &res, nil

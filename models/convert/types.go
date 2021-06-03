@@ -12,17 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package convert
 
 import (
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type Writer interface {
-	Header(height uint64, header *flow.Header) error
-	Commit(height uint64, commit flow.StateCommitment) error
-	Events(height uint64, events []flow.Event) error
-	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
-	Last(height uint64) error
+func TypesToStrings(types []flow.EventType) []string {
+	ss := make([]string, 0, len(types))
+	for _, typ := range types {
+		ss = append(ss, string(typ))
+	}
+	return ss
 }
