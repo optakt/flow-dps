@@ -24,6 +24,7 @@ This document describes the internal components that the Flow Data Provisioning 
       3. [Invoker](#invoker)
       4. [Validator](#validator)
       5. [Retriever](#retriever)
+   2. [DPS API](#dps-api)
 
 ## Chain
 
@@ -193,3 +194,9 @@ It can be used to validate blocks, networks, accounts, transactions and currenci
 The retriever uses all the aforementioned components to retrieve account balances, blocks and transactions.
 
 [Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/retriever)
+
+### DPS API
+
+The DPS API uses GRPC to allow clients to read from the DPS index.
+
+[API Documentation](dps-api.md)
