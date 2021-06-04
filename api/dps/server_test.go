@@ -101,6 +101,69 @@ func TestServerGetLast(t *testing.T) {
 	}
 }
 
+func TestServerGetFirst(t *testing.T) {
+
+	var (
+		testHeight = uint64(128)
+	)
+
+	vectors := []struct {
+		description string
+
+		mockHeight uint64
+		mockErr    error
+
+		wantRes *GetLastResponse
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			description: "happy case",
+
+			mockHeight: testHeight,
+			mockErr:    nil,
+
+			wantRes: &GetLastResponse{
+				Height: testHeight,
+			},
+
+			checkErr: assert.NoError,
+		},
+		{
+			description: "error case",
+
+			mockHeight: testHeight,
+			mockErr:    errors.New("dummy error"),
+
+			wantRes: nil,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, vector := range vectors {
+		vector := vector
+		t.Run(vector.description, func(t *testing.T) {
+			t.Parallel()
+
+			index := &mocks.Reader{}
+			s := Server{index: index}
+
+			index.LastFunc = func() (uint64, error) {
+				return vector.mockHeight, vector.mockErr
+			}
+
+			req := &GetFirstRequest{}
+
+			gotRes, gotErr := s.GetFirst(context.Background(), req)
+			vector.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, vector.wantRes, gotRes)
+			}
+		})
+	}
+}
+
 func TestServerGetHeader(t *testing.T) {
 
 	var (
