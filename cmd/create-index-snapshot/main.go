@@ -15,77 +15,75 @@
 package main
 
 import (
-	"bytes"
 	"encoding/hex"
-	"fmt"
+	"io"
 	"os"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/klauspost/compress/zstd"
-	"github.com/optakt/flow-dps/models/dps"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
+
+	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/service/dictionaries"
 )
 
 func main() {
 
+	// Parse the command line arguments.
 	var (
 		flagIndex string
 		flagLevel string
-		flagRaw   string
+		flagRaw   bool
 	)
 
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to badger database for index")
-	pflag.StringVarP(&flagLevel, "level", "l", "info", "log level for JSON logger")
-	pflag.StringVarP(&flagRaw, "raw", "r", "", "target file for raw output (overwrites existing)")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.BoolVarP(&flagRaw, "raw", "r", false, "use raw binary output instead of hexadecimal")
 
 	pflag.Parse()
 
+	// Initialize the logger.
 	zerolog.TimestampFunc = func() time.Time { return time.Now() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
 		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
 	}
-
 	log = log.Level(level)
 
+	// Open the index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
 		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open badger db")
 	}
 	defer db.Close()
 
-	var buf bytes.Buffer
-	compressor, err := zstd.NewWriter(&buf)
+	// We write to stdout; if we want hex output, we wrap the writer into a
+	// hex encoder as well.
+	var writer io.Writer
+	writer = os.Stdout
+	if !flagRaw {
+		writer = hex.NewEncoder(writer)
+	}
+
+	// We can then create a compressor to make sure we only pipe compressed
+	// bytes into the writer.
+	dict, _ := hex.DecodeString(dictionaries.Payload)
+	compressor, err := zstd.NewWriter(writer,
+		zstd.WithEncoderDict(dict),
+	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize zstd compression")
+		log.Fatal().Err(err).Msg("could not initialize compressor")
 	}
 	defer compressor.Close()
 
+	// We can then run the DB backup mechanism on top of the writer to directly
+	// write the output.
 	_, err = db.Backup(compressor, 0)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not backup badger db")
-	}
-
-	// if we don't want binary output, just write to stdout and we're done
-	if flagRaw == "" {
-		fmt.Printf("%s", hex.EncodeToString(buf.Bytes()))
-		return
-	}
-
-	// open output file - create/truncate existing
-	out, err := os.OpenFile(flagRaw, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		log.Fatal().Err(err).Str("path", flagRaw).Msg("could not open output file")
-	}
-
-	defer out.Close()
-
-	_, err = out.Write(buf.Bytes())
-	if err != nil {
-		log.Fatal().Err(err).Str("path", flagRaw).Msg("could not write to output")
+		log.Fatal().Err(err).Msg("could not backup database")
 	}
 
 	os.Exit(0)
