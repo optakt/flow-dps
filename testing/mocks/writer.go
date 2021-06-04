@@ -20,11 +20,20 @@ import (
 )
 
 type Writer struct {
+	FirstFunc    func(height uint64) error
+	LastFunc     func(height uint64) error
 	HeaderFunc   func(height uint64, header *flow.Header) error
 	CommitFunc   func(height uint64, commit flow.StateCommitment) error
 	EventsFunc   func(height uint64, events []flow.Event) error
 	PayloadsFunc func(height uint64, paths []ledger.Path, value []*ledger.Payload) error
-	LastFunc     func(height uint64) error
+}
+
+func (w *Writer) First(height uint64) error {
+	return w.FirstFunc(height)
+}
+
+func (w *Writer) Last(height uint64) error {
+	return w.LastFunc(height)
 }
 
 func (w *Writer) Header(height uint64, header *flow.Header) error {
@@ -41,9 +50,4 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 
 func (w *Writer) Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error {
 	return w.PayloadsFunc(height, paths, values)
-}
-
-func (w *Writer) Last(height uint64) error {
-	return w.LastFunc(height)
-
 }

@@ -20,11 +20,16 @@ import (
 )
 
 type Reader struct {
+	FirstFunc     func() (uint64, error)
 	LastFunc      func() (uint64, error)
 	HeaderFunc    func(height uint64) (*flow.Header, error)
 	CommitFunc    func(height uint64) (flow.StateCommitment, error)
 	EventsFunc    func(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	RegistersFunc func(height uint64, paths []ledger.Path) ([]ledger.Value, error)
+}
+
+func (r *Reader) First() (uint64, error) {
+	return r.FirstFunc()
 }
 
 func (r *Reader) Last() (uint64, error) {

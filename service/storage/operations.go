@@ -61,6 +61,10 @@ func Combine(ops ...func(*badger.Txn) error) func(*badger.Txn) error {
 	}
 }
 
+func RetrieveFirstHeight(height *uint64) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixFirstHeight), height)
+}
+
 func RetrieveLastHeight(height *uint64) func(*badger.Txn) error {
 	return retrieve(encodeKey(prefixLastHeight), height)
 }
@@ -154,6 +158,10 @@ func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) f
 		})
 		return err
 	}
+}
+
+func SaveFirstHeight(height uint64) func(*badger.Txn) error {
+	return save(encodeKey(prefixFirstHeight), height)
 }
 
 func SaveLastHeight(height uint64) func(*badger.Txn) error {

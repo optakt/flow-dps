@@ -42,6 +42,11 @@ func NewWriter(db *badger.DB) *Writer {
 	return &w
 }
 
+// First indexes the height of the first finalized block.
+func (w *Writer) First(height uint64) error {
+	return w.db.Update(storage.SaveFirstHeight(height))
+}
+
 // Last indexes the height of the last finalized block.
 func (w *Writer) Last(height uint64) error {
 	return w.db.Update(storage.SaveLastHeight(height))

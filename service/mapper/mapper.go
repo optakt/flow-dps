@@ -116,9 +116,16 @@ func (m *Mapper) Run() error {
 	defer m.wg.Done()
 
 	// We start trying to map at the root height.
-	height, err := m.chain.Root()
+	root, err := m.chain.Root()
 	if err != nil {
 		return fmt.Errorf("could not get root height: %w", err)
+	}
+	height := root
+
+	// And we mark the root height as first height in our index.
+	err = m.index.First(height)
+	if err != nil {
+		return fmt.Errorf("could not index first height: %w", err)
 	}
 
 	// If we have no checkpoint file, we start from an empty trie; otherwise we
@@ -359,8 +366,7 @@ Outer:
 		// having an API that allows combining into a single Badger tx
 		// => https://github.com/optakt/flow-dps/issues/36
 
-		// If we successfully indexed all of the deltas, we can index the rest
-		// of the block data.
+		// Index all of the data for this height.
 		err = m.index.Header(height, header)
 		if err != nil {
 			return fmt.Errorf("could not index header: %w", err)
@@ -372,6 +378,14 @@ Outer:
 		err = m.index.Events(height, events)
 		if err != nil {
 			return fmt.Errorf("could not index events: %w", err)
+		}
+
+		// The first height is only indexed once.
+		if height == root {
+			err = m.index.First(height)
+			if err != nil {
+				return fmt.Errorf("could not index first: %w", err)
+			}
 		}
 		err = m.index.Last(height)
 		if err != nil {

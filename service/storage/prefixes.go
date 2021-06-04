@@ -15,6 +15,7 @@
 package storage
 
 const (
+	prefixFirstHeight = 6
 	prefixLastHeight  = 1
 	prefixIndexCommit = 2
 	prefixDataHeader  = 3

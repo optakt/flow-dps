@@ -31,6 +31,7 @@ import (
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/index"
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 func main() {
@@ -44,11 +45,13 @@ func main() {
 		flagLevel string
 		flagIndex string
 		flagPort  uint16
+		flagFirst uint64
 	)
 
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
+	pflag.Uint64VarP(&flagFirst, "first", "f", 0, "first height to fix DB with") // FIXME: remove this after all fixed
 
 	pflag.Parse()
 
@@ -67,6 +70,14 @@ func main() {
 		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open index DB")
 	}
 	defer db.Close()
+
+	// Check if we have a first height set and insert into DB.
+	if flagFirst != 0 {
+		err := db.Update(storage.SaveFirstHeight(flagFirst))
+		if err != nil {
+			log.Fatal().Uint64("first", flagFirst).Err(err).Msg("could not save first height")
+		}
+	}
 
 	// GRPC API initialization.
 	gsvr := grpc.NewServer()

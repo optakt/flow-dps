@@ -18,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type APIClient interface {
+	GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
 	GetLast(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
 	GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
 	GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
@@ -31,6 +32,15 @@ type aPIClient struct {
 
 func NewAPIClient(cc grpc.ClientConnInterface) APIClient {
 	return &aPIClient{cc}
+}
+
+func (c *aPIClient) GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error) {
+	out := new(GetFirstResponse)
+	err := c.cc.Invoke(ctx, "/API/GetFirst", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *aPIClient) GetLast(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error) {
@@ -82,6 +92,7 @@ func (c *aPIClient) GetRegisters(ctx context.Context, in *GetRegistersRequest, o
 // All implementations should embed UnimplementedAPIServer
 // for forward compatibility
 type APIServer interface {
+	GetFirst(context.Context, *GetFirstRequest) (*GetFirstResponse, error)
 	GetLast(context.Context, *GetLastRequest) (*GetLastResponse, error)
 	GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error)
 	GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error)
@@ -93,6 +104,9 @@ type APIServer interface {
 type UnimplementedAPIServer struct {
 }
 
+func (UnimplementedAPIServer) GetFirst(context.Context, *GetFirstRequest) (*GetFirstResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFirst not implemented")
+}
 func (UnimplementedAPIServer) GetLast(context.Context, *GetLastRequest) (*GetLastResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLast not implemented")
 }
@@ -118,6 +132,24 @@ type UnsafeAPIServer interface {
 
 func RegisterAPIServer(s grpc.ServiceRegistrar, srv APIServer) {
 	s.RegisterService(&API_ServiceDesc, srv)
+}
+
+func _API_GetFirst_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFirstRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetFirst(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/GetFirst",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetFirst(ctx, req.(*GetFirstRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _API_GetLast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -217,6 +249,10 @@ var API_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "API",
 	HandlerType: (*APIServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetFirst",
+			Handler:    _API_GetFirst_Handler,
+		},
 		{
 			MethodName: "GetLast",
 			Handler:    _API_GetLast_Handler,

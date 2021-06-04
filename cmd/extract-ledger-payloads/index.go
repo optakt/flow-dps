@@ -21,6 +21,14 @@ import (
 
 type Index struct{}
 
+func (*Index) First(height uint64) error {
+	return nil
+}
+
+func (*Index) Last(height uint64) error {
+	return nil
+}
+
 func (*Index) Header(height uint64, header *flow.Header) error {
 	return nil
 }
@@ -34,9 +42,5 @@ func (*Index) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Pa
 }
 
 func (*Index) Events(height uint64, events []flow.Event) error {
-	return nil
-}
-
-func (*Index) Last(height uint64) error {
 	return nil
 }

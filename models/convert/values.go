@@ -27,3 +27,12 @@ func ValuesToBytes(values []ledger.Value) [][]byte {
 	}
 	return bb
 }
+
+func BytesToValues(bb [][]byte) ([]ledger.Value, error) {
+	values := make([]ledger.Value, 0, len(bb))
+	for _, b := range bb {
+		value := ledger.Value(b)
+		values = append(values, value)
+	}
+	return values, nil
+}
