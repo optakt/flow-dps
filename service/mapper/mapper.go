@@ -117,11 +117,10 @@ func (m *Mapper) Run() error {
 	defer m.wg.Done()
 
 	// We start trying to map at the root height.
-	root, err := m.chain.Root()
+	height, err := m.chain.Root()
 	if err != nil {
 		return fmt.Errorf("could not get root height: %w", err)
 	}
-	height := root
 
 	// If we have no checkpoint file, we start from an empty trie; otherwise we
 	// rebuild the checkpoint and use that as the starting trie.
@@ -177,8 +176,17 @@ func (m *Mapper) Run() error {
 	// state commitment to the state commitment of the next finalized block. At
 	// that point, we can discard all other tries, as the path must continue
 	// from the state trie with the sealed state commitment.
+	once := &sync.Once{}
 Outer:
 	for {
+		// We want to check in this tight loop if we want to quit, just in case
+		// we get stuck on a timed out network connection.
+		select {
+		case <-m.stop:
+			break Outer
+		default:
+			// keep going
+		}
 
 		log := m.log.With().
 			Uint64("height", height).
@@ -214,9 +222,8 @@ Outer:
 
 	Inner:
 		for {
-			// We do want to check for shutdown here because it's the one part
-			// that we traverse both for the outer and for the inner loop each
-			// time.
+			// We want to check in this tight loop if we want to quit, just in case
+			// we get stuck on a timed out network connection.
 			select {
 			case <-m.stop:
 				break Outer
@@ -329,6 +336,24 @@ Outer:
 			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
 
+		// TODO: look at performance of doing separate transactions versus
+		// having an API that allows combining into a single Badger tx
+		// => https://github.com/optakt/flow-dps/issues/36
+
+		// Index all of the data for this height.
+		err = m.index.Header(height, header)
+		if err != nil {
+			return fmt.Errorf("could not index header: %w", err)
+		}
+		err = m.index.Commit(height, commitNext)
+		if err != nil {
+			return fmt.Errorf("could not index commit: %w", err)
+		}
+		err = m.index.Events(height, events)
+		if err != nil {
+			return fmt.Errorf("could not index events: %w", err)
+		}
+
 		// We use the tree from the step and the paths that were changed to
 		// index each change for this height. As we are starting at the back, we
 		// keep track of paths already updated, so we only index the last change
@@ -362,35 +387,17 @@ Outer:
 			}
 		}
 
-		// TODO: look at performance of doing separate transactions versus
-		// having an API that allows combining into a single Badger tx
-		// => https://github.com/optakt/flow-dps/issues/36
-
-		// Index all of the data for this height.
-		err = m.index.Header(height, header)
-		if err != nil {
-			return fmt.Errorf("could not index header: %w", err)
-		}
-		err = m.index.Commit(height, commitNext)
-		if err != nil {
-			return fmt.Errorf("could not index commit: %w", err)
-		}
-		err = m.index.Events(height, events)
-		if err != nil {
-			return fmt.Errorf("could not index events: %w", err)
-		}
-
 		// The first height is only indexed once, but we always index the last
 		// indexed block.
-		if height == root {
+		once.Do(func() {
 			err = m.index.First(height)
-			if err != nil {
-				return fmt.Errorf("could not index first: %w", err)
-			}
+		})
+		if err != nil {
+			return fmt.Errorf("could not index first height: %w", err)
 		}
 		err = m.index.Last(height)
 		if err != nil {
-			return fmt.Errorf("could not index last: %w", err)
+			return fmt.Errorf("could not index last height: %w", err)
 		}
 
 		// At this point, we increase the height; we have found the full
