@@ -91,13 +91,13 @@ func run() int {
 	defer data.Close()
 
 	// Initialize mapper.
-	chain := chain.FromProtocolState(data)
+	chain := chain.FromDisk(data)
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
 		return failure
 	}
-	feeder, err := feeder.FromLedgerWAL(wal.NewReader(segments))
+	feeder, err := feeder.FromDisk(wal.NewReader(segments))
 	if err != nil {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 		return failure

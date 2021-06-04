@@ -19,38 +19,37 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
-
-	"github.com/optakt/flow-dps/models/dps"
 )
 
-type ProtocolState struct {
+type Disk struct {
 	db *badger.DB
 }
 
-func FromProtocolState(db *badger.DB) *ProtocolState {
-	ps := ProtocolState{
+func FromDisk(db *badger.DB) *Disk {
+	d := Disk{
 		db: db,
 	}
 
-	return &ps
+	return &d
 }
 
-func (ps *ProtocolState) Root() (uint64, error) {
+func (d *Disk) Root() (uint64, error) {
 	var height uint64
-	err := operation.RetrieveRootHeight(&height)(ps.db.NewTransaction(false))
+	err := operation.RetrieveRootHeight(&height)(d.db.NewTransaction(false))
 	if err != nil {
 		return 0, fmt.Errorf("could not look up root height: %w", err)
 	}
 	return height, nil
 }
 
-func (ps *ProtocolState) Header(height uint64) (*flow.Header, error) {
+func (d *Disk) Header(height uint64) (*flow.Header, error) {
 	var blockID flow.Identifier
-	err := operation.LookupBlockHeight(height, &blockID)(ps.db.NewTransaction(false))
+	err := operation.LookupBlockHeight(height, &blockID)(d.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, dps.ErrFinished
 	}
@@ -58,35 +57,35 @@ func (ps *ProtocolState) Header(height uint64) (*flow.Header, error) {
 		return nil, fmt.Errorf("could not look up block: %w", err)
 	}
 	var header flow.Header
-	err = operation.RetrieveHeader(blockID, &header)(ps.db.NewTransaction(false))
+	err = operation.RetrieveHeader(blockID, &header)(d.db.NewTransaction(false))
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve header: %w", err)
 	}
 	return &header, nil
 }
 
-func (ps *ProtocolState) Commit(height uint64) (flow.StateCommitment, error) {
+func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 	var blockID flow.Identifier
-	err := operation.LookupBlockHeight(height, &blockID)(ps.db.NewTransaction(false))
+	err := operation.LookupBlockHeight(height, &blockID)(d.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
 		return flow.StateCommitment{}, dps.ErrFinished
 	}
 	var commit flow.StateCommitment
-	err = operation.LookupStateCommitment(blockID, &commit)(ps.db.NewTransaction(false))
+	err = operation.LookupStateCommitment(blockID, &commit)(d.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
 		return flow.StateCommitment{}, dps.ErrFinished
 	}
 	return commit, nil
 }
 
-func (ps *ProtocolState) Events(height uint64) ([]flow.Event, error) {
+func (d *Disk) Events(height uint64) ([]flow.Event, error) {
 	var blockID flow.Identifier
-	err := operation.LookupBlockHeight(height, &blockID)(ps.db.NewTransaction(false))
+	err := operation.LookupBlockHeight(height, &blockID)(d.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, dps.ErrFinished
 	}
 	var events []flow.Event
-	err = operation.LookupEventsByBlockID(blockID, &events)(ps.db.NewTransaction(false))
+	err = operation.LookupEventsByBlockID(blockID, &events)(d.db.NewTransaction(false))
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve events: %w", err)
 	}

@@ -25,22 +25,22 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-type LedgerWAL struct {
+type Disk struct {
 	reader *pwal.Reader
 }
 
-// FromLedgerWAL creates a trie update feeder that sources state deltas
+// FromDisk creates a trie update feeder that sources state deltas
 // directly from an execution node's trie directory.
-func FromLedgerWAL(reader *pwal.Reader) (*LedgerWAL, error) {
+func FromDisk(reader *pwal.Reader) (*Disk, error) {
 
-	l := LedgerWAL{
+	l := Disk{
 		reader: reader,
 	}
 
 	return &l, nil
 }
 
-func (l *LedgerWAL) Update() (*ledger.TrieUpdate, error) {
+func (d *Disk) Update() (*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip
@@ -50,15 +50,15 @@ func (l *LedgerWAL) Update() (*ledger.TrieUpdate, error) {
 		// This part reads the next entry from the WAL, makes sure we didn't
 		// encounter an error when reading or decoding and ensures that it's a
 		// trie update.
-		next := l.reader.Next()
-		err := l.reader.Err()
+		next := d.reader.Next()
+		err := d.reader.Err()
 		if !next && err != nil {
 			return nil, fmt.Errorf("could not read next record: %w", err)
 		}
 		if !next {
 			return nil, dps.ErrFinished
 		}
-		record := l.reader.Record()
+		record := d.reader.Record()
 		operation, _, update, err := wal.Decode(record)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode record: %w", err)

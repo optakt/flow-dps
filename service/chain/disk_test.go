@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	testHeight               = 42
-	testChainID flow.ChainID = "flow-testnet"
+	testHeight  = 42
+	testChainID = flow.ChainID("flow-testnet")
 )
 
 var (
@@ -38,20 +38,20 @@ var (
 	testBlockID = flow.Identifier{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
 )
 
-func TestProtocolState_Root(t *testing.T) {
+func TestDisk_Root(t *testing.T) {
 	db := inMemoryDB(t)
 	defer db.Close()
-	c := chain.FromProtocolState(db)
+	c := chain.FromDisk(db)
 
 	root, err := c.Root()
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(testHeight), root)
 }
 
-func TestProtocolState_Header(t *testing.T) {
+func TestDisk_Header(t *testing.T) {
 	db := inMemoryDB(t)
 	defer db.Close()
-	c := chain.FromProtocolState(db)
+	c := chain.FromDisk(db)
 
 	header, err := c.Header(testHeight)
 	assert.NoError(t, err)
@@ -63,10 +63,10 @@ func TestProtocolState_Header(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestProtocolState_Commit(t *testing.T) {
+func TestDisk_Commit(t *testing.T) {
 	db := inMemoryDB(t)
 	defer db.Close()
-	c := chain.FromProtocolState(db)
+	c := chain.FromDisk(db)
 
 	commit, err := c.Commit(testHeight)
 	assert.NoError(t, err)
@@ -76,10 +76,10 @@ func TestProtocolState_Commit(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestProtocolState_Events(t *testing.T) {
+func TestDisk_Events(t *testing.T) {
 	db := inMemoryDB(t)
 	defer db.Close()
-	c := chain.FromProtocolState(db)
+	c := chain.FromDisk(db)
 
 	events, err := c.Events(testHeight)
 	assert.NoError(t, err)
