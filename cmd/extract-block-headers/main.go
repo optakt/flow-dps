@@ -35,7 +35,16 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+const (
+	success = 0
+	failure = 1
+)
+
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 
 	// Command line parameter initialization.
 	var (
@@ -61,7 +70,8 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		return failure
 	}
 	log = log.Level(level)
 
@@ -69,7 +79,8 @@ func main() {
 	opts := dps.DefaultOptions(flagData).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Str("data", flagData).Err(err).Msg("could not open blockchain database")
+		log.Error().Str("data", flagData).Err(err).Msg("could not open blockchain database")
+		return failure
 	}
 	defer db.Close()
 
@@ -101,21 +112,25 @@ func main() {
 			continue
 		}
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not look up block")
+			log.Error().Err(err).Msg("could not look up block")
+			return failure
 		}
 		var header flow.Header
 		err = db.View(operation.RetrieveHeader(blockID, &header))
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not retrieve header")
+			log.Error().Err(err).Msg("could not retrieve header")
+			return failure
 		}
 		data, err := codec.Marshal(&header)
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not encode header")
+			log.Error().Err(err).Msg("could not encode header")
+			return failure
 		}
 		name := filepath.Join(flagOutput, fmt.Sprintf("header-%07d", index))
 		err = os.WriteFile(name, data, fs.ModePerm)
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not write header file")
+			log.Error().Err(err).Msg("could not write header file")
+			return failure
 		}
 		total += uint64(len(data))
 		log.Info().Int("header_size", len(data)).Uint64("total_size", total).Msg("block header extracted")
@@ -124,5 +139,5 @@ func main() {
 		}
 	}
 
-	os.Exit(0)
+	return success
 }

@@ -37,7 +37,16 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+const (
+	success = 0
+	failure = 1
+)
+
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 
 	// Command line parameter initialization.
 	var (
@@ -63,7 +72,8 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		return failure
 	}
 	log = log.Level(level)
 
@@ -77,7 +87,8 @@ func main() {
 	opts := dps.DefaultOptions(flagData).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal().Str("data", flagData).Err(err).Msg("could not open blockchain database")
+		log.Error().Str("data", flagData).Err(err).Msg("could not open blockchain database")
+		return failure
 	}
 	defer db.Close()
 
@@ -85,18 +96,21 @@ func main() {
 
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
-		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
+		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
+		return failure
 	}
 	feeder, err := feeder.FromLedgerWAL(wal.NewReader(segments))
 	if err != nil {
-		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
+		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
+		return failure
 	}
 	mapper, err := mapper.New(log, chain, feeder, &Index{},
 		mapper.WithCheckpointFile(flagCheckpoint),
 		mapper.WithPostProcessing(post),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize mapper")
+		log.Error().Err(err).Msg("could not initialize mapper")
+		return failure
 	}
 
 	log.Info().Msg("starting disk mapper to build final state trie")
@@ -105,7 +119,8 @@ func main() {
 	start := time.Now()
 	err = mapper.Run()
 	if err != nil {
-		log.Fatal().Err(err).Msg("disk mapper encountered error")
+		log.Error().Err(err).Msg("disk mapper encountered error")
+		return failure
 	}
 	finish := time.Now()
 	delta := finish.Sub(start)
@@ -125,12 +140,14 @@ func main() {
 		log := log.With().Int("index", index).Hex("key", payload.Key.CanonicalForm()).Logger()
 		data, err := codec.Marshal(&payload)
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not encode payload")
+			log.Error().Err(err).Msg("could not encode payload")
+			return failure
 		}
 		name := filepath.Join(flagOutput, fmt.Sprintf("payload-%07d", index))
 		err = os.WriteFile(name, data, fs.ModePerm)
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not write payload file")
+			log.Error().Err(err).Msg("could not write payload file")
+			return failure
 		}
 		total += uint64(len(data))
 		log.Info().Int("payload_size", len(data)).Uint64("total_size", total).Msg("ledger payload extracted")
@@ -139,5 +156,5 @@ func main() {
 		}
 	}
 
-	os.Exit(0)
+	return success
 }

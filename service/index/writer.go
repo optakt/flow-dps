@@ -44,23 +44,23 @@ func NewWriter(db *badger.DB) *Writer {
 
 // First indexes the height of the first finalized block.
 func (w *Writer) First(height uint64) error {
-	return w.db.Update(storage.SaveFirstHeight(height))
+	return w.db.Update(storage.SaveFirst(height))
 }
 
 // Last indexes the height of the last finalized block.
 func (w *Writer) Last(height uint64) error {
-	return w.db.Update(storage.SaveLastHeight(height))
+	return w.db.Update(storage.SaveLast(height))
 }
 
 // Header indexes the given header of a finalized block at the given height.
 func (w *Writer) Header(height uint64, header *flow.Header) error {
-	return w.db.Update(storage.SaveHeaderForHeight(height, header))
+	return w.db.Update(storage.SaveHeader(height, header))
 }
 
 // Commit indexes the given commitment of the execution state as it was after
 // the execution of the finalized block at the given height.
 func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
-	return w.db.Update(storage.SaveCommitForHeight(commit, height))
+	return w.db.Update(storage.SaveCommit(commit, height))
 }
 
 // Events indexes the events, which should represent all events of the finalized

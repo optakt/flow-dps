@@ -47,14 +47,14 @@ func NewReader(db *badger.DB) *Reader {
 // First returns the height of the first finalized block that was indexed.
 func (r *Reader) First() (uint64, error) {
 	var height uint64
-	err := r.db.View(storage.RetrieveFirstHeight(&height))
+	err := r.db.View(storage.RetrieveFirst(&height))
 	return height, err
 }
 
 // Last returns the height of the last finalized block that was indexed.
 func (r *Reader) Last() (uint64, error) {
 	var height uint64
-	err := r.db.View(storage.RetrieveLastHeight(&height))
+	err := r.db.View(storage.RetrieveLast(&height))
 	return height, err
 }
 
@@ -69,7 +69,7 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 // execution of the finalized block at the given height.
 func (r *Reader) Commit(height uint64) (flow.StateCommitment, error) {
 	var commit flow.StateCommitment
-	err := r.db.View(storage.RetrieveCommitByHeight(height, &commit))
+	err := r.db.View(storage.RetrieveCommit(height, &commit))
 	return commit, err
 }
 

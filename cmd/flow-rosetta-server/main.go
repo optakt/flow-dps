@@ -40,7 +40,16 @@ import (
 	"github.com/optakt/flow-dps/rosetta/validator"
 )
 
+const (
+	success = 0
+	failure = 1
+)
+
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 
 	// Signal catching for clean shutdown.
 	sig := make(chan os.Signal, 1)
@@ -66,20 +75,23 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		return failure
 	}
 	log = log.Level(level)
 
 	// Check if the configured chain ID is valid.
 	params, ok := dps.FlowParams[flow.ChainID(flagChain)]
 	if !ok {
-		log.Fatal().Str("chain", flagChain).Msg("invalid chain ID for params")
+		log.Error().Str("chain", flagChain).Msg("invalid chain ID for params")
+		return failure
 	}
 
 	// Initialize the API client.
 	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
 	if err != nil {
-		log.Fatal().Str("api", flagAPI).Err(err).Msg("could not dial API host")
+		log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
+		return failure
 	}
 	defer conn.Close()
 
@@ -106,17 +118,28 @@ func main() {
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
+	done := make(chan struct{})
+	failed := make(chan struct{})
 	go func() {
 		log.Info().Msg("Flow Rosetta Server starting")
 		err := server.Start(fmt.Sprint(":", flagPort))
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error().Uint16("port", flagPort).Err(err).Msg("Rosetta API encountered error")
+			close(failed)
+		} else {
+			close(done)
 		}
 		log.Info().Msg("Flow Rosetta Server stopped")
 	}()
 
-	<-sig
-	log.Info().Msg("Flow Rosetta Server stopping")
+	select {
+	case <-sig:
+		log.Info().Msg("Flow Rosetta Server stopping")
+	case <-done:
+		log.Info().Msg("Flow Rosetta Server done")
+	case <-failed:
+		log.Warn().Msg("Flow Rosetta Server failed")
+		return failure
+	}
 	go func() {
 		<-sig
 		log.Warn().Msg("forcing exit")
@@ -132,7 +155,8 @@ func main() {
 	err = server.Shutdown(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("could not shut down Rosetta API")
+		return failure
 	}
 
-	os.Exit(0)
+	return success
 }

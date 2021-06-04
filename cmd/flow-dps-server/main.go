@@ -31,10 +31,18 @@ import (
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/index"
-	"github.com/optakt/flow-dps/service/storage"
+)
+
+const (
+	success = 0
+	failure = 1
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 
 	// Signal catching for clean shutdown.
 	sig := make(chan os.Signal, 1)
@@ -45,13 +53,11 @@ func main() {
 		flagLevel string
 		flagIndex string
 		flagPort  uint16
-		flagFirst uint64
 	)
 
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
-	pflag.Uint64VarP(&flagFirst, "first", "f", 0, "first height to fix DB with") // FIXME: remove this after all fixed
 
 	pflag.Parse()
 
@@ -60,26 +66,18 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		return failure
 	}
 	log = log.Level(level)
 
 	// Initialize the index core state.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		return failure
 	}
 	defer db.Close()
-
-	// Check if we have a first height set and insert into DB.
-	// TODO: Remove this once we have fixed all of the currently active indexes.
-	// => https://github.com/optakt/flow-dps/issues/135
-	if flagFirst != 0 {
-		err := db.Update(storage.SaveFirstHeight(flagFirst))
-		if err != nil {
-			log.Fatal().Uint64("first", flagFirst).Err(err).Msg("could not save first height")
-		}
-	}
 
 	// GRPC API initialization.
 	gsvr := grpc.NewServer()
@@ -89,22 +87,34 @@ func main() {
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
+	listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
+	if err != nil {
+		log.Error().Uint16("port", flagPort).Err(err).Msg("could not listen")
+		return failure
+	}
+	done := make(chan struct{})
+	failed := make(chan struct{})
 	go func() {
 		log.Info().Msg("Flow DPS Server starting")
-		listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
-		if err != nil {
-			log.Fatal().Uint16("port", flagPort).Err(err).Msg("could not listen")
-		}
 		api.RegisterAPIServer(gsvr, server)
 		err = gsvr.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error().Err(err).Msg("GRPC API encountered error")
+			close(failed)
+		} else {
+			close(done)
 		}
 		log.Info().Msg("Flow DPS Server stopped")
 	}()
 
-	<-sig
-	log.Info().Msg("Flow DPS Server stopping")
+	select {
+	case <-sig:
+		log.Info().Msg("Flow DPS Server stopping")
+	case <-done:
+		log.Info().Msg("Flow DPS Server done")
+	case <-failed:
+		log.Warn().Msg("Flow DPS Server failed")
+		return failure
+	}
 	go func() {
 		<-sig
 		log.Warn().Msg("forcing exit")
@@ -117,5 +127,5 @@ func main() {
 	// an error. We then wait for shutdown on each component to complete.
 	gsvr.GracefulStop()
 
-	os.Exit(0)
+	return success
 }
