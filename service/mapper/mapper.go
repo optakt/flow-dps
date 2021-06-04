@@ -389,9 +389,7 @@ Outer:
 
 		// The first height is only indexed once, but we always index the last
 		// indexed block.
-		once.Do(func() {
-			err = m.index.First(height)
-		})
+		once.Do(func() { err = m.index.First(height) })
 		if err != nil {
 			return fmt.Errorf("could not index first height: %w", err)
 		}
