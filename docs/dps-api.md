@@ -49,6 +49,8 @@
 
 ### GetEventsResponse
 
+The `data` field contains [CBOR-encoded](https://cbor.io/) payloads.
+
 | Field  | Type     | Label    |
 |--------|----------|----------|
 | height | `uint64` |          |
@@ -62,6 +64,8 @@
 | height | `uint64` |       |
 
 ### GetHeaderResponse
+
+The `data` field contains [CBOR-encoded](https://cbor.io/) payloads.
 
 | Field  | Type     | Label |
 |--------|----------|-------|
