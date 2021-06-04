@@ -20,9 +20,10 @@ import (
 )
 
 type Writer interface {
+	First(height uint64) error
+	Last(height uint64) error
 	Header(height uint64, header *flow.Header) error
 	Commit(height uint64, commit flow.StateCommitment) error
 	Events(height uint64, events []flow.Event) error
 	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
-	Last(height uint64) error
 }

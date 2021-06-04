@@ -49,6 +49,21 @@ func NewServer(index index.Reader) *Server {
 	return &s
 }
 
+// GetFirst implements the `GetFirst` function of the generated GRPC server.
+func (s *Server) GetFirst(_ context.Context, _ *GetFirstRequest) (*GetFirstResponse, error) {
+
+	height, err := s.index.First()
+	if err != nil {
+		return nil, fmt.Errorf("could not get first height: %w", err)
+	}
+
+	res := GetFirstResponse{
+		Height: height,
+	}
+
+	return &res, nil
+}
+
 // GetLast implements the `GetLast` function of the generated GRPC server.
 func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse, error) {
 

@@ -22,6 +22,8 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/models/convert"
 )
 
 // Index implements the `index.Reader` interface on top of the DPS server's
@@ -41,6 +43,18 @@ func IndexFromAPI(client APIClient) *Index {
 	}
 
 	return &i
+}
+
+// First returns the height of the first finalized block that was indexed.
+func (i *Index) First() (uint64, error) {
+
+	req := GetFirstRequest{}
+	res, err := i.client.GetFirst(context.Background(), &req)
+	if err != nil {
+		return 0, fmt.Errorf("could not get first height: %w", err)
+	}
+
+	return res.Height, nil
 }
 
 // Last returns the height of the last finalized block that was indexed.
@@ -129,23 +143,18 @@ func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, er
 // found within the indexed execution state returns a nil value without error.
 func (i *Index) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 
-	pp := make([][]byte, 0, len(paths))
-	for _, path := range paths {
-		pp = append(pp, path[:])
-	}
-
 	req := GetRegistersRequest{
 		Height: height,
-		Paths:  pp,
+		Paths:  convert.PathsToBytes(paths),
 	}
 	res, err := i.client.GetRegisters(context.Background(), &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not get registers: %w", err)
 	}
 
-	values := make([]ledger.Value, 0, len(res.Values))
-	for _, value := range res.Values {
-		values = append(values, ledger.Value(value))
+	values, err := convert.BytesToValues(res.Values)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert values: %w", err)
 	}
 
 	return values, nil
