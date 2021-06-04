@@ -19,10 +19,10 @@ package storage
 // => https://github.com/optakt/flow-dps/issues/134
 
 const (
-	prefixFirstHeight = 6
-	prefixLastHeight  = 1
-	prefixIndexCommit = 2
-	prefixDataHeader  = 3
-	prefixDataDelta   = 4
-	prefixDataEvents  = 5
+	prefixFirst   = 1
+	prefixLast    = 2
+	prefixHeader  = 3
+	prefixCommit  = 4
+	prefixEvents  = 5
+	prefixPayload = 6
 )

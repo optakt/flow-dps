@@ -75,7 +75,7 @@ func main() {
 	// TODO: Remove this once we have fixed all of the currently active indexes.
 	// => https://github.com/optakt/flow-dps/issues/135
 	if flagFirst != 0 {
-		err := db.Update(storage.SaveFirstHeight(flagFirst))
+		err := db.Update(storage.SaveFirst(flagFirst))
 		if err != nil {
 			log.Fatal().Uint64("first", flagFirst).Err(err).Msg("could not save first height")
 		}
