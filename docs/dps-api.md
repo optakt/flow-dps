@@ -49,7 +49,7 @@
 
 ### GetEventsResponse
 
-The `data` field contains [CBOR-encoded](https://cbor.io/) payloads.
+The `data` field contains a [CBOR-encoded](https://cbor.io/) slice of Flow events (`[]flow.Event`) as payload.
 
 | Field  | Type     | Label    |
 |--------|----------|----------|
@@ -65,7 +65,7 @@ The `data` field contains [CBOR-encoded](https://cbor.io/) payloads.
 
 ### GetHeaderResponse
 
-The `data` field contains [CBOR-encoded](https://cbor.io/) payloads.
+The `data` field contains a [CBOR-encoded](https://cbor.io/) Flow header (`flow.Header`) as payload.
 
 | Field  | Type     | Label |
 |--------|----------|-------|
