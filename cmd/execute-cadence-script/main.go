@@ -14,7 +14,16 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 )
 
+const (
+	success = 0
+	failure = -1
+)
+
 func main() {
+	os.Exit(int(run()))
+}
+
+func run() int {
 
 	var (
 		flagAPI    string
@@ -34,19 +43,22 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Err(err).Str("level", flagLevel).Msg("could not parse log level")
+		log.Error().Err(err).Str("level", flagLevel).Msg("could not parse log level")
+		return failure
 	}
 
 	log = log.Level(level)
 
 	cli, err := client.New(flagAPI, grpc.WithInsecure())
 	if err != nil {
-		log.Fatal().Str("api", flagAPI).Err(err).Msg("could not connect to the access node")
+		log.Error().Str("api", flagAPI).Err(err).Msg("could not connect to the access node")
+		return failure
 	}
 
 	script, err := os.ReadFile(flagScript)
 	if err != nil {
-		log.Fatal().Err(err).Str("script", flagScript).Msg("could not read script file")
+		log.Error().Err(err).Str("script", flagScript).Msg("could not read script file")
+		return failure
 	}
 
 	var value cadence.Value
@@ -57,10 +69,11 @@ func main() {
 	}
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("cadence script execution failed")
+		log.Error().Err(err).Msg("cadence script execution failed")
+		return failure
 	}
 
 	fmt.Printf("%s\n", value.String())
 
-	os.Exit(0)
+	return success
 }

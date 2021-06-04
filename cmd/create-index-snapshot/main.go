@@ -29,7 +29,16 @@ import (
 	"github.com/optakt/flow-dps/service/dictionaries"
 )
 
+const (
+	success = 0
+	failure = 1
+)
+
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 
 	// Parse the command line arguments.
 	var (
@@ -49,14 +58,16 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		return failure
 	}
 	log = log.Level(level)
 
 	// Open the index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open badger db")
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open badger db")
+		return failure
 	}
 	defer db.Close()
 
@@ -75,7 +86,8 @@ func main() {
 		zstd.WithEncoderDict(dict),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not initialize compressor")
+		log.Error().Err(err).Msg("could not initialize compressor")
+		return failure
 	}
 	defer compressor.Close()
 
@@ -83,8 +95,9 @@ func main() {
 	// write the output.
 	_, err = db.Backup(compressor, 0)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not backup database")
+		log.Error().Err(err).Msg("could not backup database")
+		return failure
 	}
 
-	os.Exit(0)
+	return success
 }

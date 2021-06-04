@@ -32,7 +32,16 @@ import (
 	"github.com/optakt/flow-dps/service/mapper"
 )
 
+const (
+	success = 0
+	failure = 1
+)
+
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 
 	// Signal catching for clean shutdown.
 	sig := make(chan os.Signal, 1)
@@ -60,21 +69,24 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		return failure
 	}
 	log = log.Level(level)
 
 	// Open index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		return failure
 	}
 	defer db.Close()
 
 	// Open protocol state database.
 	data, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not open blockchain database")
+		log.Error().Err(err).Msg("could not open blockchain database")
+		return failure
 	}
 	defer data.Close()
 
@@ -82,27 +94,34 @@ func main() {
 	chain := chain.FromProtocolState(data)
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
-		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
+		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
+		return failure
 	}
 	feeder, err := feeder.FromLedgerWAL(wal.NewReader(segments))
 	if err != nil {
-		log.Fatal().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
+		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
+		return failure
 	}
 	index := index.NewWriter(db)
 	mapper, err := mapper.New(log, chain, feeder, index, mapper.WithCheckpointFile(flagCheckpoint))
 	if err != nil {
-		log.Fatal().Str("checkpoint", flagCheckpoint).Err(err).Msg("could not initialize mapper")
+		log.Error().Str("checkpoint", flagCheckpoint).Err(err).Msg("could not initialize mapper")
+		return failure
 	}
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
+	done := make(chan struct{})
+	failed := make(chan struct{})
 	go func() {
 		start := time.Now()
 		log.Info().Time("start", start).Msg("Flow DPS Indexer starting")
 		err := mapper.Run()
 		if err != nil {
-			log.Error().Err(err).Msg("disk mapper encountered error")
+			close(failed)
+		} else {
+			close(done)
 		}
 		finish := time.Now()
 		duration := finish.Sub(start)
@@ -112,8 +131,11 @@ func main() {
 	select {
 	case <-sig:
 		log.Info().Msg("Flow DPS Indexer stopping")
-	case <-mapper.Done():
+	case <-done:
 		log.Info().Msg("Flow DPS Indexer done")
+	case <-failed:
+		log.Warn().Msg("Flow DPS Indexer failed")
+		return failure
 	}
 	go func() {
 		<-sig
@@ -130,7 +152,8 @@ func main() {
 	err = mapper.Stop(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
+		return failure
 	}
 
-	os.Exit(0)
+	return success
 }

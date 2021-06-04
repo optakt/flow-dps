@@ -31,7 +31,16 @@ import (
 	"github.com/optakt/flow-dps/rosetta/invoker"
 )
 
+const (
+	success = 0
+	failure = 1
+)
+
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 
 	// Signal catching for clean shutdown.
 	sig := make(chan os.Signal, 1)
@@ -59,21 +68,24 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		return failure
 	}
 	log = log.Level(level)
 
 	// Initialize the API client.
 	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
 	if err != nil {
-		log.Fatal().Str("api", flagAPI).Err(err).Msg("could not dial API host")
+		log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
+		return failure
 	}
 	defer conn.Close()
 
 	// Read the script.
 	script, err := os.ReadFile(flagScript)
 	if err != nil {
-		log.Fatal().Str("script", flagScript).Err(err).Msg("could not read script")
+		log.Error().Str("script", flagScript).Err(err).Msg("could not read script")
+		return failure
 	}
 
 	// Decode the arguments
@@ -81,15 +93,18 @@ func main() {
 	if flagParams != "" {
 		data, err := os.ReadFile(flagParams)
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not read parameters")
+			log.Error().Err(err).Msg("could not read parameters")
+			return failure
 		}
 		val, err := json.Decode(data)
 		if err != nil {
-			log.Fatal().Err(err).Msg("could not decode parameters")
+			log.Error().Err(err).Msg("could not decode parameters")
+			return failure
 		}
 		array, ok := val.(cadence.Array)
 		if !ok {
-			log.Fatal().Str("type", fmt.Sprintf("%T", val)).Msg("invalid type for parameters")
+			log.Error().Str("type", fmt.Sprintf("%T", val)).Msg("invalid type for parameters")
+			return failure
 		}
 		args = array.Values
 	}
@@ -99,14 +114,16 @@ func main() {
 	invoke := invoker.New(dps.IndexFromAPI(client))
 	result, err := invoke.Script(flagHeight, script, args)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not invoke script")
+		log.Error().Err(err).Msg("could not invoke script")
+		return failure
 	}
 	output, err := json.Encode(result)
 	if err != nil {
-		log.Fatal().Uint64("height", flagHeight).Err(err).Msg("could not encode result")
+		log.Error().Uint64("height", flagHeight).Err(err).Msg("could not encode result")
+		return failure
 	}
 
 	fmt.Println(string(output))
 
-	os.Exit(0)
+	return success
 }

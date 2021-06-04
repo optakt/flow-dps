@@ -33,7 +33,16 @@ import (
 	"github.com/optakt/flow-dps/service/index"
 )
 
+const (
+	success = 0
+	failure = 1
+)
+
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 
 	// Signal catching for clean shutdown.
 	sig := make(chan os.Signal, 1)
@@ -57,14 +66,16 @@ func main() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Fatal().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		return failure
 	}
 	log = log.Level(level)
 
 	// Initialize the index core state.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Fatal().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		return failure
 	}
 	defer db.Close()
 
@@ -76,22 +87,34 @@ func main() {
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
+	listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
+	if err != nil {
+		log.Error().Uint16("port", flagPort).Err(err).Msg("could not listen")
+		return failure
+	}
+	done := make(chan struct{})
+	failed := make(chan struct{})
 	go func() {
 		log.Info().Msg("Flow DPS Server starting")
-		listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
-		if err != nil {
-			log.Fatal().Uint16("port", flagPort).Err(err).Msg("could not listen")
-		}
 		api.RegisterAPIServer(gsvr, server)
 		err = gsvr.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error().Err(err).Msg("GRPC API encountered error")
+			close(failed)
+		} else {
+			close(done)
 		}
 		log.Info().Msg("Flow DPS Server stopped")
 	}()
 
-	<-sig
-	log.Info().Msg("Flow DPS Server stopping")
+	select {
+	case <-sig:
+		log.Info().Msg("Flow DPS Server stopping")
+	case <-done:
+		log.Info().Msg("Flow DPS Server done")
+	case <-failed:
+		log.Warn().Msg("Flow DPS Server failed")
+		return failure
+	}
 	go func() {
 		<-sig
 		log.Warn().Msg("forcing exit")
@@ -104,5 +127,5 @@ func main() {
 	// an error. We then wait for shutdown on each component to complete.
 	gsvr.GracefulStop()
 
-	os.Exit(0)
+	return success
 }
