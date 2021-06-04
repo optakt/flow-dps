@@ -22,6 +22,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -128,6 +129,8 @@ func (m *Mapper) Run() error {
 	if m.checkpoint == "" {
 		tree = trie.NewEmptyMTrie()
 	} else {
+		start := time.Now()
+		m.log.Info().Time("start", start).Str("checkpoint", m.checkpoint).Msg("checkpoint rebuild starting")
 		file, err := os.Open(m.checkpoint)
 		if err != nil {
 			return fmt.Errorf("could not open checkpoint file: %w", err)
@@ -144,6 +147,9 @@ func (m *Mapper) Run() error {
 			return fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
 		}
 		tree = trees[0]
+		finish := time.Now()
+		duration := finish.Sub(start)
+		m.log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("checkpoint rebuild finished")
 	}
 
 	// When trying to go from one finalized block to the next, we keep a list
