@@ -2,18 +2,19 @@
 
 ## Table of Contents
 
-- [Endpoints](#Endpoints)
-- [Types](#Types)
-    - [GetCommitRequest](#GetCommitRequest)
-    - [GetCommitResponse](#GetCommitResponse)
-    - [GetEventsRequest](#GetEventsRequest)
-    - [GetEventsResponse](#GetEventsResponse)
-    - [GetHeaderRequest](#GetHeaderRequest)
-    - [GetHeaderResponse](#GetHeaderResponse)
-    - [GetLastRequest](#GetLastRequest)
-    - [GetLastResponse](#GetLastResponse)
-    - [GetRegistersRequest](#GetRegistersRequest)
-    - [GetRegistersResponse](#GetRegistersResponse)
+1. [Table of Contents](#table-of-contents)
+2. [Endpoints](#endpoints)
+3. [Types](#types)
+   1. [GetCommitRequest](#getcommitrequest)
+   2. [GetCommitResponse](#getcommitresponse)
+   3. [GetEventsRequest](#geteventsrequest)
+   4. [GetEventsResponse](#geteventsresponse)
+   5. [GetHeaderRequest](#getheaderrequest)
+   6. [GetHeaderResponse](#getheaderresponse)
+   7. [GetLastRequest](#getlastrequest)
+   8. [GetLastResponse](#getlastresponse)
+   9. [GetRegistersRequest](#getregistersrequest)
+   10. [GetRegistersResponse](#getregistersresponse)
 
 ## Endpoints
 

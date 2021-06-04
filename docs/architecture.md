@@ -5,26 +5,18 @@ This document describes the internal components that the Flow Data Provisioning 
 **Table of Contents**
 
 1. [Chain](#chain)
-   1. [ProtocolState Chain](#protocolstate-chain)
+   1. [Disk Chain](#disk-chain)
 2. [Feeder](#feeder)
-   1. [LedgerWAL Feeder](#ledgerwal-feeder)
+   1. [Disk Feeder](#disk-feeder)
 3. [Mapper](#mapper)
-4. [Store](#store)
+4. [Index](#index)
    1. [Database Schema](#database-schema)
-      1. [Block-To-Height Index](#block-to-height-index)
-         1. [Commit-To-Height Index](#commit-to-height-index)
-         2. [Height-To-Commit Index](#height-to-commit-index)
+         1. [First Height](#first-height)
+         2. [Last Height](#last-height)
          3. [Header Index](#header-index)
-         4. [Path Deltas Index](#path-deltas-index)
+         4. [Commit Index](#commit-index)
          5. [Events Index](#events-index)
-5. [API](#api)
-   1. [Rosetta API](#rosetta-api)
-      1. [Contracts](#contracts)
-      2. [Scripts](#scripts)
-      3. [Invoker](#invoker)
-      4. [Validator](#validator)
-      5. [Retriever](#retriever)
-   2. [DPS API](#dps-api)
+         6. [Path Deltas Index](#path-deltas-index)
 
 ## Chain
 
@@ -32,81 +24,70 @@ The Chain component is responsible for reconstructing a view of the sequence of 
 It allows the consumer to step from the root block to the last sealed block, while providing data related to each height along the sequence of blocks, such as block identifier, state commitment and events.
 It is used by the [Mapper](#mapper) to map a set of deltas from the [Feeder](#feeder) to each block height.
 
-[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/chain)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/service/chain)
 
-### ProtocolState Chain
+### Disk Chain
 
-The [Filesystem Chain](https://pkg.go.dev/github.com/optakt/flow-dps/chain#ProtocolState) uses the execution node's on-disk key-value store for the Flow protocol state to reconstruct the block sequence.
+The [Disk Chain](https://pkg.go.dev/github.com/optakt/flow-dps/service/chain#Disk) uses the execution node's on-disk key-value store for the Flow protocol state to reconstruct the block sequence.
 
 ## Feeder
 
 The Feeder component is responsible for streaming trie updates to the [Mapper](#mapper).
 It outputs a state delta for each requested state commitment, so that the [Mapper](#mapper) can follow the sequence of changes to the state trie and attribute each change to a block height.
 
-[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/feeder)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/service/feeder)
 
-### LedgerWAL Feeder
+### Disk Feeder
 
-The [LedgerWAL Feeder](https://pkg.go.dev/github.com/optakt/flow-dps/feeder#LedgerWAL) reads trie updates directly from an on-disk write-ahead log of the execution node.
+The [Disk Feeder](https://pkg.go.dev/github.com/optakt/flow-dps/service/feeder#Disk) reads trie updates directly from an on-disk write-ahead log of the execution node.
 
 ## Mapper
 
-The mapper component is at the core of the DPS. It is responsible for mapping incoming state trie updates to blocks.
+The Mapper component is at the core of the DPS. It is responsible for mapping incoming state trie updates to blocks.
 In order to do that, it depends on the [Feeder](#feeder) and [Chain](#chain) components to get state trie updates and block information, as well as on the [Store](#store) component for indexing.
 Generally, trie updates come in by chunk, so each block height corresponds to an arbitrary number of trie updates, from zero to many.
 Once a block height is mapped to its respective trie updates, the mapper uses the indexer to persist the information.
 
-[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/mapper)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/service/mapper)
 
-## Store
+## Index
 
-The Store component is responsible for receiving a set of trie updates for each block and creating the necessary mainand auxiliary indexes in the on-disk database.
-These indexes allow efficient retrieval of the state at arbitrary block heights of the state history.
-This translates to random access to state registers of the execution state at any block height.
-It combines writing and retrieving of indexes, so that an efficient caching strategy is possible.
+The Index component has a [Index Writer](https://pkg.go.dev/github.com/optakt/flow-dps/index#Writer), responsible for indexing the data at each block height.
+The writer creates a number of auxiliary indexes that allow us to access the state of each register at any block height.
+This index is then accessed by the [Index Reader](https://pkg.go.dev/github.com/optakt/flow-dps/index#Reader) to retrieve block data.
+The reader serves as an intermediary to the Flow Virtual Machine, allowing execution of Cadence scripts on top of its data.
+Additionally, it provides access to the DPS API through the GRPC server, which in turn allows remote clients to execute scripts as well.
 
-[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/indexer)
+[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/service/index)
 
 ### Database Schema
 
 The DPS uses [BadgerDB](https://github.com/dgraph-io/badger) to store datasets of state changes and block information to build all the indexes required for random protocol and execution state access.
 It does not re-use any of the protocol state database, but instead re-indexes everything, so that all databases used to bootstrap the index can be discarded subsequently.
 
-#### Block-To-Height Index
+##### First Height
 
-In this index, keys map the block ID to the block height.
+The value under this key keeps track of the first finalized block.
 
-| **Length** (bytes) | `1`               | `8`        |
-|:-------------------|:------------------|:-----------|
-| **Type**           | byte              | hex hash   |
-| **Description**    | Index type prefix | Block ID   |
-| **Example Value**  | `2`               | `1fd5532a` |
+| **Length** (bytes) | `1`               |
+|:-------------------|:------------------|
+| **Type**           | byte              |
+| **Description**    | Index type prefix |
+| **Example Value**  | `1`               |
 
-The value stored at that key is the **Height** of the referenced block.
+The value stored (only once) is the **height** of the first indexed block.
 
-##### Commit-To-Height Index
+##### Last Height
 
-In this index, keys map the state commitment hash to the block height.
+The value under this key keeps track of the last finalized block.
 
-| **Length** (bytes) | `1`               | `8`        |
-|:-------------------|:------------------|:-----------|
-| **Type**           | byte              | hex hash   |
-| **Description**    | Index type prefix | Commit     |
-| **Example Value**  | `3`               | `3f5d8120` |
+| **Length** (bytes) | `1`               |
+|:-------------------|:------------------|
+| **Type**           | byte              |
+| **Description**    | Index type prefix |
+| **Example Value**  | `2`               |
 
-The value stored at that key is the **Height** of the referenced state commitment's block.
-
-##### Height-To-Commit Index
-
-In this index, keys map the block height to the state commitment hash.
-
-| **Length** (bytes) | `1`               | `8`          |
-|:-------------------|:------------------|:-------------|
-| **Type**           | byte              | uint64       |
-| **Description**    | Index type prefix | Block Height |
-| **Example Value**  | `4`               | `425`        |
-
-The value stored at that key is the **state commitment hash** of the referenced block height.
+The value stored (updated each indexed block) is the **height** of the last indexed block.
 
 ##### Header Index
 
@@ -117,9 +98,35 @@ The header contains the metadata for a block as well as a hash representing the 
 |:-------------------|:------------------|:-------------|
 | **Type**           | uint              | uint64       |
 | **Description**    | Index type prefix | Block Height |
-| **Example Value**  | `5`               | `425`        |
+| **Example Value**  | `3`               | `425`        |
 
-The value stored at that key is the **Height** of the referenced state commitment's block.
+The value stored at that key is the **height** of the referenced state commitment's block.
+
+##### Commit Index
+
+In this index, keys map the block height to the state commitment hash.
+
+| **Length** (bytes) | `1`               | `8`          |
+|:-------------------|:------------------|:-------------|
+| **Type**           | byte              | uint64       |
+| **Description**    | Index type prefix | Block Height |
+| **Example Value**  | `4`               | `425`        |
+
+The value stored at that key is the **state commitment** of the referenced block height.
+
+##### Events Index
+
+The events index indexes events grouped by block height and transaction type.
+The block height is first in the index so that we can look through all events at a given height regardless of type using a key prefix.
+
+| **Length (bytes)** | `1`               | `8`          | `64`                        |
+|:-------------------|:------------------|:-------------|:----------------------------|
+| **Type**           | uint              | uint64       | hex string                  |
+| **Description**    | Index type prefix | Block Height | Transaction Type (xxHashed) |
+| **Example Value**  | `5`               | `425`        | `45D66Q565F5DEDB[...]`      |
+
+The value stored at the key is the **a compressed slice of all events at the given height and given type**.
+It is compressed using [CBOR compression](https://en.wikipedia.org/wiki/CBOR).
 
 ##### Path Deltas Index
 
@@ -131,72 +138,6 @@ This index maps a block ID to all the paths that are changed within its state up
 | **Description**    | Index type prefix |       Register path       | Block Height |
 | **Example Value**  | `6`               |      `/0//1//2/uuid`      | `425`        |
 
-The value stored at that key is **the compressed payload of the change at the given path**.
+The value stored at that key is **the compressed payload of the payload at the given height and given path**.
 It is compressed using [CBOR compression](https://en.wikipedia.org/wiki/CBOR).
 
-##### Events Index
-
-The events index indexes events grouped by block height and transaction type.
-The block height is first in the index so that we can look through all events at a given height regardless of type using a key prefix.
-
-| **Length (bytes)** | `1`               | `8`          | `64`                        |
-|:-------------------|:------------------|:-------------|:----------------------------|
-| **Type**           | uint              | uint64       | hex string                  |
-| **Description**    | Index type prefix | Block Height | Transaction Type (xxHashed) |
-| **Example Value**  | `7`               | `425`        | `45D66Q565F5DEDB[...]`      |
-
-The value stored at the key is the **the compressed list of all events at the given height of a common type**.
-It is compressed using [CBOR compression](https://en.wikipedia.org/wiki/CBOR).
-
-## API
-
-The API component provides APIs to access the execution state at different block heights and registers.
-See the [API documentation](./api.md) for details on the different APIs that are available.
-
-**API Package documentation**:
-
-* [REST package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/api/rest)
-* [GRPC package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/api/grpc)
-* [Rosetta package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/api/rosetta)
-
-### Rosetta API
-
-The Rosetta API needs its own documentation because of the amount of components it has that interact with each other.
-The main reason for its complexity is that it needs to interact with the Flow Virtual Machine (FVM) and to translate between the Flow and Rosetta application domains.
-
-#### Contracts
-
-The contracts component keeps track of Flow contracts on the blockchain and provides a method to retrieve the token contract's address, if it exists, from a currency's symbol.
-
-[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/contracts)
-
-#### Scripts
-
-The script package produces Cadence scripts with the correct imports and storage paths, depending on the configured Flow chain.
-
-[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/scripts)
-
-#### Invoker
-
-This component, given a Cadence script, can execute it at any given height and return the value produced by the script.
-
-[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/invoker)
-
-#### Validator
-
-The Validator component validates whether a given Rosetta identifier is valid.
-It can be used to validate blocks, networks, accounts, transactions and currencies.
-
-[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/validator)
-
-#### Retriever
-
-The retriever uses all the aforementioned components to retrieve account balances, blocks and transactions.
-
-[Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/rosetta/retriever)
-
-### DPS API
-
-The DPS API uses GRPC to allow clients to read from the DPS index.
-
-[API Documentation](dps-api.md)
