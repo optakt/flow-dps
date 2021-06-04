@@ -5,30 +5,36 @@ This document is aimed at introducing developers to the Flow Data Provisioning S
 **Table of Contents**
 
 1. [Getting Started](#getting-started)
-2. [Flow overview](#flow)
-    1. [Rules](#rules)
-    2. [Errors](#errors)
-    3. [Execution state vs Protocol state](#execution-state-vs-protocol-state)
-3. [Flow Node roles](#flow-node-roles)
-    * [Collection Nodes](#collection-nodes)
-    * [Consensus Nodes](#consensus-nodes)
-    * [Execution Nodes](#execution-nodes)
-    * [Verification Nodes](#verification-nodes)
-    * [Access Nodes](#access-nodes)
+2. [Flow](#flow)
+   1. [Rules](#rules)
+   2. [Errors](#errors)
+   3. [Execution State vs Protocol State](#execution-state-vs-protocol-state)
+3. [Flow Node Roles](#flow-node-roles)
+   1. [Collection Nodes](#collection-nodes)
+      1. [Collection Formation](#collection-formation)
+   2. [Consensus Nodes](#consensus-nodes)
+      1. [Block Formation](#block-formation)
+   3. [Execution Nodes](#execution-nodes)
+      1. [Collection retrieval](#collection-retrieval)
+      2. [Block Execution](#block-execution)
+   4. [Verification Nodes](#verification-nodes)
+   5. [Access Nodes](#access-nodes)
 4. [Glossary](#glossary)
-    1. [Proof of Stake](#proof-of-stake)
-    2. [Staking](#staking)
-    3. [Slashing](#slashing)
-    4. [Sporks](#sporks)
-    5. [Cadence](#cadence)
-    6. [Transactions](#transactions)
-    7. [Byzantine Fault](#byzantine-fault)
-    8. [Merkle Patricia Tries](#merkle-patricia-tries)
-    9. [Specialized Proof of Confidential Knowledge](#specialized-proof-of-confidential-knowledge)
+   1. [Proof of Stake](#proof-of-stake)
+   2. [Staking](#staking)
+   3. [Slashing](#slashing)
+   4. [Sporks](#sporks)
+   5. [Cadence](#cadence)
+   6. [Transactions](#transactions)
+   7. [Byzantine Fault](#byzantine-fault)
+   8. [Merkle Patricia Tries](#merkle-patricia-tries)
+   9. [Specialized Proof of Confidential Knowledge](#specialized-proof-of-confidential-knowledge)
 5. [Developer Guide](#developer-guide)
-    1. [Installation](#installation)
-    2. [Setting up a test environment](#setting-up-a-test-environment)
-6. [More resources](#more-resources)
+   1. [Installation](#installation)
+      1. [Dependencies](#dependencies)
+      2. [Manual Build](#manual-build)
+   2. [Setting up a test environment](#setting-up-a-test-environment)
+6. [More Resources](#more-resources)
 
 ## Getting Started
 
@@ -45,9 +51,12 @@ The final version of the previous execution state remains available through a le
 ## Flow
 
 Most current blockchains are built as a homogenous system comprised of *full nodes*.
-Each full node is expected to collect and choose the transactions to be included in the next block, execute the block, come to a consensus over the output of the block with other full nodes, and finally sign the block and append it to the chain.
+Every full node collects and propagates the transaction it sees on the network.
+When being able to mine the next block, or being selected as the leader to propose the next block, they will choose the transactions to include according to the consensus rules.
+This means that every node needs to be able to execute every transaction it includes in a block in order to validate them.
+When validating other nodes' blocks, every node also needs to run every transaction to validate the block's correctness.
 
-Existing blockchain architectures have well documented throughput limitations. Two approaches to mitigate this are layer-2 networks and sharding.
+These existing blockchain architectures thus suffer from well documented throughput limitations. Two approaches to mitigate this are layer-2 networks and sharding.
 
 Layer-2 solutions include include networks like Bitcoin's Lightning and Ethereum's Plasma — these networks work off the main chain.
 
