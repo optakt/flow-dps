@@ -72,6 +72,8 @@ func main() {
 	defer db.Close()
 
 	// Check if we have a first height set and insert into DB.
+	// TODO: Remove this once we have fixed all of the currently active indexes.
+	// => https://github.com/optakt/flow-dps/issues/135
 	if flagFirst != 0 {
 		err := db.Update(storage.SaveFirstHeight(flagFirst))
 		if err != nil {

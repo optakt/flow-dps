@@ -14,6 +14,10 @@
 
 package storage
 
+// TODO: Reorder the prefixes so first has 1 and last 2, before we tag the first
+// release candidate:
+// => https://github.com/optakt/flow-dps/issues/134
+
 const (
 	prefixFirstHeight = 6
 	prefixLastHeight  = 1

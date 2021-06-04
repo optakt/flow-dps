@@ -149,7 +149,7 @@ func TestServerGetFirst(t *testing.T) {
 			index := &mocks.Reader{}
 			s := Server{index: index}
 
-			index.LastFunc = func() (uint64, error) {
+			index.FirstFunc = func() (uint64, error) {
 				return vector.mockHeight, vector.mockErr
 			}
 

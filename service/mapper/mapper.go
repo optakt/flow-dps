@@ -122,12 +122,6 @@ func (m *Mapper) Run() error {
 	}
 	height := root
 
-	// And we mark the root height as first height in our index.
-	err = m.index.First(height)
-	if err != nil {
-		return fmt.Errorf("could not index first height: %w", err)
-	}
-
 	// If we have no checkpoint file, we start from an empty trie; otherwise we
 	// rebuild the checkpoint and use that as the starting trie.
 	var tree *trie.MTrie
@@ -380,7 +374,8 @@ Outer:
 			return fmt.Errorf("could not index events: %w", err)
 		}
 
-		// The first height is only indexed once.
+		// The first height is only indexed once, but we always index the last
+		// indexed block.
 		if height == root {
 			err = m.index.First(height)
 			if err != nil {

@@ -49,8 +49,8 @@ func main() {
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host for GRPC API server")
 	pflag.Uint64VarP(&flagHeight, "height", "h", 0, "block height to execute the script at")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagParams, "params", "p", "", "path to JSON-encoded list of Cadence arguments")
-	pflag.StringVarP(&flagScript, "script", "s", "script.cdc", "path to Cadence script file")
+	pflag.StringVarP(&flagParams, "params", "p", "", "path to file with JSON-encoded list of Cadence arguments")
+	pflag.StringVarP(&flagScript, "script", "s", "script.cdc", "path to file with Cadence script")
 
 	pflag.Parse()
 
