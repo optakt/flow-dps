@@ -279,7 +279,7 @@ The execution result of a block includes:
 
 Execution results have one or more **chunks**.
 **Chunking** is a process of dividing a block's computation into smaller pieces so that individual chunks can be executed and verified in a distributed and parallel manner by many verification nodes.
-Chunks aim to be equally computation-heavy, to avoid a scenario where some verification nodes take too long to verify a specific chunk.
+Chunks should have approximately equal needs in terms of computation resources, to avoid a scenario where some verification nodes take too long to verify a specific chunk.
 There is a system-wide threshold for chunk computation consumption. 
 Each chunk corresponds to a [collection](#collection-nodes).
 
