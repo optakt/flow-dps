@@ -124,6 +124,7 @@ func run() int {
 		log.Info().Msg("Flow Rosetta Server starting")
 		err := server.Start(fmt.Sprint(":", flagPort))
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Warn().Err(err).Msg("Flow Rosetta Server failed")
 			close(failed)
 		} else {
 			close(done)
@@ -137,7 +138,7 @@ func run() int {
 	case <-done:
 		log.Info().Msg("Flow Rosetta Server done")
 	case <-failed:
-		log.Warn().Msg("Flow Rosetta Server failed")
+		log.Warn().Msg("Flow Rosetta Server aborted")
 		return failure
 	}
 	go func() {

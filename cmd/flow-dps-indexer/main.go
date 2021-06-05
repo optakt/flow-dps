@@ -119,6 +119,7 @@ func run() int {
 		log.Info().Time("start", start).Msg("Flow DPS Indexer starting")
 		err := mapper.Run()
 		if err != nil {
+			log.Warn().Err(err).Msg("Flow DPS Indexer failed")
 			close(failed)
 		} else {
 			close(done)
@@ -134,7 +135,7 @@ func run() int {
 	case <-done:
 		log.Info().Msg("Flow DPS Indexer done")
 	case <-failed:
-		log.Warn().Msg("Flow DPS Indexer failed")
+		log.Warn().Msg("Flow DPS Indexer aborted")
 		return failure
 	}
 	go func() {
