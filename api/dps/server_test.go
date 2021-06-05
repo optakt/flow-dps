@@ -19,12 +19,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/optakt/flow-dps/models/convert"
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -167,7 +167,7 @@ func TestServerGetLast(t *testing.T) {
 func TestServerGetHeader(t *testing.T) {
 
 	var (
-		testCodec, _ = cbor.CanonicalEncOptions().EncMode()
+		testCodec, _ = dps.Encoding.EncMode()
 		testHeight   = uint64(128)
 		testHeader   = flow.Header{Height: testHeight}
 		testData, _  = testCodec.Marshal(testHeader)
@@ -330,7 +330,7 @@ func TestServerGetCommit(t *testing.T) {
 func TestServerGetEvents(t *testing.T) {
 
 	var (
-		testCodec, _ = cbor.CanonicalEncOptions().EncMode()
+		testCodec, _ = dps.Encoding.EncMode()
 		testHeight   = uint64(128)
 		testEvents   = []flow.Event{
 			{TransactionID: flow.Identifier{0x1, 0x2}},

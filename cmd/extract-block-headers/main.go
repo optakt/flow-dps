@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
@@ -85,7 +84,7 @@ func run() int {
 	defer db.Close()
 
 	// Initialize the codec we use for the data.
-	codec, _ := cbor.CanonicalEncOptions().EncMode()
+	codec, _ := dps.Encoding.EncMode()
 
 	// Make a list of all available heights and shuffle them.
 	if flagBegin > flagFinish {
