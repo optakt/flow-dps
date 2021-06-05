@@ -22,12 +22,13 @@ import (
 	"os"
 	"sort"
 	"sync"
-	"time"
 
+	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
@@ -122,8 +123,7 @@ func (m *Mapper) Run() error {
 	if m.checkpoint == "" {
 		tree = trie.NewEmptyMTrie()
 	} else {
-		start := time.Now()
-		m.log.Info().Time("start", start).Str("checkpoint", m.checkpoint).Msg("checkpoint rebuild starting")
+		m.log.Info().Msg("checkpoint rebuild starting")
 		file, err := os.Open(m.checkpoint)
 		if err != nil {
 			return fmt.Errorf("could not open checkpoint file: %w", err)
@@ -140,25 +140,51 @@ func (m *Mapper) Run() error {
 			return fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
 		}
 		tree = trees[0]
-		finish := time.Now()
-		duration := finish.Sub(start)
-		m.log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("checkpoint rebuild finished")
+		m.log.Info().Msg("checkpoint rebuild finished")
 	}
+
+	m.log.Info().Msg("root trie crawl starting")
+
+	// We have to index all of the paths from the checkpoint; otherwise, we will
+	// miss every single one of the bootstrapped registers.
+	paths := make([]ledger.Path, 0, len(tree.AllPayloads()))
+	queue := deque.New()
+	root := tree.RootNode()
+	if root != nil {
+		queue.PushBack(root)
+	}
+	for queue.Len() > 0 {
+		node := queue.PopBack().(*node.Node)
+		if node.IsLeaf() {
+			path := node.Path()
+			paths = append(paths, *path)
+			continue
+		}
+		if node.LeftChild() != nil {
+			queue.PushBack(node.LeftChild())
+		}
+		if node.RightChild() != nil {
+			queue.PushBack(node.RightChild())
+		}
+	}
+
+	m.log.Info().Int("paths", len(paths)).Msg("root trie crawl finished")
 
 	// When trying to go from one finalized block to the next, we keep a list
 	// of intermediary tries until the full set of transitions have been
 	// identified. We keep track of these transitions as steps in this map.
 	steps := make(map[flow.StateCommitment]*Step)
 
-	// The root block does not necessarily overlap with the first state trie.
-	// It's possible that we have to apply some of the trie updates before the
-	// root block, in which case we map them to it. We therefore have to take
-	// the initial trie's state commitment as starting point and at it to the
-	// transitions as the very first one made.
-	commitPrev := flow.StateCommitment(tree.RootHash())
-	steps[commitPrev] = &Step{
-		Commit: flow.StateCommitment{}, // not needed
-		Paths:  nil,                    // not needed
+	// We start at an "imaginary" state commitment that preceedes the root block
+	// and root state commitment. This is done so that we include the first
+	// checkpoint's changes in the first block's indexing operations. We thus
+	// define a step that contains all the paths from the root checkpoint and
+	// the root state commitment as a key, referencing this "imaginary" commit.
+	emptyCommit := flow.DummyStateCommitment
+	rootCommit := flow.StateCommitment(tree.RootHash())
+	steps[rootCommit] = &Step{
+		Commit: emptyCommit,
+		Paths:  paths,
 		Tree:   tree,
 	}
 
@@ -171,6 +197,7 @@ func (m *Mapper) Run() error {
 	// that point, we can discard all other tries, as the path must continue
 	// from the state trie with the sealed state commitment.
 	once := &sync.Once{}
+	commitPrev := emptyCommit
 Outer:
 	for {
 		// We want to check in this tight loop if we want to quit, just in case
@@ -276,7 +303,7 @@ Outer:
 			// Deduplicate the paths and payloads. We no longer need to copy the
 			// path because it is now an array, and thus a value type, that is
 			// copied on assignment.
-			paths := make([]ledger.Path, 0, len(update.Paths))
+			paths = make([]ledger.Path, 0, len(update.Paths))
 			lookup := make(map[ledger.Path]*ledger.Payload)
 			for i, path := range update.Paths {
 				_, ok := lookup[path]
@@ -330,10 +357,6 @@ Outer:
 			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
 
-		// TODO: look at performance of doing separate transactions versus
-		// having an API that allows combining into a single Badger tx
-		// => https://github.com/optakt/flow-dps/issues/36
-
 		// Index all of the data for this height.
 		err = m.index.Header(height, header)
 		if err != nil {
@@ -348,13 +371,19 @@ Outer:
 			return fmt.Errorf("could not index events: %w", err)
 		}
 
-		// We use the tree from the step and the paths that were changed to
-		// index each change for this height. As we are starting at the back, we
-		// keep track of paths already updated, so we only index the last change
-		// to the register payload.
+		// We step back from the commit of the block we are now indexing
+		// (`commitNext`) to the commit of the last block we indexed
+		// (`commitPrev`). In the updated map, we keep a log of all register
+		// paths that have already been updated; as we are stepping backwards in
+		// time, keeping only the first update for a path that we come across
+		// means that we keep the most recent one for the block, which is the
+		// only one we care about.
 		commit := commitNext
 		updated := make(map[ledger.Path]struct{})
 		for commit != commitPrev {
+
+			// In the first part, we get the step we are currently at and filter
+			// out any paths that have already been updated.
 			step := steps[commit]
 			paths := make([]ledger.Path, 0, len(step.Paths))
 			for _, path := range step.Paths {
@@ -365,11 +394,44 @@ Outer:
 				paths = append(paths, path)
 				updated[path] = struct{}{}
 			}
-			payloads := step.Tree.UnsafeRead(paths)
-			err = m.index.Payloads(height, paths, payloads)
-			if err != nil {
-				return fmt.Errorf("could not index payloads: %w", err)
+
+			// We then divide the remaining paths into chunks of 1000. For each
+			// batch, we retrieve the payloads from the state trie as it was at
+			// the end of this block and index them.
+			count := 0
+			n := 1000
+			total := ((len(paths) + n - 1) / n)
+			log.Debug().Int("num_paths", len(paths)).Int("num_batches", total).Msg("path batching executed")
+			for start := 0; start < len(paths); start += n {
+
+				// This loop may take a while, especially for the root checkpoint
+				// updates, so check if we should quit.
+				select {
+				case <-m.stop:
+					break Outer
+				default:
+					// keep going
+				}
+
+				end := start + n
+				if end > len(paths) {
+					end = len(paths)
+				}
+				batch := paths[start:end]
+				payloads := step.Tree.UnsafeRead(batch)
+				err = m.index.Payloads(height, batch, payloads)
+				if err != nil {
+					return fmt.Errorf("could not index payloads: %w", err)
+				}
+
+				count++
+
+				log.Debug().Int("batch", count).Int("start", start).Int("end", end).Msg("path batch indexed")
 			}
+
+			// Finally, we forward the commit to the previous trie update and
+			// repeat until we have stepped all the way back to the last indexed
+			// commit.
 			commit = step.Commit
 		}
 

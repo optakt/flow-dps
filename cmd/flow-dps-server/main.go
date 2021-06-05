@@ -99,6 +99,7 @@ func run() int {
 		api.RegisterAPIServer(gsvr, server)
 		err = gsvr.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Warn().Err(err).Msg("Flow DPS Server failed")
 			close(failed)
 		} else {
 			close(done)
@@ -112,7 +113,7 @@ func run() int {
 	case <-done:
 		log.Info().Msg("Flow DPS Server done")
 	case <-failed:
-		log.Warn().Msg("Flow DPS Server failed")
+		log.Warn().Msg("Flow DPS Server aborted")
 		return failure
 	}
 	go func() {
