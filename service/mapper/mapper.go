@@ -407,6 +407,16 @@ Outer:
 			total := ((len(paths) + n - 1) / n)
 			log.Debug().Int("num_paths", len(paths)).Int("num_batches", total).Msg("path batching executed")
 			for start := 0; start < len(paths); start += n {
+
+				// This loop may take a while, especially for the root checkpoint
+				// updates, so check if we should quit.
+				select {
+				case <-m.stop:
+					break Outer
+				default:
+					// keep going
+				}
+
 				end := start + n
 				if end > len(paths) {
 					end = len(paths)
@@ -417,7 +427,9 @@ Outer:
 				if err != nil {
 					return fmt.Errorf("could not index payloads: %w", err)
 				}
+
 				count++
+
 				log.Debug().Int("batch", count).Int("start", start).Int("end", end).Msg("path batch indexed")
 			}
 
