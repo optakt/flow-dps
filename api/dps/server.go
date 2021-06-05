@@ -23,6 +23,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/index"
 )
 
@@ -39,7 +40,7 @@ type Server struct {
 // for data retrieval.
 func NewServer(index index.Reader) *Server {
 
-	codec, _ := cbor.CanonicalEncOptions().EncMode()
+	codec, _ := dps.Encoding.EncMode()
 
 	s := Server{
 		index: index,

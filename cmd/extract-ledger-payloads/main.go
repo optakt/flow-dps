@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/prometheus/tsdb/wal"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
@@ -129,7 +128,7 @@ func run() int {
 
 	// Now, we got the full trie and we can write random payloads to disk until
 	// we have enough data for the dictionary creator.
-	codec, _ := cbor.CanonicalEncOptions().EncMode()
+	codec, _ := dps.Encoding.EncMode()
 	payloads := tree.AllPayloads()
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(payloads), func(i int, j int) {

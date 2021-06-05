@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/dictionaries"
 )
 
@@ -45,7 +46,7 @@ var (
 func init() {
 	var err error
 
-	codec, _ = cbor.CanonicalEncOptions().EncMode()
+	codec, _ = dps.Encoding.EncMode()
 
 	defaultCompressor, err = zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
