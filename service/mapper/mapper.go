@@ -357,10 +357,6 @@ Outer:
 			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
 
-		// TODO: look at performance of doing separate transactions versus
-		// having an API that allows combining into a single Badger tx
-		// => https://github.com/optakt/flow-dps/issues/36
-
 		// Index all of the data for this height.
 		err = m.index.Header(height, header)
 		if err != nil {
