@@ -12,15 +12,10 @@ require (
 	github.com/labstack/echo/v4 v4.3.0
 	github.com/onflow/cadence v0.16.1
 	github.com/onflow/flow-go v0.17.4
-	github.com/onflow/flow-go-sdk v0.20.0
-	github.com/prometheus/client_golang v1.10.0 // indirect
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rs/zerolog v1.22.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
-	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015 // indirect
-	google.golang.org/genproto v0.0.0-20210513213006-bf773b8c8384 // indirect
 	google.golang.org/grpc v1.37.1
 	google.golang.org/protobuf v1.26.0
 )
