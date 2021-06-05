@@ -14,7 +14,9 @@
 
 package dps
 
-import "github.com/fxamacker/cbor/v2"
+import (
+	"github.com/fxamacker/cbor/v2"
+)
 
 var Encoding = cbor.CanonicalEncOptions()
 
