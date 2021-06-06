@@ -117,11 +117,14 @@ func (m *Mapper) Run() error {
 		return fmt.Errorf("could not get root height: %w", err)
 	}
 
-	// If we have no checkpoint file, we start from an empty trie; otherwise we
-	// rebuild the checkpoint and use that as the starting trie.
+	// We always initialize an empty state trie to refer to the first step
+	// before the checkpoint. If there is no checkpoint, then the step after the
+	// checkpoint will also just be the empty trie. Otherwise, the second trie
+	// will load the checkpoint trie.
+	empty := trie.NewEmptyMTrie()
 	var tree *trie.MTrie
 	if m.checkpoint == "" {
-		tree = trie.NewEmptyMTrie()
+		tree = empty
 	} else {
 		m.log.Info().Msg("checkpoint rebuild starting")
 		file, err := os.Open(m.checkpoint)
@@ -175,12 +178,23 @@ func (m *Mapper) Run() error {
 	// identified. We keep track of these transitions as steps in this map.
 	steps := make(map[flow.StateCommitment]*Step)
 
-	// We start at an "imaginary" state commitment that preceedes the root block
-	// and root state commitment. This is done so that we include the first
-	// checkpoint's changes in the first block's indexing operations. We thus
-	// define a step that contains all the paths from the root checkpoint and
-	// the root state commitment as a key, referencing this "imaginary" commit.
+	// We start at an "imaginary" step that refers to an empty trie, has no
+	// paths and no previous commit. We consider this step already done, so it
+	// will never be indexed; it's merely used as the sentinel value for
+	// stopping when we index the first block. It also makes sure that we don't
+	// return a `nil` trie if we abort indexing before the first block is done.
 	emptyCommit := flow.DummyStateCommitment
+	steps[emptyCommit] = &Step{
+		Commit: flow.StateCommitment{},
+		Paths:  nil,
+		Tree:   empty,
+	}
+
+	// We then add a second step that refers to the first step that is already
+	// done, which uses the commit of the initial state trie after the
+	// checkpoint has been loaded, and contains all of the paths found in the
+	// initial checkpoint state trie. This will make sure that we index all the
+	// data from the checkpoint as part of the first block.
 	rootCommit := flow.StateCommitment(tree.RootHash())
 	steps[rootCommit] = &Step{
 		Commit: emptyCommit,
@@ -188,16 +202,19 @@ func (m *Mapper) Run() error {
 		Tree:   tree,
 	}
 
-	// The purpose of this function is to map state deltas from a continuous
-	// feed to specific blocks from the chain. This is necessary because the
-	// trie updates that we receive as state deltas are agnostic of blocks and
-	// instead operate on a chunk level. We keep applying these deltas to our
-	// set of tries until we found a path from one finalized block's sealed
-	// state commitment to the state commitment of the next finalized block. At
-	// that point, we can discard all other tries, as the path must continue
-	// from the state trie with the sealed state commitment.
-	once := &sync.Once{}
+	// This is how we let the indexing loop know that the first "imaginary" step
+	// was already indexed. The `commitPrev` value is used as a sentinel value
+	// for when to stop going backwards through the steps when indexing a block.
+	// This means the value is always set to the last already indexed step.
 	commitPrev := emptyCommit
+
+	// Next, we launch into the loop that is responsible for mapping all
+	// incoming trie updates to a block. The loop itself has no concept of what
+	// the next state commitment is that we should look at. It will simply try
+	// to find a previous step for _any_ trie update that comes in. This means
+	// that the first trie update needs to either apply to the empty trie or to
+	// the trie after the checkpoint in order to be processed.
+	once := &sync.Once{}
 Outer:
 	for {
 		// We want to check in this tight loop if we want to quit, just in case
@@ -213,9 +230,12 @@ Outer:
 			Uint64("height", height).
 			Hex("commit_prev", commitPrev[:]).Logger()
 
-		// As a first step, we retrieve the state commitment of the current
-		// block, which will serve as the sentinel value we will look for from
-		// the state trie.
+		// As a first step, we retrieve the state commitment of the finalized
+		// block at the current height; we start at the root height and then
+		// increase it each time we are done indexing a block. Once an applied
+		// trie update gives us a state trie with the same root hash as
+		// `commitNext`, we have reached the end state of the next finalized
+		// block and can index all steps in-between for that block height.
 		commitNext, err := m.chain.Commit(height)
 
 		// If the retrieval times out, it's possible that we are on a live chain
@@ -252,17 +272,20 @@ Outer:
 				// keep going
 			}
 
-			// We first look for a trie in our register whose state commitment
-			// corresponds to the next block's state commitment. If we find one
-			// we can break the inner loop and simply map the collected deltas
-			// and the other block data to the block.
+			// When we have the state commitment of the next finalized block, we
+			// check to see if we find a trie for it in our steps. If we do, it
+			// means that we have steps from the last finalized block to the
+			// finalized block at the current height. This condition will
+			// trigger immediately for every empty block.
 			_, ok := steps[commitNext]
 			if ok {
 				break Inner
 			}
 
-			// If we don't find a trie for the current sentinel state commitment
-			// in our register of tries, we keep applying deltas.
+			// If we don't find a trie for the current state commitment, we need
+			// to keep applying trie updates to state tries until one of them
+			// does have the correct commit. We simply feed the next trie update
+			// here.
 			update, err := m.feed.Update()
 
 			// Once more, we might be on a live spork and the next delta might not
@@ -284,25 +307,33 @@ Outer:
 				return fmt.Errorf("could not retrieve next delta: %w", err)
 			}
 
-			// We don't really need to copy this anymore, but we want to deal
-			// with a single type in our code, and the value type will be copied
-			// anyway.
+			// NOTE: We used to require a copy of the `RootHash` here, when it
+			// was still a byte slice, as the underlying slice was being reused.
+			// It was changed to a value type that is always copied now.
 			commitBefore := flow.StateCommitment(update.RootHash)
 
 			log := log.With().Hex("commit_before", commitBefore[:]).Logger()
 
-			// We now try to find the trie that this delta should be applied to.
-			// If we can't find it, the delta is probably for a pruned trie and
-			// we can discard it.
+			// Once we have our new update and know which trie it should be
+			// applied to, we check to see if we have such a trie in our current
+			// steps. If not, we can simply skip it; this can happen, for
+			// example, when there is an execution fork and the trie update
+			// applies to an obsolete part of the blockchain history.
 			step, ok := steps[commitBefore]
 			if !ok {
 				log.Debug().Msg("skipping trie update without matching trie")
 				continue Inner
 			}
 
-			// Deduplicate the paths and payloads. We no longer need to copy the
-			// path because it is now an array, and thus a value type, that is
-			// copied on assignment.
+			// We de-duplicate the paths and payloads here. This replicates some
+			// code that is part of the execution node and has moved between
+			// different layers of the architecture. We keep it to be safe for
+			// all versions of the Flow dependencies.
+			// NOTE: Past versions of this code required paths to be copied,
+			// because the underlying slice was being re-used. In contrary,
+			// deep-copying payloads was a bad idea, because they were already
+			// being copied by the trie insertion code, and it would have led to
+			// twice the memory usage.
 			paths = make([]ledger.Path, 0, len(update.Paths))
 			lookup := make(map[ledger.Path]*ledger.Payload)
 			for i, path := range update.Paths {
@@ -320,20 +351,24 @@ Outer:
 				payloads = append(payloads, *lookup[path])
 			}
 
-			// Otherwise, we can apply the delta to the tree we retrieved and
-			// get the resulting state commitment. We then create the step that
-			// tracks our changes throughout the tries in our register
+			// We can now apply the trie update to the state trie as it was at
+			// the previous step. This is where the trie code will deep-copy the
+			// payloads.
 			// NOTE: It's important that we don't shadow the variable here,
 			// otherwise the root trie will never go out of scope and we will
-			// never garbage collect any of the initial payloads.
+			// never garbage collect any of the root trie payloads that have
+			// been replaced by subsequent trie updates.
 			tree, err = trie.NewTrieWithUpdatedRegisters(step.Tree, paths, payloads)
 			if err != nil {
 				return fmt.Errorf("could not update trie: %w", err)
 			}
 
-			// We then store the new tree along with the state commitment of its
-			// parent and the paths that were changed so we can rebuild the
-			// delta later.
+			// We then store the new trie along with the state commitment of its
+			// parent and the paths that were changed. This will make it
+			// available for subsequent trie updates to be applied to it, and it
+			// will also allow us to reconstruct the payloads changed in this
+			// step by retrieving them directly from the trie with the given
+			// paths.
 			commitAfter := flow.StateCommitment(tree.RootHash())
 			step = &Step{
 				Commit: commitBefore,
@@ -345,9 +380,10 @@ Outer:
 			log.Debug().Hex("commit_after", commitAfter[:]).Msg("trie update applied")
 		}
 
-		// At this point we have identified a step that has lead to the next
-		// finalized state commitment. We can thus retrieve the remaining data
-		// we need to fully index the block first.
+		// At this point we have identified a step that has lead to the state
+		// commitment of the finalized block at the current height. We can
+		// retrieve some additional indexing data, such as the block header and
+		// the events that resulted from transactions in the block.
 		header, err := m.chain.Header(height)
 		if err != nil {
 			return fmt.Errorf("could not retrieve header: %w (height: %d)", err, height)
@@ -357,7 +393,7 @@ Outer:
 			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
 
-		// Index all of the data for this height.
+		// We then index the data for the finalized block at the current height.
 		err = m.index.Header(height, header)
 		if err != nil {
 			return fmt.Errorf("could not index header: %w", err)
@@ -371,13 +407,16 @@ Outer:
 			return fmt.Errorf("could not index events: %w", err)
 		}
 
-		// We step back from the commit of the block we are now indexing
-		// (`commitNext`) to the commit of the last block we indexed
-		// (`commitPrev`). In the updated map, we keep a log of all register
-		// paths that have already been updated; as we are stepping backwards in
-		// time, keeping only the first update for a path that we come across
-		// means that we keep the most recent one for the block, which is the
-		// only one we care about.
+		// In order to index the payloads, we step back from the state
+		// commitment of the finalized block at the current height to the state
+		// commitment of the last finalized block that was indexed. For each
+		// step, we collect all the payloads by using the paths for the step and
+		// index them as we go.
+		// NOTE: We keep track of the paths for which we already indexed
+		// payloads, so we can skip them in earlier steps. One inherent benefit
+		// of stepping from the last step to the first step is that this will
+		// automatically use only the latest update of a register, which is
+		// exactly what we want.
 		commit := commitNext
 		updated := make(map[ledger.Path]struct{})
 		for commit != commitPrev {
@@ -403,7 +442,6 @@ Outer:
 			total := ((len(paths) + n - 1) / n)
 			log.Debug().Int("num_paths", len(paths)).Int("num_batches", total).Msg("path batching executed")
 			for start := 0; start < len(paths); start += n {
-
 				// This loop may take a while, especially for the root checkpoint
 				// updates, so check if we should quit.
 				select {
@@ -436,15 +474,18 @@ Outer:
 		}
 
 		// At this point, we can delete any trie that does not correspond to
-		// the state that we have just reached.
+		// the state that we have just reached. This will allow the garbage
+		// collector to free up any payload that has been changed and which is
+		// no longer part of the state trie at the newly indexed finalized
+		// block.
 		for key := range steps {
 			if key != commitNext {
 				delete(steps, key)
 			}
 		}
 
-		// The first height is only indexed once, but we always index the last
-		// indexed block.
+		// Last but not least, we take care of properly indexing the height of
+		// the first indexed block and the height of the last indexed block.
 		once.Do(func() { err = m.index.First(height) })
 		if err != nil {
 			return fmt.Errorf("could not index first height: %w", err)
@@ -454,9 +495,10 @@ Outer:
 			return fmt.Errorf("could not index last height: %w", err)
 		}
 
-		// At this point, we increase the height; we have found the full
-		// path of deltas to the current height and it is a finalized block,
-		// so we will never look at a lower height again.
+		// We have now successfully indexed all state trie changes and other
+		// data at the current height. We set the last indexed step to the last
+		// step from our current height, and then increase the height to start
+		// the indexing of the next block.
 		commitPrev = commitNext
 		height++
 
