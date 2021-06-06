@@ -59,6 +59,11 @@ For now, `GetLastRequest` is empty.
 
 ### GetHeaderResponse
 
+| Field  | Type     | Label |
+|--------|----------|-------|
+| height | `uint64` |       |
+| data   | `bytes`  |       |
+
 The `data` field contains a [CBOR-encoded](https://cbor.io/) Flow header (`flow.Header`) as payload.
 
 Here is an example of how to decode this field in a small Go program:
@@ -70,11 +75,6 @@ Here is an example of how to decode this field in a small Go program:
      return err
    }
 ```
-
-| Field  | Type     | Label |
-|--------|----------|-------|
-| height | `uint64` |       |
-| data   | `bytes`  |       |
 
 ### GetCommitRequest
 
@@ -98,6 +98,12 @@ Here is an example of how to decode this field in a small Go program:
 
 ### GetEventsResponse
 
+| Field  | Type     | Label    |
+|--------|----------|----------|
+| height | `uint64` |          |
+| types  | `string` | repeated |
+| data   | `bytes`  |          |
+
 The `data` field contains a [CBOR-encoded](https://cbor.io/) slice of Flow events (`[]flow.Event`) as payload.
 
 Here is an example of how to decode this field in a small Go program:
@@ -109,12 +115,6 @@ Here is an example of how to decode this field in a small Go program:
      return err
    }
 ```
-
-| Field  | Type     | Label    |
-|--------|----------|----------|
-| height | `uint64` |          |
-| types  | `string` | repeated |
-| data   | `bytes`  |          |
 
 ### GetRegistersRequest
 
