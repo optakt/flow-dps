@@ -87,7 +87,7 @@ The following diagram provides a simple overview of the data flow for the DPS:
                            ┌──────────────────────────────────────────┐  │ GRPC Client │
                            │   Disk Feeder  ◄     Disk Chain          │  └────────┬────┘
                            ├───────▼▼▼──────┬───────────┬─────────────┤           │
-                           │                │           ◄ DPS API     │◄──────────┘
+                           │                │           ◄   DPS API   │◄──────────┘
                            │      Mapper    ►   Index   ├─────────────┤
                            │                │           ◄ Rosetta API │◄──────────┐
                            ├───────▲▲▲──────┴───────────┴─────────────┤           │
