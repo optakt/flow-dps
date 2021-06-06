@@ -91,7 +91,7 @@ The following diagram provides a simple overview of the data flow for the DPS:
                            │      Mapper    ►   Index   ├─────────────┤
                            │                │           ◄ Rosetta API │◄──────────┐
                            ├───────▲▲▲──────┴───────────┴─────────────┤           │
-                           │   Live Feeder  ◄    Live Chain           │  ┌────────┴────┐
+                           │   Live Feeder  ◄     Live Chain          │  ┌────────┴────┐
                            └──────────────────────────────────────────┘  │ HTTP Client │
                                     ▲                 ▲                  └─────────────┘
                                     │                 │
