@@ -30,5 +30,5 @@ type Block struct {
 	ID           identifier.Block `json:"block_identifier"`
 	ParentID     identifier.Block `json:"parent_block_identifier"`
 	Timestamp    int64            `json:"timestamp"`
-	Transactions []Transaction    `json:"transactions"`
+	Transactions []*Transaction   `json:"transactions"`
 }

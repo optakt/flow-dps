@@ -20,12 +20,12 @@ import (
 )
 
 type BlockResponse struct {
-	Block             rosetta.Block            `json:"block"`
+	Block             *rosetta.Block           `json:"block"`
 	OtherTransactions []identifier.Transaction `json:"other_transactions"`
 }
 
 type TransactionResponse struct {
-	Transaction rosetta.Transaction `json:"transaction"`
+	Transaction *rosetta.Transaction `json:"transaction"`
 }
 
 type BalanceResponse struct {

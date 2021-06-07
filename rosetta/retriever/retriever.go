@@ -21,18 +21,22 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/models/index"
 	"github.com/optakt/flow-dps/models/rosetta"
 )
 
 type Retriever struct {
+	index     index.Reader
 	generator Generator
 	invoke    Invoker
 }
 
-func New(generator Generator, invoke Invoker) *Retriever {
+func New(index index.Reader, generator Generator, invoke Invoker) *Retriever {
 
 	r := Retriever{
+		index:     index,
 		generator: generator,
 		invoke:    invoke,
 	}
@@ -68,14 +72,107 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 	return amounts, nil
 }
 
-func (r *Retriever) Block(network identifier.Network, block identifier.Block) (rosetta.Block, []identifier.Transaction, error) {
-	// TODO: implement Rosetta block retrieval
-	// => https://github.com/optakt/flow-dps/issues/43
-	return rosetta.Block{}, nil, fmt.Errorf("not implemented")
+func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*rosetta.Block, []identifier.Transaction, error) {
+
+	// Retrieve the Flow token default withdrawal and deposit events.
+	withdrawal, err := r.generator.Withdrawal(dps.FlowSymbol)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
+	}
+	deposit, err := r.generator.Deposit(dps.FlowSymbol)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not generate deposit event type: %w", err)
+	}
+
+	// Then, we get the header; it will give us the block ID, parent ID and timestamp.
+	header, err := r.index.Header(id.Index)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get header: %w", err)
+	}
+
+	// Next, we get all the events for the block to extract deposit and withdrawal events.
+	events, err := r.index.Events(id.Index)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get events: %w", err)
+	}
+
+	// Next, we step through all the transactions and accumulate events by transaction ID.
+	// NOTE: We consider transactions that don't generate any fund movements as irrelevant for now.
+	batches := make(map[flow.Identifier][]rosetta.Operation)
+	for _, event := range events {
+		if event.Type != flow.EventType(withdrawal) && event.Type != flow.EventType(deposit) {
+			continue
+		}
+		op := rosetta.Operation{
+			ID: identifier.Operation{
+				Index: uint(event.EventIndex),
+			},
+			RelatedIDs: nil, // needs to be set when building transactions
+			Type:       "transfer",
+			Status:     "sealed",
+			AccountID: identifier.Account{
+				Address: "", // needs to be set from decoded event
+			},
+			Amount: rosetta.Amount{
+				Value: "", // needs to be set from decoded event
+				Currency: identifier.Currency{
+					Symbol:   dps.FlowSymbol,
+					Decimals: dps.FlowDecimals,
+				},
+			},
+		}
+		switch event.Type {
+		case flow.EventType(withdrawal):
+			// FIXME: decode withdrawal event and get account address & amount
+		case flow.EventType(deposit):
+			// FIXME: decode deposit event and get account address & amount
+		}
+		batches[event.TransactionID] = append(batches[event.TransactionID], op)
+	}
+
+	// Finally, we batch all of the operations together into the transactions.
+	var transactions []*rosetta.Transaction
+	for transactionID, operations := range batches {
+		transaction := rosetta.Transaction{
+			ID: identifier.Transaction{
+				Hash: transactionID.String(),
+			},
+			Operations: operations,
+		}
+		for _, op := range operations {
+			for index := range transaction.Operations {
+				if transaction.Operations[index].ID != op.ID {
+					transaction.Operations[index].RelatedIDs = append(transaction.Operations[index].RelatedIDs, op.ID)
+				}
+			}
+		}
+		transactions = append(transactions, &transaction)
+	}
+
+	// Now we just need to build the block.
+	block := rosetta.Block{
+		ID: identifier.Block{
+			Index: header.Height,
+			Hash:  header.ID().String(),
+		},
+		ParentID: identifier.Block{
+			Index: header.Height - 1,
+			Hash:  header.ParentID.String(),
+		},
+		Timestamp:    header.Timestamp.UnixNano() / 1_000_000,
+		Transactions: transactions,
+	}
+
+	// TODO: When a block contains to many transactions / operations, we should
+	// limit the returned block size and return a list of transaction IDs in
+	// the second field.
+	// => https://github.com/optakt/flow-dps/issues/149
+
+	return &block, nil, nil
 }
 
-func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (rosetta.Transaction, error) {
+func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (*rosetta.Transaction, error) {
 	// TODO: implement Rosetta transaction retrieval
 	// => https://github.com/optakt/flow-dps/issues/44
-	return rosetta.Transaction{}, fmt.Errorf("not implemented")
+	return nil, fmt.Errorf("not implemented")
 }

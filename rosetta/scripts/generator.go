@@ -26,6 +26,8 @@ type Generator struct {
 	params         dps.Params
 	getBalance     *template.Template
 	transferTokens *template.Template
+	withdrawal     *template.Template
+	deposit        *template.Template
 }
 
 func NewGenerator(params dps.Params) *Generator {
@@ -33,19 +35,45 @@ func NewGenerator(params dps.Params) *Generator {
 		params:         params,
 		getBalance:     template.Must(template.New("get_balance").Parse(getBalance)),
 		transferTokens: template.Must(template.New("transfer_tokens").Parse(transferTokens)),
+		withdrawal:     template.Must(template.New("withdrawal").Parse(withdrawal)),
+		deposit:        template.Must(template.New("deposit").Parse(deposit)),
 	}
 	return &g
 }
 
 func (g *Generator) GetBalance(symbol string) ([]byte, error) {
-	return g.compile(g.getBalance, symbol)
+	return g.bytes(g.getBalance, symbol)
 }
 
 func (g *Generator) TransferTokens(symbol string) ([]byte, error) {
-	return g.compile(g.transferTokens, symbol)
+	return g.bytes(g.transferTokens, symbol)
 }
 
-func (g *Generator) compile(template *template.Template, symbol string) ([]byte, error) {
+func (g *Generator) Withdrawal(symbol string) (string, error) {
+	return g.string(g.withdrawal, symbol)
+}
+
+func (g *Generator) Deposit(symbol string) (string, error) {
+	return g.string(g.deposit, symbol)
+}
+
+func (g *Generator) string(template *template.Template, symbol string) (string, error) {
+	buf, err := g.compile(template, symbol)
+	if err != nil {
+		return "", fmt.Errorf("could not compile template: %w", err)
+	}
+	return buf.String(), nil
+}
+
+func (g *Generator) bytes(template *template.Template, symbol string) ([]byte, error) {
+	buf, err := g.compile(template, symbol)
+	if err != nil {
+		return nil, fmt.Errorf("could not compile template: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+func (g *Generator) compile(template *template.Template, symbol string) (*bytes.Buffer, error) {
 	token, ok := g.params.Tokens[symbol]
 	if !ok {
 		return nil, fmt.Errorf("invalid token symbol (%s)", symbol)
@@ -62,6 +90,5 @@ func (g *Generator) compile(template *template.Template, symbol string) ([]byte,
 	if err != nil {
 		return nil, fmt.Errorf("could not execute template: %w", err)
 	}
-	script := buf.Bytes()
-	return script, nil
+	return buf, nil
 }
