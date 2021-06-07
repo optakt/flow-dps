@@ -101,7 +101,7 @@ func run() int {
 	generator := scripts.NewGenerator(params)
 	invoke := invoker.New(index)
 	validate := validator.New(params)
-	retrieve := retriever.New(index, generator, invoke)
+	retrieve := retriever.New(params, index, generator, invoke)
 	ctrl := rosetta.NewData(validate, retrieve)
 
 	// TODO: Implement custom echo logger middleware that wraps around our own
@@ -112,9 +112,12 @@ func run() int {
 	server.HideBanner = true
 	server.HidePort = true
 	server.Use(middleware.Logger())
+	server.POST("/network/list", ctrl.Networks)
+	server.POST("/network/options", ctrl.Options)
+	server.POST("/network/status", ctrl.Status)
 	server.POST("/account/balance", ctrl.Balance)
 	server.POST("/block", ctrl.Block)
-	server.POST("/block/transaction", ctrl.Transaction)
+	// server.POST("/block/transaction", ctrl.Transaction)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

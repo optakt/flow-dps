@@ -15,11 +15,18 @@
 package rosetta
 
 import (
+	"time"
+
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type Retriever interface {
+	Oldest() (identifier.Block, time.Time, error)
+	Current() (identifier.Block, time.Time, error)
+	Network() (identifier.Network, error)
+	Version() (object.Version, error)
+	Allow() (object.Allow, error)
 	Block(network identifier.Network, block identifier.Block) (*object.Block, []identifier.Transaction, error)
 	Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (*object.Transaction, error)
 	Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]object.Amount, error)
