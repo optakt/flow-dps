@@ -17,6 +17,6 @@ package retriever
 type Generator interface {
 	GetBalance(symbol string) ([]byte, error)
 	TransferTokens(symbol string) ([]byte, error)
-	Withdrawal(symbol string) (string, error)
-	Deposit(symbol string) (string, error)
+	TokensDeposited(symbol string) (string, error)
+	TokensWithdrawn(symbol string) (string, error)
 }

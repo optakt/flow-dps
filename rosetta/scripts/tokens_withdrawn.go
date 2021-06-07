@@ -14,4 +14,4 @@
 
 package scripts
 
-const deposit = "A.{{.Token.Address}}.{{.Token.Type}}.Deposit"
+const tokensWithdrawn = "A.{{.Token.Address}}.{{.Token.Type}}.TokensWithdrawn"

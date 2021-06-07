@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -75,13 +76,13 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*object.Block, []identifier.Transaction, error) {
 
 	// Retrieve the Flow token default withdrawal and deposit events.
-	withdrawal, err := r.generator.Withdrawal(dps.FlowSymbol)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
-	}
-	deposit, err := r.generator.Deposit(dps.FlowSymbol)
+	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not generate deposit event type: %w", err)
+	}
+	withdrawal, err := r.generator.TokensWithdrawn(dps.FlowSymbol)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
 	}
 
 	// Then, we get the header; it will give us the block ID, parent ID and timestamp.
@@ -98,41 +99,70 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 
 	// Next, we step through all the transactions and accumulate events by transaction ID.
 	// NOTE: We consider transactions that don't generate any fund movements as irrelevant for now.
-	batches := make(map[flow.Identifier][]object.Operation)
+	buckets := make(map[flow.Identifier][]object.Operation)
 	for _, event := range events {
-		if event.Type != flow.EventType(withdrawal) && event.Type != flow.EventType(deposit) {
+
+		// This switch just skips all events except the ones we are explicitly interested in.
+		switch event.Type {
+		default:
 			continue
+		case flow.EventType(deposit):
+		case flow.EventType(withdrawal):
 		}
+
+		// Decode the event payload into a Cadence value and cast to Cadence event.
+		value, err := json.Decode(event.Payload)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not decode event: %w", err)
+		}
+		e, ok := value.(cadence.Event)
+		if !ok {
+			return nil, nil, fmt.Errorf("could not cast event: %w", err)
+		}
+
+		// Now we have access to the fields for the events; the first one is always
+		// the amount, the second one the address, as an optional.
+		amount, ok := e.Fields[0].ToGoValue().(uint64)
+		if !ok {
+			panic(fmt.Sprintf("%T\n", e.Fields[0].ToGoValue()))
+		}
+		address, ok := e.Fields[1].ToGoValue().(flow.Address)
+		if !ok {
+			panic(fmt.Sprintf("%T\n", e.Fields[1].ToGoValue()))
+		}
+
+		// For the witdrawal event, we make it a negative number.
+		if event.Type == flow.EventType(withdrawal) {
+			amount = -amount
+		}
+
+		// Now we have everything to assemble the respective operation.
 		op := object.Operation{
 			ID: identifier.Operation{
 				Index: uint(event.EventIndex),
 			},
-			RelatedIDs: nil, // needs to be set when building transactions
-			Type:       "transfer",
-			Status:     "sealed",
+			RelatedIDs: nil,
+			Type:       "TRANSFER",
+			Status:     "COMPLETED",
 			AccountID: identifier.Account{
-				Address: "", // needs to be set from decoded event
+				Address: address.String(),
 			},
 			Amount: object.Amount{
-				Value: "", // needs to be set from decoded event
+				Value: strconv.FormatUint(amount, 10),
 				Currency: identifier.Currency{
 					Symbol:   dps.FlowSymbol,
 					Decimals: dps.FlowDecimals,
 				},
 			},
 		}
-		switch event.Type {
-		case flow.EventType(withdrawal):
-			// FIXME: decode withdrawal event and get account address & amount
-		case flow.EventType(deposit):
-			// FIXME: decode deposit event and get account address & amount
-		}
-		batches[event.TransactionID] = append(batches[event.TransactionID], op)
+
+		// We store all operations for a transaction together in a bucket.
+		buckets[event.TransactionID] = append(buckets[event.TransactionID], op)
 	}
 
 	// Finally, we batch all of the operations together into the transactions.
 	var transactions []*object.Transaction
-	for transactionID, operations := range batches {
+	for transactionID, operations := range buckets {
 		transaction := object.Transaction{
 			ID: identifier.Transaction{
 				Hash: transactionID.String(),

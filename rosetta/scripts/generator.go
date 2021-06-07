@@ -23,20 +23,20 @@ import (
 )
 
 type Generator struct {
-	params         dps.Params
-	getBalance     *template.Template
-	transferTokens *template.Template
-	withdrawal     *template.Template
-	deposit        *template.Template
+	params          dps.Params
+	getBalance      *template.Template
+	transferTokens  *template.Template
+	tokensDeposited *template.Template
+	tokensWithdrawn *template.Template
 }
 
 func NewGenerator(params dps.Params) *Generator {
 	g := Generator{
-		params:         params,
-		getBalance:     template.Must(template.New("get_balance").Parse(getBalance)),
-		transferTokens: template.Must(template.New("transfer_tokens").Parse(transferTokens)),
-		withdrawal:     template.Must(template.New("withdrawal").Parse(withdrawal)),
-		deposit:        template.Must(template.New("deposit").Parse(deposit)),
+		params:          params,
+		getBalance:      template.Must(template.New("get_balance").Parse(getBalance)),
+		transferTokens:  template.Must(template.New("transfer_tokens").Parse(transferTokens)),
+		tokensDeposited: template.Must(template.New("tokensDeposited").Parse(tokensDeposited)),
+		tokensWithdrawn: template.Must(template.New("withdrawal").Parse(tokensWithdrawn)),
 	}
 	return &g
 }
@@ -49,12 +49,12 @@ func (g *Generator) TransferTokens(symbol string) ([]byte, error) {
 	return g.bytes(g.transferTokens, symbol)
 }
 
-func (g *Generator) Withdrawal(symbol string) (string, error) {
-	return g.string(g.withdrawal, symbol)
+func (g *Generator) TokensDeposited(symbol string) (string, error) {
+	return g.string(g.tokensDeposited, symbol)
 }
 
-func (g *Generator) Deposit(symbol string) (string, error) {
-	return g.string(g.deposit, symbol)
+func (g *Generator) TokensWithdrawn(symbol string) (string, error) {
+	return g.string(g.tokensWithdrawn, symbol)
 }
 
 func (g *Generator) string(template *template.Template, symbol string) (string, error) {
