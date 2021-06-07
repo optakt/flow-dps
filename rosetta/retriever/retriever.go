@@ -121,17 +121,25 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 		}
 
 		// Now we have access to the fields for the events; the first one is always
-		// the amount, the second one the address, as an optional.
-		amount, ok := e.Fields[0].ToGoValue().(uint64)
+		// the amount, the second one the address. The types coming from Cadence
+		// are not native Flow types, so we need to use primitive types first.
+		vAmount := e.Fields[0].ToGoValue()
+		uAmount, ok := vAmount.(uint64)
 		if !ok {
-			panic(fmt.Sprintf("%T\n", e.Fields[0].ToGoValue()))
+			return nil, nil, fmt.Errorf("could not cast amount (%T)", vAmount)
 		}
-		address, ok := e.Fields[1].ToGoValue().(flow.Address)
+		vAddress := e.Fields[1].ToGoValue()
+		bAddress, ok := vAddress.([flow.AddressLength]byte)
 		if !ok {
-			panic(fmt.Sprintf("%T\n", e.Fields[1].ToGoValue()))
+			return nil, nil, fmt.Errorf("could not cast address (%T)", vAddress)
 		}
 
-		// For the witdrawal event, we make it a negative number.
+		// Then, we can convert the amount to a signed integer so we can invert
+		// it and the address to a native Flow address.
+		amount := int64(uAmount)
+		address := flow.Address(bAddress)
+
+		// For the witdrawal event, we invert the amount into a negative number.
 		if event.Type == flow.EventType(withdrawal) {
 			amount = -amount
 		}
@@ -148,7 +156,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 				Address: address.String(),
 			},
 			Amount: object.Amount{
-				Value: strconv.FormatUint(amount, 10),
+				Value: strconv.FormatInt(amount, 10),
 				Currency: identifier.Currency{
 					Symbol:   dps.FlowSymbol,
 					Decimals: dps.FlowDecimals,
