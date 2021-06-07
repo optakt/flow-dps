@@ -20,7 +20,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 type Validator struct {

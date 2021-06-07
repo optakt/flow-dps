@@ -15,20 +15,20 @@
 package rosetta
 
 import (
-	"github.com/optakt/flow-dps/models/identifier"
-	"github.com/optakt/flow-dps/models/rosetta"
+	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type BlockResponse struct {
-	Block             *rosetta.Block           `json:"block"`
+	Block             *object.Block            `json:"block"`
 	OtherTransactions []identifier.Transaction `json:"other_transactions"`
 }
 
 type TransactionResponse struct {
-	Transaction *rosetta.Transaction `json:"transaction"`
+	Transaction *object.Transaction `json:"transaction"`
 }
 
 type BalanceResponse struct {
 	BlockID  identifier.Block `json:"block_identifier"`
-	Balances []rosetta.Amount `json:"balances"`
+	Balances []object.Amount  `json:"balances"`
 }

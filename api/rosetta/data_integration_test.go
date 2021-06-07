@@ -33,7 +33,7 @@ import (
 
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"

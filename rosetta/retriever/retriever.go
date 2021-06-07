@@ -22,9 +22,9 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/models/identifier"
 	"github.com/optakt/flow-dps/models/index"
-	"github.com/optakt/flow-dps/models/rosetta"
+	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type Retriever struct {
@@ -44,10 +44,10 @@ func New(index index.Reader, generator Generator, invoke Invoker) *Retriever {
 	return &r
 }
 
-func (r *Retriever) Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error) {
+func (r *Retriever) Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]object.Amount, error) {
 
 	// get the cadence value that is the result of the script execution
-	amounts := make([]rosetta.Amount, 0, len(currencies))
+	amounts := make([]object.Amount, 0, len(currencies))
 	address := cadence.NewAddress(flow.HexToAddress(account.Address))
 	for _, currency := range currencies {
 		getBalance, err := r.generator.GetBalance(currency.Symbol)
@@ -62,7 +62,7 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 		if !ok {
 			return nil, fmt.Errorf("could not convert balance (type: %T)", value.ToGoValue())
 		}
-		amount := rosetta.Amount{
+		amount := object.Amount{
 			Currency: currency,
 			Value:    strconv.FormatUint(balance, 10),
 		}
@@ -72,7 +72,7 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 	return amounts, nil
 }
 
-func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*rosetta.Block, []identifier.Transaction, error) {
+func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*object.Block, []identifier.Transaction, error) {
 
 	// Retrieve the Flow token default withdrawal and deposit events.
 	withdrawal, err := r.generator.Withdrawal(dps.FlowSymbol)
@@ -98,12 +98,12 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*ros
 
 	// Next, we step through all the transactions and accumulate events by transaction ID.
 	// NOTE: We consider transactions that don't generate any fund movements as irrelevant for now.
-	batches := make(map[flow.Identifier][]rosetta.Operation)
+	batches := make(map[flow.Identifier][]object.Operation)
 	for _, event := range events {
 		if event.Type != flow.EventType(withdrawal) && event.Type != flow.EventType(deposit) {
 			continue
 		}
-		op := rosetta.Operation{
+		op := object.Operation{
 			ID: identifier.Operation{
 				Index: uint(event.EventIndex),
 			},
@@ -113,7 +113,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*ros
 			AccountID: identifier.Account{
 				Address: "", // needs to be set from decoded event
 			},
-			Amount: rosetta.Amount{
+			Amount: object.Amount{
 				Value: "", // needs to be set from decoded event
 				Currency: identifier.Currency{
 					Symbol:   dps.FlowSymbol,
@@ -131,9 +131,9 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*ros
 	}
 
 	// Finally, we batch all of the operations together into the transactions.
-	var transactions []*rosetta.Transaction
+	var transactions []*object.Transaction
 	for transactionID, operations := range batches {
-		transaction := rosetta.Transaction{
+		transaction := object.Transaction{
 			ID: identifier.Transaction{
 				Hash: transactionID.String(),
 			},
@@ -150,7 +150,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*ros
 	}
 
 	// Now we just need to build the block.
-	block := rosetta.Block{
+	block := object.Block{
 		ID: identifier.Block{
 			Index: header.Height,
 			Hash:  header.ID().String(),
@@ -171,7 +171,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*ros
 	return &block, nil, nil
 }
 
-func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (*rosetta.Transaction, error) {
+func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (*object.Transaction, error) {
 	// TODO: implement Rosetta transaction retrieval
 	// => https://github.com/optakt/flow-dps/issues/44
 	return nil, fmt.Errorf("not implemented")
