@@ -28,8 +28,15 @@ type OptionsRequest struct {
 }
 
 type OptionsResponse struct {
-	Version object.Version
-	Allow   object.Allow
+	Version object.Version `json:"version"`
+	Allow   Allow          `json:"allow"`
+}
+
+type Allow struct {
+	OperationStatuses       []object.StatusDefinition `json:"operation_statuses"`
+	OperationTypes          []string                  `json:"operation_types"`
+	Errors                  []object.ErrorDefinition  `json:"errors"`
+	HistoricalBalanceLookup bool                      `json:"historical_balance_lookup"`
 }
 
 func (d *Data) Options(ctx echo.Context) error {
@@ -41,26 +48,15 @@ func (d *Data) Options(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
 	}
 
-	// Get our network and check it's correct.
-	err = d.validate.Network(req.NetworkID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-	}
-
-	// Get the current status.
-	version, err := d.retrieve.Version()
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
-	}
-
-	// Get the allowed operations.
-	allow, err := d.retrieve.Allow()
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+	// Create the allow object, which is native to the response.
+	allow := Allow{
+		OperationStatuses: d.config.Statuses(),
+		OperationTypes:    d.config.Operations(),
+		Errors:            d.config.Errors(),
 	}
 
 	res := OptionsResponse{
-		Version: version,
+		Version: d.config.Version(),
 		Allow:   allow,
 	}
 

@@ -16,12 +16,13 @@ package rosetta
 
 import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-type Validator interface {
-	Network(network identifier.Network) error
-	Block(block identifier.Block) error
-	Transaction(transaction identifier.Transaction) error
-	Account(account identifier.Account) error
-	Currency(currency identifier.Currency) error
+type Configuration interface {
+	Network() identifier.Network
+	Version() object.Version
+	Operations() []string
+	Statuses() []object.StatusDefinition
+	Errors() []object.ErrorDefinition
 }

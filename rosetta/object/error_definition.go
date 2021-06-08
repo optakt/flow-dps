@@ -14,8 +14,8 @@
 
 package object
 
-type Version struct {
-	RosettaVersion    string `json:"rosetta_version"`
-	NodeVersion       string `json:"node_version"`
-	MiddlewareVersion string `json:"middleware_version"`
+type ErrorDefinition struct {
+	Code      uint   `json:"code"`
+	Message   string `json:"message"`
+	Retriable bool   `json:"retriable"`
 }

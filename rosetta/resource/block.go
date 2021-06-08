@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package resource
 
 import (
 	"github.com/optakt/flow-dps/rosetta/identifier"

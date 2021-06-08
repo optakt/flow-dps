@@ -22,19 +22,27 @@ package object
 // Example for detail fields given in the Rosetta API documentation are
 // `address` and `error`.
 type Error struct {
-	Code        uint                   `json:"code"`
-	Message     string                 `json:"message"`
+	ErrorDefinition
 	Description string                 `json:"description"`
-	Retriable   bool                   `json:"retriable"`
 	Details     map[string]interface{} `json:"details"`
 }
 
+const (
+	AnyCode = 1
+
+	AnyMessage = "catch-all for all errors for now"
+
+	AnyRetriable = false
+)
+
 func AnyError(err error) Error {
 	return Error{
-		Code:        1,
-		Message:     "catch-all for all errors for now",
+		ErrorDefinition: ErrorDefinition{
+			Code:      AnyCode,
+			Message:   AnyMessage,
+			Retriable: AnyRetriable,
+		},
 		Description: err.Error(),
-		Retriable:   false,
 		Details:     make(map[string]interface{}),
 	}
 }

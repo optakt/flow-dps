@@ -14,14 +14,8 @@
 
 package object
 
-type Allow struct {
-	OperationStatuses       []OperationStatus `json:"operation_statuses"`
-	OperationTypes          []string          `json:"operation_types"`
-	Errors                  []Error           `json:"errors"`
-	HistoricalBalanceLookup bool              `json:"historical_balance_lookup"`
-}
-
-type OperationStatus struct {
-	Status     string `json:"status"`
-	Successful bool   `json:"successful"`
+type Version struct {
+	RosettaVersion    string `json:"rosetta_version"`
+	NodeVersion       string `json:"node_version"`
+	MiddlewareVersion string `json:"middleware_version"`
 }

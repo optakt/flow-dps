@@ -41,12 +41,6 @@ func (d *Data) Status(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	// Get our network and check it's correct.
-	err = d.validate.Network(req.NetworkID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-	}
-
 	oldest, _, err := d.retrieve.Oldest()
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
