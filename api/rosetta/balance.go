@@ -86,7 +86,7 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
-	balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
+	balances, err := d.retrieve.Balances(&req.BlockID, req.AccountID, req.Currencies)
 
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {

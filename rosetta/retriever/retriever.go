@@ -91,10 +91,10 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 	return block, header.Timestamp, nil
 }
 
-func (r *Retriever) Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error) {
+func (r *Retriever) Balances(block *identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error) {
 
 	// Run validation on the block ID. This also fills in missing information.
-	err := r.validate.Block(&block)
+	err := r.validate.Block(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
