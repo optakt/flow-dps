@@ -20,7 +20,6 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type NetworksRequest struct {
@@ -36,7 +35,7 @@ func (d *Data) Networks(ctx echo.Context) error {
 	var req NetworksRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
 	}
 
 	// Get the network we are running on from the configuration.

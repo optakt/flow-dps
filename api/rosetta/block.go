@@ -20,8 +20,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
-	"github.com/optakt/flow-dps/rosetta/resource"
+	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
 type BlockRequest struct {
@@ -30,7 +29,7 @@ type BlockRequest struct {
 }
 
 type BlockResponse struct {
-	Block             *resource.Block          `json:"block"`
+	Block             *rosetta.Block           `json:"block"`
 	OtherTransactions []identifier.Transaction `json:"other_transactions"`
 }
 
@@ -41,12 +40,12 @@ func (d *Data) Block(ctx echo.Context) error {
 	var req BlockRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
 	}
 
 	block, other, err := d.retrieve.Block(req.NetworkID, req.BlockID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
 	res := BlockResponse{

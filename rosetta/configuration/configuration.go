@@ -19,15 +19,15 @@ import (
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
 type Configuration struct {
 	network    identifier.Network
-	version    object.Version
-	statuses   []object.StatusDefinition
+	version    meta.Version
+	statuses   []meta.StatusDefinition
 	operations []string
-	errors     []object.ErrorDefinition
+	errors     []meta.ErrorDefinition
 }
 
 func New(chain flow.ChainID) *Configuration {
@@ -41,22 +41,25 @@ func New(chain flow.ChainID) *Configuration {
 	// `go.mod` file and the middleware version from the repository tag:
 	// => https://github.com/optakt/flow-dps/issues/151
 
-	version := object.Version{
-		RosettaVersion:    "1.4.10",
-		NodeVersion:       "1.17.4",
-		MiddlewareVersion: "0.0.0",
+	version := meta.Version{
+		RosettaVersion:    RosettaVersion,
+		NodeVersion:       NodeVersion,
+		MiddlewareVersion: MiddlewareVersion,
 	}
 
-	statuses := []object.StatusDefinition{
-		{Status: "COMPLETED", Successful: true},
+	statuses := []meta.StatusDefinition{
+		StatusCompleted,
 	}
 
 	operations := []string{
-		"TRANSFER",
+		OperationTransfer,
 	}
 
-	errors := []object.ErrorDefinition{
-		{Code: object.AnyCode, Message: object.AnyMessage, Retriable: object.AnyRetriable},
+	errors := []meta.ErrorDefinition{
+		ErrorInvalidNetwork,
+		ErrorInvalidBlock,
+		ErrorInvalidAccount,
+		ErrorInvalidTransaction,
 	}
 
 	c := Configuration{
@@ -74,11 +77,11 @@ func (c *Configuration) Network() identifier.Network {
 	return c.network
 }
 
-func (c *Configuration) Version() object.Version {
+func (c *Configuration) Version() meta.Version {
 	return c.version
 }
 
-func (c *Configuration) Statuses() []object.StatusDefinition {
+func (c *Configuration) Statuses() []meta.StatusDefinition {
 	return c.statuses
 }
 
@@ -86,6 +89,6 @@ func (c *Configuration) Operations() []string {
 	return c.operations
 }
 
-func (c *Configuration) Errors() []object.ErrorDefinition {
+func (c *Configuration) Errors() []meta.ErrorDefinition {
 	return c.errors
 }

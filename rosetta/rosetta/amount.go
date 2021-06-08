@@ -15,16 +15,12 @@
 package rosetta
 
 import (
-	"time"
-
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
-type Retriever interface {
-	Oldest() (identifier.Block, time.Time, error)
-	Current() (identifier.Block, time.Time, error)
-	Block(network identifier.Network, block identifier.Block) (*rosetta.Block, []identifier.Transaction, error)
-	Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (*rosetta.Transaction, error)
-	Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error)
+// Amount is some value of a currency. It is considered invalid to specify a
+// value without a currency.
+type Amount struct {
+	Value    string              `json:"value"`
+	Currency identifier.Currency `json:"currency"`
 }

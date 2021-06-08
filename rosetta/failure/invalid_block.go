@@ -12,17 +12,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package failure
 
 import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/meta"
+	"fmt"
+
+	"github.com/onflow/flow-go/model/flow"
 )
 
-type Configuration interface {
-	Network() identifier.Network
-	Version() meta.Version
-	Operations() []string
-	Statuses() []meta.StatusDefinition
-	Errors() []meta.ErrorDefinition
+type InvalidBlock struct {
+	Height  uint64
+	BlockID flow.Identifier
+	Message string
+}
+
+func (i InvalidBlock) Error() string {
+	return fmt.Sprintf("invalid block (height: %d, block: %x): %s", i.Height, i.BlockID, i.Message)
 }

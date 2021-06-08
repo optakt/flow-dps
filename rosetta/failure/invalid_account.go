@@ -12,10 +12,19 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package failure
 
-type ErrorDefinition struct {
-	Code      uint   `json:"code"`
-	Message   string `json:"message"`
-	Retriable bool   `json:"retriable"`
+import (
+	"fmt"
+
+	"github.com/onflow/flow-go/model/flow"
+)
+
+type InvalidAccount struct {
+	Address flow.Address
+	Message string
+}
+
+func (i InvalidAccount) Error() string {
+	return fmt.Sprintf("invalid account (address: %x): %s", i.Address, i.Message)
 }

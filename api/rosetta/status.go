@@ -20,7 +20,6 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type StatusRequest struct {
@@ -38,16 +37,16 @@ func (d *Data) Status(ctx echo.Context) error {
 	var req StatusRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
 	}
 
 	oldest, _, err := d.retrieve.Oldest()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 	current, timestamp, err := d.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
 	// TODO: See if it makes sense to include the genesis block information:

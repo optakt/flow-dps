@@ -12,17 +12,9 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package meta
 
-import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/meta"
-)
-
-type Configuration interface {
-	Network() identifier.Network
-	Version() meta.Version
-	Operations() []string
-	Statuses() []meta.StatusDefinition
-	Errors() []meta.ErrorDefinition
+type StatusDefinition struct {
+	Status     string `json:"status"`
+	Successful bool   `json:"successful"`
 }

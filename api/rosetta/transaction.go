@@ -20,8 +20,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
-	"github.com/optakt/flow-dps/rosetta/resource"
+	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
 type TransactionRequest struct {
@@ -31,7 +30,7 @@ type TransactionRequest struct {
 }
 
 type TransactionResponse struct {
-	Transaction *resource.Transaction `json:"transaction"`
+	Transaction *rosetta.Transaction `json:"transaction"`
 }
 
 // TODO: integration testing of Rosetta transaction endpoint
@@ -41,12 +40,12 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	var req TransactionRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
 	}
 
 	transaction, err := d.retrieve.Transaction(req.NetworkID, req.BlockID, req.TransactionID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
 	res := TransactionResponse{

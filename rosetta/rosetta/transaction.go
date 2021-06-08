@@ -15,16 +15,15 @@
 package rosetta
 
 import (
-	"time"
-
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
-type Retriever interface {
-	Oldest() (identifier.Block, time.Time, error)
-	Current() (identifier.Block, time.Time, error)
-	Block(network identifier.Network, block identifier.Block) (*rosetta.Block, []identifier.Transaction, error)
-	Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (*rosetta.Transaction, error)
-	Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error)
+// Transaction contains an array of operations that are attributable to the same
+// transaction identifier.
+//
+// Examples of metadata given in the Rosetta API documentation are "size" and
+// "lockTime".
+type Transaction struct {
+	ID         identifier.Transaction `json:"transaction_identifier"`
+	Operations []Operation            `json:"operations"`
 }

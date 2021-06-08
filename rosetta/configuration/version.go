@@ -12,18 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package resource
+package configuration
 
-import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
+const (
+	RosettaVersion    = "1.4.10"
+	NodeVersion       = "1.17.4"
+	MiddlewareVersion = "0.0.0"
 )
-
-// Transaction contains an array of operations that are attributable to the same
-// transaction identifier.
-//
-// Examples of metadata given in the Rosetta API documentation are "size" and
-// "lockTime".
-type Transaction struct {
-	ID         identifier.Transaction `json:"transaction_identifier"`
-	Operations []*Operation           `json:"operations"`
-}

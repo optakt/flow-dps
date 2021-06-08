@@ -12,9 +12,19 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package failure
 
-type StatusDefinition struct {
-	Status     string `json:"status"`
-	Successful bool   `json:"successful"`
+import (
+	"fmt"
+
+	"github.com/onflow/flow-go/model/flow"
+)
+
+type InvalidTransaction struct {
+	TransactionID flow.Identifier
+	Message       string
+}
+
+func (i InvalidTransaction) Error() string {
+	return fmt.Sprintf("invalid transaction (transaction: %x): %s", i.TransactionID, i.Message)
 }

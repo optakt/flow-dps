@@ -12,15 +12,18 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package failure
 
 import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
+	"fmt"
 )
 
-// Amount is some value of a currency. It is considered invalid to specify a
-// value without a currency.
-type Amount struct {
-	Value    string              `json:"value"`
-	Currency identifier.Currency `json:"currency"`
+type InvalidNetwork struct {
+	Blockchain string
+	Network    string
+	Message    string
+}
+
+func (i InvalidNetwork) Error() string {
+	return fmt.Sprintf("invalid network (blockchain: %s, network: %s): %s", i.Blockchain, i.Network, i.Message)
 }

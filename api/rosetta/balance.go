@@ -20,7 +20,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
 type BalanceRequest struct {
@@ -32,7 +32,7 @@ type BalanceRequest struct {
 
 type BalanceResponse struct {
 	BlockID  identifier.Block `json:"block_identifier"`
-	Balances []object.Amount  `json:"balances"`
+	Balances []rosetta.Amount `json:"balances"`
 }
 
 // TODO: integration testing of Rosetta balance endpoint
@@ -42,12 +42,12 @@ func (d *Data) Balance(ctx echo.Context) error {
 	var req BalanceRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
 	}
 
 	balances, err := d.retrieve.Balances(req.NetworkID, req.BlockID, req.AccountID, req.Currencies)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
 	res := BalanceResponse{
