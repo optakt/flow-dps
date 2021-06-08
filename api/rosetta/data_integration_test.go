@@ -55,13 +55,15 @@ func setupDB(t *testing.T) *badger.DB {
 	db, err := badger.Open(opts)
 	require.NoError(t, err)
 
+	reader := hex.NewDecoder(strings.NewReader(snapshots.Rosetta))
 	dict, _ := hex.DecodeString(dictionaries.Payload)
-	reader, err := zstd.NewReader(hex.NewDecoder(strings.NewReader(snapshots.Rosetta)),
+
+	decompressor, err := zstd.NewReader(reader,
 		zstd.WithDecoderDicts(dict),
 	)
 	require.NoError(t, err)
 
-	err = db.Load(reader, runtime.GOMAXPROCS(0))
+	err = db.Load(decompressor, runtime.GOMAXPROCS(0))
 	require.NoError(t, err)
 
 	return db
@@ -238,7 +240,7 @@ func TestGetBalanceBadRequest(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 }
 
-// balanceRequest will generate a BalanceRequest with the specified parameters.
+// balanceRequest generates a BalanceRequest with the specified parameters.
 func balanceRequest(address string, blockIndex uint64, blockHash string) rosetta.BalanceRequest {
 
 	return rosetta.BalanceRequest{
