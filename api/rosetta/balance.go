@@ -88,6 +88,30 @@ func (d *Data) Balance(ctx echo.Context) error {
 	}
 
 	balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
+
+	var ibErr failure.InvalidBlock
+	if errors.As(err, &ibErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidBlock(ibErr))
+	}
+	var ubErr failure.UnknownBlock
+	if errors.As(err, &ubErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownBlock(ubErr))
+	}
+
+	var iaErr failure.InvalidAccount
+	if errors.As(err, &iaErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidAccount(iaErr))
+	}
+
+	var icErr failure.InvalidCurrency
+	if errors.As(err, &icErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidCurrency(icErr))
+	}
+	var ucErr failure.UnknownCurrency
+	if errors.As(err, &ucErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownCurrency(ucErr))
+	}
+
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}

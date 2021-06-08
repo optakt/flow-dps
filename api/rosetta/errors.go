@@ -76,12 +76,35 @@ func InvalidAccount(fail failure.InvalidAccount) Error {
 	}
 }
 
-func InvalidTransaction(fail failure.InvalidTransaction) Error {
+func InvalidCurrency(fail failure.InvalidCurrency) Error {
 	return Error{
-		ErrorDefinition: configuration.ErrorInvalidTransaction,
+		ErrorDefinition: configuration.ErrorInvalidCurrency,
 		Description:     fail.Message,
 		Details: map[string]interface{}{
-			"transaction": fail.TransactionID.String(),
+			"symbol":   fail.Symbol,
+			"decimals": fail.Decimals,
+		},
+	}
+}
+
+func UnknownBlock(fail failure.UnknownBlock) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorUnknownBlock,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"height": fail.Height,
+			"block":  fail.BlockID.String(),
+		},
+	}
+}
+
+func UnknownCurrency(fail failure.UnknownCurrency) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorUnknownCurrency,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"symbol":   fail.Symbol,
+			"decimals": fail.Decimals,
 		},
 	}
 }
