@@ -34,11 +34,11 @@ import (
 
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
-	"github.com/optakt/flow-dps/rosetta/validator"
 	"github.com/optakt/flow-dps/service/dictionaries"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/testing/snapshots"
@@ -75,11 +75,11 @@ func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	index := index.NewReader(db)
 
 	params := dps.FlowParams[dps.FlowTestnet]
+	config := configuration.New(params.ChainID)
 	generator := scripts.NewGenerator(params)
 	invoke := invoker.New(index)
-	validate := validator.New(params)
 	retrieve := retriever.New(params, index, generator, invoke)
-	controller := rosetta.NewData(validate, retrieve)
+	controller := rosetta.NewData(config, retrieve)
 
 	return controller
 }

@@ -12,10 +12,9 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package meta
 
-type Version struct {
-	RosettaVersion    string `json:"rosetta_version"`
-	NodeVersion       string `json:"node_version"`
-	MiddlewareVersion string `json:"middleware_version"`
+type StatusDefinition struct {
+	Status     string `json:"status"`
+	Successful bool   `json:"successful"`
 }

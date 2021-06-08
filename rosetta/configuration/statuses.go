@@ -15,9 +15,9 @@
 package configuration
 
 import (
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
 var (
-	StatusCompleted = object.StatusDefinition{Status: "COMPLETED", Successful: true}
+	StatusCompleted = meta.StatusDefinition{Status: "COMPLETED", Successful: true}
 )

@@ -12,18 +12,15 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package resource
+package rosetta
 
 import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-// Transaction contains an array of operations that are attributable to the same
-// transaction identifier.
-//
-// Examples of metadata given in the Rosetta API documentation are "size" and
-// "lockTime".
-type Transaction struct {
-	ID         identifier.Transaction `json:"transaction_identifier"`
-	Operations []*Operation           `json:"operations"`
+// Amount is some value of a currency. It is considered invalid to specify a
+// value without a currency.
+type Amount struct {
+	Value    string              `json:"value"`
+	Currency identifier.Currency `json:"currency"`
 }

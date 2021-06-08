@@ -20,7 +20,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/resource"
+	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
 type BlockRequest struct {
@@ -29,7 +29,7 @@ type BlockRequest struct {
 }
 
 type BlockResponse struct {
-	Block             *resource.Block          `json:"block"`
+	Block             *rosetta.Block           `json:"block"`
 	OtherTransactions []identifier.Transaction `json:"other_transactions"`
 }
 

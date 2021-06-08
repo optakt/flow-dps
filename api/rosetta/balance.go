@@ -20,7 +20,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
 type BalanceRequest struct {
@@ -32,7 +32,7 @@ type BalanceRequest struct {
 
 type BalanceResponse struct {
 	BlockID  identifier.Block `json:"block_identifier"`
-	Balances []object.Amount  `json:"balances"`
+	Balances []rosetta.Amount `json:"balances"`
 }
 
 // TODO: integration testing of Rosetta balance endpoint

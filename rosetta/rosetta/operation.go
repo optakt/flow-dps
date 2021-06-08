@@ -12,11 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package resource
+package rosetta
 
 import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 // Operation contains all balance-changing information within a transaction. It
@@ -37,5 +36,5 @@ type Operation struct {
 	Type       string                 `json:"type"`
 	Status     string                 `json:"status"`
 	AccountID  identifier.Account     `json:"account"`
-	Amount     object.Amount          `json:"amount"`
+	Amount     Amount                 `json:"amount"`
 }

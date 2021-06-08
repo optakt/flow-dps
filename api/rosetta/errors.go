@@ -17,11 +17,11 @@ package rosetta
 import (
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/failure"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
 type Error struct {
-	object.ErrorDefinition
+	meta.ErrorDefinition
 	Description string                 `json:"description"`
 	Details     map[string]interface{} `json:"details"`
 }

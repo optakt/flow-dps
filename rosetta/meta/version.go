@@ -12,15 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package meta
 
-import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
-)
-
-// Amount is some value of a currency. It is considered invalid to specify a
-// value without a currency.
-type Amount struct {
-	Value    string              `json:"value"`
-	Currency identifier.Currency `json:"currency"`
+type Version struct {
+	RosettaVersion    string `json:"rosetta_version"`
+	NodeVersion       string `json:"node_version"`
+	MiddlewareVersion string `json:"middleware_version"`
 }

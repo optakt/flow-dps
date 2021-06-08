@@ -20,7 +20,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
 type OptionsRequest struct {
@@ -28,15 +28,15 @@ type OptionsRequest struct {
 }
 
 type OptionsResponse struct {
-	Version object.Version `json:"version"`
-	Allow   Allow          `json:"allow"`
+	Version meta.Version `json:"version"`
+	Allow   Allow        `json:"allow"`
 }
 
 type Allow struct {
-	OperationStatuses       []object.StatusDefinition `json:"operation_statuses"`
-	OperationTypes          []string                  `json:"operation_types"`
-	Errors                  []object.ErrorDefinition  `json:"errors"`
-	HistoricalBalanceLookup bool                      `json:"historical_balance_lookup"`
+	OperationStatuses       []meta.StatusDefinition `json:"operation_statuses"`
+	OperationTypes          []string                `json:"operation_types"`
+	Errors                  []meta.ErrorDefinition  `json:"errors"`
+	HistoricalBalanceLookup bool                    `json:"historical_balance_lookup"`
 }
 
 func (d *Data) Options(ctx echo.Context) error {

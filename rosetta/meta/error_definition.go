@@ -12,9 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package meta
 
-type StatusDefinition struct {
-	Status     string `json:"status"`
-	Successful bool   `json:"successful"`
+type ErrorDefinition struct {
+	Code      uint   `json:"code"`
+	Message   string `json:"message"`
+	Retriable bool   `json:"retriable"`
 }

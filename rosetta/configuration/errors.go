@@ -15,14 +15,14 @@
 package configuration
 
 import (
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
 var (
-	ErrorInternal           = object.ErrorDefinition{Code: 1, Message: "internal error", Retriable: false}
-	ErrorInvalidFormat      = object.ErrorDefinition{Code: 2, Message: "invalid request format", Retriable: false}
-	ErrorInvalidNetwork     = object.ErrorDefinition{Code: 3, Message: "invalid network identifier", Retriable: false}
-	ErrorInvalidBlock       = object.ErrorDefinition{Code: 4, Message: "invalid block identifier", Retriable: false}
-	ErrorInvalidAccount     = object.ErrorDefinition{Code: 5, Message: "invalid account identifier", Retriable: false}
-	ErrorInvalidTransaction = object.ErrorDefinition{Code: 6, Message: "invalid transaction identifier", Retriable: false}
+	ErrorInternal           = meta.ErrorDefinition{Code: 1, Message: "internal error", Retriable: false}
+	ErrorInvalidFormat      = meta.ErrorDefinition{Code: 2, Message: "invalid request format", Retriable: false}
+	ErrorInvalidNetwork     = meta.ErrorDefinition{Code: 3, Message: "invalid network identifier", Retriable: false}
+	ErrorInvalidBlock       = meta.ErrorDefinition{Code: 4, Message: "invalid block identifier", Retriable: false}
+	ErrorInvalidAccount     = meta.ErrorDefinition{Code: 5, Message: "invalid account identifier", Retriable: false}
+	ErrorInvalidTransaction = meta.ErrorDefinition{Code: 6, Message: "invalid transaction identifier", Retriable: false}
 )

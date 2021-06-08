@@ -16,13 +16,13 @@ package rosetta
 
 import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
 type Configuration interface {
 	Network() identifier.Network
-	Version() object.Version
+	Version() meta.Version
 	Operations() []string
-	Statuses() []object.StatusDefinition
-	Errors() []object.ErrorDefinition
+	Statuses() []meta.StatusDefinition
+	Errors() []meta.ErrorDefinition
 }

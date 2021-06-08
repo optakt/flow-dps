@@ -20,7 +20,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/resource"
+	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
 type TransactionRequest struct {
@@ -30,7 +30,7 @@ type TransactionRequest struct {
 }
 
 type TransactionResponse struct {
-	Transaction *resource.Transaction `json:"transaction"`
+	Transaction *rosetta.Transaction `json:"transaction"`
 }
 
 // TODO: integration testing of Rosetta transaction endpoint
