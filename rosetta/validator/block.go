@@ -35,11 +35,15 @@ func (v *Validator) Block(block *identifier.Block) error {
 		return fmt.Errorf("block access with hash currently not supported")
 	}
 
-	// We should always be able to parse this at this point, as we already
-	// checked the format, so normal error is fine.
-	blockID, err := flow.HexStringToIdentifier(block.Hash)
-	if err != nil {
-		return fmt.Errorf("could not parse block ID: %w", err)
+	// We should always be able to parse this at this point, if it is present,
+	// as we already checked the format, so normal error is fine.
+	var blockID flow.Identifier
+	var err error
+	if block.Hash != "" {
+		blockID, err = flow.HexStringToIdentifier(block.Hash)
+		if err != nil {
+			return fmt.Errorf("could not parse block ID: %w", err)
+		}
 	}
 
 	// The block index can't be below the first indexed height.
