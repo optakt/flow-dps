@@ -72,6 +72,11 @@ func (d *Data) Balance(ctx echo.Context) error {
 	if len(req.Currencies) == 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifiers empty"))
 	}
+	for _, currency := range req.Currencies {
+		if currency.Symbol == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifier symbol missing"))
+		}
+	}
 
 	err = d.config.Check(req.NetworkID)
 	var netErr failure.InvalidNetwork

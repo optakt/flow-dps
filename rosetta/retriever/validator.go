@@ -21,4 +21,5 @@ import (
 type Validator interface {
 	Block(block *identifier.Block) error
 	Account(address identifier.Account) error
+	Currency(currency *identifier.Currency) error
 }

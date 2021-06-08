@@ -99,6 +99,22 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
+	// Run validation on the account ID. This uses the chain ID to check the
+	// address validation.
+	err = r.validate.Account(account)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate account: %w", err)
+	}
+
+	// Run validation on the currencies. This checks basically if we know the
+	// currency and if it has the correct decimals set, if they are set.
+	for _, currency := range currencies {
+		err := r.validate.Currency(&currency)
+		if err != nil {
+			return nil, fmt.Errorf("could not validate currency: %w", err)
+		}
+	}
+
 	// get the cadence value that is the result of the script execution
 	amounts := make([]rosetta.Amount, 0, len(currencies))
 	address := cadence.NewAddress(flow.HexToAddress(account.Address))

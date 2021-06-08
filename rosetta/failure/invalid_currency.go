@@ -12,24 +12,18 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package validator
+package failure
 
 import (
-	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/models/index"
+	"fmt"
 )
 
-type Validator struct {
-	params dps.Params
-	index  index.Reader
+type InvalidCurrency struct {
+	Symbol   string
+	Decimals uint
+	Message  string
 }
 
-func New(params dps.Params, index index.Reader) *Validator {
-
-	v := &Validator{
-		params: params,
-		index:  index,
-	}
-
-	return v
+func (i InvalidCurrency) Error() string {
+	return fmt.Sprintf("invalid currency (symbol: %s, decimals: %d): %s", i.Symbol, i.Decimals, i.Message)
 }

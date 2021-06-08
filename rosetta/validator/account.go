@@ -15,21 +15,26 @@
 package validator
 
 import (
-	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/models/index"
+	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/rosetta/failure"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-type Validator struct {
-	params dps.Params
-	index  index.Reader
-}
+func (v *Validator) Account(account identifier.Account) error {
 
-func New(params dps.Params, index index.Reader) *Validator {
+	// Parse the address; this should always work as we already checked the
+	// length.
+	address := flow.HexToAddress(account.Address)
 
-	v := &Validator{
-		params: params,
-		index:  index,
+	// We use the Flow chain address generator to check if the converted address
+	// is valid.
+	ok := v.params.ChainID.Chain().IsValid(address)
+	if !ok {
+		return failure.InvalidAccount{
+			Address: address,
+			Message: "not a valid address for configured chain",
+		}
 	}
 
-	return v
+	return nil
 }

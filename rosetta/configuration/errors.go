@@ -23,7 +23,9 @@ var (
 	ErrorInvalidFormat      = meta.ErrorDefinition{Code: 2, Message: "invalid request format", Retriable: false}
 	ErrorInvalidNetwork     = meta.ErrorDefinition{Code: 3, Message: "invalid network identifier", Retriable: false}
 	ErrorInvalidBlock       = meta.ErrorDefinition{Code: 4, Message: "invalid block identifier", Retriable: false}
-	ErrorInvalidAccount     = meta.ErrorDefinition{Code: 5, Message: "invalid account identifier", Retriable: false}
 	ErrorInvalidTransaction = meta.ErrorDefinition{Code: 6, Message: "invalid transaction identifier", Retriable: false}
+	ErrorInvalidAccount     = meta.ErrorDefinition{Code: 5, Message: "invalid account identifier", Retriable: false}
+	ErrorInvalidCurrency    = meta.ErrorDefinition{Code: 6, Message: "invalid currency identifier", Retriable: false}
 	ErrorUnknownBlock       = meta.ErrorDefinition{Code: 7, Message: "unknown block identifier", Retriable: true}
+	ErrorUnknownCurrency    = meta.ErrorDefinition{Code: 8, Message: "unknown currency identifier", Retriable: false}
 )

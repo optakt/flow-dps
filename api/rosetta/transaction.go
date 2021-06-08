@@ -60,6 +60,13 @@ func (d *Data) Transaction(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier hash wrong length (have: %d, want: %d)", len(req.BlockID.Hash), len(flow.ZeroID)))
 	}
 
+	if req.TransactionID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier hash missing"))
+	}
+	if len(req.TransactionID.Hash) != len(flow.ZeroID) {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier hash wrong length (have: %d, want: %d)", len(req.TransactionID.Hash), len(flow.ZeroID)))
+	}
+
 	err = d.config.Check(req.NetworkID)
 	var netErr failure.InvalidNetwork
 	if errors.As(err, &netErr) {
