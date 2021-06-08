@@ -25,4 +25,5 @@ var (
 	ErrorInvalidBlock       = meta.ErrorDefinition{Code: 4, Message: "invalid block identifier", Retriable: false}
 	ErrorInvalidAccount     = meta.ErrorDefinition{Code: 5, Message: "invalid account identifier", Retriable: false}
 	ErrorInvalidTransaction = meta.ErrorDefinition{Code: 6, Message: "invalid transaction identifier", Retriable: false}
+	ErrorUnknownBlock       = meta.ErrorDefinition{Code: 7, Message: "unknown block identifier", Retriable: true}
 )

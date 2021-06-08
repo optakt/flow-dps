@@ -53,6 +53,9 @@ func (d *Data) Block(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier network missing"))
 	}
 
+	if req.BlockID.Index == 0 && req.BlockID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier at least one of hash or index"))
+	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != len(flow.ZeroID) {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier hash wrong length (have: %d, want: %d)", len(req.BlockID.Hash), len(flow.ZeroID)))
 	}

@@ -33,15 +33,17 @@ import (
 type Retriever struct {
 	params    dps.Params
 	index     index.Reader
+	validate  Validator
 	generator Generator
 	invoke    Invoker
 }
 
-func New(params dps.Params, index index.Reader, generator Generator, invoke Invoker) *Retriever {
+func New(params dps.Params, index index.Reader, validate Validator, generator Generator, invoke Invoker) *Retriever {
 
 	r := Retriever{
 		params:    params,
 		index:     index,
+		validate:  validate,
 		generator: generator,
 		invoke:    invoke,
 	}
@@ -91,6 +93,12 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 
 func (r *Retriever) Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error) {
 
+	// Run validation on the block ID. This also fills in missing information.
+	err := r.validate.Block(&block)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate block: %w", err)
+	}
+
 	// get the cadence value that is the result of the script execution
 	amounts := make([]rosetta.Amount, 0, len(currencies))
 	address := cadence.NewAddress(flow.HexToAddress(account.Address))
@@ -118,6 +126,12 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 }
 
 func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Transaction, error) {
+
+	// Run validation on the block ID. This also fills in missing information.
+	err := r.validate.Block(&id)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not validate block: %w", err)
+	}
 
 	// Retrieve the Flow token default withdrawal and deposit events.
 	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
@@ -256,6 +270,12 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	// that we can actually check transaction existence and return transactions,
 	// even if they don't move any funds:
 	// => https://github.com/optakt/flow-dps/issues/156
+
+	// Run validation on the block ID. This also fills in missing information.
+	err := r.validate.Block(&block)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate block: %w", err)
+	}
 
 	// Retrieve the Flow token default withdrawal and deposit events.
 	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)

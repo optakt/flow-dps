@@ -20,54 +20,26 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/models/index"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 type Validator struct {
 	params dps.Params
+	index  index.Reader
 }
 
-func New(params dps.Params) *Validator {
+func New(params dps.Params, index index.Reader) *Validator {
 
 	v := &Validator{
 		params: params,
+		index:  index,
 	}
 
 	return v
 }
 
-func (v *Validator) Network(network identifier.Network) error {
-
-	// Rosetta uses `Blockchain` to identify the blockchain type, as opposed to
-	// other blockchains such as Bitcoin or Ethereum. Flow, however, internally
-	// uses `ChainID` and `Chain` to describe different instances of Flow. We
-	// thus use the nomencloture of `flow` being the `Blockchain` and
-	// `flow-testnet` and `flow-mainnet` being the `Chains`.
-	// In other words, `Blockchain` is the same between Rosetta and Flow, but
-	// the Rosetta `Network` corresponds to a Flow `ChainID`.
-
-	if network.Blockchain != dps.FlowBlockchain {
-		return fmt.Errorf("invalid blockchain in network identifier (blockchain: %s, expected: %s)", network.Blockchain, dps.FlowBlockchain)
-	}
-
-	if flow.ChainID(network.Network) != v.params.ChainID {
-		return fmt.Errorf("invalid network in network identifier (network: %s, expected: %s)", network.Network, v.params.ChainID)
-	}
-
-	return nil
-}
-
-// TODO: implement validation for block; should distinguish between block we
-// don't know yet / haven't seen and blocks that are just mismatched
-// => https://github.com/optakt/flow-dps/issues/51
-func (v *Validator) Block(block identifier.Block) error {
-
-	return nil
-}
-
 func (v *Validator) Transaction(transaction identifier.Transaction) error {
-
-	// We parse the transaction hash explicitely to see if it has a valid format.
 	_, err := flow.HexStringToIdentifier(transaction.Hash)
 	if err != nil {
 		return fmt.Errorf("could not parse transaction identifier hash: %w", err)
