@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/klauspost/compress/zstd"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,6 +39,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
+	"github.com/optakt/flow-dps/service/dictionaries"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/testing/snapshots"
 )
@@ -54,8 +56,14 @@ func setupDB(t *testing.T) *badger.DB {
 	require.NoError(t, err)
 
 	reader := hex.NewDecoder(strings.NewReader(snapshots.Rosetta))
+	dict, _ := hex.DecodeString(dictionaries.Payload)
 
-	err = db.Load(reader, runtime.GOMAXPROCS(0))
+	decompressor, err := zstd.NewReader(reader,
+		zstd.WithDecoderDicts(dict),
+	)
+	require.NoError(t, err)
+
+	err = db.Load(decompressor, runtime.GOMAXPROCS(0))
 	require.NoError(t, err)
 
 	return db
@@ -89,11 +97,24 @@ func TestGetBalance(t *testing.T) {
 		wantBalance    string
 		wantHandlerErr assert.ErrorAssertionFunc
 	}{
-		// TODO: use a different 'valid balance request' - one that has an actual, non-zero balance
 		{
-			name:           "valid balance request",
-			request:        getBalanceRequest("8c5303eaa26202d6", 0, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
-			wantBalance:    "0",
+			name:           "valid balance request - first occurrence of the account",
+			request:        balanceRequest("754aed9de6197641", 13, "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"),
+			wantBalance:    "10000100000",
+			wantStatusCode: http.StatusOK,
+			wantHandlerErr: assert.NoError,
+		},
+		{
+			name:           "valid balance request - mid chain",
+			request:        balanceRequest("754aed9de6197641", 50, "d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df"),
+			wantBalance:    "10000099999",
+			wantStatusCode: http.StatusOK,
+			wantHandlerErr: assert.NoError,
+		},
+		{
+			name:           "valid balance request - last indexed block",
+			request:        balanceRequest("754aed9de6197641", 425, "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683"),
+			wantBalance:    "10000100002",
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
 		},
@@ -103,16 +124,32 @@ func TestGetBalance(t *testing.T) {
 			wantStatusCode: http.StatusUnprocessableEntity,
 			wantHandlerErr: assert.Error,
 		},
+		/*
+			TODO: when we re-add block validation, we should reintroduce this test case - block height and hash mismatch should result in an error
+				=> https://github.com/optakt/flow-dps/issues/51
+			{
+				name:           "invalid request - block hash and height mismatch",
+				request:        balanceRequest("754aed9de6197641", 50, "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683"),
+				wantStatusCode: http.StatusUnprocessableEntity,
+				wantHandlerErr: assert.Error,
+			},
+		*/
 		{
-			name:           "block hash and height mismatch",
-			request:        getBalanceRequest("8c5303eaa26202d6", 99, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
+			name:           "invalid account address",
+			request:        balanceRequest("invalid_address", 0, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
 			wantStatusCode: http.StatusUnprocessableEntity,
 			wantHandlerErr: assert.Error,
 		},
 		{
-			name:           "invalid account address",
-			request:        getBalanceRequest("invalid_address", 0, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
-			wantStatusCode: http.StatusUnprocessableEntity,
+			name:           "invalid balance request - account does not exist yet",
+			request:        balanceRequest("754aed9de6197641", 12, "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"),
+			wantStatusCode: http.StatusInternalServerError,
+			wantHandlerErr: assert.Error,
+		},
+		{
+			name:           "invalid balance request - unknown block",
+			request:        balanceRequest("754aed9de6197641", 426, "xyz"),
+			wantStatusCode: http.StatusInternalServerError,
 			wantHandlerErr: assert.Error,
 		},
 	}
@@ -203,11 +240,11 @@ func TestGetBalanceBadRequest(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 }
 
-// getBalanceRequest will generate a BalanceRequest with the specified parameters.
-func getBalanceRequest(address string, blockIndex uint64, blockHash string) rosetta.BalanceRequest {
+// balanceRequest generates a BalanceRequest with the specified parameters.
+func balanceRequest(address string, blockIndex uint64, blockHash string) rosetta.BalanceRequest {
 
 	return rosetta.BalanceRequest{
-		NetworkID: getDefaultNetworkID(),
+		NetworkID: defaultNetworkID(),
 		AccountID: identifier.Account{
 			Address: address,
 		},
@@ -215,21 +252,21 @@ func getBalanceRequest(address string, blockIndex uint64, blockHash string) rose
 			Index: blockIndex,
 			Hash:  blockHash,
 		},
-		Currencies: getDefaultCurrencySpec(),
+		Currencies: defaultCurrencySpec(),
 	}
 }
 
-// getDefaultNetworkID returns the Network identifier common for all requests.
-func getDefaultNetworkID() identifier.Network {
+// defaultNetworkID returns the Network identifier common for all requests.
+func defaultNetworkID() identifier.Network {
 	return identifier.Network{
 		Blockchain: dps.FlowBlockchain,
 		Network:    dps.FlowTestnet.String(),
 	}
 }
 
-// getDefaultCurrencySpec returns the Currency spec common for all requests.
+// defaultCurrencySpec returns the Currency spec common for all requests.
 // At the moment only get the FLOW tokens, perhaps in the future it will support multiple.
-func getDefaultCurrencySpec() []identifier.Currency {
+func defaultCurrencySpec() []identifier.Currency {
 	return []identifier.Currency{
 		{
 			Symbol:   dps.FlowSymbol,
