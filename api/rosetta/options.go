@@ -68,9 +68,10 @@ func (d *Data) Options(ctx echo.Context) error {
 
 	// Create the allow object, which is native to the response.
 	allow := Allow{
-		OperationStatuses: d.config.Statuses(),
-		OperationTypes:    d.config.Operations(),
-		Errors:            d.config.Errors(),
+		OperationStatuses:       d.config.Statuses(),
+		OperationTypes:          d.config.Operations(),
+		Errors:                  d.config.Errors(),
+		HistoricalBalanceLookup: true,
 	}
 
 	res := OptionsResponse{
