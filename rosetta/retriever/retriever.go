@@ -178,7 +178,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 	}
 
 	// Next, we get all the events for the block to extract deposit and withdrawal events.
-	events, err := r.index.Events(id.Index)
+	events, err := r.index.Events(id.Index, flow.EventType(deposit), flow.EventType(withdrawal))
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get events: %w", err)
 	}
@@ -188,14 +188,6 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 	buckets := make(map[flow.Identifier][]object.Operation)
 	for _, event := range events {
 
-		// This switch just skips all events except the ones we are explicitly interested in.
-		switch event.Type {
-		default:
-			continue
-		case flow.EventType(deposit):
-		case flow.EventType(withdrawal):
-		}
-
 		// Decode the event payload into a Cadence value and cast to Cadence event.
 		value, err := json.Decode(event.Payload)
 		if err != nil {
@@ -204,6 +196,11 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 		e, ok := value.(cadence.Event)
 		if !ok {
 			return nil, nil, fmt.Errorf("could not cast event: %w", err)
+		}
+
+		// Check we have the necessary amount of fields.
+		if len(e.Fields) != 2 {
+			return nil, nil, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
 		}
 
 		// Now we have access to the fields for the events; the first one is always
@@ -287,16 +284,115 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 		Transactions: transactions,
 	}
 
-	// TODO: When a block contains to many transactions / operations, we should
-	// limit the returned block size and return a list of transaction IDs in
-	// the second field.
+	// TODO: When a block contains too many transactions, we should limit the
+	// size of the returned transaction slice and provide a list of extra
+	// transactions IDs in the second return value instead:
 	// => https://github.com/optakt/flow-dps/issues/149
 
 	return &block, nil, nil
 }
 
-func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (*object.Transaction, error) {
-	// TODO: implement Rosetta transaction retrieval
-	// => https://github.com/optakt/flow-dps/issues/44
-	return nil, fmt.Errorf("not implemented")
+func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, id identifier.Transaction) (*object.Transaction, error) {
+
+	// TODO: We should start indexing all of the transactions for each block, so
+	// that we can actually check transaction existence and return transactions,
+	// even if they don't move any funds:
+	// => https://github.com/optakt/flow-dps/issues/156
+
+	// Retrieve the Flow token default withdrawal and deposit events.
+	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate deposit event type: %w", err)
+	}
+	withdrawal, err := r.generator.TokensWithdrawn(dps.FlowSymbol)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
+	}
+
+	// Retrieve the deposit and withdrawal events for the block (yes, all of them).
+	events, err := r.index.Events(block.Index, flow.EventType(deposit), flow.EventType(withdrawal))
+	if err != nil {
+		return nil, fmt.Errorf("could not get events: %w", err)
+	}
+
+	// Go through the events, but only look at the ones with the given transaction ID.
+	transaction := object.Transaction{
+		ID:         id,
+		Operations: []object.Operation{},
+	}
+	for _, event := range events {
+
+		// Decode the event payload into a Cadence value and cast to Cadence event.
+		value, err := json.Decode(event.Payload)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode event: %w", err)
+		}
+		e, ok := value.(cadence.Event)
+		if !ok {
+			return nil, fmt.Errorf("could not cast event: %w", err)
+		}
+
+		// Check we have the necessary amount of fields.
+		if len(e.Fields) != 2 {
+			return nil, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
+		}
+
+		// Now we have access to the fields for the events; the first one is always
+		// the amount, the second one the address. The types coming from Cadence
+		// are not native Flow types, so we need to use primitive types first.
+		vAmount := e.Fields[0].ToGoValue()
+		uAmount, ok := vAmount.(uint64)
+		if !ok {
+			return nil, fmt.Errorf("could not cast amount (%T)", vAmount)
+		}
+		vAddress := e.Fields[1].ToGoValue()
+		bAddress, ok := vAddress.([flow.AddressLength]byte)
+		if !ok {
+			return nil, fmt.Errorf("could not cast address (%T)", vAddress)
+		}
+
+		// Then, we can convert the amount to a signed integer so we can invert
+		// it and the address to a native Flow address.
+		amount := int64(uAmount)
+		address := flow.Address(bAddress)
+
+		// For the witdrawal event, we invert the amount into a negative number.
+		if event.Type == flow.EventType(withdrawal) {
+			amount = -amount
+		}
+
+		// Now we have everything to assemble the respective operation.
+		op := object.Operation{
+			ID: identifier.Operation{
+				Index: uint(event.EventIndex),
+			},
+			RelatedIDs: nil,
+			Type:       "TRANSFER",
+			Status:     "COMPLETED",
+			AccountID: identifier.Account{
+				Address: address.String(),
+			},
+			Amount: object.Amount{
+				Value: strconv.FormatInt(amount, 10),
+				Currency: identifier.Currency{
+					Symbol:   dps.FlowSymbol,
+					Decimals: dps.FlowDecimals,
+				},
+			},
+		}
+
+		// Add the operation to the transaction.
+		transaction.Operations = append(transaction.Operations, op)
+	}
+
+	// Assign the related operation IDs.
+	for _, op := range transaction.Operations {
+		for index := range transaction.Operations {
+			if transaction.Operations[index].ID != op.ID {
+				transaction.Operations[index].RelatedIDs = append(transaction.Operations[index].RelatedIDs, op.ID)
+			}
+		}
+	}
+
+	return &transaction, nil
 }

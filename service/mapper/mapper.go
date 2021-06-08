@@ -407,6 +407,15 @@ Outer:
 			return fmt.Errorf("could not index events: %w", err)
 		}
 
+		// TODO: In order to provide more complete responses for the Rosetta API
+		// and to be able to implement all Access API endpoints, we need
+		// transaction data in our index:
+		// https://github.com/optakt/flow-dps/issues/156
+
+		// TODO: In order to be able to implement Access API endpoints that use
+		// block IDs, we need to start indexing block IDs at each height:
+		// https://github.com/optakt/flow-dps/issues/157
+
 		// In order to index the payloads, we step back from the state
 		// commitment of the finalized block at the current height to the state
 		// commitment of the last finalized block that was indexed. For each
