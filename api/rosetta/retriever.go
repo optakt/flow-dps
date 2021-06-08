@@ -26,5 +26,5 @@ type Retriever interface {
 	Current() (identifier.Block, time.Time, error)
 	Block(block identifier.Block) (*rosetta.Block, []identifier.Transaction, error)
 	Transaction(block identifier.Block, transaction identifier.Transaction) (*rosetta.Transaction, error)
-	Balances(block *identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error)
+	Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) (identifier.Block, []rosetta.Amount, error)
 }

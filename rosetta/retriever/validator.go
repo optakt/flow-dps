@@ -20,7 +20,7 @@ import (
 
 type Validator interface {
 	Account(address identifier.Account) error
-	Block(block *identifier.Block) error
+	Block(block identifier.Block) (identifier.Block, error)
 	Transaction(transaction identifier.Transaction) error
-	Currency(currency *identifier.Currency) error
+	Currency(currency identifier.Currency) (identifier.Currency, error)
 }

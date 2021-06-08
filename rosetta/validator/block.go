@@ -27,12 +27,12 @@ import (
 // of itself. For now, we will always need a height.
 // NOTE: We always pass a block identifier that in principle at least could be
 // valid, so we will have at least a height or a hash.
-func (v *Validator) Block(block *identifier.Block) error {
+func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 
 	// We currently only support retrieval by height, until we start indexing
 	// the block IDs as part of the DPS index.
 	if block.Index == 0 {
-		return fmt.Errorf("block access with hash currently not supported")
+		return identifier.Block{}, fmt.Errorf("block access with hash currently not supported")
 	}
 
 	// We should always be able to parse this at this point, if it is present,
@@ -42,17 +42,17 @@ func (v *Validator) Block(block *identifier.Block) error {
 	if block.Hash != "" {
 		blockID, err = flow.HexStringToIdentifier(block.Hash)
 		if err != nil {
-			return fmt.Errorf("could not parse block ID: %w", err)
+			return identifier.Block{}, fmt.Errorf("could not parse block ID: %w", err)
 		}
 	}
 
 	// The block index can't be below the first indexed height.
 	first, err := v.index.First()
 	if err != nil {
-		return fmt.Errorf("could not get first: %w", err)
+		return identifier.Block{}, fmt.Errorf("could not get first: %w", err)
 	}
 	if block.Index < first {
-		return failure.InvalidBlock{
+		return identifier.Block{}, failure.InvalidBlock{
 			Height:  block.Index,
 			BlockID: blockID,
 			Message: fmt.Sprintf("block height below first indexed block (first: %d)", first),
@@ -62,10 +62,10 @@ func (v *Validator) Block(block *identifier.Block) error {
 	// The block index can't be above the last indexed height.
 	last, err := v.index.Last()
 	if err != nil {
-		return fmt.Errorf("could not get last: %w", err)
+		return identifier.Block{}, fmt.Errorf("could not get last: %w", err)
 	}
 	if block.Index > last {
-		return failure.UnknownBlock{
+		return identifier.Block{}, failure.UnknownBlock{
 			Height:  block.Index,
 			BlockID: blockID,
 			Message: fmt.Sprintf("block height above last indexed block (last: %d)", last),
@@ -75,10 +75,10 @@ func (v *Validator) Block(block *identifier.Block) error {
 	// The given block ID should match the block ID at the given height.
 	header, err := v.index.Header(block.Index)
 	if err != nil {
-		return fmt.Errorf("could not get header: %w", err)
+		return identifier.Block{}, fmt.Errorf("could not get header: %w", err)
 	}
 	if block.Hash != "" && block.Hash != header.ID().String() {
-		return failure.InvalidBlock{
+		return identifier.Block{}, failure.InvalidBlock{
 			Height:  block.Index,
 			BlockID: blockID,
 			Message: fmt.Sprintf("provided hash does not match real hash for height (real: %s)", header.ID().String()),
@@ -89,5 +89,5 @@ func (v *Validator) Block(block *identifier.Block) error {
 	// should insert it.
 	block.Hash = header.ID().String()
 
-	return nil
+	return block, nil
 }
