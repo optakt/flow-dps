@@ -15,10 +15,13 @@
 package rosetta
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
@@ -42,10 +45,41 @@ func (d *Data) Balance(ctx echo.Context) error {
 	var req BalanceRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
 	}
 
-	balances, err := d.retrieve.Balances(req.NetworkID, req.BlockID, req.AccountID, req.Currencies)
+	if req.NetworkID.Blockchain == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier blockchain missing"))
+	}
+	if req.NetworkID.Network == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier network missing"))
+	}
+
+	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != len(flow.ZeroID) {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier hash wrong length (have: %d, want: %d)", len(req.BlockID.Hash), len(flow.ZeroID)))
+	}
+
+	if req.AccountID.Address == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier address missing"))
+	}
+	if len(req.AccountID.Address) != flow.AddressLength {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier address wrong length (have: %d, want: %d)", len(req.AccountID.Address), flow.AddressLength))
+	}
+
+	if len(req.Currencies) == 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifiers empty"))
+	}
+
+	err = d.config.Check(req.NetworkID)
+	var netErr failure.InvalidNetwork
+	if errors.As(err, &netErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+	}
+
+	balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}

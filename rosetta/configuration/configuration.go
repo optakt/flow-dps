@@ -15,9 +15,12 @@
 package configuration
 
 import (
+	"fmt"
+
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
@@ -91,4 +94,22 @@ func (c *Configuration) Operations() []string {
 
 func (c *Configuration) Errors() []meta.ErrorDefinition {
 	return c.errors
+}
+
+func (c *Configuration) Check(network identifier.Network) error {
+	if network.Blockchain != c.network.Blockchain {
+		return failure.InvalidNetwork{
+			Blockchain: network.Blockchain,
+			Network:    network.Network,
+			Message:    fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", network.Blockchain, c.network.Blockchain),
+		}
+	}
+	if network.Network != c.network.Network {
+		return failure.InvalidNetwork{
+			Blockchain: network.Blockchain,
+			Network:    network.Network,
+			Message:    fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", network.Network, c.network.Network),
+		}
+	}
+	return nil
 }

@@ -25,4 +25,5 @@ type Configuration interface {
 	Operations() []string
 	Statuses() []meta.StatusDefinition
 	Errors() []meta.ErrorDefinition
+	Check(network identifier.Network) error
 }

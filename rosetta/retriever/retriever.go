@@ -89,7 +89,7 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 	return block, header.Timestamp, nil
 }
 
-func (r *Retriever) Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error) {
+func (r *Retriever) Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error) {
 
 	// get the cadence value that is the result of the script execution
 	amounts := make([]rosetta.Amount, 0, len(currencies))
@@ -117,7 +117,7 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 	return amounts, nil
 }
 
-func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*rosetta.Block, []identifier.Transaction, error) {
+func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Transaction, error) {
 
 	// Retrieve the Flow token default withdrawal and deposit events.
 	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
@@ -250,7 +250,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*ros
 	return &block, nil, nil
 }
 
-func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, id identifier.Transaction) (*rosetta.Transaction, error) {
+func (r *Retriever) Transaction(block identifier.Block, id identifier.Transaction) (*rosetta.Transaction, error) {
 
 	// TODO: We should start indexing all of the transactions for each block, so
 	// that we can actually check transaction existence and return transactions,

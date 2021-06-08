@@ -15,6 +15,8 @@
 package rosetta
 
 import (
+	"fmt"
+
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/meta"
@@ -34,10 +36,10 @@ func Internal(err error) Error {
 	}
 }
 
-func InvalidFormat(err error) Error {
+func InvalidFormat(message string, args ...interface{}) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorInvalidFormat,
-		Description:     err.Error(),
+		Description:     fmt.Sprintf(message, args...),
 		Details:         map[string]interface{}{},
 	}
 }
