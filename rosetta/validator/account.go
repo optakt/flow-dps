@@ -12,18 +12,29 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package validator
 
 import (
+	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
-type Configuration interface {
-	Network() identifier.Network
-	Version() meta.Version
-	Operations() []string
-	Statuses() []meta.StatusDefinition
-	Errors() []meta.ErrorDefinition
-	Check(network identifier.Network) error
+func (v *Validator) Account(account identifier.Account) error {
+
+	// Parse the address; this should always work as we already checked the
+	// length.
+	address := flow.HexToAddress(account.Address)
+
+	// We use the Flow chain address generator to check if the converted address
+	// is valid.
+	ok := v.params.ChainID.Chain().IsValid(address)
+	if !ok {
+		return failure.InvalidAccount{
+			Address: address,
+			Message: "not a valid address for configured chain",
+		}
+	}
+
+	return nil
 }

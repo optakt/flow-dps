@@ -12,8 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package identifier
+package validator
 
-type Peer struct {
-	ID string `json:"peer_id"`
+import (
+	"fmt"
+
+	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/rosetta/identifier"
+)
+
+func (v *Validator) Transaction(transaction identifier.Transaction) error {
+
+	_, err := flow.HexStringToIdentifier(transaction.Hash)
+	if err != nil {
+		return fmt.Errorf("could not parse transaction ID: %w", err)
+	}
+
+	return nil
 }

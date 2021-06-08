@@ -33,15 +33,17 @@ import (
 type Retriever struct {
 	params    dps.Params
 	index     index.Reader
+	validate  Validator
 	generator Generator
 	invoke    Invoker
 }
 
-func New(params dps.Params, index index.Reader, generator Generator, invoke Invoker) *Retriever {
+func New(params dps.Params, index index.Reader, validate Validator, generator Generator, invoke Invoker) *Retriever {
 
 	r := Retriever{
 		params:    params,
 		index:     index,
+		validate:  validate,
 		generator: generator,
 		invoke:    invoke,
 	}
@@ -89,7 +91,29 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 	return block, header.Timestamp, nil
 }
 
-func (r *Retriever) Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error) {
+func (r *Retriever) Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]rosetta.Amount, error) {
+
+	// Run validation on the block ID. This also fills in missing information.
+	err := r.validate.Block(&block)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate block: %w", err)
+	}
+
+	// Run validation on the account ID. This uses the chain ID to check the
+	// address validation.
+	err = r.validate.Account(account)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate account: %w", err)
+	}
+
+	// Run validation on the currencies. This checks basically if we know the
+	// currency and if it has the correct decimals set, if they are set.
+	for _, currency := range currencies {
+		err := r.validate.Currency(&currency)
+		if err != nil {
+			return nil, fmt.Errorf("could not validate currency: %w", err)
+		}
+	}
 
 	// get the cadence value that is the result of the script execution
 	amounts := make([]rosetta.Amount, 0, len(currencies))
@@ -117,7 +141,13 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 	return amounts, nil
 }
 
-func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*rosetta.Block, []identifier.Transaction, error) {
+func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Transaction, error) {
+
+	// Run validation on the block ID. This also fills in missing information.
+	err := r.validate.Block(&id)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not validate block: %w", err)
+	}
 
 	// Retrieve the Flow token default withdrawal and deposit events.
 	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
@@ -250,12 +280,25 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*ros
 	return &block, nil, nil
 }
 
-func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, id identifier.Transaction) (*rosetta.Transaction, error) {
+func (r *Retriever) Transaction(block identifier.Block, id identifier.Transaction) (*rosetta.Transaction, error) {
 
 	// TODO: We should start indexing all of the transactions for each block, so
 	// that we can actually check transaction existence and return transactions,
 	// even if they don't move any funds:
 	// => https://github.com/optakt/flow-dps/issues/156
+
+	// Run validation on the block ID. This also fills in missing information.
+	err := r.validate.Block(&block)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate block: %w", err)
+	}
+
+	// Run validation on the transaction ID. This should never fail, as we
+	// already check the length, but let's run it anyway.
+	err = r.validate.Transaction(id)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate transaction: %w", err)
+	}
 
 	// Retrieve the Flow token default withdrawal and deposit events.
 	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)

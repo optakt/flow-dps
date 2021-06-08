@@ -15,6 +15,8 @@
 package rosetta
 
 import (
+	"fmt"
+
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/meta"
@@ -34,10 +36,10 @@ func Internal(err error) Error {
 	}
 }
 
-func InvalidFormat(err error) Error {
+func InvalidFormat(message string, args ...interface{}) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorInvalidFormat,
-		Description:     err.Error(),
+		Description:     fmt.Sprintf(message, args...),
 		Details:         map[string]interface{}{},
 	}
 }
@@ -74,12 +76,35 @@ func InvalidAccount(fail failure.InvalidAccount) Error {
 	}
 }
 
-func InvalidTransaction(fail failure.InvalidTransaction) Error {
+func InvalidCurrency(fail failure.InvalidCurrency) Error {
 	return Error{
-		ErrorDefinition: configuration.ErrorInvalidTransaction,
+		ErrorDefinition: configuration.ErrorInvalidCurrency,
 		Description:     fail.Message,
 		Details: map[string]interface{}{
-			"transaction": fail.TransactionID.String(),
+			"symbol":   fail.Symbol,
+			"decimals": fail.Decimals,
+		},
+	}
+}
+
+func UnknownBlock(fail failure.UnknownBlock) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorUnknownBlock,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"height": fail.Height,
+			"block":  fail.BlockID.String(),
+		},
+	}
+}
+
+func UnknownCurrency(fail failure.UnknownCurrency) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorUnknownCurrency,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"symbol":   fail.Symbol,
+			"decimals": fail.Decimals,
 		},
 	}
 }

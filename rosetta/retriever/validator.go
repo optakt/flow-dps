@@ -12,11 +12,15 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package identifier
+package retriever
 
-// Block uniquely identifies a block in a particular network. As the view is not
-// unique between sporks, index refers to the block height.
-type Block struct {
-	Index uint64 `json:"index,omitempty"`
-	Hash  string `json:"hash,omitempty"`
+import (
+	"github.com/optakt/flow-dps/rosetta/identifier"
+)
+
+type Validator interface {
+	Account(address identifier.Account) error
+	Block(block *identifier.Block) error
+	Transaction(transaction identifier.Transaction) error
+	Currency(currency *identifier.Currency) error
 }

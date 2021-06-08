@@ -16,15 +16,14 @@ package failure
 
 import (
 	"fmt"
-
-	"github.com/onflow/flow-go/model/flow"
 )
 
-type InvalidTransaction struct {
-	TransactionID flow.Identifier
-	Message       string
+type InvalidCurrency struct {
+	Symbol   string
+	Decimals uint
+	Message  string
 }
 
-func (i InvalidTransaction) Error() string {
-	return fmt.Sprintf("invalid transaction (transaction: %x): %s", i.TransactionID, i.Message)
+func (i InvalidCurrency) Error() string {
+	return fmt.Sprintf("invalid currency (symbol: %s, decimals: %d): %s", i.Symbol, i.Decimals, i.Message)
 }

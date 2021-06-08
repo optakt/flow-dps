@@ -12,11 +12,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package identifier
+package failure
 
-// Block uniquely identifies a block in a particular network. As the view is not
-// unique between sporks, index refers to the block height.
-type Block struct {
-	Index uint64 `json:"index,omitempty"`
-	Hash  string `json:"hash,omitempty"`
+import (
+	"fmt"
+
+	"github.com/onflow/flow-go/model/flow"
+)
+
+type UnknownBlock struct {
+	Height  uint64
+	BlockID flow.Identifier
+	Message string
+}
+
+func (u UnknownBlock) Error() string {
+	return fmt.Sprintf("unknown block (height: %d, block: %x): %s", u.Height, u.BlockID, u.Message)
 }

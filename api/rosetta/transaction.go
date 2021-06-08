@@ -15,10 +15,13 @@
 package rosetta
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
@@ -40,10 +43,50 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	var req TransactionRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
 	}
 
-	transaction, err := d.retrieve.Transaction(req.NetworkID, req.BlockID, req.TransactionID)
+	if req.NetworkID.Blockchain == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier blockchain missing"))
+	}
+	if req.NetworkID.Network == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier network missing"))
+	}
+
+	if req.BlockID.Index == 0 && req.BlockID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier at least one of hash or index"))
+	}
+	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != len(flow.ZeroID) {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier hash wrong length (have: %d, want: %d)", len(req.BlockID.Hash), len(flow.ZeroID)))
+	}
+
+	if req.TransactionID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier hash missing"))
+	}
+	if len(req.TransactionID.Hash) != len(flow.ZeroID) {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier hash wrong length (have: %d, want: %d)", len(req.TransactionID.Hash), len(flow.ZeroID)))
+	}
+
+	err = d.config.Check(req.NetworkID)
+	var netErr failure.InvalidNetwork
+	if errors.As(err, &netErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+	}
+
+	transaction, err := d.retrieve.Transaction(req.BlockID, req.TransactionID)
+
+	var ibErr failure.InvalidBlock
+	if errors.As(err, &ibErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidBlock(ibErr))
+	}
+	var ubErr failure.UnknownBlock
+	if errors.As(err, &ubErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownBlock(ubErr))
+	}
+
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}

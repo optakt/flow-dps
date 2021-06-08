@@ -35,7 +35,7 @@ func (d *Data) Networks(ctx echo.Context) error {
 	var req NetworksRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
 	}
 
 	// Get the network we are running on from the configuration.

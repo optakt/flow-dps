@@ -38,6 +38,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
+	"github.com/optakt/flow-dps/rosetta/validator"
 )
 
 const (
@@ -99,9 +100,10 @@ func run() int {
 	client := api.NewAPIClient(conn)
 	index := api.IndexFromAPI(client)
 	config := configuration.New(params.ChainID)
-	generator := scripts.NewGenerator(params)
+	validate := validator.New(params, index)
+	generate := scripts.NewGenerator(params)
 	invoke := invoker.New(index)
-	retrieve := retriever.New(params, index, generator, invoke)
+	retrieve := retriever.New(params, index, validate, generate, invoke)
 	ctrl := rosetta.NewData(config, retrieve)
 
 	// TODO: Implement custom echo logger middleware that wraps around our own
@@ -117,7 +119,7 @@ func run() int {
 	server.POST("/network/status", ctrl.Status)
 	server.POST("/account/balance", ctrl.Balance)
 	server.POST("/block", ctrl.Block)
-	// server.POST("/block/transaction", ctrl.Transaction)
+	server.POST("/block/transaction", ctrl.Transaction)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
