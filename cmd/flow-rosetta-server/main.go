@@ -34,10 +34,10 @@ import (
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
-	"github.com/optakt/flow-dps/rosetta/validator"
 )
 
 const (
@@ -98,11 +98,11 @@ func run() int {
 	// Rosetta API initialization.
 	client := api.NewAPIClient(conn)
 	index := api.IndexFromAPI(client)
+	config := configuration.New(params.ChainID)
 	generator := scripts.NewGenerator(params)
 	invoke := invoker.New(index)
-	validate := validator.New(params)
 	retrieve := retriever.New(params, index, generator, invoke)
-	ctrl := rosetta.NewData(validate, retrieve)
+	ctrl := rosetta.NewData(config, retrieve)
 
 	// TODO: Implement custom echo logger middleware that wraps around our own
 	// zerolog instance:

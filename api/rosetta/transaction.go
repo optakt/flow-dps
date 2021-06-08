@@ -21,6 +21,7 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/resource"
 )
 
 type TransactionRequest struct {
@@ -30,7 +31,7 @@ type TransactionRequest struct {
 }
 
 type TransactionResponse struct {
-	Transaction *object.Transaction `json:"transaction"`
+	Transaction *resource.Transaction `json:"transaction"`
 }
 
 // TODO: integration testing of Rosetta transaction endpoint
@@ -41,19 +42,6 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	err := ctx.Bind(&req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
-	}
-
-	err = d.validate.Network(req.NetworkID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-	}
-	err = d.validate.Block(req.BlockID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-	}
-	err = d.validate.Transaction(req.TransactionID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
 	}
 
 	transaction, err := d.retrieve.Transaction(req.NetworkID, req.BlockID, req.TransactionID)

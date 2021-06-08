@@ -39,14 +39,9 @@ func (d *Data) Networks(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
 	}
 
-	// For now, we simply return a single network, which is the main chain of
-	// the Flow blockchain network.
-	network, err := d.retrieve.Network()
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
+	// Get the network we are running on from the configuration.
 	res := NetworksResponse{
-		NetworkIDs: []identifier.Network{network},
+		NetworkIDs: []identifier.Network{d.config.Network()},
 	}
 
 	return ctx.JSON(http.StatusOK, res)

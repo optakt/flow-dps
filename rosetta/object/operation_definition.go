@@ -14,16 +14,7 @@
 
 package object
 
-import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
-)
-
-// Transaction contains an array of operations that are attributable to the same
-// transaction identifier.
-//
-// Examples of metadata given in the Rosetta API documentation are "size" and
-// "lockTime".
-type Transaction struct {
-	ID         identifier.Transaction `json:"transaction_identifier"`
-	Operations []Operation            `json:"operations"`
+type StatusDefinition struct {
+	Status     string `json:"status"`
+	Successful bool   `json:"successful"`
 }

@@ -12,20 +12,18 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package resource
 
 import (
-	"time"
-
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
-	"github.com/optakt/flow-dps/rosetta/resource"
 )
 
-type Retriever interface {
-	Oldest() (identifier.Block, time.Time, error)
-	Current() (identifier.Block, time.Time, error)
-	Block(network identifier.Network, block identifier.Block) (*resource.Block, []identifier.Transaction, error)
-	Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (*resource.Transaction, error)
-	Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]object.Amount, error)
+// Transaction contains an array of operations that are attributable to the same
+// transaction identifier.
+//
+// Examples of metadata given in the Rosetta API documentation are "size" and
+// "lockTime".
+type Transaction struct {
+	ID         identifier.Transaction `json:"transaction_identifier"`
+	Operations []*Operation           `json:"operations"`
 }

@@ -45,25 +45,6 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
 	}
 
-	err = d.validate.Network(req.NetworkID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-	}
-	err = d.validate.Block(req.BlockID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-	}
-	err = d.validate.Account(req.AccountID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-	}
-	for _, currency := range req.Currencies {
-		err = d.validate.Currency(currency)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-		}
-	}
-
 	balances, err := d.retrieve.Balances(req.NetworkID, req.BlockID, req.AccountID, req.Currencies)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))

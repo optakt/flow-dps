@@ -27,6 +27,7 @@ import (
 	"github.com/optakt/flow-dps/models/index"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/resource"
 )
 
 type Retriever struct {
@@ -71,24 +72,6 @@ func (r *Retriever) Version() (object.Version, error) {
 	}
 
 	return version, nil
-}
-
-func (r *Retriever) Allow() (object.Allow, error) {
-
-	allow := object.Allow{
-		OperationStatuses: []object.OperationStatus{
-			{Status: dps.StatusCompleted, Successful: true},
-		},
-		OperationTypes: []string{
-			dps.OperationTransfer,
-		},
-		Errors: []object.Error{
-			object.AnyError(fmt.Errorf("dummy error")),
-		},
-		HistoricalBalanceLookup: true,
-	}
-
-	return allow, nil
 }
 
 func (r *Retriever) Oldest() (identifier.Block, time.Time, error) {
@@ -159,7 +142,7 @@ func (r *Retriever) Balances(network identifier.Network, block identifier.Block,
 	return amounts, nil
 }
 
-func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*object.Block, []identifier.Transaction, error) {
+func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*resource.Block, []identifier.Transaction, error) {
 
 	// Retrieve the Flow token default withdrawal and deposit events.
 	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
@@ -185,7 +168,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 
 	// Next, we step through all the transactions and accumulate events by transaction ID.
 	// NOTE: We consider transactions that don't generate any fund movements as irrelevant for now.
-	buckets := make(map[flow.Identifier][]object.Operation)
+	buckets := make(map[flow.Identifier][]*resource.Operation)
 	for _, event := range events {
 
 		// Decode the event payload into a Cadence value and cast to Cadence event.
@@ -228,7 +211,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 		}
 
 		// Now we have everything to assemble the respective operation.
-		op := object.Operation{
+		op := resource.Operation{
 			ID: identifier.Operation{
 				Index: uint(event.EventIndex),
 			},
@@ -248,13 +231,13 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 		}
 
 		// We store all operations for a transaction together in a bucket.
-		buckets[event.TransactionID] = append(buckets[event.TransactionID], op)
+		buckets[event.TransactionID] = append(buckets[event.TransactionID], &op)
 	}
 
 	// Finally, we batch all of the operations together into the transactions.
-	var transactions []*object.Transaction
+	var transactions []*resource.Transaction
 	for transactionID, operations := range buckets {
-		transaction := object.Transaction{
+		transaction := resource.Transaction{
 			ID: identifier.Transaction{
 				Hash: transactionID.String(),
 			},
@@ -271,7 +254,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 	}
 
 	// Now we just need to build the block.
-	block := object.Block{
+	block := resource.Block{
 		ID: identifier.Block{
 			Index: header.Height,
 			Hash:  header.ID().String(),
@@ -292,7 +275,7 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 	return &block, nil, nil
 }
 
-func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, id identifier.Transaction) (*object.Transaction, error) {
+func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, id identifier.Transaction) (*resource.Transaction, error) {
 
 	// TODO: We should start indexing all of the transactions for each block, so
 	// that we can actually check transaction existence and return transactions,
@@ -316,9 +299,9 @@ func (r *Retriever) Transaction(network identifier.Network, block identifier.Blo
 	}
 
 	// Go through the events, but only look at the ones with the given transaction ID.
-	transaction := object.Transaction{
+	transaction := resource.Transaction{
 		ID:         id,
-		Operations: []object.Operation{},
+		Operations: []*resource.Operation{},
 	}
 	for _, event := range events {
 
@@ -362,7 +345,7 @@ func (r *Retriever) Transaction(network identifier.Network, block identifier.Blo
 		}
 
 		// Now we have everything to assemble the respective operation.
-		op := object.Operation{
+		op := resource.Operation{
 			ID: identifier.Operation{
 				Index: uint(event.EventIndex),
 			},
@@ -382,7 +365,7 @@ func (r *Retriever) Transaction(network identifier.Network, block identifier.Blo
 		}
 
 		// Add the operation to the transaction.
-		transaction.Operations = append(transaction.Operations, op)
+		transaction.Operations = append(transaction.Operations, &op)
 	}
 
 	// Assign the related operation IDs.

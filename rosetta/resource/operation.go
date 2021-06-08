@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package resource
 
 import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -36,5 +36,5 @@ type Operation struct {
 	Type       string                 `json:"type"`
 	Status     string                 `json:"status"`
 	AccountID  identifier.Account     `json:"account"`
-	Amount     Amount                 `json:"amount"`
+	Amount     object.Amount          `json:"amount"`
 }

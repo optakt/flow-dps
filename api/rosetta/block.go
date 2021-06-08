@@ -21,6 +21,7 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/resource"
 )
 
 type BlockRequest struct {
@@ -29,7 +30,7 @@ type BlockRequest struct {
 }
 
 type BlockResponse struct {
-	Block             *object.Block            `json:"block"`
+	Block             *resource.Block          `json:"block"`
 	OtherTransactions []identifier.Transaction `json:"other_transactions"`
 }
 
@@ -43,23 +44,14 @@ func (d *Data) Block(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
 	}
 
-	err = d.validate.Network(req.NetworkID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-	}
-	err = d.validate.Block(req.BlockID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
-	}
-
-	block, transactions, err := d.retrieve.Block(req.NetworkID, req.BlockID)
+	block, other, err := d.retrieve.Block(req.NetworkID, req.BlockID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
 	}
 
 	res := BlockResponse{
 		Block:             block,
-		OtherTransactions: transactions,
+		OtherTransactions: other,
 	}
 
 	return ctx.JSON(http.StatusOK, res)
