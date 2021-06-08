@@ -284,15 +284,20 @@ func (r *Retriever) Block(network identifier.Network, id identifier.Block) (*obj
 		Transactions: transactions,
 	}
 
-	// TODO: When a block contains to many transactions / operations, we should
-	// limit the returned block size and return a list of transaction IDs in
-	// the second field.
+	// TODO: When a block contains too many transactions, we should limit the
+	// size of the returned transaction slice and provide a list of extra
+	// transactions IDs in the second return value instead:
 	// => https://github.com/optakt/flow-dps/issues/149
 
 	return &block, nil, nil
 }
 
 func (r *Retriever) Transaction(network identifier.Network, block identifier.Block, id identifier.Transaction) (*object.Transaction, error) {
+
+	// TODO: We should start indexing all of the transactions for each block, so
+	// that we can actually check transaction existence and return transactions,
+	// even if they don't move any funds:
+	// => https://github.com/optakt/flow-dps/issues/156
 
 	// Retrieve the Flow token default withdrawal and deposit events.
 	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
@@ -304,7 +309,7 @@ func (r *Retriever) Transaction(network identifier.Network, block identifier.Blo
 		return nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
 	}
 
-	// Retrieve the events for this block (yes, all of them).
+	// Retrieve the deposit and withdrawal events for the block (yes, all of them).
 	events, err := r.index.Events(block.Index, flow.EventType(deposit), flow.EventType(withdrawal))
 	if err != nil {
 		return nil, fmt.Errorf("could not get events: %w", err)
