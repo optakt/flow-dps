@@ -20,8 +20,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/onflow/flow-go/model/flow"
-
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/rosetta"
@@ -57,15 +55,15 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	if req.BlockID.Index == 0 && req.BlockID.Hash == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier at least one of hash or index"))
 	}
-	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != len(flow.ZeroID) {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier hash wrong length (have: %d, want: %d)", len(req.BlockID.Hash), len(flow.ZeroID)))
+	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier hash wrong length (have: %d, want: %d)", len(req.BlockID.Hash), hexIDSize))
 	}
 
 	if req.TransactionID.Hash == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier hash missing"))
 	}
-	if len(req.TransactionID.Hash) != len(flow.ZeroID) {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier hash wrong length (have: %d, want: %d)", len(req.TransactionID.Hash), len(flow.ZeroID)))
+	if len(req.TransactionID.Hash) != hexIDSize {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier hash wrong length (have: %d, want: %d)", len(req.TransactionID.Hash), hexIDSize))
 	}
 
 	err = d.config.Check(req.NetworkID)
