@@ -21,6 +21,7 @@ type Data struct {
 
 func NewData(config Configuration, retrieve Retriever) *Data {
 	d := Data{
+		config:   config,
 		retrieve: retrieve,
 	}
 	return &d
