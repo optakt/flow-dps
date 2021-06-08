@@ -25,14 +25,14 @@ import (
 type Error struct {
 	meta.ErrorDefinition
 	Description string                 `json:"description"`
-	Details     map[string]interface{} `json:"details"`
+	Details     map[string]interface{} `json:"details,omitempty"`
 }
 
 func Internal(err error) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorInternal,
 		Description:     err.Error(),
-		Details:         map[string]interface{}{},
+		Details:         nil,
 	}
 }
 
@@ -40,7 +40,7 @@ func InvalidFormat(message string, args ...interface{}) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorInvalidFormat,
 		Description:     fmt.Sprintf(message, args...),
-		Details:         map[string]interface{}{},
+		Details:         nil,
 	}
 }
 
