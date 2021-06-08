@@ -42,12 +42,12 @@ func (d *Data) Balance(ctx echo.Context) error {
 	var req BalanceRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
 	}
 
 	balances, err := d.retrieve.Balances(req.NetworkID, req.BlockID, req.AccountID, req.Currencies)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
 	res := BalanceResponse{

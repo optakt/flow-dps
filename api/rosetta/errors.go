@@ -14,5 +14,72 @@
 
 package rosetta
 
-// TODO: implement the error types to return along with the HTTP codes
-// => https://github.com/optakt/flow-dps/issues/34
+import (
+	"github.com/optakt/flow-dps/rosetta/configuration"
+	"github.com/optakt/flow-dps/rosetta/failure"
+	"github.com/optakt/flow-dps/rosetta/object"
+)
+
+type Error struct {
+	object.ErrorDefinition
+	Description string                 `json:"description"`
+	Details     map[string]interface{} `json:"details"`
+}
+
+func Internal(err error) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorInternal,
+		Description:     err.Error(),
+		Details:         map[string]interface{}{},
+	}
+}
+
+func InvalidFormat(err error) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorInvalidFormat,
+		Description:     err.Error(),
+		Details:         map[string]interface{}{},
+	}
+}
+
+func InvalidNetwork(fail failure.InvalidNetwork) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorInvalidNetwork,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"blockchain": fail.Blockchain,
+			"network":    fail.Network,
+		},
+	}
+}
+
+func InvalidBlock(fail failure.InvalidBlock) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorInvalidBlock,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"height": fail.Height,
+			"block":  fail.BlockID.String(),
+		},
+	}
+}
+
+func InvalidAccount(fail failure.InvalidAccount) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorInvalidAccount,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"address": fail.Address.String(),
+		},
+	}
+}
+
+func InvalidTransaction(fail failure.InvalidTransaction) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorInvalidTransaction,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"transaction": fail.TransactionID.String(),
+		},
+	}
+}

@@ -45,7 +45,7 @@ func (d *Data) Options(ctx echo.Context) error {
 	var req OptionsRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err))
 	}
 
 	// Create the allow object, which is native to the response.

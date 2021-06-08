@@ -42,21 +42,24 @@ func New(chain flow.ChainID) *Configuration {
 	// => https://github.com/optakt/flow-dps/issues/151
 
 	version := object.Version{
-		RosettaVersion:    "1.4.10",
-		NodeVersion:       "1.17.4",
-		MiddlewareVersion: "0.0.0",
+		RosettaVersion:    RosettaVersion,
+		NodeVersion:       NodeVersion,
+		MiddlewareVersion: MiddlewareVersion,
 	}
 
 	statuses := []object.StatusDefinition{
-		{Status: "COMPLETED", Successful: true},
+		StatusCompleted,
 	}
 
 	operations := []string{
-		"TRANSFER",
+		OperationTransfer,
 	}
 
 	errors := []object.ErrorDefinition{
-		{Code: object.AnyCode, Message: object.AnyMessage, Retriable: object.AnyRetriable},
+		ErrorInvalidNetwork,
+		ErrorInvalidBlock,
+		ErrorInvalidAccount,
+		ErrorInvalidTransaction,
 	}
 
 	c := Configuration{
