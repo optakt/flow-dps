@@ -12,15 +12,15 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package object
 
 import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-type Retriever interface {
-	Block(network identifier.Network, block identifier.Block) (*object.Block, []identifier.Transaction, error)
-	Transaction(network identifier.Network, block identifier.Block, transaction identifier.Transaction) (*object.Transaction, error)
-	Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]object.Amount, error)
+// Amount is some value of a currency. It is considered invalid to specify a
+// value without a currency.
+type Amount struct {
+	Value    string              `json:"value"`
+	Currency identifier.Currency `json:"currency"`
 }

@@ -12,10 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package object
 
 import (
-	"github.com/optakt/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 // Block contains an array of transactions that occurred at a particular block
@@ -30,5 +30,5 @@ type Block struct {
 	ID           identifier.Block `json:"block_identifier"`
 	ParentID     identifier.Block `json:"parent_block_identifier"`
 	Timestamp    int64            `json:"timestamp"`
-	Transactions []Transaction    `json:"transactions"`
+	Transactions []*Transaction   `json:"transactions"`
 }

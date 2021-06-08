@@ -15,7 +15,7 @@
 package rosetta
 
 import (
-	"github.com/optakt/flow-dps/models/identifier"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 type Validator interface {

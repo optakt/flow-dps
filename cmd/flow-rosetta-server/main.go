@@ -97,10 +97,11 @@ func run() int {
 
 	// Rosetta API initialization.
 	client := api.NewAPIClient(conn)
+	index := api.IndexFromAPI(client)
 	generator := scripts.NewGenerator(params)
-	invoke := invoker.New(api.IndexFromAPI(client))
+	invoke := invoker.New(index)
 	validate := validator.New(params)
-	retrieve := retriever.New(generator, invoke)
+	retrieve := retriever.New(index, generator, invoke)
 	ctrl := rosetta.NewData(validate, retrieve)
 
 	// TODO: Implement custom echo logger middleware that wraps around our own
