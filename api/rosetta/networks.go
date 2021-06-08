@@ -24,7 +24,6 @@ import (
 )
 
 type NetworksRequest struct {
-	Metadata map[string]string `json:"metadata"`
 }
 
 type NetworksResponse struct {
