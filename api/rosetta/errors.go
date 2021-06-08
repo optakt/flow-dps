@@ -55,17 +55,6 @@ func InvalidNetwork(fail failure.InvalidNetwork) Error {
 	}
 }
 
-func InvalidBlock(fail failure.InvalidBlock) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorInvalidBlock,
-		Description:     fail.Message,
-		Details: map[string]interface{}{
-			"height": fail.Height,
-			"block":  fail.BlockID.String(),
-		},
-	}
-}
-
 func InvalidAccount(fail failure.InvalidAccount) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorInvalidAccount,
@@ -87,13 +76,23 @@ func InvalidCurrency(fail failure.InvalidCurrency) Error {
 	}
 }
 
-func UnknownBlock(fail failure.UnknownBlock) Error {
+func InvalidBlock(fail failure.InvalidBlock) Error {
 	return Error{
-		ErrorDefinition: configuration.ErrorUnknownBlock,
+		ErrorDefinition: configuration.ErrorInvalidBlock,
 		Description:     fail.Message,
 		Details: map[string]interface{}{
 			"height": fail.Height,
 			"block":  fail.BlockID.String(),
+		},
+	}
+}
+
+func InvalidTransaction(fail failure.InvalidTransaction) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorInvalidTransaction,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"transaction": fail.TransactionID.String(),
 		},
 	}
 }
@@ -105,6 +104,17 @@ func UnknownCurrency(fail failure.UnknownCurrency) Error {
 		Details: map[string]interface{}{
 			"symbol":   fail.Symbol,
 			"decimals": fail.Decimals,
+		},
+	}
+}
+
+func UnknownBlock(fail failure.UnknownBlock) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorUnknownBlock,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"height": fail.Height,
+			"block":  fail.BlockID.String(),
 		},
 	}
 }

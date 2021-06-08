@@ -12,26 +12,19 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package validator
+package failure
 
 import (
 	"fmt"
 
 	"github.com/onflow/flow-go/model/flow"
-
-	"github.com/optakt/flow-dps/rosetta/failure"
-	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-func (v *Validator) Transaction(transaction identifier.Transaction) error {
+type InvalidTransaction struct {
+	TransactionID flow.Identifier
+	Message       string
+}
 
-	_, err := flow.HexStringToIdentifier(transaction.Hash)
-	if err != nil {
-		return failure.InvalidTransaction{
-			TransactionID: flow.ZeroID,
-			Message:       fmt.Sprintf("transaction hash not in hex format (hash: %s)", transaction.Hash),
-		}
-	}
-
-	return nil
+func (i InvalidTransaction) Error() string {
+	return fmt.Sprintf("invalid block (transaction: %x): %s", i.TransactionID, i.Message)
 }

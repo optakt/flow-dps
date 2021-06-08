@@ -42,7 +42,11 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	if block.Hash != "" {
 		blockID, err = flow.HexStringToIdentifier(block.Hash)
 		if err != nil {
-			return identifier.Block{}, fmt.Errorf("could not parse block ID: %w", err)
+			return identifier.Block{}, failure.InvalidBlock{
+				Height:  block.Index,
+				BlockID: flow.ZeroID,
+				Message: fmt.Sprintf("block hash not in hex format (hash: %s)", block.Hash),
+			}
 		}
 	}
 

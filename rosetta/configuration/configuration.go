@@ -59,10 +59,15 @@ func New(chain flow.ChainID) *Configuration {
 	}
 
 	errors := []meta.ErrorDefinition{
+		ErrorInternal,
+		ErrorInvalidFormat,
 		ErrorInvalidNetwork,
 		ErrorInvalidBlock,
 		ErrorInvalidAccount,
+		ErrorInvalidCurrency,
 		ErrorInvalidTransaction,
+		ErrorUnknownBlock,
+		ErrorUnknownCurrency,
 	}
 
 	c := Configuration{
