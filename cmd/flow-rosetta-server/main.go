@@ -119,7 +119,7 @@ func run() int {
 	server.POST("/network/status", ctrl.Status)
 	server.POST("/account/balance", ctrl.Balance)
 	server.POST("/block", ctrl.Block)
-	// server.POST("/block/transaction", ctrl.Transaction)
+	server.POST("/block/transaction", ctrl.Transaction)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

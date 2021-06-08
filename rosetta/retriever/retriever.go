@@ -293,6 +293,13 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
+	// Run validation on the transaction ID. This should never fail, as we
+	// already check the length, but let's run it anyway.
+	err = r.validate.Transaction(id)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate transaction: %w", err)
+	}
+
 	// Retrieve the Flow token default withdrawal and deposit events.
 	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
 	if err != nil {

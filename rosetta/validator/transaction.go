@@ -12,15 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package retriever
+package validator
 
 import (
+	"fmt"
+
+	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-type Validator interface {
-	Account(address identifier.Account) error
-	Block(block *identifier.Block) error
-	Transaction(transaction identifier.Transaction) error
-	Currency(currency *identifier.Currency) error
+func (v *Validator) Transaction(transaction identifier.Transaction) error {
+
+	_, err := flow.HexStringToIdentifier(transaction.Hash)
+	if err != nil {
+		return fmt.Errorf("could not parse transaction ID: %w", err)
+	}
+
+	return nil
 }
