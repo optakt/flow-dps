@@ -32,7 +32,7 @@ type BlockRequest struct {
 
 type BlockResponse struct {
 	Block             *rosetta.Block           `json:"block"`
-	OtherTransactions []identifier.Transaction `json:"other_transactions"`
+	OtherTransactions []identifier.Transaction `json:"other_transactions,omitempty"`
 }
 
 // TODO: integration testing of Rosetta block endpoint
