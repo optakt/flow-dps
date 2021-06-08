@@ -12,17 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package object
 
-type Data struct {
-	validate Validator
-	retrieve Retriever
+type Allow struct {
+	OperationStatuses       []OperationStatus `json:"operation_statuses"`
+	OperationTypes          []string          `json:"operation_types"`
+	Errors                  []Error           `json:"errors"`
+	HistoricalBalanceLookup bool              `json:"historical_balance_lookup"`
 }
 
-func NewData(validate Validator, retrieve Retriever) *Data {
-	d := Data{
-		validate: validate,
-		retrieve: retrieve,
-	}
-	return &d
+type OperationStatus struct {
+	Status     string `json:"status"`
+	Successful bool   `json:"successful"`
 }

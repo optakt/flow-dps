@@ -24,6 +24,10 @@ const (
 	FlowTestnet    = flow.Testnet
 	FlowSymbol     = "FLOW"
 	FlowDecimals   = 8
+
+	StatusCompleted = "COMPLETED"
+
+	OperationTransfer = "TRANSFER"
 )
 
 var FlowParams = make(map[flow.ChainID]Params)

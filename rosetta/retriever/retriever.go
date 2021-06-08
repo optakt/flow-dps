@@ -17,6 +17,7 @@ package retriever
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
@@ -29,20 +30,105 @@ import (
 )
 
 type Retriever struct {
+	params    dps.Params
 	index     index.Reader
 	generator Generator
 	invoke    Invoker
 }
 
-func New(index index.Reader, generator Generator, invoke Invoker) *Retriever {
+func New(params dps.Params, index index.Reader, generator Generator, invoke Invoker) *Retriever {
 
 	r := Retriever{
+		params:    params,
 		index:     index,
 		generator: generator,
 		invoke:    invoke,
 	}
 
 	return &r
+}
+
+func (r *Retriever) Network() (identifier.Network, error) {
+
+	network := identifier.Network{
+		Blockchain: dps.FlowBlockchain,
+		Network:    r.params.ChainID.String(),
+	}
+
+	return network, nil
+}
+
+func (r *Retriever) Version() (object.Version, error) {
+
+	// TODO: Find a way to inject the Flow Go dependency version from the
+	// `go.mod` file and the middleware version from the repository tag:
+	// => https://github.com/optakt/flow-dps/issues/151
+
+	version := object.Version{
+		RosettaVersion:    "1.4.10",
+		NodeVersion:       "1.17.4",
+		MiddlewareVersion: "0.0.0",
+	}
+
+	return version, nil
+}
+
+func (r *Retriever) Allow() (object.Allow, error) {
+
+	allow := object.Allow{
+		OperationStatuses: []object.OperationStatus{
+			{Status: dps.StatusCompleted, Successful: true},
+		},
+		OperationTypes: []string{
+			dps.OperationTransfer,
+		},
+		Errors: []object.Error{
+			object.AnyError(fmt.Errorf("dummy error")),
+		},
+		HistoricalBalanceLookup: true,
+	}
+
+	return allow, nil
+}
+
+func (r *Retriever) Oldest() (identifier.Block, time.Time, error) {
+
+	first, err := r.index.First()
+	if err != nil {
+		return identifier.Block{}, time.Time{}, nil
+	}
+
+	header, err := r.index.Header(first)
+	if err != nil {
+		return identifier.Block{}, time.Time{}, nil
+	}
+
+	block := identifier.Block{
+		Hash:  header.ID().String(),
+		Index: header.Height,
+	}
+
+	return block, header.Timestamp, nil
+}
+
+func (r *Retriever) Current() (identifier.Block, time.Time, error) {
+
+	last, err := r.index.Last()
+	if err != nil {
+		return identifier.Block{}, time.Time{}, nil
+	}
+
+	header, err := r.index.Header(last)
+	if err != nil {
+		return identifier.Block{}, time.Time{}, nil
+	}
+
+	block := identifier.Block{
+		Hash:  header.ID().String(),
+		Index: header.Height,
+	}
+
+	return block, header.Timestamp, nil
 }
 
 func (r *Retriever) Balances(network identifier.Network, block identifier.Block, account identifier.Account, currencies []identifier.Currency) ([]object.Amount, error) {

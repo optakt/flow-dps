@@ -28,3 +28,13 @@ type Error struct {
 	Retriable   bool                   `json:"retriable"`
 	Details     map[string]interface{} `json:"details"`
 }
+
+func AnyError(err error) Error {
+	return Error{
+		Code:        1,
+		Message:     "catch-all for all errors for now",
+		Description: err.Error(),
+		Retriable:   false,
+		Details:     make(map[string]interface{}),
+	}
+}
