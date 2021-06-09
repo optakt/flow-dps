@@ -105,7 +105,64 @@ func TestGetBlock(t *testing.T) {
 			wantTimestamp:  1621375483243,
 			wantParentHash: knownBlockID(424),
 		},
-		// TODO: add negative test cases
+		// negative test cases
+		{
+			name:           "unknown block",
+			request:        blockRequest(426, "xyz"),
+			wantStatusCode: http.StatusInternalServerError,
+			wantHandlerErr: assert.Error,
+		},
+		{
+			name:           "empty request",
+			request:        rosetta.BlockRequest{},
+			wantStatusCode: http.StatusUnprocessableEntity,
+			wantHandlerErr: assert.Error,
+		},
+		{
+			name: "invalid blockchain",
+			request: rosetta.BlockRequest{
+				NetworkID: identifier.Network{
+					Blockchain: "not-flow",
+					Network:    dps.FlowTestnet.String(),
+				},
+				BlockID: identifier.Block{
+					Index: 44,
+					Hash:  knownBlockID(44),
+				},
+			},
+			wantStatusCode: http.StatusUnprocessableEntity,
+			wantHandlerErr: assert.Error,
+		},
+		{
+			name: "invalid network",
+			request: rosetta.BlockRequest{
+				NetworkID: identifier.Network{
+					Blockchain: dps.FlowBlockchain,
+					Network:    "not-a-flow-testnet",
+				},
+				BlockID: identifier.Block{
+					Index: 44,
+					Hash:  knownBlockID(44),
+				},
+			},
+			wantStatusCode: http.StatusUnprocessableEntity,
+			wantHandlerErr: assert.Error,
+		},
+		/*
+			TODO: when we re-add block validation, we should reintroduce this test case - block height and hash mismatch should result in an error
+				=> https://github.com/optakt/flow-dps/issues/51
+			{
+				name:           "invalid request - block hash and height mismatch",
+				request:        blockRequest(44, knownBlockID(43)),
+				wantStatusCode: http.StatusUnprocessableEntity,
+				wantHandlerErr: assert.Error,
+			},
+		*/
+
+		/* TODO: when the errors we return get solidifed, add test cases to verify the errors
+		=> https://github.com/optakt/flow-dps/issues/34
+		*/
+
 	}
 
 	for _, test := range tests {
@@ -129,6 +186,7 @@ func TestGetBlock(t *testing.T) {
 			test.wantHandlerErr(t, err)
 
 			if test.wantStatusCode != http.StatusOK {
+
 				e, ok := err.(*echo.HTTPError)
 				require.True(t, ok)
 				assert.Equal(t, test.wantStatusCode, e.Code)
