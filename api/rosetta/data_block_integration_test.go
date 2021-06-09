@@ -31,10 +31,10 @@ import (
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	rosettaobj "github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
-type transactionValidationFn func(*object.Transaction)
+type transactionValidationFn func(*rosettaobj.Transaction)
 
 func TestGetBlock(t *testing.T) {
 
@@ -240,7 +240,7 @@ func validateSingleTransfer(t *testing.T, hash string, from string, to string, a
 
 	t.Helper()
 
-	return func(tx *object.Transaction) {
+	return func(tx *rosettaobj.Transaction) {
 
 		assert.Equal(t, tx.ID.Hash, hash)
 		assert.Equal(t, len(tx.Operations), 2)
