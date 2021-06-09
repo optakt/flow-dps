@@ -22,6 +22,11 @@ import (
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
+// Error represents an error as defined by the Rosetta API specification. It
+// contains an error definition, which has an error code, error message and
+// retriable flag that never change, as well as a description and a list of
+// details to provide more granular error information.
+// See: https://www.rosetta-api.org/docs/api_objects.html#error
 type Error struct {
 	meta.ErrorDefinition
 	Description string                 `json:"description"`

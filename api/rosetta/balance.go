@@ -48,34 +48,38 @@ func (d *Data) Balance(ctx echo.Context) error {
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier blockchain missing"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: blockchain field is empty"))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier network missing"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: network field is empty"))
 	}
 
 	if req.BlockID.Index == 0 && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier at least one of hash or index"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: at least one of hash or index is required"))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier hash wrong length (have: %d, want: %d)", len(req.BlockID.Hash), hexIDSize))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: hash field has wrong length (have: %d, want: %d)", len(req.BlockID.Hash), hexIDSize))
 	}
 
 	if req.AccountID.Address == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier address missing"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier: address field is empty"))
 	}
 	if len(req.AccountID.Address) != hexAddressSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier address wrong length (have: %d, want: %d)", len(req.AccountID.Address), hexAddressSize))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier: address field has wrong length (have: %d, want: %d)", len(req.AccountID.Address), hexAddressSize))
 	}
 
 	if len(req.Currencies) == 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifiers empty"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifiers: currency list is empty"))
 	}
 	for _, currency := range req.Currencies {
 		if currency.Symbol == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifier symbol missing"))
+			return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifier: symbol field is missing"))
 		}
 	}
+
+	// TODO: Check if we can set up validation middleware to remove the
+	// redundant business logic between routes:
+	// => https://github.com/optakt/flow-dps/issues/164
 
 	err = d.config.Check(req.NetworkID)
 	var netErr failure.InvalidNetwork
