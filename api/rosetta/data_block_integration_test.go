@@ -53,7 +53,8 @@ func TestGetBlock(t *testing.T) {
 		transactionValidator transactionValidationFn
 	}{
 		{
-			// TODO: consider what to do here; it's a natural boundary element, but the parent block we will receive will be a bit weird (parent ID is uint64(-1))
+			// TODO: this is a natural boundary element, but the parent block we will receive will be a bit weird (parent ID is uint64(-1));
+			// since the recent rosetta explicitly states that block with height 0 is not supported, probably should be removed
 			name:           "first block",
 			request:        blockRequest(0, knownBlockID(0)),
 			wantStatusCode: http.StatusOK,
@@ -201,7 +202,6 @@ func TestGetBlock(t *testing.T) {
 			var blockResponse rosetta.BlockResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &blockResponse))
 
-			// TODO: if we don't have 'other transactions' we can just require this
 			if assert.NotNil(t, blockResponse.Block) {
 				// verify that we got the data for the requested block
 				assert.Equal(t, test.request.BlockID.Index, blockResponse.Block.ID.Index)
@@ -236,7 +236,6 @@ func blockRequest(height uint64, hash string) rosetta.BlockRequest {
 	}
 }
 
-// TODO: check test data - do we ever have a single block with multiple transactions
 func validateSingleTransfer(t *testing.T, hash string, from string, to string, amount int64) transactionValidationFn {
 
 	t.Helper()
