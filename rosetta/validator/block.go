@@ -35,8 +35,7 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 		return identifier.Block{}, fmt.Errorf("block access with hash currently not supported")
 	}
 
-	// We should always be able to parse this at this point, if it is present,
-	// as we already checked the format, so normal error is fine.
+	// If a block hash is present, it should be a valid block ID for Flow.
 	if block.Hash != "" {
 		_, err := flow.HexStringToIdentifier(block.Hash)
 		if err != nil {

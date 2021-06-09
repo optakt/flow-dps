@@ -35,7 +35,7 @@ func (v *Validator) Currency(currency identifier.Currency) (identifier.Currency,
 		}
 	}
 
-	// If the token is known, the decimals should always be 8, as we always use
+	// If the token is known, there should always be 8 decimals, as we always use
 	// `UFix64` for tokens on Flow.
 	if currency.Decimals != 0 && currency.Decimals != dps.FlowDecimals {
 		return identifier.Currency{}, failure.InvalidCurrency{

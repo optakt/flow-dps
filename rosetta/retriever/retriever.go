@@ -93,8 +93,8 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 
 func (r *Retriever) Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) (identifier.Block, []rosetta.Amount, error) {
 
-	// Run validation on the block ID. This also fills in missing information.
-	completeBlock, err := r.validate.Block(block)
+	// Run validation on the block identifier. This also fills in missing fields, where possible.
+	completed, err := r.validate.Block(block)
 	if err != nil {
 		return identifier.Block{}, nil, fmt.Errorf("could not validate block: %w", err)
 	}
@@ -139,13 +139,13 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 		amounts = append(amounts, amount)
 	}
 
-	return completeBlock, amounts, nil
+	return completed, amounts, nil
 }
 
 func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Transaction, error) {
 
 	// Run validation on the block ID. This also fills in missing information.
-	completeID, err := r.validate.Block(id)
+	completed, err := r.validate.Block(id)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not validate block: %w", err)
 	}
@@ -161,13 +161,13 @@ func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Tra
 	}
 
 	// Then, we get the header; it will give us the block ID, parent ID and timestamp.
-	header, err := r.index.Header(completeID.Index)
+	header, err := r.index.Header(completed.Index)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get header: %w", err)
 	}
 
 	// Next, we get all the events for the block to extract deposit and withdrawal events.
-	events, err := r.index.Events(completeID.Index, flow.EventType(deposit), flow.EventType(withdrawal))
+	events, err := r.index.Events(completed.Index, flow.EventType(deposit), flow.EventType(withdrawal))
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get events: %w", err)
 	}
@@ -289,7 +289,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	// => https://github.com/optakt/flow-dps/issues/156
 
 	// Run validation on the block ID. This also fills in missing information.
-	completeBlock, err := r.validate.Block(block)
+	completed, err := r.validate.Block(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
@@ -312,7 +312,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 
 	// Retrieve the deposit and withdrawal events for the block (yes, all of them).
-	events, err := r.index.Events(completeBlock.Index, flow.EventType(deposit), flow.EventType(withdrawal))
+	events, err := r.index.Events(completed.Index, flow.EventType(deposit), flow.EventType(withdrawal))
 	if err != nil {
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
