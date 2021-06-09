@@ -151,8 +151,7 @@ func TestGetBlock(t *testing.T) {
 
 				if test.transactionValidator != nil {
 
-					// not a universal condition, but in our test cases we only have a single transaction per block
-					if assert.Len(t, blockResponse.Block.Transactions, 1) {
+					if assert.GreaterOrEqual(t, len(blockResponse.Block.Transactions), 1) {
 						test.transactionValidator(blockResponse.Block.Transactions[0])
 					}
 				}
@@ -175,7 +174,6 @@ func blockRequest(height uint64, hash string) rosetta.BlockRequest {
 
 type transactionValidationFn func(*object.Transaction)
 
-// FIXME: make this a testing helper and assert all the individual points
 // TODO: check test data - do we ever have a single block with multiple transactions
 func validateSingleTransfer(t *testing.T, hash string, from string, to string, amount int64) transactionValidationFn {
 
@@ -186,9 +184,18 @@ func validateSingleTransfer(t *testing.T, hash string, from string, to string, a
 		assert.Equal(t, tx.ID.Hash, hash)
 		assert.Equal(t, len(tx.Operations), 2)
 
+		relatedOperations := make(map[uint]uint)
+
 		for _, op := range tx.Operations {
 
-			// TODO: cross reference operation_identifier with the related_operations index?
+			// save related operation IDs in a map so we can cross reference them
+			// TODO: check - is this special-casing the test too much perhaps?
+			// operation can have multiple related operations,
+			// but also this function does state that it's verifying a single transfer
+
+			if assert.Len(t, op.RelatedIDs, 1) {
+				relatedOperations[op.ID.Index] = op.RelatedIDs[0].Index
+			}
 
 			// validate operation and status
 			assert.Equal(t, op.Type, dps.OperationTransfer)
@@ -211,6 +218,12 @@ func validateSingleTransfer(t *testing.T, hash string, from string, to string, a
 			}
 
 			assert.Equal(t, op.Amount.Value, wantValue)
+		}
+
+		// cross-reference related operations - verify that the related operation backlinks to the original one
+		for id, relatedID := range relatedOperations {
+			assert.Contains(t, relatedOperations, relatedID)
+			assert.Equal(t, id, relatedOperations[relatedID])
 		}
 	}
 }
