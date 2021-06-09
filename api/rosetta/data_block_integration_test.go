@@ -34,6 +34,8 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
+type transactionValidationFn func(*object.Transaction)
+
 func TestGetBlock(t *testing.T) {
 
 	db := setupDB(t)
@@ -45,19 +47,18 @@ func TestGetBlock(t *testing.T) {
 		request rosetta.BlockRequest
 
 		wantStatusCode       int
-		wantTimestamp        int64 // TODO: init
+		wantTimestamp        int64
 		wantParentHash       string
 		wantHandlerErr       assert.ErrorAssertionFunc
 		transactionValidator transactionValidationFn
 	}{
 		{
-			// TODO: think of a nice way to validate block responses
-
 			// TODO: consider what to do here; it's a natural boundary element, but the parent block we will receive will be a bit weird (parent ID is uint64(-1))
 			name:           "first block",
 			request:        blockRequest(0, knownBlockID(0)),
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
+			wantTimestamp:  1621337233243,
 			wantParentHash: "0000000000000000000000000000000000000000000000000000000000000000",
 		},
 		{
@@ -65,14 +66,16 @@ func TestGetBlock(t *testing.T) {
 			request:        blockRequest(1, knownBlockID(1)),
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
+			wantTimestamp:  1621337323243,
 			wantParentHash: knownBlockID(0),
 		},
 		{
-			// initial transfer of currency from the root account to the user
+			// initial transfer of currency from the root account to the user - 100 tokens
 			name:                 "block mid-chain with transactions",
 			request:              blockRequest(13, knownBlockID(13)),
 			wantStatusCode:       http.StatusOK,
 			wantHandlerErr:       assert.NoError,
+			wantTimestamp:        1621338403243,
 			wantParentHash:       knownBlockID(12),
 			transactionValidator: validateSingleTransfer(t, "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1", "8c5303eaa26202d6", "754aed9de6197641", 100_00000000),
 		},
@@ -81,6 +84,7 @@ func TestGetBlock(t *testing.T) {
 			request:        blockRequest(43, knownBlockID(43)),
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
+			wantTimestamp:  1621341103243,
 			wantParentHash: knownBlockID(42),
 		},
 		{
@@ -89,6 +93,7 @@ func TestGetBlock(t *testing.T) {
 			request:              blockRequest(44, knownBlockID(44)),
 			wantStatusCode:       http.StatusOK,
 			wantHandlerErr:       assert.NoError,
+			wantTimestamp:        1621341193243,
 			wantParentHash:       knownBlockID(43),
 			transactionValidator: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
 		},
@@ -97,6 +102,7 @@ func TestGetBlock(t *testing.T) {
 			request:        blockRequest(425, knownBlockID(425)),
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
+			wantTimestamp:  1621375483243,
 			wantParentHash: knownBlockID(424),
 		},
 		// TODO: add negative test cases
@@ -147,7 +153,7 @@ func TestGetBlock(t *testing.T) {
 				assert.Equal(t, test.request.BlockID.Index-1, blockResponse.Block.ParentID.Index)
 				assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 
-				// assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
+				assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
 
 				if test.transactionValidator != nil {
 
@@ -171,8 +177,6 @@ func blockRequest(height uint64, hash string) rosetta.BlockRequest {
 		},
 	}
 }
-
-type transactionValidationFn func(*object.Transaction)
 
 // TODO: check test data - do we ever have a single block with multiple transactions
 func validateSingleTransfer(t *testing.T, hash string, from string, to string, amount int64) transactionValidationFn {
