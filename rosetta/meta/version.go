@@ -12,11 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package identifier
+package meta
 
-// Block uniquely identifies a block in a particular network. As the view is not
-// unique between sporks, index refers to the block height.
-type Block struct {
-	Index uint64 `json:"index,omitempty"`
-	Hash  string `json:"hash,omitempty"`
+type Version struct {
+	RosettaVersion    string `json:"rosetta_version"`
+	NodeVersion       string `json:"node_version"`
+	MiddlewareVersion string `json:"middleware_version"`
 }

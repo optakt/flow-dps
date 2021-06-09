@@ -15,12 +15,14 @@
 package rosetta
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
 type BlockRequest struct {
@@ -29,8 +31,8 @@ type BlockRequest struct {
 }
 
 type BlockResponse struct {
-	Block             *object.Block            `json:"block"`
-	OtherTransactions []identifier.Transaction `json:"other_transactions"`
+	Block             *rosetta.Block           `json:"block"`
+	OtherTransactions []identifier.Transaction `json:"other_transactions,omitempty"`
 }
 
 // TODO: integration testing of Rosetta block endpoint
@@ -40,26 +42,50 @@ func (d *Data) Block(ctx echo.Context) error {
 	var req BlockRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
 	}
 
-	err = d.validate.Network(req.NetworkID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
+	if req.NetworkID.Blockchain == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: blockchain field is empty"))
 	}
-	err = d.validate.Block(req.BlockID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
+	if req.NetworkID.Network == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: network field is empty"))
 	}
 
-	block, transactions, err := d.retrieve.Block(req.NetworkID, req.BlockID)
+	if req.BlockID.Index == 0 && req.BlockID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: at least one of hash or index is required"))
+	}
+	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: hash field has wrong length (have: %d, want: %d)", len(req.BlockID.Hash), hexIDSize))
+	}
+
+	err = d.config.Check(req.NetworkID)
+	var netErr failure.InvalidNetwork
+	if errors.As(err, &netErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+	}
+
+	block, other, err := d.retrieve.Block(req.BlockID)
+
+	var ibErr failure.InvalidBlock
+	if errors.As(err, &ibErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidBlock(ibErr))
+	}
+	var ubErr failure.UnknownBlock
+	if errors.As(err, &ubErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownBlock(ubErr))
+	}
+
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
 	res := BlockResponse{
 		Block:             block,
-		OtherTransactions: transactions,
+		OtherTransactions: other,
 	}
 
 	return ctx.JSON(http.StatusOK, res)

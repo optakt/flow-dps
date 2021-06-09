@@ -12,11 +12,24 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package identifier
+package validator
 
-// Block uniquely identifies a block in a particular network. As the view is not
-// unique between sporks, index refers to the block height.
-type Block struct {
-	Index uint64 `json:"index,omitempty"`
-	Hash  string `json:"hash,omitempty"`
+import (
+	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/rosetta/failure"
+	"github.com/optakt/flow-dps/rosetta/identifier"
+)
+
+func (v *Validator) Transaction(transaction identifier.Transaction) error {
+
+	_, err := flow.HexStringToIdentifier(transaction.Hash)
+	if err != nil {
+		return failure.InvalidTransaction{
+			Hash:    transaction.Hash,
+			Message: "transaction hash is not a valid hex-encoded string",
+		}
+	}
+
+	return nil
 }

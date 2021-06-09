@@ -15,12 +15,13 @@
 package rosetta
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type StatusRequest struct {
@@ -38,22 +39,32 @@ func (d *Data) Status(ctx echo.Context) error {
 	var req StatusRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
 	}
 
-	// Get our network and check it's correct.
-	err = d.validate.Network(req.NetworkID)
+	if req.NetworkID.Blockchain == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: blockchain field is missing"))
+	}
+	if req.NetworkID.Network == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: network field is missing"))
+	}
+
+	err = d.config.Check(req.NetworkID)
+	var netErr failure.InvalidNetwork
+	if errors.As(err, &netErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
 	oldest, _, err := d.retrieve.Oldest()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 	current, timestamp, err := d.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
 	// TODO: See if it makes sense to include the genesis block information:

@@ -12,18 +12,18 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package failure
 
 import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
+	"fmt"
 )
 
-// Transaction contains an array of operations that are attributable to the same
-// transaction identifier.
-//
-// Examples of metadata given in the Rosetta API documentation are "size" and
-// "lockTime".
-type Transaction struct {
-	ID         identifier.Transaction `json:"transaction_identifier"`
-	Operations []Operation            `json:"operations"`
+type UnknownBlock struct {
+	Index   uint64
+	Hash    string
+	Message string
+}
+
+func (u UnknownBlock) Error() string {
+	return fmt.Sprintf("unknown block (index: %d, hash: %s): %s", u.Index, u.Hash, u.Message)
 }

@@ -15,13 +15,13 @@
 package rosetta
 
 type Data struct {
-	validate Validator
+	config   Configuration
 	retrieve Retriever
 }
 
-func NewData(validate Validator, retrieve Retriever) *Data {
+func NewData(config Configuration, retrieve Retriever) *Data {
 	d := Data{
-		validate: validate,
+		config:   config,
 		retrieve: retrieve,
 	}
 	return &d

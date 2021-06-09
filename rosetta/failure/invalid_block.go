@@ -12,11 +12,18 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package identifier
+package failure
 
-// Block uniquely identifies a block in a particular network. As the view is not
-// unique between sporks, index refers to the block height.
-type Block struct {
-	Index uint64 `json:"index,omitempty"`
-	Hash  string `json:"hash,omitempty"`
+import (
+	"fmt"
+)
+
+type InvalidBlock struct {
+	Index   uint64
+	Hash    string
+	Message string
+}
+
+func (i InvalidBlock) Error() string {
+	return fmt.Sprintf("invalid block (index: %d, hash: %x): %s", i.Index, i.Hash, i.Message)
 }

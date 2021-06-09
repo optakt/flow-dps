@@ -23,5 +23,5 @@ package identifier
 // An example of metadata given in the Rosetta API documentation is `Issuer`.
 type Currency struct {
 	Symbol   string `json:"symbol"`
-	Decimals uint   `json:"decimals"`
+	Decimals uint   `json:"decimals,omitempty"`
 }

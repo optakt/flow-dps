@@ -12,11 +12,15 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package identifier
+package rosetta
 
-// Block uniquely identifies a block in a particular network. As the view is not
-// unique between sporks, index refers to the block height.
-type Block struct {
-	Index uint64 `json:"index,omitempty"`
-	Hash  string `json:"hash,omitempty"`
-}
+import (
+	"github.com/onflow/flow-go/model/flow"
+)
+
+// We have to multiply by two here, because the strings that we receive are
+// hex-encoded and use two characters for every byte.
+const (
+	hexIDSize      = 2 * len(flow.ZeroID)
+	hexAddressSize = 2 * flow.AddressLength
+)

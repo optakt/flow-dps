@@ -15,12 +15,14 @@
 package rosetta
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
 type OptionsRequest struct {
@@ -28,8 +30,15 @@ type OptionsRequest struct {
 }
 
 type OptionsResponse struct {
-	Version object.Version
-	Allow   object.Allow
+	Version meta.Version `json:"version"`
+	Allow   Allow        `json:"allow"`
+}
+
+type Allow struct {
+	OperationStatuses       []meta.StatusDefinition `json:"operation_statuses"`
+	OperationTypes          []string                `json:"operation_types"`
+	Errors                  []meta.ErrorDefinition  `json:"errors"`
+	HistoricalBalanceLookup bool                    `json:"historical_balance_lookup"`
 }
 
 func (d *Data) Options(ctx echo.Context) error {
@@ -38,29 +47,35 @@ func (d *Data) Options(ctx echo.Context) error {
 	var req OptionsRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
 	}
 
-	// Get our network and check it's correct.
-	err = d.validate.Network(req.NetworkID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, object.AnyError(err))
+	if req.NetworkID.Blockchain == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: blockchain field is missing"))
+	}
+	if req.NetworkID.Network == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: network field is missing"))
 	}
 
-	// Get the current status.
-	version, err := d.retrieve.Version()
+	err = d.config.Check(req.NetworkID)
+	var netErr failure.InvalidNetwork
+	if errors.As(err, &netErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
 	}
 
-	// Get the allowed operations.
-	allow, err := d.retrieve.Allow()
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, object.AnyError(err))
+	// Create the allow object, which is native to the response.
+	allow := Allow{
+		OperationStatuses:       d.config.Statuses(),
+		OperationTypes:          d.config.Operations(),
+		Errors:                  d.config.Errors(),
+		HistoricalBalanceLookup: true,
 	}
 
 	res := OptionsResponse{
-		Version: version,
+		Version: d.config.Version(),
 		Allow:   allow,
 	}
 

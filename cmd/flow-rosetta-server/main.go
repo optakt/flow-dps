@@ -34,6 +34,7 @@ import (
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
@@ -98,11 +99,12 @@ func run() int {
 	// Rosetta API initialization.
 	client := api.NewAPIClient(conn)
 	index := api.IndexFromAPI(client)
-	generator := scripts.NewGenerator(params)
+	config := configuration.New(params.ChainID)
+	validate := validator.New(params, index)
+	generate := scripts.NewGenerator(params)
 	invoke := invoker.New(index)
-	validate := validator.New(params)
-	retrieve := retriever.New(params, index, generator, invoke)
-	ctrl := rosetta.NewData(validate, retrieve)
+	retrieve := retriever.New(params, index, validate, generate, invoke)
+	ctrl := rosetta.NewData(config, retrieve)
 
 	// TODO: Implement custom echo logger middleware that wraps around our own
 	// zerolog instance:
@@ -117,7 +119,7 @@ func run() int {
 	server.POST("/network/status", ctrl.Status)
 	server.POST("/account/balance", ctrl.Balance)
 	server.POST("/block", ctrl.Block)
-	// server.POST("/block/transaction", ctrl.Transaction)
+	server.POST("/block/transaction", ctrl.Transaction)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

@@ -12,15 +12,12 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package configuration
 
 import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
-// Amount is some value of a currency. It is considered invalid to specify a
-// value without a currency.
-type Amount struct {
-	Value    string              `json:"value"`
-	Currency identifier.Currency `json:"currency"`
-}
+var (
+	StatusCompleted = meta.StatusDefinition{Status: "COMPLETED", Successful: true}
+)

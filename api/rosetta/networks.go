@@ -20,7 +20,6 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type NetworksRequest struct {
@@ -36,17 +35,12 @@ func (d *Data) Networks(ctx echo.Context) error {
 	var req NetworksRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, object.AnyError(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
 	}
 
-	// For now, we simply return a single network, which is the main chain of
-	// the Flow blockchain network.
-	network, err := d.retrieve.Network()
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
+	// Get the network we are running on from the configuration.
 	res := NetworksResponse{
-		NetworkIDs: []identifier.Network{network},
+		NetworkIDs: []identifier.Network{d.config.Network()},
 	}
 
 	return ctx.JSON(http.StatusOK, res)

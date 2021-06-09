@@ -12,11 +12,18 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package identifier
+package rosetta
 
-// Block uniquely identifies a block in a particular network. As the view is not
-// unique between sporks, index refers to the block height.
-type Block struct {
-	Index uint64 `json:"index,omitempty"`
-	Hash  string `json:"hash,omitempty"`
+import (
+	"github.com/optakt/flow-dps/rosetta/identifier"
+)
+
+// Transaction contains an array of operations that are attributable to the same
+// transaction identifier.
+//
+// Examples of metadata given in the Rosetta API documentation are "size" and
+// "lockTime".
+type Transaction struct {
+	ID         identifier.Transaction `json:"transaction_identifier"`
+	Operations []Operation            `json:"operations"`
 }

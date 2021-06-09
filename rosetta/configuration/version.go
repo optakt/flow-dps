@@ -12,16 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package configuration
 
-import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
+const (
+	RosettaVersion    = "1.4.10"
+	NodeVersion       = "1.17.4"
+	MiddlewareVersion = "0.0.0"
 )
-
-type Validator interface {
-	Network(network identifier.Network) error
-	Block(block identifier.Block) error
-	Transaction(transaction identifier.Transaction) error
-	Account(account identifier.Account) error
-	Currency(currency identifier.Currency) error
-}

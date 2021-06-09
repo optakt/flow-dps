@@ -12,16 +12,18 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package object
+package failure
 
-type Allow struct {
-	OperationStatuses       []OperationStatus `json:"operation_statuses"`
-	OperationTypes          []string          `json:"operation_types"`
-	Errors                  []Error           `json:"errors"`
-	HistoricalBalanceLookup bool              `json:"historical_balance_lookup"`
+import (
+	"fmt"
+)
+
+type InvalidNetwork struct {
+	Blockchain string
+	Network    string
+	Message    string
 }
 
-type OperationStatus struct {
-	Status     string `json:"status"`
-	Successful bool   `json:"successful"`
+func (i InvalidNetwork) Error() string {
+	return fmt.Sprintf("invalid network (blockchain: %s, network: %s): %s", i.Blockchain, i.Network, i.Message)
 }
