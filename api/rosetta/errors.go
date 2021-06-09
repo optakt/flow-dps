@@ -65,7 +65,8 @@ func InvalidAccount(fail failure.InvalidAccount) Error {
 		ErrorDefinition: configuration.ErrorInvalidAccount,
 		Description:     fail.Message,
 		Details: map[string]interface{}{
-			"address": fail.Address.String(),
+			"address": fail.Address,
+			"chain":   fail.Chain,
 		},
 	}
 }
@@ -86,8 +87,8 @@ func InvalidBlock(fail failure.InvalidBlock) Error {
 		ErrorDefinition: configuration.ErrorInvalidBlock,
 		Description:     fail.Message,
 		Details: map[string]interface{}{
-			"height": fail.Index,
-			"block":  fail.Hash,
+			"index": fail.Index,
+			"hash":  fail.Hash,
 		},
 	}
 }
