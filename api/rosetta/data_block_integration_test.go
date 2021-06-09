@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -28,7 +29,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/optakt/flow-dps/api/rosetta"
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 func TestGetBlock(t *testing.T) {
@@ -41,10 +44,11 @@ func TestGetBlock(t *testing.T) {
 
 		request rosetta.BlockRequest
 
-		wantStatusCode int
-		wantParentHash string // TODO: init
-		wantTimestamp  int64  // TODO: init
-		wantHandlerErr assert.ErrorAssertionFunc
+		wantStatusCode       int
+		wantTimestamp        int64 // TODO: init
+		wantParentHash       string
+		wantHandlerErr       assert.ErrorAssertionFunc
+		transactionValidator transactionValidationFn
 	}{
 		{
 			// TODO: think of a nice way to validate block responses
@@ -61,14 +65,16 @@ func TestGetBlock(t *testing.T) {
 			request:        blockRequest(1, knownBlockID(1)),
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
-			wantParentHash: knownBlockID(0), // ID of first block
+			wantParentHash: knownBlockID(0),
 		},
 		{
-			name:           "block mid-chain with transactions",
-			request:        blockRequest(13, knownBlockID(13)),
-			wantStatusCode: http.StatusOK,
-			wantHandlerErr: assert.NoError,
-			wantParentHash: knownBlockID(12),
+			// initial transfer of currency from the root account to the user
+			name:                 "block mid-chain with transactions",
+			request:              blockRequest(13, knownBlockID(13)),
+			wantStatusCode:       http.StatusOK,
+			wantHandlerErr:       assert.NoError,
+			wantParentHash:       knownBlockID(12),
+			transactionValidator: validateSingleTransfer(t, "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1", "8c5303eaa26202d6", "754aed9de6197641", 100_00000000),
 		},
 		{
 			name:           "block mid-chain without transactions",
@@ -78,11 +84,13 @@ func TestGetBlock(t *testing.T) {
 			wantParentHash: knownBlockID(42),
 		},
 		{
-			name:           "second block mid-chain with transactions",
-			request:        blockRequest(44, knownBlockID(44)),
-			wantStatusCode: http.StatusOK,
-			wantHandlerErr: assert.NoError,
-			wantParentHash: knownBlockID(43),
+			// transaction between two users
+			name:                 "second block mid-chain with transactions",
+			request:              blockRequest(44, knownBlockID(44)),
+			wantStatusCode:       http.StatusOK,
+			wantHandlerErr:       assert.NoError,
+			wantParentHash:       knownBlockID(43),
+			transactionValidator: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
 		},
 		{
 			name:           "last indexed block",
@@ -140,8 +148,15 @@ func TestGetBlock(t *testing.T) {
 				assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 
 				// assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
-			}
 
+				if test.transactionValidator != nil {
+
+					// not a universal condition, but in our test cases we only have a single transaction per block
+					if assert.Len(t, blockResponse.Block.Transactions, 1) {
+						test.transactionValidator(blockResponse.Block.Transactions[0])
+					}
+				}
+			}
 		})
 	}
 }
@@ -155,6 +170,48 @@ func blockRequest(height uint64, hash string) rosetta.BlockRequest {
 			Index: height,
 			Hash:  hash,
 		},
+	}
+}
+
+type transactionValidationFn func(*object.Transaction)
+
+// FIXME: make this a testing helper and assert all the individual points
+// TODO: check test data - do we ever have a single block with multiple transactions
+func validateSingleTransfer(t *testing.T, hash string, from string, to string, amount int64) transactionValidationFn {
+
+	t.Helper()
+
+	return func(tx *object.Transaction) {
+
+		assert.Equal(t, tx.ID.Hash, hash)
+		assert.Equal(t, len(tx.Operations), 2)
+
+		for _, op := range tx.Operations {
+
+			// TODO: cross reference operation_identifier with the related_operations index?
+
+			// validate operation and status
+			assert.Equal(t, op.Type, dps.OperationTransfer)
+			assert.Equal(t, op.Status, dps.StatusCompleted)
+
+			// validate currency
+			assert.Equal(t, op.Amount.Currency.Symbol, dps.FlowSymbol)
+			assert.Equal(t, op.Amount.Currency.Decimals, uint(dps.FlowDecimals))
+
+			// validate address
+			address := op.AccountID.Address
+			if address != from && address != to {
+				t.Errorf("unexpected account address (%v)", address)
+			}
+
+			// validate transfered amount
+			wantValue := strconv.FormatInt(amount, 10)
+			if address == from {
+				wantValue = "-" + wantValue
+			}
+
+			assert.Equal(t, op.Amount.Value, wantValue)
+		}
 	}
 }
 
