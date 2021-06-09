@@ -86,8 +86,8 @@ func InvalidBlock(fail failure.InvalidBlock) Error {
 		ErrorDefinition: configuration.ErrorInvalidBlock,
 		Description:     fail.Message,
 		Details: map[string]interface{}{
-			"height": fail.Height,
-			"block":  fail.BlockID.String(),
+			"height": fail.Index,
+			"block":  fail.Hash,
 		},
 	}
 }
@@ -97,7 +97,7 @@ func InvalidTransaction(fail failure.InvalidTransaction) Error {
 		ErrorDefinition: configuration.ErrorInvalidTransaction,
 		Description:     fail.Message,
 		Details: map[string]interface{}{
-			"transaction": fail.TransactionID.String(),
+			"hash": fail.Hash,
 		},
 	}
 }
@@ -118,8 +118,8 @@ func UnknownBlock(fail failure.UnknownBlock) Error {
 		ErrorDefinition: configuration.ErrorUnknownBlock,
 		Description:     fail.Message,
 		Details: map[string]interface{}{
-			"height": fail.Height,
-			"block":  fail.BlockID.String(),
+			"index": fail.Index,
+			"hash":  fail.Hash,
 		},
 	}
 }

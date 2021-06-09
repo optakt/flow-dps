@@ -37,15 +37,13 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 
 	// We should always be able to parse this at this point, if it is present,
 	// as we already checked the format, so normal error is fine.
-	var blockID flow.Identifier
-	var err error
 	if block.Hash != "" {
-		blockID, err = flow.HexStringToIdentifier(block.Hash)
+		_, err := flow.HexStringToIdentifier(block.Hash)
 		if err != nil {
 			return identifier.Block{}, failure.InvalidBlock{
-				Height:  block.Index,
-				BlockID: flow.ZeroID,
-				Message: fmt.Sprintf("block hash not in hex format (hash: %s)", block.Hash),
+				Index:   block.Index,
+				Hash:    block.Hash,
+				Message: "block hash is not a valid hex-encoded string",
 			}
 		}
 	}
@@ -57,9 +55,9 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	}
 	if block.Index < first {
 		return identifier.Block{}, failure.InvalidBlock{
-			Height:  block.Index,
-			BlockID: blockID,
-			Message: fmt.Sprintf("block height below first indexed block (first: %d)", first),
+			Index:   block.Index,
+			Hash:    block.Hash,
+			Message: fmt.Sprintf("block index is below first indexed block (first: %d)", first),
 		}
 	}
 
@@ -70,9 +68,9 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	}
 	if block.Index > last {
 		return identifier.Block{}, failure.UnknownBlock{
-			Height:  block.Index,
-			BlockID: blockID,
-			Message: fmt.Sprintf("block height above last indexed block (last: %d)", last),
+			Index:   block.Index,
+			Hash:    block.Hash,
+			Message: fmt.Sprintf("block index is above last indexed block (last: %d)", last),
 		}
 	}
 
@@ -83,9 +81,9 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	}
 	if block.Hash != "" && block.Hash != header.ID().String() {
 		return identifier.Block{}, failure.InvalidBlock{
-			Height:  block.Index,
-			BlockID: blockID,
-			Message: fmt.Sprintf("provided hash does not match real hash for height (real: %s)", header.ID().String()),
+			Index:   block.Index,
+			Hash:    block.Hash,
+			Message: fmt.Sprintf("block hash does not match known hash for height (known: %s)", header.ID().String()),
 		}
 	}
 

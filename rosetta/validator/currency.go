@@ -31,7 +31,7 @@ func (v *Validator) Currency(currency identifier.Currency) (identifier.Currency,
 		return identifier.Currency{}, failure.UnknownCurrency{
 			Symbol:   currency.Symbol,
 			Decimals: currency.Decimals,
-			Message:  "currency not currently configured",
+			Message:  "currency symbol has not been configured",
 		}
 	}
 
@@ -41,7 +41,7 @@ func (v *Validator) Currency(currency identifier.Currency) (identifier.Currency,
 		return identifier.Currency{}, failure.InvalidCurrency{
 			Symbol:   currency.Symbol,
 			Decimals: currency.Decimals,
-			Message:  fmt.Sprintf("invalid number of decimals (have: %d, want: %d)", currency.Decimals, dps.FlowDecimals),
+			Message:  fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
 		}
 	}
 

@@ -16,16 +16,14 @@ package failure
 
 import (
 	"fmt"
-
-	"github.com/onflow/flow-go/model/flow"
 )
 
 type UnknownBlock struct {
-	Height  uint64
-	BlockID flow.Identifier
+	Index   uint64
+	Hash    string
 	Message string
 }
 
 func (u UnknownBlock) Error() string {
-	return fmt.Sprintf("unknown block (height: %d, block: %x): %s", u.Height, u.BlockID, u.Message)
+	return fmt.Sprintf("unknown block (index: %d, hash: %s): %s", u.Index, u.Hash, u.Message)
 }

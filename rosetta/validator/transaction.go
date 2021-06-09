@@ -15,8 +15,6 @@
 package validator
 
 import (
-	"fmt"
-
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/rosetta/failure"
@@ -28,8 +26,8 @@ func (v *Validator) Transaction(transaction identifier.Transaction) error {
 	_, err := flow.HexStringToIdentifier(transaction.Hash)
 	if err != nil {
 		return failure.InvalidTransaction{
-			TransactionID: flow.ZeroID,
-			Message:       fmt.Sprintf("transaction hash not in hex format (hash: %s)", transaction.Hash),
+			Hash:    transaction.Hash,
+			Message: "transaction hash is not a valid hex-encoded string",
 		}
 	}
 

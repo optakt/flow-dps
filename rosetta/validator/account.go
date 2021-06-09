@@ -15,24 +15,37 @@
 package validator
 
 import (
+	"encoding/hex"
+
 	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 func (v *Validator) Account(account identifier.Account) error {
 
-	// Parse the address; this should always work as we already checked the
-	// length.
-	address := flow.HexToAddress(account.Address)
+	// Parse the address; the length was already validated, but it's still
+	// possible that the characters are not valid hex encoding.
+	bytes, err := hex.DecodeString(account.Address)
+	if err != nil {
+		return failure.InvalidAccount{
+			Address: account.Address,
+			Chain:   v.params.ChainID.String(),
+			Message: "account address is not a valid hex-encoded string",
+		}
+	}
 
 	// We use the Flow chain address generator to check if the converted address
 	// is valid.
+	var address flow.Address
+	copy(address[:], bytes)
 	ok := v.params.ChainID.Chain().IsValid(address)
 	if !ok {
 		return failure.InvalidAccount{
-			Address: address,
-			Message: "not a valid address for configured chain",
+			Address: account.Address,
+			Chain:   v.params.ChainID.String(),
+			Message: "account address is not valid for configured chain",
 		}
 	}
 

@@ -16,16 +16,14 @@ package failure
 
 import (
 	"fmt"
-
-	"github.com/onflow/flow-go/model/flow"
 )
 
 type InvalidBlock struct {
-	Height  uint64
-	BlockID flow.Identifier
+	Index   uint64
+	Hash    string
 	Message string
 }
 
 func (i InvalidBlock) Error() string {
-	return fmt.Sprintf("invalid block (height: %d, block: %x): %s", i.Height, i.BlockID, i.Message)
+	return fmt.Sprintf("invalid block (index: %d, hash: %x): %s", i.Index, i.Hash, i.Message)
 }

@@ -16,15 +16,14 @@ package failure
 
 import (
 	"fmt"
-
-	"github.com/onflow/flow-go/model/flow"
 )
 
 type InvalidAccount struct {
-	Address flow.Address
+	Address string
+	Chain   string
 	Message string
 }
 
 func (i InvalidAccount) Error() string {
-	return fmt.Sprintf("invalid account (address: %x): %s", i.Address, i.Message)
+	return fmt.Sprintf("invalid account (address: %s, chain: %s): %s", i.Address, i.Message, i.Chain)
 }
