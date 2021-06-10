@@ -25,4 +25,5 @@ const (
 	prefixCommit  = 4
 	prefixEvents  = 5
 	prefixPayload = 6
+	prefixHeight  = 7
 )

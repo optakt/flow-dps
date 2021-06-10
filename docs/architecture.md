@@ -17,6 +17,7 @@ This document describes the internal components that the Flow Data Provisioning 
          4. [Commit Index](#commit-index)
          5. [Events Index](#events-index)
          6. [Path Deltas Index](#path-deltas-index)
+         7. [Height Index](#height-index)
 
 ## Chain
 
@@ -44,7 +45,7 @@ The [Disk Feeder](https://pkg.go.dev/github.com/optakt/flow-dps/service/feeder#D
 ## Mapper
 
 The Mapper component is at the core of the DPS. It is responsible for mapping incoming state trie updates to blocks.
-In order to do that, it depends on the [Feeder](#feeder) and [Chain](#chain) components to get state trie updates and block information, as well as on the [Store](#store) component for indexing.
+In order to do that, it depends on the [Feeder](#feeder) and [Chain](#chain) components to get state trie updates and block information, as well as on the [Index](#index) component for indexing.
 Generally, trie updates come in by chunk, so each block height corresponds to an arbitrary number of trie updates, from zero to many.
 Once a block height is mapped to its respective trie updates, the mapper uses the indexer to persist the information.
 
@@ -141,3 +142,14 @@ This index maps a block ID to all the paths that are changed within its state up
 The value stored at that key is **the compressed payload of the payload at the given height and given path**.
 It is compressed using [CBOR compression](https://en.wikipedia.org/wiki/CBOR).
 
+##### Height Index
+
+In this index, keys map the block IDs to their height.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Block ID               |
+| **Example Value**  | `7`               | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **block height** of the referenced block ID.

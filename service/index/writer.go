@@ -103,3 +103,8 @@ func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger
 		return nil
 	})
 }
+
+// Height indexes the height of the block.
+func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
+	return w.db.Update(storage.SaveHeight(blockID, height))
+}

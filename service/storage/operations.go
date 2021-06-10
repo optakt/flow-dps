@@ -52,6 +52,10 @@ func SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(
 	return save(encodeKey(prefixPayload, path, height), payload)
 }
 
+func SaveHeight(blockID flow.Identifier, height uint64) func(*badger.Txn) error {
+	return save(encodeKey(prefixHeight, blockID), height)
+}
+
 func RetrieveFirst(height *uint64) func(*badger.Txn) error {
 	return retrieve(encodeKey(prefixFirst), height)
 }
@@ -149,4 +153,8 @@ func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) f
 		})
 		return err
 	}
+}
+
+func RetrieveHeight(blockID flow.Identifier, height *uint64) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixHeight, blockID), height)
 }
