@@ -335,8 +335,6 @@ func TestBlockErrors(t *testing.T) {
 		},
 	}
 
-	// TODO: malformed JSON test case
-
 	for _, test := range tests {
 		test := test
 
@@ -371,6 +369,72 @@ func TestBlockErrors(t *testing.T) {
 			assert.Equal(t, test.wantRosettaErrorDetails, gotErr.Details)
 		})
 	}
+}
+
+func TestMalformedBlockRequest(t *testing.T) {
+
+	db := setupDB(t)
+	api := setupAPI(t, db)
+
+	tests := []struct {
+		name     string
+		payload  []byte
+		mimeType string
+	}{
+		{
+			name:     "empty request",
+			payload:  []byte(``),
+			mimeType: echo.MIMEApplicationJSON,
+		},
+		{
+			name:     "wrong field type",
+			payload:  []byte(`{ "network_identifier": { "blockchain": "flow", "network": 99} }`),
+			mimeType: echo.MIMEApplicationJSON,
+		},
+		{
+			name: "unclosed bracket",
+			payload: []byte(`{ "network_identifier": { "blockchain": "flow", "network": "flow-testnet" },
+							   "block_identifier": { "index": 13, "hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23" }`),
+			mimeType: echo.MIMEApplicationJSON,
+		},
+		{
+			// TODO: check if this should be treated as an error - echo will
+			name: "valid payload with no mime type set",
+			payload: []byte(`{ "network_identifier": { "blockchain": "flow", "network": "flow-testnet" },
+							   "block_identifier": { "index": 13, "hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23" } }`),
+			mimeType: "",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodPost, "/block", bytes.NewReader(test.payload))
+			req.Header.Set(echo.HeaderContentType, test.mimeType)
+
+			rec := httptest.NewRecorder()
+			ctx := echo.New().NewContext(req, rec)
+
+			err := api.Block(ctx)
+			assert.Error(t, err)
+
+			echoErr, ok := err.(*echo.HTTPError)
+			require.True(t, ok)
+
+			assert.Equal(t, http.StatusBadRequest, echoErr.Code)
+
+			gotErr, ok := echoErr.Message.(rosetta.Error)
+			require.True(t, ok)
+
+			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.NotEmpty(t, gotErr.Description)
+		})
+	}
+
 }
 
 // blockRequest generates a BlockRequest with the specified parameters.
