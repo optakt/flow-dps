@@ -37,6 +37,7 @@ import (
 	rosettaobj "github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
+type blockIDValidationFn func(identifier.Block)
 type transactionValidationFn func(*rosettaobj.Transaction)
 
 func TestGetBlock(t *testing.T) {
@@ -49,9 +50,10 @@ func TestGetBlock(t *testing.T) {
 
 		request rosetta.BlockRequest
 
-		wantTimestamp        int64
-		wantParentHash       string
-		transactionValidator transactionValidationFn
+		wantTimestamp          int64
+		wantParentHash         string
+		transactionValidator   transactionValidationFn
+		customBlockIDValidator blockIDValidationFn
 	}{
 		{
 			name:           "child of first block",
@@ -80,6 +82,17 @@ func TestGetBlock(t *testing.T) {
 			wantTimestamp:        1621341193243,
 			wantParentHash:       knownBlockID(43),
 			transactionValidator: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
+		},
+		{
+			// same as above, but verify lookup by index only works
+			name: "lookup of a block mid-chain by index only",
+			request: rosetta.BlockRequest{
+				NetworkID: defaultNetworkID(),
+				BlockID:   identifier.Block{Index: 44}},
+			wantTimestamp:          1621341193243,
+			wantParentHash:         knownBlockID(43),
+			transactionValidator:   validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
+			customBlockIDValidator: validateBlockID(t, 44, knownBlockID(44)), // verify that the returned block ID has both height and hash
 		},
 		{
 			name:           "last indexed block",
@@ -114,9 +127,15 @@ func TestGetBlock(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &blockResponse))
 
 			if assert.NotNil(t, blockResponse.Block) {
-				// verify that we got the data for the requested block
-				assert.Equal(t, test.request.BlockID.Index, blockResponse.Block.ID.Index)
-				assert.Equal(t, test.request.BlockID.Hash, blockResponse.Block.ID.Hash)
+
+				// verify block ID of the returned block either using the provided validator,
+				// or by comparing the requested and returned block height and hash
+				if test.customBlockIDValidator != nil {
+					test.customBlockIDValidator(blockResponse.Block.ID)
+				} else {
+					assert.Equal(t, test.request.BlockID.Index, blockResponse.Block.ID.Index)
+					assert.Equal(t, test.request.BlockID.Hash, blockResponse.Block.ID.Hash)
+				}
 
 				// verify the parent block index is correct
 				assert.Equal(t, test.request.BlockID.Index-1, blockResponse.Block.ParentID.Index)
@@ -499,6 +518,16 @@ func validateSingleTransfer(t *testing.T, hash string, from string, to string, a
 			assert.Contains(t, relatedOperations, relatedID)
 			assert.Equal(t, id, relatedOperations[relatedID])
 		}
+	}
+}
+
+func validateBlockID(t *testing.T, height uint64, hash string) blockIDValidationFn {
+
+	t.Helper()
+
+	return func(blockID identifier.Block) {
+		assert.Equal(t, height, blockID.Index)
+		assert.Equal(t, hash, blockID.Hash)
 	}
 }
 
