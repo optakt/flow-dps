@@ -26,6 +26,7 @@ type Writer struct {
 	CommitFunc   func(height uint64, commit flow.StateCommitment) error
 	EventsFunc   func(height uint64, events []flow.Event) error
 	PayloadsFunc func(height uint64, paths []ledger.Path, value []*ledger.Payload) error
+	HeightFunc   func(blockID flow.Identifier, height uint64) error
 }
 
 func (w *Writer) First(height uint64) error {
@@ -50,4 +51,8 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 
 func (w *Writer) Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error {
 	return w.PayloadsFunc(height, paths, values)
+}
+
+func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
+	return w.HeightFunc(blockID, height)
 }

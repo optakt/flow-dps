@@ -392,6 +392,7 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
+		blockID := header.ID()
 
 		// We then index the data for the finalized block at the current height.
 		err = m.index.Header(height, header)
@@ -405,6 +406,10 @@ Outer:
 		err = m.index.Events(height, events)
 		if err != nil {
 			return fmt.Errorf("could not index events: %w", err)
+		}
+		err = m.index.Height(blockID, height)
+		if err != nil {
+			return fmt.Errorf("could not index block heights: %w", err)
 		}
 
 		// TODO: In order to provide more complete responses for the Rosetta API
@@ -511,7 +516,6 @@ Outer:
 		commitPrev = commitNext
 		height++
 
-		blockID := header.ID()
 		log.Info().
 			Hex("block", blockID[:]).
 			Int("num_changes", len(updated)).

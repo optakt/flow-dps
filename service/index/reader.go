@@ -127,3 +127,10 @@ func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, 
 	})
 	return values, err
 }
+
+// Height returns the height of the given block ID.
+func (r *Reader) Height(blockID flow.Identifier) (uint64, error) {
+	var height uint64
+	err := r.db.View(storage.RetrieveHeight(blockID, &height))
+	return height, err
+}

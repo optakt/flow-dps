@@ -26,4 +26,5 @@ type Writer interface {
 	Commit(height uint64, commit flow.StateCommitment) error
 	Events(height uint64, events []flow.Event) error
 	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
+	Height(blockID flow.Identifier, height uint64) error
 }
