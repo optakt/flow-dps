@@ -49,27 +49,13 @@ func TestGetBlock(t *testing.T) {
 
 		request rosetta.BlockRequest
 
-		wantStatusCode       int
 		wantTimestamp        int64
 		wantParentHash       string
-		wantHandlerErr       assert.ErrorAssertionFunc
 		transactionValidator transactionValidationFn
 	}{
 		{
-			// TODO: this is a natural boundary element, but the parent block we will receive will be a bit weird (parent ID is uint64(-1));
-			// since the recent rosetta explicitly states that block with height 0 is not supported, probably should be removed
-			name:           "first block",
-			request:        blockRequest(0, knownBlockID(0)), // TODO: make blockRequest in the format: blockRequest(height) and set the hash by itself
-			wantStatusCode: http.StatusOK,
-			wantHandlerErr: assert.NoError,
-			wantTimestamp:  1621337233243,
-			wantParentHash: "0000000000000000000000000000000000000000000000000000000000000000",
-		},
-		{
 			name:           "child of first block",
 			request:        blockRequest(1, knownBlockID(1)),
-			wantStatusCode: http.StatusOK,
-			wantHandlerErr: assert.NoError,
 			wantTimestamp:  1621337323243,
 			wantParentHash: knownBlockID(0),
 		},
@@ -77,8 +63,6 @@ func TestGetBlock(t *testing.T) {
 			// initial transfer of currency from the root account to the user - 100 tokens
 			name:                 "block mid-chain with transactions",
 			request:              blockRequest(13, knownBlockID(13)),
-			wantStatusCode:       http.StatusOK,
-			wantHandlerErr:       assert.NoError,
 			wantTimestamp:        1621338403243,
 			wantParentHash:       knownBlockID(12),
 			transactionValidator: validateSingleTransfer(t, "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1", "8c5303eaa26202d6", "754aed9de6197641", 100_00000000),
@@ -86,8 +70,6 @@ func TestGetBlock(t *testing.T) {
 		{
 			name:           "block mid-chain without transactions",
 			request:        blockRequest(43, knownBlockID(43)),
-			wantStatusCode: http.StatusOK,
-			wantHandlerErr: assert.NoError,
 			wantTimestamp:  1621341103243,
 			wantParentHash: knownBlockID(42),
 		},
@@ -95,8 +77,6 @@ func TestGetBlock(t *testing.T) {
 			// transaction between two users
 			name:                 "second block mid-chain with transactions",
 			request:              blockRequest(44, knownBlockID(44)),
-			wantStatusCode:       http.StatusOK,
-			wantHandlerErr:       assert.NoError,
 			wantTimestamp:        1621341193243,
 			wantParentHash:       knownBlockID(43),
 			transactionValidator: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
@@ -104,69 +84,9 @@ func TestGetBlock(t *testing.T) {
 		{
 			name:           "last indexed block",
 			request:        blockRequest(425, knownBlockID(425)),
-			wantStatusCode: http.StatusOK,
-			wantHandlerErr: assert.NoError,
 			wantTimestamp:  1621375483243,
 			wantParentHash: knownBlockID(424),
 		},
-		// negative test cases
-		{
-			name:           "unknown block",
-			request:        blockRequest(426, "xyz"),
-			wantStatusCode: http.StatusInternalServerError,
-			wantHandlerErr: assert.Error,
-		},
-		{
-			name:           "empty request",
-			request:        rosetta.BlockRequest{},
-			wantStatusCode: http.StatusUnprocessableEntity,
-			wantHandlerErr: assert.Error,
-		},
-		{
-			name: "invalid blockchain",
-			request: rosetta.BlockRequest{
-				NetworkID: identifier.Network{
-					Blockchain: "not-flow",
-					Network:    dps.FlowTestnet.String(),
-				},
-				BlockID: identifier.Block{
-					Index: 44,
-					Hash:  knownBlockID(44),
-				},
-			},
-			wantStatusCode: http.StatusUnprocessableEntity,
-			wantHandlerErr: assert.Error,
-		},
-		{
-			name: "invalid network",
-			request: rosetta.BlockRequest{
-				NetworkID: identifier.Network{
-					Blockchain: dps.FlowBlockchain,
-					Network:    "not-a-flow-testnet",
-				},
-				BlockID: identifier.Block{
-					Index: 44,
-					Hash:  knownBlockID(44),
-				},
-			},
-			wantStatusCode: http.StatusUnprocessableEntity,
-			wantHandlerErr: assert.Error,
-		},
-		/*
-			TODO: when we re-add block validation, we should reintroduce this test case - block height and hash mismatch should result in an error
-				=> https://github.com/optakt/flow-dps/issues/51
-			{
-				name:           "invalid request - block hash and height mismatch",
-				request:        blockRequest(44, knownBlockID(43)),
-				wantStatusCode: http.StatusUnprocessableEntity,
-				wantHandlerErr: assert.Error,
-			},
-		*/
-
-		/* TODO: when the errors we return get solidifed, add test cases to verify the errors
-		=> https://github.com/optakt/flow-dps/issues/34
-		*/
-
 	}
 
 	for _, test := range tests {
@@ -187,19 +107,7 @@ func TestGetBlock(t *testing.T) {
 			ctx := echo.New().NewContext(req, rec)
 
 			err = api.Block(ctx)
-			test.wantHandlerErr(t, err)
-
-			if test.wantStatusCode != http.StatusOK {
-
-				e, ok := err.(*echo.HTTPError)
-				require.True(t, ok)
-				assert.Equal(t, test.wantStatusCode, e.Code)
-
-				// nothing more to do, response validation should only be done for '200 OK' responses
-				return
-			}
-
-			assert.Equal(t, test.wantStatusCode, rec.Result().StatusCode)
+			assert.NoError(t, err)
 
 			// unpack response
 			var blockResponse rosetta.BlockResponse
@@ -414,6 +322,16 @@ func TestBlockErrors(t *testing.T) {
 			wantRosettaError:            configuration.ErrorInvalidBlock,
 			wantRosettaErrorDescription: fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownBlockID(43)),
 			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(43), "hash": knownBlockID(44)},
+		},
+		{
+			// effectively the same as the 'missing blockchain name' test case, since it's the first check we'll do
+			name:    "empty block request",
+			request: rosetta.BlockRequest{},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
+			wantRosettaErrorDetails:     nil,
 		},
 	}
 
