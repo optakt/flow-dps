@@ -234,6 +234,7 @@ func TestBlockErrors(t *testing.T) {
 
 	const (
 		invalidBlockchainName = "not-flow"
+		invalidNetworkName    = "not-flow-testnet"
 	)
 
 	tests := []struct {
@@ -250,7 +251,7 @@ func TestBlockErrors(t *testing.T) {
 		wantRosettaErrorDetails     map[string]interface{}
 	}{
 		{
-			name: "network blockchain name missing",
+			name: "missing network blockchain name",
 			request: rosetta.BlockRequest{
 				NetworkID: identifier.Network{
 					Blockchain: "",
@@ -268,7 +269,7 @@ func TestBlockErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "network blockchain name wrong",
+			name: "wrong network blockchain name",
 			request: rosetta.BlockRequest{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchainName,
@@ -286,7 +287,7 @@ func TestBlockErrors(t *testing.T) {
 			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchainName, "network": dps.FlowTestnet.String()},
 		},
 		{
-			name: "network name missing",
+			name: "missing network name",
 			request: rosetta.BlockRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
@@ -302,6 +303,24 @@ func TestBlockErrors(t *testing.T) {
 			wantRosettaError:            configuration.ErrorInvalidFormat,
 			wantRosettaErrorDescription: "blockchain identifier: network field is empty",
 			wantRosettaErrorDetails:     nil,
+		},
+		{
+			name: "wrong network name",
+			request: rosetta.BlockRequest{
+				NetworkID: identifier.Network{
+					Blockchain: dps.FlowBlockchain,
+					Network:    invalidNetworkName,
+				},
+				BlockID: identifier.Block{
+					Index: 44,
+					Hash:  knownBlockID(44),
+				},
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidNetwork,
+			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetworkName, dps.FlowTestnet.String()),
+			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetworkName},
 		},
 	}
 
