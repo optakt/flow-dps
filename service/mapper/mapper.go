@@ -126,7 +126,7 @@ func (m *Mapper) Run() error {
 	if m.checkpoint == "" {
 		tree = empty
 	} else {
-		m.log.Info().Msg("checkpoint rebuild starting")
+		m.log.Info().Msg("checkpoint rebuild started")
 		file, err := os.Open(m.checkpoint)
 		if err != nil {
 			return fmt.Errorf("could not open checkpoint file: %w", err)
@@ -146,7 +146,7 @@ func (m *Mapper) Run() error {
 		m.log.Info().Msg("checkpoint rebuild finished")
 	}
 
-	m.log.Info().Msg("root trie crawl starting")
+	m.log.Info().Msg("path collection started")
 
 	// We have to index all of the paths from the checkpoint; otherwise, we will
 	// miss every single one of the bootstrapped registers.
@@ -171,7 +171,15 @@ func (m *Mapper) Run() error {
 		}
 	}
 
-	m.log.Info().Int("paths", len(paths)).Msg("root trie crawl finished")
+	m.log.Info().Int("paths", len(paths)).Msg("path collection finished")
+
+	m.log.Info().Msg("path sorting started")
+
+	sort.Slice(paths, func(i int, j int) bool {
+		return bytes.Compare(paths[i][:], paths[j][:]) < 0
+	})
+
+	m.log.Info().Msg("path sorting finished")
 
 	// When trying to go from one finalized block to the next, we keep a list
 	// of intermediary tries until the full set of transitions have been
@@ -207,6 +215,8 @@ func (m *Mapper) Run() error {
 	// for when to stop going backwards through the steps when indexing a block.
 	// This means the value is always set to the last already indexed step.
 	commitPrev := emptyCommit
+
+	m.log.Info().Msg("state indexing started")
 
 	// Next, we launch into the loop that is responsible for mapping all
 	// incoming trie updates to a block. The loop itself has no concept of what
@@ -522,6 +532,8 @@ Outer:
 			Int("num_events", len(events)).
 			Msg("block data indexed")
 	}
+
+	m.log.Info().Msg("state indexing finished")
 
 	step := steps[commitPrev]
 	m.post(step.Tree)
