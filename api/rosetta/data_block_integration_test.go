@@ -236,9 +236,10 @@ func TestBlockErrors(t *testing.T) {
 		invalidBlockchainName = "not-flow"
 		invalidNetworkName    = "not-flow-testnet"
 
-		trimmedBlockId     = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
-		invalidBlockHash   = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
-		validBlockIDLength = 64
+		trimmedBlockId       = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
+		invalidBlockHash     = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+		validBlockIDLength   = 64
+		lastKnownBlockHeight = 425
 	)
 
 	tests := []struct {
@@ -384,6 +385,35 @@ func TestBlockErrors(t *testing.T) {
 			wantRosettaError:            configuration.ErrorInvalidBlock,
 			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
 			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
+		},
+		{
+			name: "unknown block",
+			request: rosetta.BlockRequest{
+				NetworkID: defaultNetworkID(),
+				BlockID: identifier.Block{
+					Index: lastKnownBlockHeight + 1,
+				},
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorUnknownBlock,
+			wantRosettaErrorDescription: fmt.Sprintf("block index is above last indexed block (last: %d)", lastKnownBlockHeight),
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(426), "hash": ""},
+		},
+		{
+			name: "mismatched block height and hash",
+			request: rosetta.BlockRequest{
+				NetworkID: defaultNetworkID(),
+				BlockID: identifier.Block{
+					Index: 43,
+					Hash:  knownBlockID(44),
+				},
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidBlock,
+			wantRosettaErrorDescription: fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownBlockID(43)),
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(43), "hash": knownBlockID(44)},
 		},
 	}
 
