@@ -19,6 +19,7 @@ package rosetta_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -30,7 +31,9 @@ import (
 
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/meta"
 	rosettaobj "github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
@@ -56,7 +59,7 @@ func TestGetBlock(t *testing.T) {
 			// TODO: this is a natural boundary element, but the parent block we will receive will be a bit weird (parent ID is uint64(-1));
 			// since the recent rosetta explicitly states that block with height 0 is not supported, probably should be removed
 			name:           "first block",
-			request:        blockRequest(0, knownBlockID(0)),
+			request:        blockRequest(0, knownBlockID(0)), // TODO: make blockRequest in the format: blockRequest(height) and set the hash by itself
 			wantStatusCode: http.StatusOK,
 			wantHandlerErr: assert.NoError,
 			wantTimestamp:  1621337233243,
@@ -220,6 +223,122 @@ func TestGetBlock(t *testing.T) {
 					}
 				}
 			}
+		})
+	}
+}
+
+func TestBlockErrors(t *testing.T) {
+
+	db := setupDB(t)
+	api := setupAPI(t, db)
+
+	const (
+		invalidBlockchainName = "not-flow"
+	)
+
+	tests := []struct {
+		name string
+
+		request rosetta.BlockRequest
+
+		// HTTP/handler errors
+		wantStatusCode int
+
+		// rosetta errors - validated separately since it makes reporting mismatches more manageable
+		wantRosettaError            meta.ErrorDefinition
+		wantRosettaErrorDescription string
+		wantRosettaErrorDetails     map[string]interface{}
+	}{
+		{
+			name: "network blockchain name missing",
+			request: rosetta.BlockRequest{
+				NetworkID: identifier.Network{
+					Blockchain: "",
+					Network:    dps.FlowTestnet.String(),
+				},
+				BlockID: identifier.Block{
+					Index: 44,
+					Hash:  knownBlockID(44),
+				},
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
+			wantRosettaErrorDetails:     nil,
+		},
+		{
+			name: "network blockchain name wrong",
+			request: rosetta.BlockRequest{
+				NetworkID: identifier.Network{
+					Blockchain: invalidBlockchainName,
+					Network:    dps.FlowTestnet.String(),
+				},
+				BlockID: identifier.Block{
+					Index: 44,
+					Hash:  knownBlockID(44),
+				},
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidNetwork,
+			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchainName, dps.FlowBlockchain),
+			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchainName, "network": dps.FlowTestnet.String()},
+		},
+		{
+			name: "network name missing",
+			request: rosetta.BlockRequest{
+				NetworkID: identifier.Network{
+					Blockchain: dps.FlowBlockchain,
+					Network:    "",
+				},
+				BlockID: identifier.Block{
+					Index: 44,
+					Hash:  knownBlockID(44),
+				},
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "blockchain identifier: network field is empty",
+			wantRosettaErrorDetails:     nil,
+		},
+	}
+
+	// TODO: malformed JSON test case
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			enc, err := json.Marshal(test.request)
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPost, "/block", bytes.NewReader(enc))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+			rec := httptest.NewRecorder()
+			ctx := echo.New().NewContext(req, rec)
+
+			// execute the request
+			err = api.Block(ctx)
+			assert.Error(t, err)
+
+			echoErr, ok := err.(*echo.HTTPError)
+			require.True(t, ok)
+
+			// verify HTTP status code
+			assert.Equal(t, test.wantStatusCode, echoErr.Code)
+
+			gotErr, ok := echoErr.Message.(rosetta.Error)
+			require.True(t, ok)
+
+			assert.Equal(t, test.wantRosettaError, gotErr.ErrorDefinition)
+			assert.Equal(t, test.wantRosettaErrorDescription, gotErr.Description)
+			assert.Equal(t, test.wantRosettaErrorDetails, gotErr.Details)
 		})
 	}
 }
