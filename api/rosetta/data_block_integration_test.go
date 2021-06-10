@@ -235,6 +235,10 @@ func TestBlockErrors(t *testing.T) {
 	const (
 		invalidBlockchainName = "not-flow"
 		invalidNetworkName    = "not-flow-testnet"
+
+		trimmedBlockId     = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
+		invalidBlockHash   = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+		validBlockIDLength = 64
 	)
 
 	tests := []struct {
@@ -321,6 +325,65 @@ func TestBlockErrors(t *testing.T) {
 			wantRosettaError:            configuration.ErrorInvalidNetwork,
 			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetworkName, dps.FlowTestnet.String()),
 			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetworkName},
+		},
+		{
+			name: "missing block height and hash",
+			request: rosetta.BlockRequest{
+				NetworkID: defaultNetworkID(),
+				BlockID: identifier.Block{
+					Index: 0,
+					Hash:  "",
+				},
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
+			wantRosettaErrorDetails:     nil,
+		},
+		{
+			name: "wrong length of block id",
+			request: rosetta.BlockRequest{
+				NetworkID: defaultNetworkID(),
+				BlockID: identifier.Block{
+					Index: 43,
+					Hash:  trimmedBlockId,
+				},
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockId), validBlockIDLength),
+			wantRosettaErrorDetails:     nil,
+		},
+		{
+			name: "missing block height",
+			request: rosetta.BlockRequest{
+				NetworkID: defaultNetworkID(),
+				BlockID: identifier.Block{
+					Hash: knownBlockID(44),
+				},
+			},
+
+			wantStatusCode:              http.StatusInternalServerError,
+			wantRosettaError:            configuration.ErrorInternal,
+			wantRosettaErrorDescription: "could not validate block: block access with hash currently not supported",
+			wantRosettaErrorDetails:     nil,
+		},
+		{
+			name: "invalid block hash",
+			request: rosetta.BlockRequest{
+				NetworkID: defaultNetworkID(),
+				BlockID: identifier.Block{
+					Index: 13,
+					Hash:  invalidBlockHash,
+				},
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidBlock,
+			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
 		},
 	}
 
