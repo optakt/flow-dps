@@ -20,11 +20,11 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 
-	"github.com/optakt/flow-dps/models/dps"
-
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Disk struct {
@@ -92,14 +92,4 @@ func (d *Disk) Events(height uint64) ([]flow.Event, error) {
 	}
 
 	return events, nil
-}
-
-func (d *Disk) BlockID(height uint64) (flow.Identifier, error) {
-	var blockID flow.Identifier
-	err := operation.LookupBlockHeight(height, &blockID)(d.db.NewTransaction(false))
-	if errors.Is(err, storage.ErrNotFound) {
-		return flow.Identifier{}, dps.ErrFinished
-	}
-
-	return blockID, nil
 }

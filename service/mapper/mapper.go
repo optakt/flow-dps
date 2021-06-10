@@ -392,10 +392,7 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
-		blockID, err := m.chain.BlockID(height)
-		if err != nil {
-			return fmt.Errorf("could not retrieve blockID: %w (height: %d)", err, height)
-		}
+		blockID := header.ID()
 
 		// We then index the data for the finalized block at the current height.
 		err = m.index.Header(height, header)
@@ -412,7 +409,7 @@ Outer:
 		}
 		err = m.index.Height(blockID, height)
 		if err != nil {
-			return fmt.Errorf("could not index events: %w", err)
+			return fmt.Errorf("could not index block heights: %w", err)
 		}
 
 		// TODO: In order to provide more complete responses for the Rosetta API

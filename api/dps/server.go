@@ -169,7 +169,6 @@ func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*Get
 	return &res, nil
 }
 
-
 // GetHeight implements the `GetHeight` function of the generated GRPC
 // server.
 func (s *Server) GetHeight(_ context.Context, req *GetHeightRequest) (*GetHeightResponse, error) {
@@ -182,7 +181,8 @@ func (s *Server) GetHeight(_ context.Context, req *GetHeightRequest) (*GetHeight
 	}
 
 	res := GetHeightResponse{
-		Height: height,
+		BlockID: req.BlockID,
+		Height:  height,
 	}
 
 	return &res, nil

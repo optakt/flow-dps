@@ -532,7 +532,7 @@ func TestServer_GetRegisters(t *testing.T) {
 func TestServer_GetHeight(t *testing.T) {
 
 	var (
-		testHeight = uint64(128)
+		testHeight     = uint64(128)
 		testBlockID, _ = flow.HexStringToIdentifier("98827808c61af6b29c7f16071e69a9bbfba40d0f96b572ce23994b3aa605c7c2")
 	)
 
@@ -544,7 +544,8 @@ func TestServer_GetHeight(t *testing.T) {
 		mockHeight uint64
 		mockErr    error
 
-		wantHeight uint64
+		wantBlockID flow.Identifier
+		wantHeight  uint64
 
 		checkErr assert.ErrorAssertionFunc
 	}{
@@ -556,7 +557,8 @@ func TestServer_GetHeight(t *testing.T) {
 			mockHeight: testHeight,
 			mockErr:    nil,
 
-			wantHeight: testHeight,
+			wantBlockID: testBlockID,
+			wantHeight:  testHeight,
 
 			checkErr: assert.NoError,
 		},
@@ -565,7 +567,7 @@ func TestServer_GetHeight(t *testing.T) {
 
 			reqBlockID: testBlockID,
 
-			mockErr:    errors.New("dummy error"),
+			mockErr: errors.New("dummy error"),
 
 			checkErr: assert.Error,
 		},
@@ -591,6 +593,7 @@ func TestServer_GetHeight(t *testing.T) {
 			vector.checkErr(t, gotErr)
 			if gotErr == nil {
 				assert.Equal(t, vector.wantHeight, gotRes.Height)
+				assert.Equal(t, vector.wantBlockID[:], gotRes.BlockID)
 			}
 		})
 	}

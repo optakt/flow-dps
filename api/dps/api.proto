@@ -85,5 +85,6 @@ message GetHeightRequest {
 }
 
 message GetHeightResponse {
-  uint64 height = 1;
+  bytes blockID = 1;
+  uint64 height = 2;
 }
