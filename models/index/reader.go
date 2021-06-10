@@ -26,4 +26,5 @@ type Reader interface {
 	Commit(height uint64) (flow.StateCommitment, error)
 	Events(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error)
+	Height(blockID flow.Identifier) (uint64, error)
 }

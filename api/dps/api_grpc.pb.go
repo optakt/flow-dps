@@ -24,6 +24,7 @@ type APIClient interface {
 	GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
 	GetEvents(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
 	GetRegisters(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
+	GetHeight(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error)
 }
 
 type aPIClient struct {
@@ -88,6 +89,15 @@ func (c *aPIClient) GetRegisters(ctx context.Context, in *GetRegistersRequest, o
 	return out, nil
 }
 
+func (c *aPIClient) GetHeight(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error) {
+	out := new(GetHeightResponse)
+	err := c.cc.Invoke(ctx, "/API/GetHeight", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // APIServer is the server API for API service.
 // All implementations should embed UnimplementedAPIServer
 // for forward compatibility
@@ -98,6 +108,7 @@ type APIServer interface {
 	GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error)
 	GetEvents(context.Context, *GetEventsRequest) (*GetEventsResponse, error)
 	GetRegisters(context.Context, *GetRegistersRequest) (*GetRegistersResponse, error)
+	GetHeight(context.Context, *GetHeightRequest) (*GetHeightResponse, error)
 }
 
 // UnimplementedAPIServer should be embedded to have forward compatible implementations.
@@ -121,6 +132,9 @@ func (UnimplementedAPIServer) GetEvents(context.Context, *GetEventsRequest) (*Ge
 }
 func (UnimplementedAPIServer) GetRegisters(context.Context, *GetRegistersRequest) (*GetRegistersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRegisters not implemented")
+}
+func (UnimplementedAPIServer) GetHeight(context.Context, *GetHeightRequest) (*GetHeightResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHeight not implemented")
 }
 
 // UnsafeAPIServer may be embedded to opt out of forward compatibility for this service.
@@ -242,6 +256,24 @@ func _API_GetRegisters_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_GetHeight_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHeightRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetHeight(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/GetHeight",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetHeight(ctx, req.(*GetHeightRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // API_ServiceDesc is the grpc.ServiceDesc for API service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -272,6 +304,10 @@ var API_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRegisters",
 			Handler:    _API_GetRegisters_Handler,
+		},
+		{
+			MethodName: "GetHeight",
+			Handler:    _API_GetHeight_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -26,6 +26,7 @@ type Reader struct {
 	CommitFunc    func(height uint64) (flow.StateCommitment, error)
 	EventsFunc    func(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	RegistersFunc func(height uint64, paths []ledger.Path) ([]ledger.Value, error)
+	HeightFunc    func(blockID flow.Identifier) (uint64, error)
 }
 
 func (r *Reader) First() (uint64, error) {
@@ -50,4 +51,8 @@ func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, e
 
 func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 	return r.RegistersFunc(height, paths)
+}
+
+func (r *Reader) Height(blockID flow.Identifier) (uint64, error) {
+	return r.HeightFunc(blockID)
 }

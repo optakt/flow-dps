@@ -23,6 +23,7 @@ service API {
   rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
   rpc GetEvents (GetEventsRequest) returns (GetEventsResponse) {}
   rpc GetRegisters (GetRegistersRequest) returns (GetRegistersResponse) {}
+  rpc GetHeight (GetHeightRequest) returns (GetHeightResponse) {}
 }
 
 message GetFirstRequest {
@@ -77,4 +78,12 @@ message GetRegistersResponse {
   uint64 height = 1;
   repeated bytes paths = 2;
   repeated bytes values = 3;
+}
+
+message GetHeightRequest {
+  bytes blockID = 1;
+}
+
+message GetHeightResponse {
+  uint64 height = 1;
 }

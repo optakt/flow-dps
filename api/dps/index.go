@@ -159,3 +159,17 @@ func (i *Index) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, e
 
 	return values, nil
 }
+
+// Height returns the height of the given blockID.
+func (i *Index) Height(blockID flow.Identifier) (uint64, error) {
+
+	req := GetHeightRequest{
+		BlockID: blockID[:],
+	}
+	res, err := i.client.GetHeight(context.Background(), &req)
+	if err != nil {
+		return 0, fmt.Errorf("could not get height: %w", err)
+	}
+
+	return res.Height, nil
+}

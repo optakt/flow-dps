@@ -44,3 +44,7 @@ func (*Index) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Pa
 func (*Index) Events(height uint64, events []flow.Event) error {
 	return nil
 }
+
+func (*Index) Height(blockID flow.Identifier, height uint64) error {
+	return nil
+}

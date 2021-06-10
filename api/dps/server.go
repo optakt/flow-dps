@@ -168,3 +168,22 @@ func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*Get
 
 	return &res, nil
 }
+
+
+// GetHeight implements the `GetHeight` function of the generated GRPC
+// server.
+func (s *Server) GetHeight(_ context.Context, req *GetHeightRequest) (*GetHeightResponse, error) {
+	var blockID flow.Identifier
+	copy(blockID[:], req.BlockID)
+
+	height, err := s.index.Height(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve height: %w", err)
+	}
+
+	res := GetHeightResponse{
+		Height: height,
+	}
+
+	return &res, nil
+}

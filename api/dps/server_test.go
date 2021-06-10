@@ -19,9 +19,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
@@ -38,7 +39,7 @@ func TestNewServer(t *testing.T) {
 	assert.Equal(t, index, s.index)
 }
 
-func TestServerGetFirst(t *testing.T) {
+func TestServer_GetFirst(t *testing.T) {
 
 	var (
 		testHeight = uint64(128)
@@ -101,7 +102,7 @@ func TestServerGetFirst(t *testing.T) {
 	}
 }
 
-func TestServerGetLast(t *testing.T) {
+func TestServer_GetLast(t *testing.T) {
 
 	var (
 		testHeight = uint64(128)
@@ -164,7 +165,7 @@ func TestServerGetLast(t *testing.T) {
 	}
 }
 
-func TestServerGetHeader(t *testing.T) {
+func TestServer_GetHeader(t *testing.T) {
 
 	var (
 		testCodec, _ = dps.Encoding.EncMode()
@@ -248,7 +249,7 @@ func TestServerGetHeader(t *testing.T) {
 	}
 }
 
-func TestServerGetCommit(t *testing.T) {
+func TestServer_GetCommit(t *testing.T) {
 
 	var (
 		testHeight = uint64(128)
@@ -327,7 +328,7 @@ func TestServerGetCommit(t *testing.T) {
 	}
 }
 
-func TestServerGetEvents(t *testing.T) {
+func TestServer_GetEvents(t *testing.T) {
 
 	var (
 		testCodec, _ = dps.Encoding.EncMode()
@@ -429,7 +430,7 @@ func TestServerGetEvents(t *testing.T) {
 	}
 }
 
-func TestServerGetRegisters(t *testing.T) {
+func TestServer_GetRegisters(t *testing.T) {
 
 	var (
 		testHeight = uint64(128)
@@ -523,6 +524,73 @@ func TestServerGetRegisters(t *testing.T) {
 				assert.Equal(t, vector.wantRes.Height, gotRes.Height)
 				assert.EqualValues(t, vector.wantRes.Paths, gotRes.Paths)
 				assert.EqualValues(t, vector.wantRes.Values, gotRes.Values)
+			}
+		})
+	}
+}
+
+func TestServer_GetHeight(t *testing.T) {
+
+	var (
+		testHeight = uint64(128)
+		testBlockID, _ = flow.HexStringToIdentifier("98827808c61af6b29c7f16071e69a9bbfba40d0f96b572ce23994b3aa605c7c2")
+	)
+
+	vectors := []struct {
+		description string
+
+		reqBlockID flow.Identifier
+
+		mockHeight uint64
+		mockErr    error
+
+		wantHeight uint64
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			description: "happy case",
+
+			reqBlockID: testBlockID,
+
+			mockHeight: testHeight,
+			mockErr:    nil,
+
+			wantHeight: testHeight,
+
+			checkErr: assert.NoError,
+		},
+		{
+			description: "error handling",
+
+			reqBlockID: testBlockID,
+
+			mockErr:    errors.New("dummy error"),
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, vector := range vectors {
+		vector := vector
+		t.Run(vector.description, func(t *testing.T) {
+			t.Parallel()
+
+			index := &mocks.Reader{}
+			s := Server{index: index}
+
+			index.HeightFunc = func(blockID flow.Identifier) (uint64, error) {
+				return vector.mockHeight, vector.mockErr
+			}
+
+			req := &GetHeightRequest{
+				BlockID: testBlockID[:],
+			}
+			gotRes, gotErr := s.GetHeight(context.Background(), req)
+
+			vector.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, vector.wantHeight, gotRes.Height)
 			}
 		})
 	}

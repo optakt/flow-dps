@@ -392,6 +392,10 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not retrieve events: %w (height: %d)", err, height)
 		}
+		blockID, err := m.chain.BlockID(height)
+		if err != nil {
+			return fmt.Errorf("could not retrieve blockID: %w (height: %d)", err, height)
+		}
 
 		// We then index the data for the finalized block at the current height.
 		err = m.index.Header(height, header)
@@ -403,6 +407,10 @@ Outer:
 			return fmt.Errorf("could not index commit: %w", err)
 		}
 		err = m.index.Events(height, events)
+		if err != nil {
+			return fmt.Errorf("could not index events: %w", err)
+		}
+		err = m.index.Height(blockID, height)
 		if err != nil {
 			return fmt.Errorf("could not index events: %w", err)
 		}
@@ -511,7 +519,6 @@ Outer:
 		commitPrev = commitNext
 		height++
 
-		blockID := header.ID()
 		log.Info().
 			Hex("block", blockID[:]).
 			Int("num_changes", len(updated)).
