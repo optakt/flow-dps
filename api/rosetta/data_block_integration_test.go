@@ -33,8 +33,13 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/meta"
+	"github.com/optakt/flow-dps/rosetta/retriever"
 	obj "github.com/optakt/flow-dps/rosetta/rosetta"
+	"github.com/optakt/flow-dps/rosetta/scripts"
+	"github.com/optakt/flow-dps/rosetta/validator"
+	"github.com/optakt/flow-dps/service/index"
 )
 
 type blockIDValidationFn func(identifier.Block)
@@ -452,7 +457,81 @@ func TestMalformedBlockRequest(t *testing.T) {
 			assert.NotEmpty(t, gotErr.Description)
 		})
 	}
+}
 
+// TestBlockRequestScriptGeneratorError tests the scenario where the cadence script generator fails inside the retriever,
+// producing an internal server error.
+func TestBlockRequestScriptGeneratorError(t *testing.T) {
+
+	db := setupDB(t)
+	index := index.NewReader(db)
+
+	params := dps.FlowParams[dps.FlowTestnet]
+	config := configuration.New(params.ChainID)
+	validate := validator.New(params, index)
+	invoke := invoker.New(index)
+
+	tests := []struct {
+		name string
+
+		scriptGenerator             retriever.Generator
+		wantRosettaErrorDescription string
+		wantRosettaErrorDetails     map[string]interface{}
+	}{
+		{
+			name:            "cadence script generator deposit error",
+			scriptGenerator: newFaultyGenerator(params, func(fg *faultyGenerator) { fg.depositFails = true }),
+
+			wantRosettaErrorDescription: "could not generate deposit event type: faulty generator error",
+			wantRosettaErrorDetails:     nil,
+		},
+		{
+			name:            "cadence script generator withdrawal error",
+			scriptGenerator: newFaultyGenerator(params, func(fg *faultyGenerator) { fg.withdrawalFails = true }),
+
+			wantRosettaErrorDescription: "could not generate withdrawal event type: faulty generator error",
+			wantRosettaErrorDetails:     nil,
+		},
+	}
+
+	for _, test := range tests {
+
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			retrieve := retriever.New(params, index, validate, test.scriptGenerator, invoke)
+			api := rosetta.NewData(config, retrieve)
+
+			enc, err := json.Marshal(blockRequest(43, knownBlockID(43)))
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPost, "/block", bytes.NewReader(enc))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+			rec := httptest.NewRecorder()
+
+			ctx := echo.New().NewContext(req, rec)
+
+			err = api.Block(ctx)
+			assert.Error(t, err)
+
+			echoErr, ok := err.(*echo.HTTPError)
+			require.True(t, ok)
+
+			// verify HTTP status code
+			assert.Equal(t, http.StatusInternalServerError, echoErr.Code)
+
+			gotErr, ok := echoErr.Message.(rosetta.Error)
+			require.True(t, ok)
+
+			// verify the error is the expected one, internal server error with the correct description
+			assert.Equal(t, configuration.ErrorInternal, gotErr.ErrorDefinition)
+			assert.Equal(t, test.wantRosettaErrorDescription, gotErr.Description)
+			assert.Equal(t, test.wantRosettaErrorDetails, gotErr.Details)
+		})
+	}
 }
 
 // blockRequest generates a BlockRequest with the specified parameters.
@@ -560,4 +639,51 @@ func knownBlockID(height uint64) string {
 		return ""
 	}
 
+}
+
+// faultyGenerator returns mocks the cadence script generator, failing to generate scripts when needed
+type faultyGenerator struct {
+	generator retriever.Generator
+
+	depositFails    bool
+	withdrawalFails bool
+}
+
+func newFaultyGenerator(params dps.Params, options ...func(*faultyGenerator)) faultyGenerator {
+
+	fg := faultyGenerator{
+		generator: scripts.NewGenerator(params),
+	}
+
+	for _, option := range options {
+		option(&fg)
+	}
+
+	return fg
+}
+
+func (g faultyGenerator) GetBalance(symbol string) ([]byte, error) {
+	return g.generator.GetBalance(symbol)
+}
+
+func (g faultyGenerator) TransferTokens(symbol string) ([]byte, error) {
+	return g.generator.TransferTokens(symbol)
+}
+
+func (g faultyGenerator) TokensDeposited(symbol string) (string, error) {
+
+	if g.depositFails {
+		return "", fmt.Errorf("faulty generator error")
+	}
+
+	return g.generator.TokensDeposited(symbol)
+}
+
+func (g faultyGenerator) TokensWithdrawn(symbol string) (string, error) {
+
+	if g.withdrawalFails {
+		return "", fmt.Errorf("faulty generator error")
+	}
+
+	return g.generator.TokensWithdrawn(symbol)
 }
