@@ -91,6 +91,8 @@ func TestDisk_Events(t *testing.T) {
 }
 
 func inMemoryDB(t *testing.T) *badger.DB {
+	t.Helper()
+
 	db := helpers.InMemoryDB(t)
 
 	err := db.Update(func(tx *badger.Txn) error {
