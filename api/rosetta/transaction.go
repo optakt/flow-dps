@@ -22,7 +22,7 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/rosetta"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type TransactionRequest struct {
@@ -32,7 +32,7 @@ type TransactionRequest struct {
 }
 
 type TransactionResponse struct {
-	Transaction *rosetta.Transaction `json:"transaction"`
+	Transaction *object.Transaction `json:"transaction"`
 }
 
 // TODO: integration testing of Rosetta transaction endpoint

@@ -22,7 +22,7 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/rosetta"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type BlockRequest struct {
@@ -31,7 +31,7 @@ type BlockRequest struct {
 }
 
 type BlockResponse struct {
-	Block             *rosetta.Block           `json:"block"`
+	Block             *object.Block            `json:"block"`
 	OtherTransactions []identifier.Transaction `json:"other_transactions,omitempty"`
 }
 

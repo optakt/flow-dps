@@ -22,7 +22,7 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/rosetta"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type BalanceRequest struct {
@@ -34,7 +34,7 @@ type BalanceRequest struct {
 
 type BalanceResponse struct {
 	BlockID  identifier.Block `json:"block_identifier"`
-	Balances []rosetta.Amount `json:"balances"`
+	Balances []object.Amount  `json:"balances"`
 }
 
 // TODO: integration testing of Rosetta balance endpoint
