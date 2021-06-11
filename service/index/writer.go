@@ -60,7 +60,7 @@ func (w *Writer) Header(height uint64, header *flow.Header) error {
 // Commit indexes the given commitment of the execution state as it was after
 // the execution of the finalized block at the given height.
 func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
-	return w.db.Update(storage.SaveCommit(commit, height))
+	return w.db.Update(storage.SaveCommit(height, commit))
 }
 
 // Events indexes the events, which should represent all events of the finalized
