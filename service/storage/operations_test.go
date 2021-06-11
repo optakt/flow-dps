@@ -262,16 +262,6 @@ func TestSaveAndRetrieve_Payload(t *testing.T) {
 		assert.Equal(t, *payload1, got)
 	})
 
-	t.Run("retrieve payload before it was ever indexed", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
-		var got ledger.Payload
-		err := RetrievePayload(63, path, &got)(txn)
-
-		assert.NoError(t, err)
-		assert.Equal(t, *payload1, got)
-	})
-
 	t.Run("retrieve payload after last indexed", func(t *testing.T) {
 		txn := db.NewTransaction(false)
 
@@ -280,6 +270,15 @@ func TestSaveAndRetrieve_Payload(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, *payload2, got)
+	})
+
+	t.Run("retrieve payload before it was ever indexed", func(t *testing.T) {
+		txn := db.NewTransaction(false)
+
+		var got ledger.Payload
+		err := RetrievePayload(10, path, &got)(txn)
+
+		assert.Error(t, err)
 	})
 
 	t.Run("should fail if path does not match", func(t *testing.T) {
