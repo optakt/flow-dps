@@ -27,7 +27,7 @@ import (
 	"github.com/optakt/flow-dps/models/index"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/rosetta"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type Retriever struct {
@@ -91,7 +91,7 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 	return block, header.Timestamp, nil
 }
 
-func (r *Retriever) Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) (identifier.Block, []rosetta.Amount, error) {
+func (r *Retriever) Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) (identifier.Block, []object.Amount, error) {
 
 	// Run validation on the block identifier. This also fills in missing fields, where possible.
 	completed, err := r.validate.Block(block)
@@ -117,7 +117,7 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 	}
 
 	// get the cadence value that is the result of the script execution
-	amounts := make([]rosetta.Amount, 0, len(currencies))
+	amounts := make([]object.Amount, 0, len(currencies))
 	address := cadence.NewAddress(flow.HexToAddress(account.Address))
 	for _, currency := range currencies {
 		getBalance, err := r.generator.GetBalance(currency.Symbol)
@@ -132,7 +132,7 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 		if !ok {
 			return identifier.Block{}, nil, fmt.Errorf("could not convert balance (type: %T)", value.ToGoValue())
 		}
-		amount := rosetta.Amount{
+		amount := object.Amount{
 			Currency: currency,
 			Value:    strconv.FormatUint(balance, 10),
 		}
@@ -142,7 +142,7 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 	return completed, amounts, nil
 }
 
-func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Transaction, error) {
+func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Transaction, error) {
 
 	// Run validation on the block ID. This also fills in missing information.
 	completed, err := r.validate.Block(id)
@@ -174,7 +174,7 @@ func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Tra
 
 	// Next, we step through all the transactions and accumulate events by transaction ID.
 	// NOTE: We consider transactions that don't generate any fund movements as irrelevant for now.
-	buckets := make(map[flow.Identifier][]rosetta.Operation)
+	buckets := make(map[flow.Identifier][]object.Operation)
 	for _, event := range events {
 
 		// Decode the event payload into a Cadence value and cast to Cadence event.
@@ -217,7 +217,7 @@ func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Tra
 		}
 
 		// Now we have everything to assemble the respective operation.
-		op := rosetta.Operation{
+		op := object.Operation{
 			ID: identifier.Operation{
 				Index: uint(event.EventIndex),
 			},
@@ -227,7 +227,7 @@ func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Tra
 			AccountID: identifier.Account{
 				Address: address.String(),
 			},
-			Amount: rosetta.Amount{
+			Amount: object.Amount{
 				Value: strconv.FormatInt(amount, 10),
 				Currency: identifier.Currency{
 					Symbol:   dps.FlowSymbol,
@@ -241,9 +241,9 @@ func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Tra
 	}
 
 	// Finally, we batch all of the operations together into the transactions.
-	var transactions []*rosetta.Transaction
+	var transactions []*object.Transaction
 	for transactionID, operations := range buckets {
-		transaction := rosetta.Transaction{
+		transaction := object.Transaction{
 			ID: identifier.Transaction{
 				Hash: transactionID.String(),
 			},
@@ -260,7 +260,7 @@ func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Tra
 	}
 
 	// Now we just need to build the block.
-	block := rosetta.Block{
+	block := object.Block{
 		ID: identifier.Block{
 			Index: header.Height,
 			Hash:  header.ID().String(),
@@ -281,7 +281,7 @@ func (r *Retriever) Block(id identifier.Block) (*rosetta.Block, []identifier.Tra
 	return &block, nil, nil
 }
 
-func (r *Retriever) Transaction(block identifier.Block, id identifier.Transaction) (*rosetta.Transaction, error) {
+func (r *Retriever) Transaction(block identifier.Block, id identifier.Transaction) (*object.Transaction, error) {
 
 	// TODO: We should start indexing all of the transactions for each block, so
 	// that we can actually check transaction existence and return transactions,
@@ -318,9 +318,9 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 
 	// Go through the events, but only look at the ones with the given transaction ID.
-	transaction := rosetta.Transaction{
+	transaction := object.Transaction{
 		ID:         id,
-		Operations: []rosetta.Operation{},
+		Operations: []object.Operation{},
 	}
 	for _, event := range events {
 
@@ -364,7 +364,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		}
 
 		// Now we have everything to assemble the respective operation.
-		op := rosetta.Operation{
+		op := object.Operation{
 			ID: identifier.Operation{
 				Index: uint(event.EventIndex),
 			},
@@ -374,7 +374,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 			AccountID: identifier.Account{
 				Address: address.String(),
 			},
-			Amount: rosetta.Amount{
+			Amount: object.Amount{
 				Value: strconv.FormatInt(amount, 10),
 				Currency: identifier.Currency{
 					Symbol:   dps.FlowSymbol,

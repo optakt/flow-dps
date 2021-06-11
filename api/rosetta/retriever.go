@@ -18,13 +18,13 @@ import (
 	"time"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/rosetta"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type Retriever interface {
 	Oldest() (identifier.Block, time.Time, error)
 	Current() (identifier.Block, time.Time, error)
-	Block(block identifier.Block) (*rosetta.Block, []identifier.Transaction, error)
-	Transaction(block identifier.Block, transaction identifier.Transaction) (*rosetta.Transaction, error)
-	Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) (identifier.Block, []rosetta.Amount, error)
+	Block(block identifier.Block) (*object.Block, []identifier.Transaction, error)
+	Transaction(block identifier.Block, transaction identifier.Transaction) (*object.Transaction, error)
+	Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) (identifier.Block, []object.Amount, error)
 }
