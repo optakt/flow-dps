@@ -34,11 +34,11 @@ import (
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/meta"
-	rosettaobj "github.com/optakt/flow-dps/rosetta/rosetta"
+	obj "github.com/optakt/flow-dps/rosetta/rosetta"
 )
 
 type blockIDValidationFn func(identifier.Block)
-type transactionValidationFn func(*rosettaobj.Transaction)
+type transactionValidationFn func(*obj.Transaction)
 
 func TestGetBlock(t *testing.T) {
 
@@ -84,7 +84,6 @@ func TestGetBlock(t *testing.T) {
 			transactionValidator: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
 		},
 		{
-			// same as above, but verify lookup by index only works
 			name: "lookup of a block mid-chain by index only",
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetworkID(),
@@ -472,7 +471,7 @@ func validateSingleTransfer(t *testing.T, hash string, from string, to string, a
 
 	t.Helper()
 
-	return func(tx *rosettaobj.Transaction) {
+	return func(tx *obj.Transaction) {
 
 		assert.Equal(t, tx.ID.Hash, hash)
 		assert.Equal(t, len(tx.Operations), 2)
