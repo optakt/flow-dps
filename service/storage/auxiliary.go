@@ -20,6 +20,7 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/hashicorp/go-multierror"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
