@@ -38,7 +38,7 @@ func TestPathsToBytes(t *testing.T) {
 	assert.Equal(t, [][]byte{path1b, path2b, path3b}, got)
 }
 
-func TestBytesToPaths(t *testing.T)  {
+func TestBytesToPaths(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		path1b := []byte("aac513eb1a0457700ac3fa8d292513e1")
 		path2b := []byte("1454ae2420513f79f6a5e8396d033369")
@@ -50,9 +50,9 @@ func TestBytesToPaths(t *testing.T)  {
 
 		wantPaths := []ledger.Path{path1, path2, path3}
 
-		b := [][]byte{path1b, path2b, path3b}
+		bb := [][]byte{path1b, path2b, path3b}
 
-		got, err := BytesToPaths(b)
+		got, err := BytesToPaths(bb)
 
 		assert.NoError(t, err)
 		assert.Equal(t, wantPaths, got)
@@ -60,11 +60,11 @@ func TestBytesToPaths(t *testing.T)  {
 
 	t.Run("invalid paths should fail", func(t *testing.T) {
 		path1b := []byte("aac513eb1a045770") // incorrect length
-		path2b := []byte("not even hex") // not hex
-		path3b := []byte("") // empty
+		path2b := []byte("not even hex")     // not hex
+		path3b := []byte("")                 // empty
 
-		b := [][]byte{path1b, path2b, path3b}
-		_, err := BytesToPaths(b)
+		bb := [][]byte{path1b, path2b, path3b}
+		_, err := BytesToPaths(bb)
 
 		assert.Error(t, err)
 	})

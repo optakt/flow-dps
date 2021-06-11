@@ -35,5 +35,5 @@ func TestTypesToStrings(t *testing.T) {
 
 	ss := TypesToStrings([]flow.EventType{typ1, typ2, typ3, typ4})
 
-	assert.Equal(t, []string{t1, t2, t3,t4}, ss)
+	assert.Equal(t, []string{t1, t2, t3, t4}, ss)
 }
