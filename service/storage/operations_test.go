@@ -281,6 +281,15 @@ func TestSaveAndRetrieve_Payload(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, *payload2, got)
 	})
+
+	t.Run("should fail if path does not match", func(t *testing.T) {
+		txn := db.NewTransaction(false)
+
+		var got ledger.Payload
+		err := RetrievePayload(42, ledger.Path{}, &got)(txn)
+
+		assert.Error(t, err)
+	})
 }
 
 func TestSaveAndRetrieve_Height(t *testing.T) {
