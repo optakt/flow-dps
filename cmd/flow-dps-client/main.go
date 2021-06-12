@@ -77,8 +77,8 @@ func run() int {
 	if flagAPI == "" {
 		for _, spork := range DefaultSporks {
 			if flagHeight >= spork.First && flagHeight <= spork.Last {
-				log.Info().Uint64("height", flagHeight).Str("spork", spork.Name).Str("api", spork.URL).Msg("spork and API chosen based on height")
-				flagAPI = spork.URL
+				log.Info().Uint64("height", flagHeight).Str("spork", spork.Name).Str("api", spork.API).Msg("spork and API chosen based on height")
+				flagAPI = spork.API
 				break
 			}
 		}
