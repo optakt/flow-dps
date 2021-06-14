@@ -27,9 +27,10 @@ func TestPathsToBytes(t *testing.T) {
 	path2b := []byte("1454ae2420513f79f6a5e8396d033369")
 	path3b := []byte("e91a3eb997752b78bab0bc31e30b1e30")
 
-	path1, _ := ledger.ToPath(path1b)
-	path2, _ := ledger.ToPath(path2b)
-	path3, _ := ledger.ToPath(path3b)
+	var path1, path2, path3 ledger.Path
+	copy(path1[:], path1b)
+	copy(path2[:], path2b)
+	copy(path3[:], path3b)
 
 	paths := []ledger.Path{path1, path2, path3}
 
@@ -44,9 +45,10 @@ func TestBytesToPaths(t *testing.T) {
 		path2b := []byte("1454ae2420513f79f6a5e8396d033369")
 		path3b := []byte("e91a3eb997752b78bab0bc31e30b1e30")
 
-		path1, _ := ledger.ToPath(path1b)
-		path2, _ := ledger.ToPath(path2b)
-		path3, _ := ledger.ToPath(path3b)
+		var path1, path2, path3 ledger.Path
+		copy(path1[:], path1b)
+		copy(path2[:], path2b)
+		copy(path3[:], path3b)
 
 		wantPaths := []ledger.Path{path1, path2, path3}
 
@@ -58,12 +60,28 @@ func TestBytesToPaths(t *testing.T) {
 		assert.Equal(t, wantPaths, got)
 	})
 
-	t.Run("invalid paths should fail", func(t *testing.T) {
-		path1b := []byte("aac513eb1a045770") // incorrect length
-		path2b := []byte("not even hex")     // not hex
-		path3b := []byte("")                 // empty
+	t.Run("incorrect-length paths should fail", func(t *testing.T) {
+		invalidPath := []byte("1a0457700")
 
-		bb := [][]byte{path1b, path2b, path3b}
+		bb := [][]byte{invalidPath}
+		_, err := BytesToPaths(bb)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("empty paths should fail", func(t *testing.T) {
+		invalidPath := []byte("")
+
+		bb := [][]byte{invalidPath}
+		_, err := BytesToPaths(bb)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("non-hex path should fail", func(t *testing.T) {
+		invalidPath := []byte("not even hex")
+
+		bb := [][]byte{invalidPath}
 		_, err := BytesToPaths(bb)
 
 		assert.Error(t, err)
