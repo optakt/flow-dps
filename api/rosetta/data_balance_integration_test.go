@@ -118,6 +118,7 @@ func TestGetBalance(t *testing.T) {
 			wantBalance: "10000100002",
 		},
 		// TODO: think - what about multiple currencies of the same token? e.g. []token{ "flow", "flow" }?
+		// TODO: add a test case that has the currency decimals field unset
 	}
 
 	for _, test := range tests {
@@ -187,6 +188,8 @@ func TestBalanceErrors(t *testing.T) {
 	const (
 		invalidBlockchainName = "not-flow"
 		invalidNetworkName    = "not-flow-testnet"
+		invalidTokenSymbol    = "not-flow"
+		invalidAccountAddress = "0000000000000000" // valid 16-digit hex value but not a valid account ID
 
 		trimmedBlockID     = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2"  // block hash a character short
 		invalidBlockHash   = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
@@ -396,7 +399,101 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
 			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
 		},
-		// TODO: invalid account address
+		{
+			name: "unkown block requested",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    identifier.Block{Index: 426},
+				Currencies: defaultCurrencySpec(),
+			},
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorUnknownBlock,
+			wantRosettaErrorDescription: "block index is above last indexed block (last: 425)",
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(426), "hash": ""},
+		},
+		{
+			name: "mismatched block id and height",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    identifier.Block{Index: 13, Hash: "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"},
+				Currencies: defaultCurrencySpec(),
+			},
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidBlock,
+			wantRosettaErrorDescription: "block hash does not match known hash for height (known: af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23)",
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"},
+		},
+		{
+			name: "invalid account ID hex",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  identifier.Account{Address: "zzzzzzzzzzzzzzzz"},
+				BlockID:    testBlockID,
+				Currencies: defaultCurrencySpec(),
+			},
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidAccount,
+			wantRosettaErrorDescription: "account address is not a valid hex-encoded string",
+			wantRosettaErrorDetails:     map[string]interface{}{"address": "zzzzzzzzzzzzzzzz", "chain": dps.FlowTestnet.String()},
+		},
+		{
+			name: "invalid account ID",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  identifier.Account{Address: invalidAccountAddress},
+				BlockID:    testBlockID,
+				Currencies: defaultCurrencySpec(),
+			},
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidAccount,
+			wantRosettaErrorDescription: "account address is not valid for configured chain",
+			wantRosettaErrorDetails:     map[string]interface{}{"address": invalidAccountAddress, "chain": dps.FlowTestnet.String()},
+		},
+		{
+			name: "unknown currency requested",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    testBlockID,
+				Currencies: []identifier.Currency{{Symbol: invalidTokenSymbol, Decimals: 8}},
+			},
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorUnknownCurrency,
+			wantRosettaErrorDescription: "currency symbol has not been configured",
+			wantRosettaErrorDetails:     map[string]interface{}{"symbol": invalidTokenSymbol, "decimals": uint(8)},
+		},
+		{
+			name: "invalid currency decimal count",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    testBlockID,
+				Currencies: []identifier.Currency{{Symbol: dps.FlowSymbol, Decimals: 7}},
+			},
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidCurrency,
+			wantRosettaErrorDescription: fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
+			wantRosettaErrorDetails:     map[string]interface{}{"symbol": dps.FlowSymbol, "decimals": uint(7)},
+		},
+		{
+			name: "invalid currency decimal count in a list of currencies",
+			request: rosetta.BalanceRequest{
+				NetworkID: defaultNetworkID(),
+				AccountID: testAccountAddress,
+				BlockID:   testBlockID,
+				Currencies: []identifier.Currency{
+					{Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals},
+					{Symbol: dps.FlowSymbol, Decimals: 7},
+					{Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals},
+				},
+			},
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidCurrency,
+			wantRosettaErrorDescription: fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
+			wantRosettaErrorDetails:     map[string]interface{}{"symbol": dps.FlowSymbol, "decimals": uint(7)},
+		},
 	}
 
 	for _, test := range tests {
