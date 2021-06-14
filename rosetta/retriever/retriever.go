@@ -25,7 +25,6 @@ import (
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/index"
-	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -174,89 +173,14 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 
 	// Next, we step through all the transactions and accumulate events by transaction ID.
 	// NOTE: We consider transactions that don't generate any fund movements as irrelevant for now.
-	buckets := make(map[flow.Identifier][]object.Operation)
-	for _, event := range events {
-
-		// Decode the event payload into a Cadence value and cast to Cadence event.
-		value, err := json.Decode(event.Payload)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not decode event: %w", err)
-		}
-		e, ok := value.(cadence.Event)
-		if !ok {
-			return nil, nil, fmt.Errorf("could not cast event: %w", err)
-		}
-
-		// Check we have the necessary amount of fields.
-		if len(e.Fields) != 2 {
-			return nil, nil, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
-		}
-
-		// Now we have access to the fields for the events; the first one is always
-		// the amount, the second one the address. The types coming from Cadence
-		// are not native Flow types, so we need to use primitive types first.
-		vAmount := e.Fields[0].ToGoValue()
-		uAmount, ok := vAmount.(uint64)
-		if !ok {
-			return nil, nil, fmt.Errorf("could not cast amount (%T)", vAmount)
-		}
-		vAddress := e.Fields[1].ToGoValue()
-		bAddress, ok := vAddress.([flow.AddressLength]byte)
-		if !ok {
-			return nil, nil, fmt.Errorf("could not cast address (%T)", vAddress)
-		}
-
-		// Then, we can convert the amount to a signed integer so we can invert
-		// it and the address to a native Flow address.
-		amount := int64(uAmount)
-		address := flow.Address(bAddress)
-
-		// For the withdrawal event, we invert the amount into a negative number.
-		if event.Type == flow.EventType(withdrawal) {
-			amount = -amount
-		}
-
-		// Now we have everything to assemble the respective operation.
-		op := object.Operation{
-			ID: identifier.Operation{
-				Index: uint(event.EventIndex),
-			},
-			RelatedIDs: nil,
-			Type:       "TRANSFER",
-			Status:     "COMPLETED",
-			AccountID: identifier.Account{
-				Address: address.String(),
-			},
-			Amount: object.Amount{
-				Value: strconv.FormatInt(amount, 10),
-				Currency: identifier.Currency{
-					Symbol:   dps.FlowSymbol,
-					Decimals: dps.FlowDecimals,
-				},
-			},
-		}
-
-		// We store all operations for a transaction together in a bucket.
-		buckets[event.TransactionID] = append(buckets[event.TransactionID], op)
+	tmap, err := decodeTransactions(events, withdrawal)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	// Finally, we batch all of the operations together into the transactions.
 	var transactions []*object.Transaction
-	for transactionID, operations := range buckets {
-		transaction := object.Transaction{
-			ID: identifier.Transaction{
-				Hash: transactionID.String(),
-			},
-			Operations: operations,
-		}
-		for _, op := range operations {
-			for index := range transaction.Operations {
-				if transaction.Operations[index].ID != op.ID {
-					transaction.Operations[index].RelatedIDs = append(transaction.Operations[index].RelatedIDs, op.ID)
-				}
-			}
-		}
-		transactions = append(transactions, &transaction)
+	for _, transaction := range tmap {
+		transactions = append(transactions, transaction)
 	}
 
 	// Now we just need to build the block.
@@ -317,18 +241,22 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	// Go through the events, but only look at the ones with the given transaction ID.
-	transaction := object.Transaction{
-		ID:         id,
-		Operations: []object.Operation{},
+	transactions, err := decodeTransactions(events, withdrawal)
+	if err != nil {
+		return nil, err
 	}
-	for _, event := range events {
 
-		// ignore events belonging to other transactions
-		if event.TransactionID.String() != id.Hash {
-			continue
-		}
+	transaction, found := transactions[id.Hash]
+	if !found {
+		return nil, fmt.Errorf("no transaction found with id %q at block %s", id, block.Hash)
+	}
 
+	return transaction, nil
+}
+
+func decodeTransactions(ee []flow.Event, withdrawal string) (map[string]*object.Transaction, error) {
+	transactions := make(map[string]*object.Transaction)
+	for _, event := range ee {
 		// Decode the event payload into a Cadence value and cast to Cadence event.
 		value, err := json.Decode(event.Payload)
 		if err != nil {
@@ -374,8 +302,8 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 				Index: uint(event.EventIndex),
 			},
 			RelatedIDs: nil,
-			Type:       configuration.OperationTransfer,
-			Status:     configuration.StatusCompleted.Status,
+			Type:       "TRANSFER",
+			Status:     "COMPLETED",
 			AccountID: identifier.Account{
 				Address: address.String(),
 			},
@@ -388,18 +316,31 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 			},
 		}
 
-		// Add the operation to the transaction.
-		transaction.Operations = append(transaction.Operations, op)
+		transaction, exists := transactions[event.TransactionID.String()]
+		if !exists {
+			transaction = &object.Transaction{
+				ID: identifier.Transaction{
+					Hash: event.TransactionID.String(),
+				},
+			}
+			transactions[event.TransactionID.String()] = transaction
+		}
+
+		transaction.Operations = append(transactions[event.TransactionID.String()].Operations, op)
 	}
 
-	// Assign the related operation IDs.
-	for _, op := range transaction.Operations {
-		for index := range transaction.Operations {
-			if transaction.Operations[index].ID != op.ID {
-				transaction.Operations[index].RelatedIDs = append(transaction.Operations[index].RelatedIDs, op.ID)
+	// Go through all operations of all transactions and set their related IDs.
+	for tIdx := range transactions {
+		for oIdx, op1 := range transactions[tIdx].Operations {
+			for _, op2 := range transactions[tIdx].Operations {
+				if op1.ID == op2.ID {
+					continue
+				}
+
+				transactions[tIdx].Operations[oIdx].RelatedIDs = append(transactions[tIdx].Operations[oIdx].RelatedIDs, op2.ID)
 			}
 		}
 	}
 
-	return &transaction, nil
+	return transactions, nil
 }
