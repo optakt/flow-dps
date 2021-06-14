@@ -533,30 +533,58 @@ func TestBalanceErrors(t *testing.T) {
 	}
 }
 
-// TestGetBalanceBadRequest tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
-func TestGetBalanceBadRequest(t *testing.T) {
+// TestGetBalanceMalformedJSON tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
+func TestGetBalanceMalformedJSON(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	// JSON with an invalid structure (integer instead of string for network name)
-	payload := `{ "network_identifier": { "blockchain": "flow", "network": 99} }`
+	tests := []struct {
+		name string
 
-	// create request
-	req := httptest.NewRequest(http.MethodPost, "/account/balance", strings.NewReader(payload))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		request []byte
 
-	rec := httptest.NewRecorder()
+		wantStatusCode   int
+		wantRosettaError meta.ErrorDefinition
+	}{
+		{
+			name:    "wrong field type",
+			request: []byte(`{ "network_identifier": { "blockchain": "flow", "network": 99} }`),
 
-	ctx := echo.New().NewContext(req, rec)
+			wantStatusCode:   http.StatusBadRequest,
+			wantRosettaError: configuration.ErrorInvalidFormat,
+		},
+	}
 
-	// execute the request
-	err := api.Balance(ctx)
-	assert.Error(t, err)
+	for _, test := range tests {
 
-	e, ok := err.(*echo.HTTPError)
-	require.True(t, ok)
-	assert.Equal(t, http.StatusBadRequest, e.Code)
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			// create request
+			req := httptest.NewRequest(http.MethodPost, "/account/balance", bytes.NewReader(test.request))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+			rec := httptest.NewRecorder()
+
+			ctx := echo.New().NewContext(req, rec)
+
+			// execute the request
+			err := api.Balance(ctx)
+			assert.Error(t, err)
+
+			echoErr, ok := err.(*echo.HTTPError)
+			require.True(t, ok)
+
+			assert.Equal(t, test.wantStatusCode, echoErr.Code)
+			gotErr, ok := echoErr.Message.(rosetta.Error)
+			require.True(t, ok)
+
+			assert.Equal(t, test.wantRosettaError, gotErr.ErrorDefinition)
+		})
+	}
 }
 
 // balanceRequest generates a BalanceRequest with the specified parameters.
