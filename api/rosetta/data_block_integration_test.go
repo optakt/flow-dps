@@ -162,7 +162,7 @@ func TestBlockErrors(t *testing.T) {
 		invalidBlockchainName = "not-flow"
 		invalidNetworkName    = "not-flow-testnet"
 
-		trimmedBlockId       = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
+		trimmedBlockID       = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
 		invalidBlockHash     = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
 		validBlockIDLength   = 64
 		lastKnownBlockHeight = 425
@@ -274,13 +274,13 @@ func TestBlockErrors(t *testing.T) {
 				NetworkID: defaultNetworkID(),
 				BlockID: identifier.Block{
 					Index: 43,
-					Hash:  trimmedBlockId,
+					Hash:  trimmedBlockID,
 				},
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockId), validBlockIDLength),
+			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockID), validBlockIDLength),
 			wantRosettaErrorDetails:     nil,
 		},
 		{
