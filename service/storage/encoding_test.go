@@ -65,9 +65,7 @@ func TestEncodeKey(t *testing.T) {
 			description: "unsupported types should panic",
 
 			segments: []interface{}{
-				uint16(42),
-				&flow.Header{},
-				&ledger.Payload{},
+				struct{}{},
 			},
 
 			wantPanic: true,

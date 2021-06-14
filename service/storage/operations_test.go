@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
@@ -31,20 +30,13 @@ func TestSaveAndRetrieve_First(t *testing.T) {
 	defer db.Close()
 
 	t.Run("save first height", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-		err := SaveFirst(42)(txn)
-
+		err := db.Update(SaveFirst(42))
 		assert.NoError(t, err)
-
-		err = txn.Commit()
-		require.NoError(t, err)
 	})
 
 	t.Run("retrieve first height", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got uint64
-		err := RetrieveFirst(&got)(txn)
+		err := db.View(RetrieveFirst(&got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, uint64(42), got)
@@ -56,21 +48,13 @@ func TestSaveAndRetrieve_Last(t *testing.T) {
 	defer db.Close()
 
 	t.Run("save last height", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-
-		err := SaveLast(42)(txn)
-
+		err := db.Update(SaveLast(42))
 		assert.NoError(t, err)
-
-		err = txn.Commit()
-		require.NoError(t, err)
 	})
 
 	t.Run("retrieve last height", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got uint64
-		err := RetrieveLast(&got)(txn)
+		err := db.View(RetrieveLast(&got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, uint64(42), got)
@@ -84,21 +68,13 @@ func TestSaveAndRetrieve_Commit(t *testing.T) {
 	commit, _ := flow.ToStateCommitment([]byte("07018030187ecf04945f35f1e33a89dc"))
 
 	t.Run("save commit", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-
-		err := SaveCommit(42, commit)(txn)
-
+		err := db.Update(SaveCommit(42, commit))
 		assert.NoError(t, err)
-
-		err = txn.Commit()
-		require.NoError(t, err)
 	})
 
 	t.Run("retrieve commit", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got flow.StateCommitment
-		err := RetrieveCommit(42, &got)(txn)
+		err := db.View(RetrieveCommit(42, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, commit, got)
@@ -112,21 +88,14 @@ func TestSaveAndRetrieve_Header(t *testing.T) {
 	header := &flow.Header{ChainID: "flow-testnet"}
 
 	t.Run("save header", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-
-		err := SaveHeader(42, header)(txn)
+		err := db.Update(SaveHeader(42, header))
 
 		assert.NoError(t, err)
-
-		err = txn.Commit()
-		require.NoError(t, err)
 	})
 
 	t.Run("retrieve header", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got flow.Header
-		err := RetrieveHeader(42, &got)(txn)
+		err := db.View(RetrieveHeader(42, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, *header, got)
@@ -143,55 +112,40 @@ func TestSaveAndRetrieve_Events(t *testing.T) {
 	testEvents2 := []flow.Event{{Type: testTyp2}, {Type: testTyp2}, {Type: testTyp2}}
 
 	t.Run("save multiple events under different types", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-
-		err := SaveEvents(42, testTyp1, testEvents1)(txn)
-
+		err := db.Update(SaveEvents(42, testTyp1, testEvents1))
 		assert.NoError(t, err)
 
-		err = SaveEvents(42, testTyp2, testEvents2)(txn)
-
+		err = db.Update(SaveEvents(42, testTyp2, testEvents2))
 		assert.NoError(t, err)
-
-		err = txn.Commit()
-		require.NoError(t, err)
 	})
 
 	t.Run("retrieve events nominal case", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got []flow.Event
-		err := RetrieveEvents(42, []flow.EventType{testTyp1, testTyp2}, &got)(txn)
+		err := db.Update(RetrieveEvents(42, []flow.EventType{testTyp1, testTyp2}, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, append(testEvents1, testEvents2...), got)
 	})
 
 	t.Run("retrieve events returns all types when no filter given", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got []flow.Event
-		err := RetrieveEvents(42, []flow.EventType{}, &got)(txn)
+		err := db.Update(RetrieveEvents(42, []flow.EventType{}, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, append(testEvents1, testEvents2...), got)
 	})
 
 	t.Run("retrieve events does not include types not asked for", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got []flow.Event
-		err := RetrieveEvents(42, []flow.EventType{testTyp1, "another-type"}, &got)(txn)
+		err := db.Update(RetrieveEvents(42, []flow.EventType{testTyp1, "another-type"}, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, testEvents1, got)
 	})
 
 	t.Run("retrieve events does not include types not asked for", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got []flow.Event
-		err := RetrieveEvents(42, []flow.EventType{testTyp2, "another-type"}, &got)(txn)
+		err := db.Update(RetrieveEvents(42, []flow.EventType{testTyp2, "another-type"}, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, testEvents2, got)
@@ -218,74 +172,56 @@ func TestSaveAndRetrieve_Payload(t *testing.T) {
 	)
 
 	t.Run("save two different payloads for same path at different heights", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-
-		err := SavePayload(42, path, payload1)(txn)
-
+		err := db.Update(SavePayload(42, path, payload1))
 		assert.NoError(t, err)
 
-		err = SavePayload(84, path, payload2)(txn)
-
+		err = db.Update(SavePayload(84, path, payload2))
 		assert.NoError(t, err)
-
-		err = txn.Commit()
-		require.NoError(t, err)
 	})
 
 	t.Run("retrieve payload at its first indexed height", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got ledger.Payload
-		err := RetrievePayload(42, path, &got)(txn)
+		err := db.View(RetrievePayload(42, path, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, *payload1, got)
 	})
 
 	t.Run("retrieve payload at its second indexed height", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got ledger.Payload
-		err := RetrievePayload(84, path, &got)(txn)
+		err := db.View(RetrievePayload(84, path, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, *payload2, got)
 	})
 
 	t.Run("retrieve payload between first and second indexed height", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got ledger.Payload
-		err := RetrievePayload(63, path, &got)(txn)
+		err := db.View(RetrievePayload(63, path, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, *payload1, got)
 	})
 
 	t.Run("retrieve payload after last indexed", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got ledger.Payload
-		err := RetrievePayload(999, path, &got)(txn)
+		err := db.View(RetrievePayload(999, path, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, *payload2, got)
 	})
 
 	t.Run("retrieve payload before it was ever indexed", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got ledger.Payload
-		err := RetrievePayload(10, path, &got)(txn)
+		err := db.View(RetrievePayload(10, path, &got))
 
 		assert.Error(t, err)
 	})
 
 	t.Run("should fail if path does not match", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got ledger.Payload
-		err := RetrievePayload(42, ledger.Path{}, &got)(txn)
+		unknownPath, _ := ledger.ToPath([]byte("ffffffffffffffffffffffffffffffff"))
+		err := db.View(RetrievePayload(42, unknownPath, &got))
 
 		assert.Error(t, err)
 	})
@@ -298,21 +234,14 @@ func TestSaveAndRetrieve_Height(t *testing.T) {
 	blockID, _ := flow.HexStringToIdentifier("aac513eb1a0457700ac3fa8d292513e18ad7fd70065146b35ab48fa5a6cab007")
 
 	t.Run("save height of block", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-
-		err := SaveHeight(blockID, 42)(txn)
+		err := db.Update(SaveHeight(blockID, 42))
 
 		assert.NoError(t, err)
-
-		err = txn.Commit()
-		require.NoError(t, err)
 	})
 
 	t.Run("retrieve height of block", func(t *testing.T) {
-		txn := db.NewTransaction(false)
-
 		var got uint64
-		err := RetrieveHeight(blockID, &got)(txn)
+		err := db.View(RetrieveHeight(blockID, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, uint64(42), got)

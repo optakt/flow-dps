@@ -38,7 +38,8 @@ func TestFallback(t *testing.T) {
 
 	// This is a success func that is never expected to be called.
 	noCallFn := func(txn *badger.Txn) error {
-		t.Fail()
+		t.Log("unexpected function call")
+		t.FailNow()
 		return nil
 	}
 	successFn := func(txn *badger.Txn) error {
@@ -123,7 +124,8 @@ func TestCombine(t *testing.T) {
 
 	// This is a success func that is never expected to be called.
 	noCallFn := func(txn *badger.Txn) error {
-		t.Fail()
+		t.Log("unexpected function call")
+		t.FailNow()
 		return nil
 	}
 	successFn := func(txn *badger.Txn) error {
@@ -189,11 +191,13 @@ func TestRetrieve(t *testing.T) {
 	testKey := []byte{42}
 
 	t.Run("nominal case", func(t *testing.T) {
-		insertKeyValue(t, db, testKey, testValue)
+		err := insertKeyValue(t, db, testKey, testValue)
+		require.NoError(t, err)
+
 		txn := db.NewTransaction(false)
 
 		var got uint64
-		err := retrieve(testKey, &got)(txn)
+		err = retrieve(testKey, &got)(txn)
 
 		assert.NoError(t, err)
 		assert.Equal(t, got, testValue)
@@ -205,15 +209,19 @@ func TestRetrieve(t *testing.T) {
 		var got uint64
 		err := retrieve([]byte{13, 37}, &got)(txn)
 
-		assert.Error(t, err)
+		if assert.Error(t, err) {
+			assert.True(t, errors.Is(err, badger.ErrKeyNotFound))
+		}
 	})
 
 	t.Run("badly encoded value, should fail", func(t *testing.T) {
-		insertUnencodedKeyValue(t, db, testKey, testValue)
+		err := insertUnencodedKeyValue(t, db, testKey, testValue)
+		require.NoError(t, err)
+
 		txn := db.NewTransaction(false)
 
 		var got uint64
-		err := retrieve(testKey, &got)(txn)
+		err = retrieve(testKey, &got)(txn)
 
 		assert.Error(t, err)
 	})
@@ -266,7 +274,7 @@ func TestSave(t *testing.T) {
 	})
 }
 
-func insertKeyValue(t *testing.T, db *badger.DB, key []byte, value uint64) {
+func insertKeyValue(t *testing.T, db *badger.DB, key []byte, value uint64) error {
 	t.Helper()
 
 	err := db.Update(func(txn *badger.Txn) error {
@@ -277,23 +285,19 @@ func insertKeyValue(t *testing.T, db *badger.DB, key []byte, value uint64) {
 
 		val = defaultCompressor.EncodeAll(val, nil)
 
-		err = txn.Set(key, val)
-		require.NoError(t, err)
-		return nil
+		return txn.Set(key, val)
 	})
-	require.NoError(t, err)
+	return err
 }
 
-func insertUnencodedKeyValue(t *testing.T, db *badger.DB, key []byte, value uint64) {
+func insertUnencodedKeyValue(t *testing.T, db *badger.DB, key []byte, value uint64) error {
 	t.Helper()
 
 	err := db.Update(func(txn *badger.Txn) error {
 		val := make([]byte, 8)
 		binary.BigEndian.PutUint64(val, value)
 
-		err := txn.Set(key, val)
-		require.NoError(t, err)
-		return nil
+		return txn.Set(key, val)
 	})
-	require.NoError(t, err)
+	return err
 }
