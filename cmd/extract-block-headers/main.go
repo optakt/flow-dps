@@ -17,7 +17,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -126,7 +125,7 @@ func run() int {
 			return failure
 		}
 		name := filepath.Join(flagOutput, fmt.Sprintf("header-%07d", index))
-		err = os.WriteFile(name, data, fs.ModePerm)
+		err = os.WriteFile(name, data, os.ModePerm)
 		if err != nil {
 			log.Error().Err(err).Msg("could not write header file")
 			return failure

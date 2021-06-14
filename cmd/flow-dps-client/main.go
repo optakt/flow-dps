@@ -55,7 +55,7 @@ func run() int {
 		flagScript string
 	)
 
-	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host for GRPC API server")
+	pflag.StringVarP(&flagAPI, "api", "a", "", "host for GRPC API server")
 	pflag.Uint64VarP(&flagHeight, "height", "h", 0, "block height to execute the script at")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagParams, "params", "p", "", "path to file with JSON-encoded list of Cadence arguments")
@@ -72,6 +72,21 @@ func run() int {
 		return failure
 	}
 	log = log.Level(level)
+
+	// If no API server is given, choose based on height.
+	if flagAPI == "" {
+		for _, spork := range DefaultSporks {
+			if flagHeight >= spork.First && flagHeight <= spork.Last {
+				log.Info().Uint64("height", flagHeight).Str("spork", spork.Name).Str("api", spork.API).Msg("spork and API chosen based on height")
+				flagAPI = spork.API
+				break
+			}
+		}
+	}
+	if flagAPI == "" {
+		log.Error().Uint64("height", flagHeight).Msg("could not find spork and API for height")
+		return failure
+	}
 
 	// Initialize the API client.
 	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
