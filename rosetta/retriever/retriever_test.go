@@ -628,175 +628,6 @@ func TestRetriever_Block(t *testing.T) {
 		_, _, err := r.Block(testBlockID)
 		assert.Error(t, err)
 	})
-
-	t.Run("handles event with wrong amount of fields", func(t *testing.T) {
-		invalidType := &cadence.EventType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "test",
-			Fields: []cadence.Field{
-				{
-					Identifier: "testField",
-					Type:       cadence.UInt64Type{},
-				},
-			},
-		}
-		invalidEvent := cadence.NewEvent(
-			[]cadence.Value{
-				cadence.NewUInt64(42),
-			},
-		).WithType(invalidType)
-		invalidEventPayload := json.MustEncode(invalidEvent)
-
-		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return block, nil },
-		}
-		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) {
-				return "", nil
-			},
-			TokensWithdrawnFunc: func(symbol string) (string, error) {
-				return "", nil
-			},
-		}
-		index := &mocks.Reader{
-			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				assert.Equal(t, testHeight, height)
-				return testHeader, nil
-			},
-			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-				return []flow.Event{
-					{
-						Payload: invalidEventPayload,
-					},
-				}, nil
-			},
-		}
-
-		r := &Retriever{
-			validate:  validator,
-			generator: generator,
-			index:     index,
-		}
-
-		_, _, err := r.Block(testBlockID)
-		assert.Error(t, err)
-	})
-
-	t.Run("handles event with missing amount field", func(t *testing.T) {
-		invalidType := &cadence.EventType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "test",
-			Fields: []cadence.Field{
-				{
-					Identifier: "testField",
-					Type:       cadence.StringType{},
-				},
-				{
-					Identifier: "address",
-					Type:       cadence.AddressType{},
-				},
-			},
-		}
-		invalidEvent := cadence.NewEvent(
-			[]cadence.Value{
-				cadence.NewString("42"),
-				cadence.NewAddress([8]byte{1, 2, 3, 4, 5, 6, 7, 8}),
-			},
-		).WithType(invalidType)
-		invalidEventPayload := json.MustEncode(invalidEvent)
-
-		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return block, nil },
-		}
-		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) {
-				return "", nil
-			},
-			TokensWithdrawnFunc: func(symbol string) (string, error) {
-				return "", nil
-			},
-		}
-		index := &mocks.Reader{
-			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				assert.Equal(t, testHeight, height)
-				return testHeader, nil
-			},
-			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-				return []flow.Event{
-					{
-						Payload: invalidEventPayload,
-					},
-				}, nil
-			},
-		}
-
-		r := &Retriever{
-			validate:  validator,
-			generator: generator,
-			index:     index,
-		}
-
-		_, _, err := r.Block(testBlockID)
-		assert.Error(t, err)
-	})
-
-	t.Run("handles event with missing address field", func(t *testing.T) {
-		invalidType := &cadence.EventType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "test",
-			Fields: []cadence.Field{
-				{
-					Identifier: "address",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "testField2",
-					Type:       cadence.StringType{},
-				},
-			},
-		}
-		invalidEvent := cadence.NewEvent(
-			[]cadence.Value{
-				cadence.NewUInt64(42),
-				cadence.NewString("test"),
-			},
-		).WithType(invalidType)
-		invalidEventPayload := json.MustEncode(invalidEvent)
-
-		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return block, nil },
-		}
-		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) {
-				return "", nil
-			},
-			TokensWithdrawnFunc: func(symbol string) (string, error) {
-				return "", nil
-			},
-		}
-		index := &mocks.Reader{
-			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				assert.Equal(t, testHeight, height)
-				return testHeader, nil
-			},
-			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-				return []flow.Event{
-					{
-						Payload: invalidEventPayload,
-					},
-				}, nil
-			},
-		}
-
-		r := &Retriever{
-			validate:  validator,
-			generator: generator,
-			index:     index,
-		}
-
-		_, _, err := r.Block(testBlockID)
-		assert.Error(t, err)
-	})
 }
 
 func TestRetriever_Transaction(t *testing.T) {
@@ -1039,158 +870,336 @@ func TestRetriever_Transaction(t *testing.T) {
 		_, err := r.Transaction(testBlockID, testTransactionID)
 		assert.Error(t, err)
 	})
+}
 
-	t.Run("handles event with wrong amount of fields", func(t *testing.T) {
-		invalidType := &cadence.EventType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "invalid",
-			Fields: []cadence.Field{
-				{
-					Identifier: "test",
-					Type:       cadence.IntType{},
-				},
-			},
-		}
-		invalidEvent := cadence.NewEvent(
-			[]cadence.Value{
-				cadence.NewInt(42),
-			},
-		).WithType(invalidType)
-		invalidEventPayload := json.MustEncode(invalidEvent)
-
-		invalidEvents := []flow.Event{
+func TestDecodeTransactions(t *testing.T) {
+	depositType := &cadence.EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "deposit",
+		Fields: []cadence.Field{
 			{
-				Payload: invalidEventPayload,
+				Identifier: "amount",
+				Type:       cadence.UInt64Type{},
 			},
-		}
-
-		validator := &mocks.Validator{
-			BlockFunc:       func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			TransactionFunc: func(transaction identifier.Transaction) error { return nil },
-		}
-		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) { return "", nil },
-			TokensWithdrawnFunc: func(symbol string) (string, error) { return "", nil },
-		}
-		index := &mocks.Reader{
-			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-				return invalidEvents, nil
-			},
-		}
-
-		r := &Retriever{
-			validate:  validator,
-			generator: generator,
-			index:     index,
-		}
-
-		_, err := r.Transaction(testBlockID, testTransactionID)
-		assert.Error(t, err)
-	})
-
-	t.Run("handles event with missing amount field", func(t *testing.T) {
-		invalidType := &cadence.EventType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "invalid",
-			Fields: []cadence.Field{
-				{
-					Identifier: "test1",
-					Type:       cadence.StringType{},
-				},
-				{
-					Identifier: "address",
-					Type:       cadence.AddressType{},
-				},
-			},
-		}
-		invalidEvent := cadence.NewEvent(
-			[]cadence.Value{
-				cadence.NewString("test"),
-				cadence.NewAddress([8]byte{1, 2, 3, 4, 5, 6, 7, 8}),
-			},
-		).WithType(invalidType)
-		invalidEventPayload := json.MustEncode(invalidEvent)
-
-		invalidEvents := []flow.Event{
 			{
-				Payload: invalidEventPayload,
+				Identifier: "address",
+				Type:       cadence.AddressType{},
 			},
-		}
+		},
+	}
+	depositEvent := cadence.NewEvent(
+		[]cadence.Value{
+			cadence.NewUInt64(42),
+			cadence.NewAddress([8]byte{1, 2, 3, 4, 5, 6, 7, 8}),
+		},
+	).WithType(depositType)
+	depositEventPayload := json.MustEncode(depositEvent)
 
-		validator := &mocks.Validator{
-			BlockFunc:       func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			TransactionFunc: func(transaction identifier.Transaction) error { return nil },
-		}
-		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) { return "", nil },
-			TokensWithdrawnFunc: func(symbol string) (string, error) { return "", nil },
-		}
-		index := &mocks.Reader{
-			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-				return invalidEvents, nil
-			},
-		}
-
-		r := &Retriever{
-			validate:  validator,
-			generator: generator,
-			index:     index,
-		}
-
-		_, err := r.Transaction(testBlockID, testTransactionID)
-		assert.Error(t, err)
-	})
-
-	t.Run("handles event with missing address field", func(t *testing.T) {
-		invalidType := &cadence.EventType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "invalid",
-			Fields: []cadence.Field{
-				{
-					Identifier: "amount",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "test",
-					Type:       cadence.StringType{},
-				},
-			},
-		}
-		invalidEvent := cadence.NewEvent(
-			[]cadence.Value{
-				cadence.NewUInt64(42),
-				cadence.NewString("test"),
-			},
-		).WithType(invalidType)
-		invalidEventPayload := json.MustEncode(invalidEvent)
-
-		invalidEvents := []flow.Event{
+	withdrawalType := &cadence.EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "withdrawal",
+		Fields: []cadence.Field{
 			{
-				Payload: invalidEventPayload,
+				Identifier: "amount",
+				Type:       cadence.UInt64Type{},
 			},
-		}
-
-		validator := &mocks.Validator{
-			BlockFunc:       func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			TransactionFunc: func(transaction identifier.Transaction) error { return nil },
-		}
-		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) { return "", nil },
-			TokensWithdrawnFunc: func(symbol string) (string, error) { return "", nil },
-		}
-		index := &mocks.Reader{
-			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-				return invalidEvents, nil
+			{
+				Identifier: "address",
+				Type:       cadence.AddressType{},
 			},
-		}
+		},
+	}
+	withdrawalEvent := cadence.NewEvent(
+		[]cadence.Value{
+			cadence.NewUInt64(42),
+			cadence.NewAddress([8]byte{2, 3, 4, 5, 6, 7, 8, 9}),
+		},
+	).WithType(withdrawalType)
+	withdrawalEventPayload := json.MustEncode(withdrawalEvent)
 
-		r := &Retriever{
-			validate:  validator,
-			generator: generator,
-			index:     index,
-		}
+	testDepositOp1 := object.Operation{
+		ID: identifier.Operation{
+			Index: 0,
+		},
+		RelatedIDs: []identifier.Operation{
+			{Index: 1},
+		},
+		Type:   "TRANSFER",
+		Status: "COMPLETED",
+		AccountID: identifier.Account{
+			Address: "0102030405060708",
+		},
+		Amount: object.Amount{
+			Value: "42",
+			Currency: identifier.Currency{
+				Symbol:   "FLOW",
+				Decimals: 0x8,
+			},
+		},
+	}
+	testWithdrawalOp1 := object.Operation{
+		ID: identifier.Operation{
+			Index: 1,
+		},
+		RelatedIDs: []identifier.Operation{
+			{Index: 0},
+		},
+		Type:   "TRANSFER",
+		Status: "COMPLETED",
+		AccountID: identifier.Account{
+			Address: "0203040506070809",
+		},
+		Amount: object.Amount{
+			Value: "-42",
+			Currency: identifier.Currency{
+				Symbol:   "FLOW",
+				Decimals: 0x8,
+			},
+		},
+	}
+	testDepositOp2 := object.Operation{
+		ID: identifier.Operation{
+			Index: 2,
+		},
+		RelatedIDs: []identifier.Operation{
+			{Index: 3},
+		},
+		Type:   "TRANSFER",
+		Status: "COMPLETED",
+		AccountID: identifier.Account{
+			Address: "0102030405060708",
+		},
+		Amount: object.Amount{
+			Value: "42",
+			Currency: identifier.Currency{
+				Symbol:   "FLOW",
+				Decimals: 0x8,
+			},
+		},
+	}
+	testWithdrawalOp2 := object.Operation{
+		ID: identifier.Operation{
+			Index: 3,
+		},
+		RelatedIDs: []identifier.Operation{
+			{Index: 2},
+		},
+		Type:   "TRANSFER",
+		Status: "COMPLETED",
+		AccountID: identifier.Account{
+			Address: "0203040506070809",
+		},
+		Amount: object.Amount{
+			Value: "-42",
+			Currency: identifier.Currency{
+				Symbol:   "FLOW",
+				Decimals: 0x8,
+			},
+		},
+	}
 
-		_, err := r.Transaction(testBlockID, testTransactionID)
-		assert.Error(t, err)
-	})
+	id1, err := flow.HexStringToIdentifier("a4c4194eae1a2dd0de4f4d51a884db4255bf265a40ddd98477a1d60ef45909ec")
+	require.NoError(t, err)
+
+	id2, err := flow.HexStringToIdentifier("e956563a78d74f927ccf1e81b4c3a012e691e9c30393bcfdb8b3db5060d4075b")
+	require.NoError(t, err)
+
+	testTransaction1 := &object.Transaction{
+		ID: identifier.Transaction{
+			Hash: id1.String(),
+		},
+		Operations: []object.Operation{
+			testDepositOp1,
+			testWithdrawalOp1,
+		},
+	}
+	testTransaction2 := &object.Transaction{
+		ID: identifier.Transaction{
+			Hash: id2.String(),
+		},
+		Operations: []object.Operation{
+			testDepositOp2,
+			testWithdrawalOp2,
+		},
+	}
+
+	threeFieldsType := &cadence.EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "test",
+		Fields: []cadence.Field{
+			{
+				Identifier: "testField1",
+				Type:       cadence.UInt64Type{},
+			},
+			{
+				Identifier: "testField2",
+				Type:       cadence.UInt64Type{},
+			},
+			{
+				Identifier: "testField3",
+				Type:       cadence.UInt64Type{},
+			},
+		},
+	}
+	threeFieldsEvent := cadence.NewEvent(
+		[]cadence.Value{
+			cadence.NewUInt64(42),
+			cadence.NewUInt64(42),
+			cadence.NewUInt64(42),
+		},
+	).WithType(threeFieldsType)
+	threeFieldsEventPayload := json.MustEncode(threeFieldsEvent)
+
+	missingAmountEventType := &cadence.EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "test",
+		Fields: []cadence.Field{
+			{
+				Identifier: "address",
+				Type:       cadence.AddressType{},
+			},
+			{
+				Identifier: "testField",
+				Type:       cadence.AddressType{},
+			},
+		},
+	}
+	missingAmountEvent := cadence.NewEvent(
+		[]cadence.Value{
+			cadence.NewAddress([8]byte{1, 2, 3, 4, 5, 6, 7, 8}),
+			cadence.NewAddress([8]byte{1, 2, 3, 4, 5, 6, 7, 8}),
+		},
+	).WithType(missingAmountEventType)
+	missingAmountEventPayload := json.MustEncode(missingAmountEvent)
+
+	missingAddressEventType := &cadence.EventType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "test",
+		Fields: []cadence.Field{
+			{
+				Identifier: "amount",
+				Type:       cadence.UInt64Type{},
+			},
+			{
+				Identifier: "amount",
+				Type:       cadence.UInt64Type{},
+			},
+		},
+	}
+	missingAddressEvent := cadence.NewEvent(
+		[]cadence.Value{
+			cadence.NewUInt64(42),
+			cadence.NewUInt64(42),
+		},
+	).WithType(missingAddressEventType)
+	missingAddressEventPayload := json.MustEncode(missingAddressEvent)
+
+	tests := []struct {
+		description string
+
+		events []flow.Event
+
+		wantTransactions []*object.Transaction
+		wantErr          assert.ErrorAssertionFunc
+	}{
+		{
+			description: "nominal case with one single transaction",
+
+			events: []flow.Event{{
+				TransactionID: id1,
+				Type:          "deposit",
+				Payload:       depositEventPayload,
+				EventIndex:    0,
+			}, {
+				TransactionID: id1,
+				Type:          "withdrawal",
+				Payload:       withdrawalEventPayload,
+				EventIndex:    1,
+			}},
+
+			wantErr: assert.NoError,
+			wantTransactions: []*object.Transaction{
+				testTransaction1,
+			},
+		},
+		{
+			description: "nominal case with multiple transactions",
+
+			events: []flow.Event{
+				{
+					TransactionID: id1,
+					Type:          "deposit",
+					Payload:       depositEventPayload,
+					EventIndex:    0,
+				},
+				{
+					TransactionID: id1,
+					Type:          "withdrawal",
+					Payload:       withdrawalEventPayload,
+					EventIndex:    1,
+				},
+				{
+					TransactionID: id2,
+					Type:          "deposit",
+					Payload:       depositEventPayload,
+					EventIndex:    2,
+				},
+				{
+					TransactionID: id2,
+					Type:          "withdrawal",
+					Payload:       withdrawalEventPayload,
+					EventIndex:    3,
+				},
+			},
+
+			wantErr: assert.NoError,
+			wantTransactions: []*object.Transaction{
+				testTransaction1,
+				testTransaction2,
+			},
+		},
+		{
+			description: "wrong amount of fields",
+
+			events: []flow.Event{{
+				Payload: threeFieldsEventPayload,
+			}},
+
+			wantErr: assert.Error,
+		},
+		{
+			description: "missing amount field",
+
+			events: []flow.Event{{
+				Payload: missingAmountEventPayload,
+			}},
+
+			wantErr: assert.Error,
+		},
+		{
+			description: "missing address field",
+
+			events: []flow.Event{{
+				Payload: missingAddressEventPayload,
+			}},
+
+			wantErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := decodeTransactions(test.events, "withdrawal")
+
+			test.wantErr(t, err)
+
+			// Since the result is a map, use assert.Contains in order not to rely on order.
+			for _, gotTransaction := range got {
+				assert.Contains(t, test.wantTransactions, gotTransaction)
+			}
+		})
+	}
 }
