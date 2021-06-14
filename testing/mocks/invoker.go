@@ -12,10 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package retriever
+package mocks
 
-type Generator interface {
-	GetBalance(symbol string) ([]byte, error)
-	TokensDeposited(symbol string) (string, error)
-	TokensWithdrawn(symbol string) (string, error)
+import (
+	"github.com/onflow/cadence"
+)
+
+type Invoker struct {
+	ScriptFunc func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
+}
+
+func (i *Invoker) Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
+	return i.ScriptFunc(height, script, parameters)
 }
