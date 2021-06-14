@@ -393,7 +393,9 @@ func TestRetriever_Block(t *testing.T) {
 		ParentID:  parentID,
 		Timestamp: time.Date(1972, 12, 31, 0, 0, 0, 0, time.UTC),
 	}
-	id, err := flow.HexStringToIdentifier("a4c4194eae1a2dd0de4f4d51a884db4255bf265a40ddd98477a1d60ef45909ec")
+	id1, err := flow.HexStringToIdentifier("a4c4194eae1a2dd0de4f4d51a884db4255bf265a40ddd98477a1d60ef45909ec")
+	require.NoError(t, err)
+	id2, err := flow.HexStringToIdentifier("fcd01710d4a40c11f4aa884bcb926b43f162f4cf302e4c4f1dd0f9e231c30878")
 	require.NoError(t, err)
 	testBlockID := identifier.Block{
 		Index: testHeight,
@@ -423,24 +425,22 @@ func TestRetriever_Block(t *testing.T) {
 			},
 		},
 	}
-	testTransaction := &object.Transaction{
+	testTransaction1 := &object.Transaction{
 		ID: identifier.Transaction{
-			Hash: id.String(),
+			Hash: id1.String(),
 		},
 		Operations: []object.Operation{
 			depositOp,
 			withdrawalOp,
 		},
 	}
-	testBlock := &object.Block{
-		ID: testBlockID,
-		ParentID: identifier.Block{
-			Index: 41,
-			Hash:  parentID.String(),
+	testTransaction2 := &object.Transaction{
+		ID: identifier.Transaction{
+			Hash: id2.String(),
 		},
-		Timestamp: testHeader.Timestamp.UnixNano() / 1_000_000,
-		Transactions: []*object.Transaction{
-			testTransaction,
+		Operations: []object.Operation{
+			depositOp,
+			withdrawalOp,
 		},
 	}
 
@@ -490,20 +490,47 @@ func TestRetriever_Block(t *testing.T) {
 
 	testEvents := []flow.Event{
 		{
+			TransactionID: id1,
 			Type:          "deposit",
-			TransactionID: id,
 			EventIndex:    0,
 			Payload:       depositEventPayload,
 		},
 		{
-			TransactionID: id,
+			TransactionID: id1,
 			Type:          "withdrawal",
 			EventIndex:    1,
 			Payload:       withdrawalEventPayload,
 		},
+		{
+			TransactionID: id2,
+			Type:          "deposit",
+			EventIndex:    2,
+			Payload:       depositEventPayload,
+		},
+		{
+			TransactionID: id2,
+			Type:          "withdrawal",
+			EventIndex:    3,
+			Payload:       withdrawalEventPayload,
+		},
 	}
 
-	t.Run("nominal case", func(t *testing.T) {
+	t.Run("nominal case without limit", func(t *testing.T) {
+		wantBlock := &object.Block{
+			ID: testBlockID,
+			ParentID: identifier.Block{
+				Index: testHeight - 1,
+				Hash:  parentID.String(),
+			},
+			Timestamp: testHeader.Timestamp.UnixNano() / 1_000_000,
+
+			// No limit, so all transactions should be in block.
+			Transactions: []*object.Transaction{
+				testTransaction1,
+				testTransaction2,
+			},
+		}
+
 		index := &mocks.Reader{
 			HeaderFunc: func(height uint64) (*flow.Header, error) {
 				assert.Equal(t, testHeight, height)
@@ -552,17 +579,177 @@ func TestRetriever_Block(t *testing.T) {
 		}
 
 		r := &Retriever{
+			cfg:       Config{TransactionLimit: 999},
 			index:     index,
 			validate:  validator,
 			generator: generator,
 			convert:   cvt,
 		}
 
-		// TODO: Add verification for transactions when https://github.com/optakt/flow-dps/issues/149 is implemented.
-		block, _, err := r.Block(testBlockID)
+		block, extra, err := r.Block(testBlockID)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, testBlock, block)
+			assert.Equal(t, wantBlock, block)
+			assert.Empty(t, extra)
+		}
+	})
+
+	t.Run("nominal case with limit reached exactly", func(t *testing.T) {
+		wantBlock := &object.Block{
+			ID: testBlockID,
+			ParentID: identifier.Block{
+				Index: 41,
+				Hash:  parentID.String(),
+			},
+			Timestamp: testHeader.Timestamp.UnixNano() / 1_000_000,
+
+			// Limit is 2, so both transactions should be included in block.
+			Transactions: []*object.Transaction{
+				testTransaction1,
+				testTransaction2,
+			},
+		}
+
+		index := &mocks.Reader{
+			HeaderFunc: func(height uint64) (*flow.Header, error) {
+				assert.Equal(t, testHeight, height)
+				return testHeader, nil
+			},
+			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+				assert.Equal(t, testHeight, height)
+				if assert.Len(t, types, 2) {
+					assert.Equal(t, flow.EventType("deposit"), types[0])
+					assert.Equal(t, flow.EventType("withdrawal"), types[1])
+				}
+				return testEvents, nil
+			},
+		}
+		validator := &mocks.Validator{
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+		}
+		generator := &mocks.Generator{
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, symbol, dps.FlowSymbol)
+				return "deposit", nil
+			},
+			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, symbol, dps.FlowSymbol)
+				return "withdrawal", nil
+			},
+		}
+		cvt := &mocks.Converter{
+			EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
+				assert.Contains(t, testEvents, event)
+
+				var op object.Operation
+				switch event.Type {
+				case "deposit":
+					op = depositOp
+				case "withdrawal":
+					op = withdrawalOp
+				}
+
+				op.RelatedIDs = nil // Unset RelatedIDs to prevent having duplicate related IDs.
+				return &op, nil
+			},
+		}
+
+		r := &Retriever{
+			cfg:       Config{TransactionLimit: 2},
+			index:     index,
+			validate:  validator,
+			generator: generator,
+			convert:   cvt,
+		}
+
+		block, extra, err := r.Block(testBlockID)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, wantBlock, block)
+			assert.Empty(t, extra)
+		}
+	})
+
+	t.Run("nominal case with more transactions than limit", func(t *testing.T) {
+		wantBlock := &object.Block{
+			ID: testBlockID,
+			ParentID: identifier.Block{
+				Index: 41,
+				Hash:  parentID.String(),
+			},
+			Timestamp: testHeader.Timestamp.UnixNano() / 1_000_000,
+
+			// Limit is 2, so both transactions should be included in block.
+			Transactions: []*object.Transaction{
+				testTransaction1,
+			},
+		}
+
+		index := &mocks.Reader{
+			HeaderFunc: func(height uint64) (*flow.Header, error) {
+				assert.Equal(t, testHeight, height)
+				return testHeader, nil
+			},
+			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+				assert.Equal(t, testHeight, height)
+				if assert.Len(t, types, 2) {
+					assert.Equal(t, flow.EventType("deposit"), types[0])
+					assert.Equal(t, flow.EventType("withdrawal"), types[1])
+				}
+				return testEvents, nil
+			},
+		}
+		validator := &mocks.Validator{
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+		}
+		generator := &mocks.Generator{
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, symbol, dps.FlowSymbol)
+				return "deposit", nil
+			},
+			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, symbol, dps.FlowSymbol)
+				return "withdrawal", nil
+			},
+		}
+		cvt := &mocks.Converter{
+			EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
+				assert.Contains(t, testEvents, event)
+
+				var op object.Operation
+				switch event.Type {
+				case "deposit":
+					op = depositOp
+				case "withdrawal":
+					op = withdrawalOp
+				}
+
+				op.RelatedIDs = nil // Unset RelatedIDs to prevent having duplicate related IDs.
+				return &op, nil
+			},
+		}
+
+		r := &Retriever{
+			cfg:       Config{TransactionLimit: 1},
+			index:     index,
+			validate:  validator,
+			generator: generator,
+			convert:   cvt,
+		}
+
+		block, extra, err := r.Block(testBlockID)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, wantBlock, block)
+
+			assert.Len(t, block.Transactions, 1)
+			assert.Len(t, extra, 1)
 		}
 	})
 

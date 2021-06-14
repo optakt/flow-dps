@@ -60,11 +60,12 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAPI   string
-		flagCache uint64
-		flagChain string
-		flagLevel string
-		flagPort  uint16
+		flagAPI          string
+		flagCache        uint64
+		flagChain        string
+		flagLevel        string
+		flagPort         uint16
+		flagTransactions uint
 	)
 
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
@@ -72,6 +73,7 @@ func run() int {
 	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowTestnet.String(), "chain ID for Flow network core contracts")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
+	pflag.UintVarP(&flagTransactions, "transaction-limit", "t", 200, "maximum amount of transactions to include in a block response")
 
 	pflag.Parse()
 
@@ -119,7 +121,9 @@ func run() int {
 		return failure
 	}
 
-	retrieve := retriever.New(params, index, validate, generate, invoke, convert)
+	retrieve := retriever.New(params, index, validate, generate, invoke, convert,
+		retriever.WithTransactionLimit(flagTransactions),
+	)
 	ctrl := rosetta.NewData(config, retrieve)
 
 	server := echo.New()
