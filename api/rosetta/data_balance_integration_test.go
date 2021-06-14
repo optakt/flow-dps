@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"runtime"
@@ -32,11 +33,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/invoker"
+	"github.com/optakt/flow-dps/rosetta/meta"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
@@ -97,63 +101,23 @@ func TestGetBalance(t *testing.T) {
 
 		wantStatusCode int
 		wantBalance    string
-		wantHandlerErr assert.ErrorAssertionFunc
 	}{
 		{
-			name:           "valid balance request - first occurrence of the account",
-			request:        balanceRequest("754aed9de6197641", 13, "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"),
-			wantBalance:    "10000100000",
-			wantStatusCode: http.StatusOK,
-			wantHandlerErr: assert.NoError,
+			name:        "valid balance request - first occurrence of the account",
+			request:     balanceRequest("754aed9de6197641", 13, "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"),
+			wantBalance: "10000100000",
 		},
 		{
-			name:           "valid balance request - mid chain",
-			request:        balanceRequest("754aed9de6197641", 50, "d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df"),
-			wantBalance:    "10000099999",
-			wantStatusCode: http.StatusOK,
-			wantHandlerErr: assert.NoError,
+			name:        "valid balance request - mid chain",
+			request:     balanceRequest("754aed9de6197641", 50, "d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df"),
+			wantBalance: "10000099999",
 		},
 		{
-			name:           "valid balance request - last indexed block",
-			request:        balanceRequest("754aed9de6197641", 425, "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683"),
-			wantBalance:    "10000100002",
-			wantStatusCode: http.StatusOK,
-			wantHandlerErr: assert.NoError,
+			name:        "valid balance request - last indexed block",
+			request:     balanceRequest("754aed9de6197641", 425, "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683"),
+			wantBalance: "10000100002",
 		},
-		{
-			name:           "empty balance request",
-			request:        rosetta.BalanceRequest{},
-			wantStatusCode: http.StatusUnprocessableEntity,
-			wantHandlerErr: assert.Error,
-		},
-		/*
-			TODO: when we re-add block validation, we should reintroduce this test case - block height and hash mismatch should result in an error
-				=> https://github.com/optakt/flow-dps/issues/51
-			{
-				name:           "invalid request - block hash and height mismatch",
-				request:        balanceRequest("754aed9de6197641", 50, "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683"),
-				wantStatusCode: http.StatusUnprocessableEntity,
-				wantHandlerErr: assert.Error,
-			},
-		*/
-		{
-			name:           "invalid account address",
-			request:        balanceRequest("invalid_address", 0, "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"),
-			wantStatusCode: http.StatusUnprocessableEntity,
-			wantHandlerErr: assert.Error,
-		},
-		{
-			name:           "invalid balance request - account does not exist yet",
-			request:        balanceRequest("754aed9de6197641", 12, "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"),
-			wantStatusCode: http.StatusInternalServerError,
-			wantHandlerErr: assert.Error,
-		},
-		{
-			name:           "invalid balance request - unknown block",
-			request:        balanceRequest("754aed9de6197641", 426, "xyz"),
-			wantStatusCode: http.StatusInternalServerError,
-			wantHandlerErr: assert.Error,
-		},
+		// TODO: think - what about multiple currencies of the same token? e.g. []token{ "flow", "flow" }?
 	}
 
 	for _, test := range tests {
@@ -177,23 +141,9 @@ func TestGetBalance(t *testing.T) {
 
 			// execute the request
 			err = api.Balance(ctx)
-			test.wantHandlerErr(t, err)
+			assert.NoError(t, err)
 
-			// validate response data
-
-			// validate status code
-			if test.wantStatusCode != http.StatusOK {
-
-				// ugly workaround for HTTP status code set by router vs set on context
-				e, ok := err.(*echo.HTTPError)
-				require.True(t, ok)
-				assert.Equal(t, test.wantStatusCode, e.Code)
-
-				// nothing more to do, response validation should only be done for '200 OK' responses
-				return
-			}
-
-			assert.Equal(t, test.wantStatusCode, rec.Result().StatusCode)
+			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
 			// unpack response
 			var balanceResponse rosetta.BalanceResponse
@@ -212,6 +162,249 @@ func TestGetBalance(t *testing.T) {
 				assert.Equal(t, test.request.Currencies[0].Decimals, balance.Currency.Decimals)
 				assert.Equal(t, test.wantBalance, balance.Value)
 			}
+		})
+	}
+}
+
+func TestBalanceErrors(t *testing.T) {
+
+	db := setupDB(t)
+	api := setupAPI(t, db)
+
+	// defined valid balance request fields
+	var (
+		testAccountAddress = identifier.Account{Address: "754aed9de6197641"}
+
+		testBlockID = identifier.Block{
+			Index: 13,
+			Hash:  "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23",
+		}
+
+		validAddressSize = 2 * flow.AddressLength
+	)
+
+	// TODO: when blocl tests get merged, this can be global for the tests perhaps
+	const (
+		invalidBlockchainName = "not-flow"
+		invalidNetworkName    = "not-flow-testnet"
+
+		trimmedBlockID     = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2" // block hash a character short
+		trimmedAccountID   = "754aed9de619764"                                                 // account ID a character short
+		validBlockIDLength = 64
+	)
+
+	tests := []struct {
+		name string
+
+		request rosetta.BalanceRequest
+
+		wantStatusCode              int
+		wantRosettaError            meta.ErrorDefinition
+		wantRosettaErrorDescription string
+		wantRosettaErrorDetails     map[string]interface{}
+	}{
+		{
+			name:    "empty balance request",
+			request: rosetta.BalanceRequest{},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
+			wantRosettaErrorDetails:     nil,
+		},
+		{
+			name: "missing network blockchain identifier",
+			request: rosetta.BalanceRequest{
+				NetworkID: identifier.Network{
+					Blockchain: "",
+					Network:    dps.FlowTestnet.String(),
+				},
+				AccountID:  testAccountAddress,
+				BlockID:    testBlockID,
+				Currencies: defaultCurrencySpec(),
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
+			wantRosettaErrorDetails:     nil,
+		},
+		{
+			name: "wrong network blockchain identifier",
+			request: rosetta.BalanceRequest{
+				NetworkID: identifier.Network{
+					Blockchain: invalidBlockchainName,
+					Network:    dps.FlowTestnet.String(),
+				},
+				AccountID:  testAccountAddress,
+				BlockID:    testBlockID,
+				Currencies: defaultCurrencySpec(),
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidNetwork,
+			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchainName, dps.FlowBlockchain),
+			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchainName, "network": dps.FlowTestnet.String()},
+		},
+		{
+			name: "missing network identifier",
+			request: rosetta.BalanceRequest{
+				NetworkID: identifier.Network{
+					Blockchain: dps.FlowBlockchain,
+					Network:    "",
+				},
+				AccountID:  testAccountAddress,
+				BlockID:    testBlockID,
+				Currencies: defaultCurrencySpec(),
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "blockchain identifier: network field is empty",
+			wantRosettaErrorDetails:     nil,
+		},
+		{
+			name: "wrong network identifier",
+			request: rosetta.BalanceRequest{
+				NetworkID: identifier.Network{
+					Blockchain: dps.FlowBlockchain,
+					Network:    invalidNetworkName,
+				},
+				AccountID:  testAccountAddress,
+				BlockID:    testBlockID,
+				Currencies: defaultCurrencySpec(),
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidNetwork,
+			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetworkName, dps.FlowTestnet.String()),
+			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetworkName},
+		},
+		{
+			name: "missing block index and height",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    identifier.Block{Index: 0, Hash: ""},
+				Currencies: defaultCurrencySpec(),
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
+		},
+		{
+			name: "wrong length of block id",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    identifier.Block{Index: 13, Hash: trimmedBlockID},
+				Currencies: defaultCurrencySpec(),
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockID), validBlockIDLength),
+		},
+		{
+			name: "missing account address",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  identifier.Account{Address: ""},
+				BlockID:    testBlockID,
+				Currencies: defaultCurrencySpec(),
+			},
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "account identifier: address field is empty",
+		},
+		{
+			name: "wrong length of account address",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  identifier.Account{Address: trimmedAccountID},
+				BlockID:    testBlockID,
+				Currencies: defaultCurrencySpec(),
+			},
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: fmt.Sprintf("account identifier: address field has wrong length (have: %d, want: %d)", len(trimmedAccountID), validAddressSize),
+		},
+		{
+			name: "missing currency data",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    testBlockID,
+				Currencies: []identifier.Currency{},
+			},
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "currency identifiers: currency list is empty",
+		},
+		{
+			name: "missing currency symbol",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    testBlockID,
+				Currencies: []identifier.Currency{{Symbol: "", Decimals: 8}},
+			},
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "currency identifier: symbol field is missing",
+		},
+		{
+			name: "some currency symbols missing",
+			request: rosetta.BalanceRequest{
+				NetworkID: defaultNetworkID(),
+				AccountID: testAccountAddress,
+				BlockID:   testBlockID,
+				Currencies: []identifier.Currency{
+					{Symbol: dps.FlowSymbol, Decimals: 8},
+					{Symbol: "", Decimals: 8},
+					{Symbol: dps.FlowSymbol, Decimals: 8},
+				},
+			},
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "currency identifier: symbol field is missing",
+		},
+	}
+
+	for _, test := range tests {
+
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			// TODO: move this code to a helper function
+			enc, err := json.Marshal(test.request)
+			require.NoError(t, err)
+
+			// create request
+			req := httptest.NewRequest(http.MethodPost, "/account/balance", bytes.NewReader(enc))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+			rec := httptest.NewRecorder()
+
+			ctx := echo.New().NewContext(req, rec)
+
+			// execute the request
+			err = api.Balance(ctx)
+			assert.Error(t, err)
+
+			echoErr, ok := err.(*echo.HTTPError)
+			require.True(t, ok)
+
+			assert.Equal(t, test.wantStatusCode, echoErr.Code)
+			gotErr, ok := echoErr.Message.(rosetta.Error)
+			require.True(t, ok)
+
+			assert.Equal(t, test.wantRosettaError, gotErr.ErrorDefinition)
+			assert.Equal(t, test.wantRosettaErrorDescription, gotErr.Description)
+			assert.Equal(t, test.wantRosettaErrorDetails, gotErr.Details)
 		})
 	}
 }
