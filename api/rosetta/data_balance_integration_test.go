@@ -494,6 +494,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDescription: fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
 			wantRosettaErrorDetails:     map[string]interface{}{"symbol": dps.FlowSymbol, "decimals": uint(7)},
 		},
+		// TODO: request account balance at height where it does not exist
 	}
 
 	for _, test := range tests {
@@ -539,6 +540,7 @@ func TestGetBalanceMalformedJSON(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
+	// TODO: content type test case?
 	tests := []struct {
 		name string
 
@@ -550,6 +552,17 @@ func TestGetBalanceMalformedJSON(t *testing.T) {
 		{
 			name:    "wrong field type",
 			request: []byte(`{ "network_identifier": { "blockchain": "flow", "network": 99} }`),
+
+			wantStatusCode:   http.StatusBadRequest,
+			wantRosettaError: configuration.ErrorInvalidFormat,
+		},
+		{
+			name: "unclosed bracket",
+			request: []byte(`{
+				"network_identifier": {"blockchain":"flow","network":"flow-testnet"},
+				"block_identifier":{"index":13,"hash":"af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"},
+				"account_identifier":{"address":"754aed9de6197641"},
+				"currencies":[{"symbol":"FLOW","decimals":8}]`),
 
 			wantStatusCode:   http.StatusBadRequest,
 			wantRosettaError: configuration.ErrorInvalidFormat,
