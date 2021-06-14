@@ -188,8 +188,9 @@ func TestBalanceErrors(t *testing.T) {
 		invalidBlockchainName = "not-flow"
 		invalidNetworkName    = "not-flow-testnet"
 
-		trimmedBlockID     = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2" // block hash a character short
-		trimmedAccountID   = "754aed9de619764"                                                 // account ID a character short
+		trimmedBlockID     = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2"  // block hash a character short
+		invalidBlockHash   = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+		trimmedAccountID   = "754aed9de619764"                                                  // account ID a character short
 		validBlockIDLength = 64
 	)
 
@@ -370,6 +371,32 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaError:            configuration.ErrorInvalidFormat,
 			wantRosettaErrorDescription: "currency identifier: symbol field is missing",
 		},
+		{
+			name: "missing block height",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    identifier.Block{Hash: "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"},
+				Currencies: defaultCurrencySpec(),
+			},
+			wantStatusCode:              http.StatusInternalServerError,
+			wantRosettaError:            configuration.ErrorInternal,
+			wantRosettaErrorDescription: "could not validate block: block access with hash currently not supported",
+		},
+		{
+			name: "invalid block hash",
+			request: rosetta.BalanceRequest{
+				NetworkID:  defaultNetworkID(),
+				AccountID:  testAccountAddress,
+				BlockID:    identifier.Block{Index: 13, Hash: invalidBlockHash},
+				Currencies: defaultCurrencySpec(),
+			},
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidBlock,
+			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
+		},
+		// TODO: invalid account address
 	}
 
 	for _, test := range tests {
