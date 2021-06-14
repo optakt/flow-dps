@@ -55,12 +55,12 @@ func (r *Retriever) Oldest() (identifier.Block, time.Time, error) {
 
 	first, err := r.index.First()
 	if err != nil {
-		return identifier.Block{}, time.Time{}, nil
+		return identifier.Block{}, time.Time{}, fmt.Errorf("could not find first indexed block: %w", err)
 	}
 
 	header, err := r.index.Header(first)
 	if err != nil {
-		return identifier.Block{}, time.Time{}, nil
+		return identifier.Block{}, time.Time{}, fmt.Errorf("could not find block header: %w", err)
 	}
 
 	block := identifier.Block{
@@ -75,12 +75,12 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 
 	last, err := r.index.Last()
 	if err != nil {
-		return identifier.Block{}, time.Time{}, nil
+		return identifier.Block{}, time.Time{}, fmt.Errorf("could not find last indexed block: %w", err)
 	}
 
 	header, err := r.index.Header(last)
 	if err != nil {
-		return identifier.Block{}, time.Time{}, nil
+		return identifier.Block{}, time.Time{}, fmt.Errorf("could not find block header: %w", err)
 	}
 
 	block := identifier.Block{
@@ -211,7 +211,7 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		amount := int64(uAmount)
 		address := flow.Address(bAddress)
 
-		// For the witdrawal event, we invert the amount into a negative number.
+		// For the withdrawal event, we invert the amount into a negative number.
 		if event.Type == flow.EventType(withdrawal) {
 			amount = -amount
 		}
@@ -363,7 +363,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		amount := int64(uAmount)
 		address := flow.Address(bAddress)
 
-		// For the witdrawal event, we invert the amount into a negative number.
+		// For the withdrawal event, we invert the amount into a negative number.
 		if event.Type == flow.EventType(withdrawal) {
 			amount = -amount
 		}

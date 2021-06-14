@@ -1,4 +1,4 @@
-// Copyright 2021 Optakt Labs OÜ
+// Copyright 2021 Alvalor S.A.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy of
@@ -12,10 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package retriever
+package mocks
 
-type Generator interface {
-	GetBalance(symbol string) ([]byte, error)
-	TokensDeposited(symbol string) (string, error)
-	TokensWithdrawn(symbol string) (string, error)
+type Generator struct {
+	GetBalanceFunc      func(symbol string) ([]byte, error)
+	TokensDepositedFunc func(symbol string) (string, error)
+	TokensWithdrawnFunc func(symbol string) (string, error)
+}
+
+func (g *Generator) GetBalance(symbol string) ([]byte, error) {
+	return g.GetBalanceFunc(symbol)
+}
+
+func (g *Generator) TokensDeposited(symbol string) (string, error) {
+	return g.TokensDepositedFunc(symbol)
+}
+
+func (g *Generator) TokensWithdrawn(symbol string) (string, error) {
+	return g.TokensWithdrawnFunc(symbol)
 }
