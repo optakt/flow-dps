@@ -74,8 +74,9 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// Open index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex))
+	// Open index database and bypass lock guard since the indexer is alone writing on the database and this allows
+	// the server to simultaneously read from the database as it is being indexed.
+	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithBypassLockGuard(true))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
 		return failure

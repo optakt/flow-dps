@@ -64,7 +64,7 @@ func run() int {
 	log = log.Level(level)
 
 	// Open the index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex))
+	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open badger db")
 		return failure

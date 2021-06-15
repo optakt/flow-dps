@@ -83,7 +83,7 @@ func run() int {
 	}
 
 	// Initialize the mapper.
-	opts := dps.DefaultOptions(flagData).WithLogger(nil)
+	opts := dps.DefaultOptions(flagData).WithLogger(nil).WithReadOnly(true)
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Error().Str("data", flagData).Err(err).Msg("could not open blockchain database")
