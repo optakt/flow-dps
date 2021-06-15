@@ -28,6 +28,10 @@ import (
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 
+	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
+
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/index"
@@ -80,7 +84,19 @@ func run() int {
 	defer db.Close()
 
 	// GRPC API initialization.
-	gsvr := grpc.NewServer()
+	opts := []logging.Option{
+		logging.WithLevels(logging.DefaultServerCodeToLevel),
+	}
+	gsvr := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			tags.UnaryServerInterceptor(),
+			logging.UnaryServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+		),
+		grpc.ChainStreamInterceptor(
+			tags.StreamServerInterceptor(),
+			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+		),
+	)
 	index := index.NewReader(db)
 	server := api.NewServer(index)
 
