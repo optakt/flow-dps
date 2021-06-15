@@ -35,7 +35,7 @@ func SaveLast(height uint64) func(*badger.Txn) error {
 	return save(encodeKey(prefixLast), height)
 }
 
-func SaveCommit(commit flow.StateCommitment, height uint64) func(*badger.Txn) error {
+func SaveCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error {
 	return save(encodeKey(prefixCommit, height), commit)
 }
 

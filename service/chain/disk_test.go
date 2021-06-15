@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
+	"github.com/optakt/flow-dps/testing/helpers"
 
 	"github.com/optakt/flow-dps/service/chain"
 )
@@ -39,7 +40,7 @@ var (
 )
 
 func TestDisk_Root(t *testing.T) {
-	db := inMemoryDB(t)
+	db := populatedDB(t)
 	defer db.Close()
 	c := chain.FromDisk(db)
 
@@ -49,7 +50,7 @@ func TestDisk_Root(t *testing.T) {
 }
 
 func TestDisk_Header(t *testing.T) {
-	db := inMemoryDB(t)
+	db := populatedDB(t)
 	defer db.Close()
 	c := chain.FromDisk(db)
 
@@ -64,7 +65,7 @@ func TestDisk_Header(t *testing.T) {
 }
 
 func TestDisk_Commit(t *testing.T) {
-	db := inMemoryDB(t)
+	db := populatedDB(t)
 	defer db.Close()
 	c := chain.FromDisk(db)
 
@@ -77,7 +78,7 @@ func TestDisk_Commit(t *testing.T) {
 }
 
 func TestDisk_Events(t *testing.T) {
-	db := inMemoryDB(t)
+	db := populatedDB(t)
 	defer db.Close()
 	c := chain.FromDisk(db)
 
@@ -89,18 +90,13 @@ func TestDisk_Events(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func inMemoryDB(t *testing.T) *badger.DB {
+func populatedDB(t *testing.T) *badger.DB {
 	t.Helper()
 
-	opts := badger.DefaultOptions("")
-	opts.InMemory = true
-	opts.Logger = nil
+	db := helpers.InMemoryDB(t)
 
-	db, err := badger.Open(opts)
-	require.NoError(t, err)
-
-	err = db.Update(func(tx *badger.Txn) error {
-		err = operation.InsertRootHeight(testHeight)(tx)
+	err := db.Update(func(tx *badger.Txn) error {
+		err := operation.InsertRootHeight(testHeight)(tx)
 		if err != nil {
 			return err
 		}
