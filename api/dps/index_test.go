@@ -64,7 +64,7 @@ func TestIndex_First(t *testing.T) {
 		}
 	})
 
-	t.Run("handles indexing failure", func(t *testing.T) {
+	t.Run("handles index failure", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetFirstFunc: func(_ context.Context, in *GetFirstRequest, _ ...grpc.CallOption) (*GetFirstResponse, error) {
@@ -103,7 +103,7 @@ func TestIndex_Last(t *testing.T) {
 		}
 	})
 
-	t.Run("handles indexing failure", func(t *testing.T) {
+	t.Run("handles index failure", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetLastFunc: func(_ context.Context, in *GetLastRequest, _ ...grpc.CallOption) (*GetLastResponse, error) {
@@ -150,7 +150,7 @@ func TestIndex_Header(t *testing.T) {
 		}
 	})
 
-	t.Run("handles indexing failures", func(t *testing.T) {
+	t.Run("handles index failures", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetHeaderFunc: func(_ context.Context, in *GetHeaderRequest, _ ...grpc.CallOption) (*GetHeaderResponse, error) {
@@ -166,7 +166,7 @@ func TestIndex_Header(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles marshalling failures", func(t *testing.T) {
+	t.Run("handles decoding failures", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetHeaderFunc: func(_ context.Context, in *GetHeaderRequest, _ ...grpc.CallOption) (*GetHeaderResponse, error) {
@@ -212,7 +212,7 @@ func TestIndex_Commit(t *testing.T) {
 		}
 	})
 
-	t.Run("handles indexing failures", func(t *testing.T) {
+	t.Run("handles index failures", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetCommitFunc: func(_ context.Context, in *GetCommitRequest, _ ...grpc.CallOption) (*GetCommitResponse, error) {
@@ -281,7 +281,7 @@ func TestIndex_Events(t *testing.T) {
 		}
 	})
 
-	t.Run("handles indexing failures", func(t *testing.T) {
+	t.Run("handles index failures", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
@@ -353,7 +353,7 @@ func TestIndex_Registers(t *testing.T) {
 		}
 	})
 
-	t.Run("handles indexing failures", func(t *testing.T) {
+	t.Run("handles index failures", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetRegistersFunc: func(_ context.Context, in *GetRegistersRequest, _ ...grpc.CallOption) (*GetRegistersResponse, error) {
@@ -400,7 +400,7 @@ func TestIndex_Height(t *testing.T) {
 		}
 	})
 
-	t.Run("handles indexing failures", func(t *testing.T) {
+	t.Run("handles index failures", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetHeightFunc: func(_ context.Context, in *GetHeightRequest, _ ...grpc.CallOption) (*GetHeightResponse, error) {
