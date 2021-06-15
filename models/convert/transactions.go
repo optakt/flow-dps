@@ -27,10 +27,13 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
+// EventsToTransactions processes a slice of events into a map of Rosetta transactions. It ensures that
+// each operation included in transactions has its related operation IDs set accordingly, and maps transactions
+// by their ID.
 func EventsToTransactions(ee []flow.Event, withdrawal string) (map[string]*object.Transaction, error) {
 	transactions := make(map[string]*object.Transaction)
 	for _, event := range ee {
-		// Decode the event payload into a Cadence value and cast to Cadence event.
+		// Decode the event payload into a Cadence value and cast it to a Cadence event.
 		value, err := json.Decode(event.Payload)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode event: %w", err)
@@ -40,14 +43,14 @@ func EventsToTransactions(ee []flow.Event, withdrawal string) (map[string]*objec
 			return nil, fmt.Errorf("could not cast event: %w", err)
 		}
 
-		// Check we have the necessary amount of fields.
+		// Ensure that there are the correct amount of fields.
 		if len(e.Fields) != 2 {
 			return nil, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
 		}
 
-		// Now we have access to the fields for the events; the first one is always
-		// the amount, the second one the address. The types coming from Cadence
-		// are not native Flow types, so we need to use primitive types first.
+		// The first field is always the amount and the second one the address.
+		// The types coming from Cadence are not native Flow types, so primitive types
+		// are needed before they can be converted into proper Flow types.
 		vAmount := e.Fields[0].ToGoValue()
 		uAmount, ok := vAmount.(uint64)
 		if !ok {
@@ -59,17 +62,16 @@ func EventsToTransactions(ee []flow.Event, withdrawal string) (map[string]*objec
 			return nil, fmt.Errorf("could not cast address (%T)", vAddress)
 		}
 
-		// Then, we can convert the amount to a signed integer so we can invert
-		// it and the address to a native Flow address.
+		// Convert the amount to a signed integer that it can be inverted.
 		amount := int64(uAmount)
+		// Convert the address bytes into a native Flow address.
 		address := flow.Address(bAddress)
 
-		// For the withdrawal event, we invert the amount into a negative number.
+		// In the case of a withdrawal, invert the amount value.
 		if event.Type == flow.EventType(withdrawal) {
 			amount = -amount
 		}
 
-		// Now we have everything to assemble the respective operation.
 		op := object.Operation{
 			ID: identifier.Operation{
 				Index: uint(event.EventIndex),
@@ -102,7 +104,7 @@ func EventsToTransactions(ee []flow.Event, withdrawal string) (map[string]*objec
 		transaction.Operations = append(transactions[event.TransactionID.String()].Operations, op)
 	}
 
-	// Go through all operations of all transactions and set their related IDs.
+	// Go through all operations of each transaction and set their related IDs.
 	for tIdx := range transactions {
 		for oIdx, op1 := range transactions[tIdx].Operations {
 			for _, op2 := range transactions[tIdx].Operations {
