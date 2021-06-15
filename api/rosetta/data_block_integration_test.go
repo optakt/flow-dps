@@ -81,7 +81,7 @@ func TestGetBlock(t *testing.T) {
 			wantTimestamp:        rosettaTime(midHeader1.Timestamp),
 			wantParentHash:       midHeader1.ParentID.String(),
 			validateBlock:        validatorFromHeader(t, midHeader1),
-			validateTransactions: validateSingleTransfer(t, "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1", "8c5303eaa26202d6", "754aed9de6197641", 100_00000000),
+			validateTransactions: validateTransfer(t, "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1", "8c5303eaa26202d6", "754aed9de6197641", 100_00000000),
 		},
 		{
 			name:           "block mid-chain without transactions",
@@ -97,7 +97,7 @@ func TestGetBlock(t *testing.T) {
 			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
 			validateBlock:        validatorFromHeader(t, midHeader3),
-			validateTransactions: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
+			validateTransactions: validateTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
 		},
 		{
 			name: "lookup of a block mid-chain by index only",
@@ -107,7 +107,7 @@ func TestGetBlock(t *testing.T) {
 			},
 			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
-			validateTransactions: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
+			validateTransactions: validateTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
 			validateBlock:        validateBlockID(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
 		},
 		{
@@ -408,6 +408,40 @@ func TestMalformedBlockRequest(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
+	const (
+		// network field is an integer instead of a string
+		wrongFieldType = `
+		{ 
+			"network_identifier": { 
+				"blockchain": "flow", 
+				"network": 99
+			}
+		}`
+
+		unclosedBracket = `
+		{
+			"network_identifier": {
+				"blockchain": "flow",
+				"network": "flow-testnet"
+			},
+			"block_identifier": {
+				"index": 13,
+				"hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+			}`
+
+		validJSON = `
+		{
+			"network_identifier": {
+				"blockchain": "flow",
+				"network": "flow-testnet"
+			},
+			"block_identifier": {
+				"index": 13,
+				"hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+			}
+		}`
+	)
+
 	tests := []struct {
 		name     string
 		payload  []byte
@@ -420,20 +454,17 @@ func TestMalformedBlockRequest(t *testing.T) {
 		},
 		{
 			name:     "wrong field type",
-			payload:  []byte(`{ "network_identifier": { "blockchain": "flow", "network": 99} }`),
+			payload:  []byte(wrongFieldType),
 			mimeType: echo.MIMEApplicationJSON,
 		},
 		{
-			name: "unclosed bracket",
-			payload: []byte(`{ "network_identifier": { "blockchain": "flow", "network": "flow-testnet" },
-							   "block_identifier": { "index": 13, "hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23" }`),
+			name:     "unclosed bracket",
+			payload:  []byte(unclosedBracket),
 			mimeType: echo.MIMEApplicationJSON,
 		},
 		{
-			// TODO: check if this should be treated as an error - echo will
-			name: "valid payload with no mime type set",
-			payload: []byte(`{ "network_identifier": { "blockchain": "flow", "network": "flow-testnet" },
-							   "block_identifier": { "index": 13, "hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23" } }`),
+			name:     "valid payload with no mime type set",
+			payload:  []byte(validJSON),
 			mimeType: "",
 		},
 	}
@@ -481,7 +512,7 @@ func blockRequest(header flow.Header) rosetta.BlockRequest {
 	}
 }
 
-func validateSingleTransfer(t *testing.T, hash string, from string, to string, amount int64) transactionValidationFn {
+func validateTransfer(t *testing.T, hash string, from string, to string, amount int64) transactionValidationFn {
 
 	t.Helper()
 
