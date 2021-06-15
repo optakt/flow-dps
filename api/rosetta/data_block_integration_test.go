@@ -183,14 +183,19 @@ func TestBlockErrors(t *testing.T) {
 		invalidBlockchain = "invalid-blockchain"
 		invalidNetwork    = "invalid-network"
 
-		validBlockID     = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
+		validBlockHash   = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
 		validBlockHeight = 44
 
-		trimmedBlockID = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
-		invalidBlockID = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
-		validLength    = 64
-		lastHeight     = 425
+		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
+		invalidBlockHash = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+		validLength      = 64
+		lastHeight       = 425
 	)
+
+	var validBlockID = identifier.Block{
+		Index: validBlockHeight,
+		Hash:  validBlockHash,
+	}
 
 	tests := []struct {
 		name string
@@ -212,10 +217,7 @@ func TestBlockErrors(t *testing.T) {
 					Blockchain: "",
 					Network:    dps.FlowTestnet.String(),
 				},
-				BlockID: identifier.Block{
-					Index: validBlockHeight,
-					Hash:  validBlockID,
-				},
+				BlockID: validBlockID,
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
@@ -230,10 +232,7 @@ func TestBlockErrors(t *testing.T) {
 					Blockchain: invalidBlockchain,
 					Network:    dps.FlowTestnet.String(),
 				},
-				BlockID: identifier.Block{
-					Index: validBlockHeight,
-					Hash:  validBlockID,
-				},
+				BlockID: validBlockID,
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
@@ -248,10 +247,7 @@ func TestBlockErrors(t *testing.T) {
 					Blockchain: dps.FlowBlockchain,
 					Network:    "",
 				},
-				BlockID: identifier.Block{
-					Index: validBlockHeight,
-					Hash:  validBlockID,
-				},
+				BlockID: validBlockID,
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
@@ -266,10 +262,7 @@ func TestBlockErrors(t *testing.T) {
 					Blockchain: dps.FlowBlockchain,
 					Network:    invalidNetwork,
 				},
-				BlockID: identifier.Block{
-					Index: validBlockHeight,
-					Hash:  validBlockID,
-				},
+				BlockID: validBlockID,
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
@@ -298,13 +291,13 @@ func TestBlockErrors(t *testing.T) {
 				NetworkID: defaultNetworkID(),
 				BlockID: identifier.Block{
 					Index: 43,
-					Hash:  trimmedBlockID,
+					Hash:  trimmedBlockHash,
 				},
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockID), validLength),
+			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validLength),
 			wantRosettaErrorDetails:     nil,
 		},
 		{
@@ -312,7 +305,7 @@ func TestBlockErrors(t *testing.T) {
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetworkID(),
 				BlockID: identifier.Block{
-					Hash: validBlockID,
+					Hash: validBlockHash,
 				},
 			},
 
@@ -327,14 +320,14 @@ func TestBlockErrors(t *testing.T) {
 				NetworkID: defaultNetworkID(),
 				BlockID: identifier.Block{
 					Index: 13,
-					Hash:  invalidBlockID,
+					Hash:  invalidBlockHash,
 				},
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidBlock,
 			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockID},
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
 		},
 		{
 			name: "unknown block",
@@ -356,14 +349,14 @@ func TestBlockErrors(t *testing.T) {
 				NetworkID: defaultNetworkID(),
 				BlockID: identifier.Block{
 					Index: validBlockHeight - 1,
-					Hash:  validBlockID,
+					Hash:  validBlockHash,
 				},
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidBlock,
 			wantRosettaErrorDescription: fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeaders(validBlockHeight-1).ID().String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(validBlockHeight - 1), "hash": validBlockID},
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(validBlockHeight - 1), "hash": validBlockHash},
 		},
 		{
 			// effectively the same as the 'missing blockchain name' test case, since it's the first check we'll do
