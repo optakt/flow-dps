@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/models/convert"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/index"
@@ -107,12 +107,12 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 
 	// Run validation on the currencies. This checks basically if we know the
 	// currency and if it has the correct decimals set, if they are set.
-	for index, currency := range currencies {
+	for idx, currency := range currencies {
 		completeCurrency, err := r.validate.Currency(currency)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not validate currency: %w", err)
 		}
-		currencies[index] = completeCurrency
+		currencies[idx] = completeCurrency
 	}
 
 	// get the cadence value that is the result of the script execution
@@ -173,7 +173,7 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 
 	// Next, we step through all the transactions and accumulate events by transaction ID.
 	// NOTE: We consider transactions that don't generate any fund movements as irrelevant for now.
-	tmap, err := decodeTransactions(events, withdrawal)
+	tmap, err := convert.EventsToTransactions(events, withdrawal)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -241,9 +241,13 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	transactions, err := decodeTransactions(events, withdrawal)
+	transactions, err := convert.EventsToTransactions(events, withdrawal)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, tr := range transactions {
+		fmt.Printf("%+#v\n", tr)
 	}
 
 	transaction, found := transactions[id.Hash]
@@ -252,95 +256,4 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 
 	return transaction, nil
-}
-
-func decodeTransactions(ee []flow.Event, withdrawal string) (map[string]*object.Transaction, error) {
-	transactions := make(map[string]*object.Transaction)
-	for _, event := range ee {
-		// Decode the event payload into a Cadence value and cast to Cadence event.
-		value, err := json.Decode(event.Payload)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode event: %w", err)
-		}
-		e, ok := value.(cadence.Event)
-		if !ok {
-			return nil, fmt.Errorf("could not cast event: %w", err)
-		}
-
-		// Check we have the necessary amount of fields.
-		if len(e.Fields) != 2 {
-			return nil, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
-		}
-
-		// Now we have access to the fields for the events; the first one is always
-		// the amount, the second one the address. The types coming from Cadence
-		// are not native Flow types, so we need to use primitive types first.
-		vAmount := e.Fields[0].ToGoValue()
-		uAmount, ok := vAmount.(uint64)
-		if !ok {
-			return nil, fmt.Errorf("could not cast amount (%T)", vAmount)
-		}
-		vAddress := e.Fields[1].ToGoValue()
-		bAddress, ok := vAddress.([flow.AddressLength]byte)
-		if !ok {
-			return nil, fmt.Errorf("could not cast address (%T)", vAddress)
-		}
-
-		// Then, we can convert the amount to a signed integer so we can invert
-		// it and the address to a native Flow address.
-		amount := int64(uAmount)
-		address := flow.Address(bAddress)
-
-		// For the withdrawal event, we invert the amount into a negative number.
-		if event.Type == flow.EventType(withdrawal) {
-			amount = -amount
-		}
-
-		// Now we have everything to assemble the respective operation.
-		op := object.Operation{
-			ID: identifier.Operation{
-				Index: uint(event.EventIndex),
-			},
-			RelatedIDs: nil,
-			Type:       "TRANSFER",
-			Status:     "COMPLETED",
-			AccountID: identifier.Account{
-				Address: address.String(),
-			},
-			Amount: object.Amount{
-				Value: strconv.FormatInt(amount, 10),
-				Currency: identifier.Currency{
-					Symbol:   dps.FlowSymbol,
-					Decimals: dps.FlowDecimals,
-				},
-			},
-		}
-
-		transaction, exists := transactions[event.TransactionID.String()]
-		if !exists {
-			transaction = &object.Transaction{
-				ID: identifier.Transaction{
-					Hash: event.TransactionID.String(),
-				},
-			}
-			transactions[event.TransactionID.String()] = transaction
-		}
-
-		transaction.Operations = append(transactions[event.TransactionID.String()].Operations, op)
-	}
-
-	// Go through all operations of all transactions and set their related IDs.
-	for tIdx := range transactions {
-		for oIdx, op1 := range transactions[tIdx].Operations {
-			for _, op2 := range transactions[tIdx].Operations {
-				if op1.ID == op2.ID {
-					continue
-				}
-
-				transactions[tIdx].Operations[oIdx].RelatedIDs = append(transactions[tIdx].Operations[oIdx].RelatedIDs, op2.ID)
-			}
-		}
-	}
-
-	return transactions, nil
 }
