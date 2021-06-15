@@ -560,7 +560,7 @@ func TestRetriever_Block(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles generator failures", func(t *testing.T) {
+	t.Run("handles deposit script generator failure", func(t *testing.T) {
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -583,7 +583,7 @@ func TestRetriever_Block(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles generator failures", func(t *testing.T) {
+	t.Run("handles withdrawal script generator failure", func(t *testing.T) {
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -610,7 +610,7 @@ func TestRetriever_Block(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles index retrieval failures", func(t *testing.T) {
+	t.Run("handles index header retrieval failure", func(t *testing.T) {
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -644,7 +644,7 @@ func TestRetriever_Block(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles index retrieval failures", func(t *testing.T) {
+	t.Run("handles index event retrieval failure", func(t *testing.T) {
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -914,7 +914,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles generator failures", func(t *testing.T) {
+	t.Run("handles deposit script generator failure", func(t *testing.T) {
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -941,7 +941,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles generator failures", func(t *testing.T) {
+	t.Run("handles withdrawal script generator failure", func(t *testing.T) {
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -972,7 +972,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles index retrieval failures", func(t *testing.T) {
+	t.Run("handles index event retrieval failure", func(t *testing.T) {
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
