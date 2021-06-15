@@ -74,7 +74,7 @@ func run() int {
 	log = log.Level(level)
 
 	// Initialize the protocol state database we will use.
-	opts := dps.DefaultOptions(flagData).WithLogger(nil)
+	opts := dps.DefaultOptions(flagData).WithLogger(nil).WithReadOnly(true).WithBypassLockGuard(true)
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Error().Str("data", flagData).Err(err).Msg("could not open blockchain database")

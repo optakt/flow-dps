@@ -58,7 +58,7 @@ When validating other nodes' blocks, every node also needs to run every transact
 
 These existing blockchain architectures thus suffer from well documented throughput limitations. Two approaches to mitigate this are layer-2 networks and sharding.
 
-Layer-2 solutions include include networks like Bitcoin's Lightning and Ethereum's Plasma — these networks work off the main chain.
+Layer-2 solutions include networks like Bitcoin's Lightning and Ethereum's Plasma — these networks work off the main chain.
 
 Sharding is a technique where a network is broken up into several interconnected networks.
 Sharding significantly increases the complexity of the programming model by breaking ACID guarantees (Atomicity, Consistency, Isolation and Durability), increasing the cost and time for application development.
@@ -123,15 +123,15 @@ Execution and protocol states are maintained and updated independently. Executio
 Only execution nodes have access to the execution state within the Flow system.
 
 The execution state contains the register values which are modified by the transaction execution.
-Updates to the execution states are done by the execution nodes but their integrity is governed by the verification process.
+Updates to the execution states are done by the execution nodes, but their integrity is governed by the verification process.
 
 The protocol state keeps track of the system related features like staked nodes, node roles, public keys, network addresses and staking amounts.
-The protocol state also tracks the chain of blocks by creating consensus amongst network participants on what the objective pre-determined order of transactions is (which is done implicitly by ordering collections and a deterministic algorithm to then determine the transaction order within the blocks).
+The protocol state also tracks the chain of blocks by creating consensus amongst network participants on what the objective pre-determined order of transactions is (which is done implicitly by ordering collections, and a deterministic algorithm to then determine the transaction order within the blocks).
 It is updated when the nodes are slashed, join the system via staking or leave the system by unstaking.
 Consensus nodes publish updates on the protocol state directly as part of the blocks they generate.
 Consensus protocol guarantees the integrity of the protocol state.
 
-To better illustrate the difference and the independence of the two states, we can consider two scenarios:
+To better illustrate the difference, and the independence of the two states, we can consider two scenarios:
 
 **Scenario 1**: Nodes never join, leave or change stake. Transactions are regularly processed. In this system, the protocol state never changes, but the execution state does.
 
@@ -151,7 +151,7 @@ At the beginning of an epoch, each collection node is randomly assigned to exact
 Number of clusters is a protocol parameter.
 
 Each cluster of collection nodes acts as a gateway to Flow from the external world.
-There is a **one-way deterministic assignment** between each transaction and a cluster that is responsible for processing it.
+There is a **one-way deterministic assignment** between each transaction, and a cluster that is responsible for processing it.
 When a collection node receives a transaction, it also checks whether it was submitted to the correct cluster.
 The clustering mechanism avoids heterogeneous systems where a collection node with better service would be getting all the traffic and end up reducing the decentralization of the whole system as well as starving out other collection nodes.
 
@@ -203,13 +203,13 @@ A block specifies the included collections as well as the other inputs (randomne
 It is worth noting that a block in Flow does not include the resulting execution state of the block execution.
 
 In order for consensus nodes to seal blocks, they must commit to the execution result of a block after it is executed and verified.
-A block can be sealed after it has been executed by the execution nodes and the execution result has been verified by a sufficient number of verification nodes.
+A block can be sealed after it has been executed by the execution nodes, and the execution result has been verified by a sufficient number of verification nodes.
 
 #### Block Formation
 
 Block formation is a continuous process performed by the consensus nodes to form new blocks. Block formation has several purposes:
 
-1. Including newly submitted guaranteed collections and reaching aggreement over the order of them
+1. Including newly submitted guaranteed collections and reaching agreement over the order of them
 2. Provide a measure of time by continuously publishing blocks (determining the length of an epoch)
 3. Publish block seals for previous blocks of the chain. The block is ready to be sealed when
     1. It has been finalized by the consensus nodes
@@ -383,7 +383,7 @@ It is Flow's countermeasure so that execution node cannot just copy the result f
 SPoCKs also make it so that a verification node cannot just blindly approve the execution results of an execution node without actually doing the verification work.
 SPoCKs cannot be copied or forged.
 
-Execution result has a list of SPoCKs — each SPoCK coresponds to a chunk, and a SPoCK for a chunk can only be generated by executing the chunk.
+Execution result has a list of SPoCKs — each SPoCK corresponds to a chunk, and a SPoCK for a chunk can only be generated by executing the chunk.
 
 This secret is derived from the execution trace — the cheapest way one can get the execution trace is by executing the entire computation.
 
@@ -399,7 +399,7 @@ This guide lists the necessary step to get started with installing and testing t
 
 #### Manual Build
 
-* `go build main.go`
+* `go build -o . ./...`
 
 ### Setting up a test environment
 
@@ -426,7 +426,9 @@ You can then copy part of this data folder to be used in DPS:
 * `trie/execution/NodeID` can be given as `trie`
 * `data/consensus/NodeID/checkpoint.00000001` can be given as `root.checkpoint`
 
-You can then run the DPS, and it should properly build its index based on the given information.
+You can then run the `flow-dps-indexer`, and it should properly build its index based on the given information.
+Be careful, there should never be multiple indexers running in parallel sharing the same `index` folder as they might end up corrupting the contents of the database.
+It is however safe to run the indexer and any command that uses the database in read-only mode with the same `index` folder.
 
 ## More Resources
 
