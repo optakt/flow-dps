@@ -35,7 +35,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	params := dps.Params{ChainID: "flow-testnet"}
+	params := dps.Params{ChainID: dps.FlowTestnet}
 	idx := &mocks.Reader{}
 	validate := &mocks.Validator{}
 	generator := &mocks.Generator{}
@@ -103,6 +103,7 @@ func TestRetriever_Oldest(t *testing.T) {
 				return testHeight, nil
 			},
 			HeaderFunc: func(height uint64) (*flow.Header, error) {
+				assert.Equal(t, testHeight, height)
 				return nil, mocks.DummyError
 			},
 		}
@@ -165,6 +166,7 @@ func TestRetriever_Current(t *testing.T) {
 				return testHeight, nil
 			},
 			HeaderFunc: func(height uint64) (*flow.Header, error) {
+				assert.Equal(t, testHeight, height)
 				return nil, mocks.DummyError
 			},
 		}
@@ -181,7 +183,7 @@ func TestRetriever_Balances(t *testing.T) {
 		Index: 42,
 		Hash:  "2c5efefc2fafa000a3102f2931598d2d",
 	}
-	testAccount := identifier.Account{Address: "test"}
+	testAccount := identifier.Account{Address: "f7e6413e94feda9c"}
 	testCurrency1 := identifier.Currency{Symbol: "TEST1"}
 	testCurrency2 := identifier.Currency{Symbol: "TEST2"}
 	testCurrency3 := identifier.Currency{Symbol: "TEST3"}
@@ -200,22 +202,38 @@ func TestRetriever_Balances(t *testing.T) {
 			Currency: testCurrency3,
 		},
 	}
+	testScript := []byte(`testScript`)
 	testValue, err := cadence.NewValue(uint64(42))
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
 		validator := &mocks.Validator{
-			AccountFunc:  func(address identifier.Account) error { return nil },
-			BlockFunc:    func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) { return currency, nil },
+			AccountFunc: func(address identifier.Account) error {
+				assert.Equal(t, testAccount, address)
+				return nil
+			},
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) {
+				assert.Contains(t, testCurrencies, currency)
+				return currency, nil
+			},
 		}
 		generator := &mocks.Generator{
 			GetBalanceFunc: func(symbol string) ([]byte, error) {
-				return []byte(`testScript`), nil
+				assert.Contains(t, testCurrencies, identifier.Currency{Symbol: symbol})
+				return testScript, nil
 			},
 		}
 		invoker := &mocks.Invoker{
 			ScriptFunc: func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
+				assert.Equal(t, testBlockID.Index, height)
+				assert.Equal(t, testScript, script)
+				if assert.Len(t, parameters, 1) {
+					assert.Equal(t, cadence.NewAddress(flow.HexToAddress(testAccount.Address)), parameters[0])
+				}
 				return testValue, nil
 			},
 		}
@@ -236,6 +254,7 @@ func TestRetriever_Balances(t *testing.T) {
 	t.Run("handles invalid block", func(t *testing.T) {
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
 				return identifier.Block{}, errors.New("invalid block")
 			},
 		}
@@ -249,8 +268,12 @@ func TestRetriever_Balances(t *testing.T) {
 
 	t.Run("handles invalid account", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return block, nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
 			AccountFunc: func(address identifier.Account) error {
+				assert.Equal(t, testAccount, address)
 				return errors.New("invalid account")
 			},
 		}
@@ -264,9 +287,16 @@ func TestRetriever_Balances(t *testing.T) {
 
 	t.Run("handles invalid currency", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc:   func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			AccountFunc: func(address identifier.Account) error { return nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			AccountFunc: func(address identifier.Account) error {
+				assert.Equal(t, testAccount, address)
+				return nil
+			},
 			CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) {
+				assert.Contains(t, testCurrencies, currency)
 				return currency, errors.New("invalid currency")
 			},
 		}
@@ -280,12 +310,22 @@ func TestRetriever_Balances(t *testing.T) {
 
 	t.Run("handles generator failure", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc:    func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			AccountFunc:  func(address identifier.Account) error { return nil },
-			CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) { return currency, nil },
+			AccountFunc: func(address identifier.Account) error {
+				assert.Equal(t, testAccount, address)
+				return nil
+			},
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) {
+				assert.Contains(t, testCurrencies, currency)
+				return currency, nil
+			},
 		}
 		generator := &mocks.Generator{
 			GetBalanceFunc: func(symbol string) ([]byte, error) {
+				assert.Contains(t, testCurrencies, identifier.Currency{Symbol: symbol})
 				return nil, mocks.DummyError
 			},
 		}
@@ -300,17 +340,33 @@ func TestRetriever_Balances(t *testing.T) {
 
 	t.Run("handles invoker failure", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc:    func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			AccountFunc:  func(address identifier.Account) error { return nil },
-			CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) { return currency, nil },
+			AccountFunc: func(address identifier.Account) error {
+				assert.Equal(t, testAccount, address)
+				return nil
+			},
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) {
+				assert.Contains(t, testCurrencies, currency)
+				return currency, nil
+			},
 		}
 		generator := &mocks.Generator{
 			GetBalanceFunc: func(symbol string) ([]byte, error) {
+				assert.Contains(t, testCurrencies, identifier.Currency{Symbol: symbol})
 				return []byte(`testScript`), nil
 			},
 		}
 		invoker := &mocks.Invoker{
 			ScriptFunc: func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
+				assert.Equal(t, testBlockID.Index, height)
+				assert.Equal(t, testScript, script)
+				if assert.Len(t, parameters, 1) {
+					assert.Equal(t, cadence.NewAddress(flow.HexToAddress(testAccount.Address)), parameters[0])
+				}
+
 				return nil, mocks.DummyError
 			},
 		}
@@ -327,40 +383,45 @@ func TestRetriever_Balances(t *testing.T) {
 
 func TestRetriever_Block(t *testing.T) {
 	testHeight := uint64(42)
+	parentID, err := flow.HexStringToIdentifier("ecd01710d4a40c11f4aa884bcb926b43f162f4cf302e4c4f1dd0f9e231c30879")
+	require.NoError(t, err)
 	testHeader := &flow.Header{
 		Height:    testHeight,
+		ParentID:  parentID,
 		Timestamp: time.Date(1972, 12, 31, 0, 0, 0, 0, time.UTC),
 	}
+	id, err := flow.HexStringToIdentifier("a4c4194eae1a2dd0de4f4d51a884db4255bf265a40ddd98477a1d60ef45909ec")
+	require.NoError(t, err)
 	testBlockID := identifier.Block{
 		Index: testHeight,
-		Hash:  "2c4c176c5c095bc3529ab425735077efb2afedd16c9ffc215a898df14fa8ac91",
+		Hash:  "69c5a0c3dce44c9e80f7ee41995f6746f78013787a88057995cb3556e721a4b6",
 	}
 	testTransaction := &object.Transaction{
 		ID: identifier.Transaction{
-			Hash: "0000000000000000000000000000000000000000000000000000000000000000",
+			Hash: id.String(),
 		},
 		Operations: []object.Operation{
 			{
-				ID:         identifier.Operation{},
-				RelatedIDs: []identifier.Operation(nil),
-				Type:       "TRANSFER",
-				Status:     "COMPLETED",
+				ID:         identifier.Operation{Index: 0},
+				RelatedIDs: []identifier.Operation{{Index: 1}},
+				Type:       dps.OperationTransfer,
+				Status:     dps.StatusCompleted,
 				AccountID:  identifier.Account{Address: "0102030405060708"},
 				Amount: object.Amount{
 					Value:    "42",
-					Currency: identifier.Currency{Symbol: "FLOW", Decimals: 0x8},
+					Currency: identifier.Currency{Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals},
 				},
 			},
 			{
-				ID:         identifier.Operation{},
-				RelatedIDs: []identifier.Operation(nil),
-				Type:       "TRANSFER",
-				Status:     "COMPLETED",
+				ID:         identifier.Operation{Index: 1},
+				RelatedIDs: []identifier.Operation{{Index: 0}},
+				Type:       dps.OperationTransfer,
+				Status:     dps.StatusCompleted,
 				AccountID:  identifier.Account{Address: "0203040506070809"},
 				Amount: object.Amount{
 					Value: "-42",
 					Currency: identifier.Currency{
-						Symbol: "FLOW", Decimals: 0x8,
+						Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals,
 					},
 				},
 			},
@@ -370,7 +431,7 @@ func TestRetriever_Block(t *testing.T) {
 		ID: testBlockID,
 		ParentID: identifier.Block{
 			Index: 41,
-			Hash:  "0000000000000000000000000000000000000000000000000000000000000000",
+			Hash:  parentID.String(),
 		},
 		Timestamp: testHeader.Timestamp.UnixNano() / 1_000_000,
 		Transactions: []*object.Transaction{
@@ -383,12 +444,12 @@ func TestRetriever_Block(t *testing.T) {
 		QualifiedIdentifier: "deposit",
 		Fields: []cadence.Field{
 			{
-				Identifier: "a",
-				Type:       cadence.IntType{},
+				Identifier: "amount",
+				Type:       cadence.UInt64Type{},
 			},
 			{
-				Identifier: "b",
-				Type:       cadence.StringType{},
+				Identifier: "address",
+				Type:       cadence.AddressType{},
 			},
 		},
 	}
@@ -424,12 +485,16 @@ func TestRetriever_Block(t *testing.T) {
 
 	testEvents := []flow.Event{
 		{
-			Type:    "deposit",
-			Payload: depositEventPayload,
+			Type:          "deposit",
+			TransactionID: id,
+			EventIndex:    0,
+			Payload:       depositEventPayload,
 		},
 		{
-			Type:    "withdrawal",
-			Payload: withdrawalEventPayload,
+			TransactionID: id,
+			Type:          "withdrawal",
+			EventIndex:    1,
+			Payload:       withdrawalEventPayload,
 		},
 	}
 
@@ -440,18 +505,19 @@ func TestRetriever_Block(t *testing.T) {
 				return testHeader, nil
 			},
 			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+				assert.Equal(t, testHeight, height)
 				if assert.Len(t, types, 2) {
 					assert.Equal(t, flow.EventType("deposit"), types[0])
 					assert.Equal(t, flow.EventType("withdrawal"), types[1])
 				}
-				assert.Equal(t, testHeight, height)
 				return testEvents, nil
 			},
 		}
 		validator := &mocks.Validator{
-			AccountFunc:  func(address identifier.Account) error { return nil },
-			BlockFunc:    func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) { return currency, nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
 		}
 		generator := &mocks.Generator{
 			TokensDepositedFunc: func(symbol string) (string, error) {
@@ -461,7 +527,6 @@ func TestRetriever_Block(t *testing.T) {
 			TokensWithdrawnFunc: func(symbol string) (string, error) {
 				assert.Equal(t, symbol, dps.FlowSymbol)
 				return "withdrawal", nil
-
 			},
 		}
 
@@ -481,7 +546,10 @@ func TestRetriever_Block(t *testing.T) {
 
 	t.Run("handles invalid block", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return identifier.Block{}, mocks.DummyError },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return identifier.Block{}, mocks.DummyError
+			},
 		}
 
 		r := &Retriever{
@@ -494,10 +562,14 @@ func TestRetriever_Block(t *testing.T) {
 
 	t.Run("handles generator failures", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return block, nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
 		}
 		generator := &mocks.Generator{
 			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, symbol, dps.FlowSymbol)
 				return "", mocks.DummyError
 			},
 		}
@@ -513,13 +585,18 @@ func TestRetriever_Block(t *testing.T) {
 
 	t.Run("handles generator failures", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return block, nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
 		}
 		generator := &mocks.Generator{
 			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, symbol, dps.FlowSymbol)
 				return "", nil
 			},
 			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, symbol, dps.FlowSymbol)
 				return "", mocks.DummyError
 			},
 		}
@@ -535,19 +612,25 @@ func TestRetriever_Block(t *testing.T) {
 
 	t.Run("handles index retrieval failures", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return block, nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
 		}
 		generator := &mocks.Generator{
 			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, symbol, dps.FlowSymbol)
 				return "", nil
 			},
 			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, symbol, dps.FlowSymbol)
 				return "", nil
 			},
 		}
 		index := &mocks.Reader{
 			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				return nil, errors.New("dummy errors")
+				assert.Equal(t, testHeight, height)
+				return nil, mocks.DummyError
 			},
 		}
 
@@ -563,14 +646,19 @@ func TestRetriever_Block(t *testing.T) {
 
 	t.Run("handles index retrieval failures", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return block, nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
 		}
 		generator := &mocks.Generator{
 			TokensDepositedFunc: func(symbol string) (string, error) {
-				return "", nil
+				assert.Equal(t, symbol, dps.FlowSymbol)
+				return "deposit", nil
 			},
 			TokensWithdrawnFunc: func(symbol string) (string, error) {
-				return "", nil
+				assert.Equal(t, symbol, dps.FlowSymbol)
+				return "withdrawal", nil
 			},
 		}
 		index := &mocks.Reader{
@@ -579,7 +667,12 @@ func TestRetriever_Block(t *testing.T) {
 				return testHeader, nil
 			},
 			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-				return nil, errors.New("dummy errors")
+				assert.Equal(t, testHeight, height)
+				if assert.Len(t, types, 2) {
+					assert.Equal(t, flow.EventType("deposit"), types[0])
+					assert.Equal(t, flow.EventType("withdrawal"), types[1])
+				}
+				return nil, mocks.DummyError
 			},
 		}
 
@@ -595,14 +688,19 @@ func TestRetriever_Block(t *testing.T) {
 
 	t.Run("handles incorrectly-formatted indexed events", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return block, nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
 		}
 		generator := &mocks.Generator{
 			TokensDepositedFunc: func(symbol string) (string, error) {
-				return "", nil
+				assert.Equal(t, symbol, dps.FlowSymbol)
+				return "deposit", nil
 			},
 			TokensWithdrawnFunc: func(symbol string) (string, error) {
-				return "", nil
+				assert.Equal(t, symbol, dps.FlowSymbol)
+				return "withdrawal", nil
 			},
 		}
 		index := &mocks.Reader{
@@ -611,11 +709,15 @@ func TestRetriever_Block(t *testing.T) {
 				return testHeader, nil
 			},
 			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-				return []flow.Event{
-					{
-						Payload: []byte(`invalid_payload`),
-					},
-				}, nil
+				assert.Equal(t, testHeight, height)
+				if assert.Len(t, types, 2) {
+					assert.Equal(t, flow.EventType("deposit"), types[0])
+					assert.Equal(t, flow.EventType("withdrawal"), types[1])
+				}
+
+				return []flow.Event{{
+					Payload: []byte(`invalid_payload`),
+				}}, nil
 			},
 		}
 
@@ -631,13 +733,16 @@ func TestRetriever_Block(t *testing.T) {
 }
 
 func TestRetriever_Transaction(t *testing.T) {
+	id, err := flow.HexStringToIdentifier("a4c4194eae1a2dd0de4f4d51a884db4255bf265a40ddd98477a1d60ef45909ec")
+	require.NoError(t, err)
+
 	testHeight := uint64(42)
 	testBlockID := identifier.Block{
 		Index: testHeight,
 		Hash:  "2c4c176c5c095bc3529ab425735077efb2afedd16c9ffc215a898df14fa8ac91",
 	}
 	testTransactionID := identifier.Transaction{
-		Hash: "0000000000000000000000000000000000000000000000000000000000000000",
+		Hash: id.String(),
 	}
 	depositType := &cadence.EventType{
 		Location:            utils.TestLocation,
@@ -684,39 +789,43 @@ func TestRetriever_Transaction(t *testing.T) {
 	withdrawalEventPayload := json.MustEncode(withdrawalEvent)
 
 	testEvents := []flow.Event{{
-		Type:    "deposit",
-		Payload: depositEventPayload,
+		TransactionID: id,
+		EventIndex:    0,
+		Type:          "deposit",
+		Payload:       depositEventPayload,
 	}, {
-		Type:    "withdrawal",
-		Payload: withdrawalEventPayload,
+		TransactionID: id,
+		Type:          "withdrawal",
+		EventIndex:    1,
+		Payload:       withdrawalEventPayload,
 	}}
 
 	testTransaction := &object.Transaction{
 		ID: identifier.Transaction{
-			Hash: "0000000000000000000000000000000000000000000000000000000000000000",
+			Hash: id.String(),
 		},
 		Operations: []object.Operation{
 			{
-				ID:         identifier.Operation{},
-				RelatedIDs: []identifier.Operation(nil),
-				Type:       "TRANSFER",
-				Status:     "COMPLETED",
+				ID:         identifier.Operation{Index: 0},
+				RelatedIDs: []identifier.Operation{{Index: 1}},
+				Type:       dps.OperationTransfer,
+				Status:     dps.StatusCompleted,
 				AccountID:  identifier.Account{Address: "0102030405060708"},
 				Amount: object.Amount{
 					Value:    "42",
-					Currency: identifier.Currency{Symbol: "FLOW", Decimals: 0x8},
+					Currency: identifier.Currency{Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals},
 				},
 			},
 			{
-				ID:         identifier.Operation{},
-				RelatedIDs: []identifier.Operation(nil),
-				Type:       "TRANSFER",
-				Status:     "COMPLETED",
+				ID:         identifier.Operation{Index: 1},
+				RelatedIDs: []identifier.Operation{{Index: 0}},
+				Type:       dps.OperationTransfer,
+				Status:     dps.StatusCompleted,
 				AccountID:  identifier.Account{Address: "0203040506070809"},
 				Amount: object.Amount{
-					Value: "42",
+					Value: "-42",
 					Currency: identifier.Currency{
-						Symbol: "FLOW", Decimals: 0x8,
+						Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals,
 					},
 				},
 			},
@@ -725,15 +834,33 @@ func TestRetriever_Transaction(t *testing.T) {
 
 	t.Run("nominal case", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc:       func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			TransactionFunc: func(transaction identifier.Transaction) error { return nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			TransactionFunc: func(transaction identifier.Transaction) error {
+				assert.Equal(t, testTransactionID, transaction)
+				return nil
+			},
 		}
 		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) { return "", nil },
-			TokensWithdrawnFunc: func(symbol string) (string, error) { return "", nil },
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "deposit", nil
+			},
+			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "withdrawal", nil
+			},
 		}
 		index := &mocks.Reader{
 			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+				assert.Equal(t, testHeight, height)
+				if assert.Len(t, types, 2) {
+					assert.Equal(t, flow.EventType("deposit"), types[0])
+					assert.Equal(t, flow.EventType("withdrawal"), types[1])
+				}
+
 				return testEvents, nil
 			},
 		}
@@ -753,7 +880,10 @@ func TestRetriever_Transaction(t *testing.T) {
 
 	t.Run("handles invalid block", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc: func(block identifier.Block) (identifier.Block, error) { return identifier.Block{}, mocks.DummyError },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return identifier.Block{}, mocks.DummyError
+			},
 		}
 
 		r := &Retriever{
@@ -766,8 +896,14 @@ func TestRetriever_Transaction(t *testing.T) {
 
 	t.Run("handles invalid transaction", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc:       func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			TransactionFunc: func(transaction identifier.Transaction) error { return mocks.DummyError },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			TransactionFunc: func(transaction identifier.Transaction) error {
+				assert.Equal(t, testTransactionID, transaction)
+				return mocks.DummyError
+			},
 		}
 
 		r := &Retriever{
@@ -780,11 +916,20 @@ func TestRetriever_Transaction(t *testing.T) {
 
 	t.Run("handles generator failures", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc:       func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			TransactionFunc: func(transaction identifier.Transaction) error { return nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			TransactionFunc: func(transaction identifier.Transaction) error {
+				assert.Equal(t, testTransactionID, transaction)
+				return nil
+			},
 		}
 		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) { return "", mocks.DummyError },
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "", mocks.DummyError
+			},
 		}
 
 		r := &Retriever{
@@ -798,12 +943,24 @@ func TestRetriever_Transaction(t *testing.T) {
 
 	t.Run("handles generator failures", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc:       func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			TransactionFunc: func(transaction identifier.Transaction) error { return nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			TransactionFunc: func(transaction identifier.Transaction) error {
+				assert.Equal(t, testTransactionID, transaction)
+				return nil
+			},
 		}
 		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) { return "", nil },
-			TokensWithdrawnFunc: func(symbol string) (string, error) { return "", mocks.DummyError },
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "deposit", nil
+			},
+			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "", mocks.DummyError
+			},
 		}
 
 		r := &Retriever{
@@ -817,15 +974,33 @@ func TestRetriever_Transaction(t *testing.T) {
 
 	t.Run("handles index retrieval failures", func(t *testing.T) {
 		validator := &mocks.Validator{
-			BlockFunc:       func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			TransactionFunc: func(transaction identifier.Transaction) error { return nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			TransactionFunc: func(transaction identifier.Transaction) error {
+				assert.Equal(t, testTransactionID, transaction)
+				return nil
+			},
 		}
 		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) { return "", nil },
-			TokensWithdrawnFunc: func(symbol string) (string, error) { return "", nil },
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "deposit", nil
+			},
+			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "withdrawal", nil
+			},
 		}
 		index := &mocks.Reader{
 			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+				assert.Equal(t, testHeight, height)
+				if assert.Len(t, types, 2) {
+					assert.Equal(t, flow.EventType("deposit"), types[0])
+					assert.Equal(t, flow.EventType("withdrawal"), types[1])
+				}
+
 				return nil, mocks.DummyError
 			},
 		}
@@ -848,15 +1023,33 @@ func TestRetriever_Transaction(t *testing.T) {
 		}
 
 		validator := &mocks.Validator{
-			BlockFunc:       func(block identifier.Block) (identifier.Block, error) { return block, nil },
-			TransactionFunc: func(transaction identifier.Transaction) error { return nil },
+			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+				assert.Equal(t, testBlockID, block)
+				return block, nil
+			},
+			TransactionFunc: func(transaction identifier.Transaction) error {
+				assert.Equal(t, testTransactionID, transaction)
+				return nil
+			},
 		}
 		generator := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) { return "", nil },
-			TokensWithdrawnFunc: func(symbol string) (string, error) { return "", nil },
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "deposit", nil
+			},
+			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "withdrawal", nil
+			},
 		}
 		index := &mocks.Reader{
 			EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+				assert.Equal(t, testHeight, height)
+				if assert.Len(t, types, 2) {
+					assert.Equal(t, flow.EventType("deposit"), types[0])
+					assert.Equal(t, flow.EventType("withdrawal"), types[1])
+				}
+
 				return invalidEvents, nil
 			},
 		}
@@ -870,336 +1063,4 @@ func TestRetriever_Transaction(t *testing.T) {
 		_, err := r.Transaction(testBlockID, testTransactionID)
 		assert.Error(t, err)
 	})
-}
-
-func TestDecodeTransactions(t *testing.T) {
-	depositType := &cadence.EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "deposit",
-		Fields: []cadence.Field{
-			{
-				Identifier: "amount",
-				Type:       cadence.UInt64Type{},
-			},
-			{
-				Identifier: "address",
-				Type:       cadence.AddressType{},
-			},
-		},
-	}
-	depositEvent := cadence.NewEvent(
-		[]cadence.Value{
-			cadence.NewUInt64(42),
-			cadence.NewAddress([8]byte{1, 2, 3, 4, 5, 6, 7, 8}),
-		},
-	).WithType(depositType)
-	depositEventPayload := json.MustEncode(depositEvent)
-
-	withdrawalType := &cadence.EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "withdrawal",
-		Fields: []cadence.Field{
-			{
-				Identifier: "amount",
-				Type:       cadence.UInt64Type{},
-			},
-			{
-				Identifier: "address",
-				Type:       cadence.AddressType{},
-			},
-		},
-	}
-	withdrawalEvent := cadence.NewEvent(
-		[]cadence.Value{
-			cadence.NewUInt64(42),
-			cadence.NewAddress([8]byte{2, 3, 4, 5, 6, 7, 8, 9}),
-		},
-	).WithType(withdrawalType)
-	withdrawalEventPayload := json.MustEncode(withdrawalEvent)
-
-	testDepositOp1 := object.Operation{
-		ID: identifier.Operation{
-			Index: 0,
-		},
-		RelatedIDs: []identifier.Operation{
-			{Index: 1},
-		},
-		Type:   "TRANSFER",
-		Status: "COMPLETED",
-		AccountID: identifier.Account{
-			Address: "0102030405060708",
-		},
-		Amount: object.Amount{
-			Value: "42",
-			Currency: identifier.Currency{
-				Symbol:   "FLOW",
-				Decimals: 0x8,
-			},
-		},
-	}
-	testWithdrawalOp1 := object.Operation{
-		ID: identifier.Operation{
-			Index: 1,
-		},
-		RelatedIDs: []identifier.Operation{
-			{Index: 0},
-		},
-		Type:   "TRANSFER",
-		Status: "COMPLETED",
-		AccountID: identifier.Account{
-			Address: "0203040506070809",
-		},
-		Amount: object.Amount{
-			Value: "-42",
-			Currency: identifier.Currency{
-				Symbol:   "FLOW",
-				Decimals: 0x8,
-			},
-		},
-	}
-	testDepositOp2 := object.Operation{
-		ID: identifier.Operation{
-			Index: 2,
-		},
-		RelatedIDs: []identifier.Operation{
-			{Index: 3},
-		},
-		Type:   "TRANSFER",
-		Status: "COMPLETED",
-		AccountID: identifier.Account{
-			Address: "0102030405060708",
-		},
-		Amount: object.Amount{
-			Value: "42",
-			Currency: identifier.Currency{
-				Symbol:   "FLOW",
-				Decimals: 0x8,
-			},
-		},
-	}
-	testWithdrawalOp2 := object.Operation{
-		ID: identifier.Operation{
-			Index: 3,
-		},
-		RelatedIDs: []identifier.Operation{
-			{Index: 2},
-		},
-		Type:   "TRANSFER",
-		Status: "COMPLETED",
-		AccountID: identifier.Account{
-			Address: "0203040506070809",
-		},
-		Amount: object.Amount{
-			Value: "-42",
-			Currency: identifier.Currency{
-				Symbol:   "FLOW",
-				Decimals: 0x8,
-			},
-		},
-	}
-
-	id1, err := flow.HexStringToIdentifier("a4c4194eae1a2dd0de4f4d51a884db4255bf265a40ddd98477a1d60ef45909ec")
-	require.NoError(t, err)
-
-	id2, err := flow.HexStringToIdentifier("e956563a78d74f927ccf1e81b4c3a012e691e9c30393bcfdb8b3db5060d4075b")
-	require.NoError(t, err)
-
-	testTransaction1 := &object.Transaction{
-		ID: identifier.Transaction{
-			Hash: id1.String(),
-		},
-		Operations: []object.Operation{
-			testDepositOp1,
-			testWithdrawalOp1,
-		},
-	}
-	testTransaction2 := &object.Transaction{
-		ID: identifier.Transaction{
-			Hash: id2.String(),
-		},
-		Operations: []object.Operation{
-			testDepositOp2,
-			testWithdrawalOp2,
-		},
-	}
-
-	threeFieldsType := &cadence.EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "test",
-		Fields: []cadence.Field{
-			{
-				Identifier: "testField1",
-				Type:       cadence.UInt64Type{},
-			},
-			{
-				Identifier: "testField2",
-				Type:       cadence.UInt64Type{},
-			},
-			{
-				Identifier: "testField3",
-				Type:       cadence.UInt64Type{},
-			},
-		},
-	}
-	threeFieldsEvent := cadence.NewEvent(
-		[]cadence.Value{
-			cadence.NewUInt64(42),
-			cadence.NewUInt64(42),
-			cadence.NewUInt64(42),
-		},
-	).WithType(threeFieldsType)
-	threeFieldsEventPayload := json.MustEncode(threeFieldsEvent)
-
-	missingAmountEventType := &cadence.EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "test",
-		Fields: []cadence.Field{
-			{
-				Identifier: "address",
-				Type:       cadence.AddressType{},
-			},
-			{
-				Identifier: "testField",
-				Type:       cadence.AddressType{},
-			},
-		},
-	}
-	missingAmountEvent := cadence.NewEvent(
-		[]cadence.Value{
-			cadence.NewAddress([8]byte{1, 2, 3, 4, 5, 6, 7, 8}),
-			cadence.NewAddress([8]byte{1, 2, 3, 4, 5, 6, 7, 8}),
-		},
-	).WithType(missingAmountEventType)
-	missingAmountEventPayload := json.MustEncode(missingAmountEvent)
-
-	missingAddressEventType := &cadence.EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "test",
-		Fields: []cadence.Field{
-			{
-				Identifier: "amount",
-				Type:       cadence.UInt64Type{},
-			},
-			{
-				Identifier: "amount",
-				Type:       cadence.UInt64Type{},
-			},
-		},
-	}
-	missingAddressEvent := cadence.NewEvent(
-		[]cadence.Value{
-			cadence.NewUInt64(42),
-			cadence.NewUInt64(42),
-		},
-	).WithType(missingAddressEventType)
-	missingAddressEventPayload := json.MustEncode(missingAddressEvent)
-
-	tests := []struct {
-		description string
-
-		events []flow.Event
-
-		wantTransactions []*object.Transaction
-		wantErr          assert.ErrorAssertionFunc
-	}{
-		{
-			description: "nominal case with one single transaction",
-
-			events: []flow.Event{{
-				TransactionID: id1,
-				Type:          "deposit",
-				Payload:       depositEventPayload,
-				EventIndex:    0,
-			}, {
-				TransactionID: id1,
-				Type:          "withdrawal",
-				Payload:       withdrawalEventPayload,
-				EventIndex:    1,
-			}},
-
-			wantErr: assert.NoError,
-			wantTransactions: []*object.Transaction{
-				testTransaction1,
-			},
-		},
-		{
-			description: "nominal case with multiple transactions",
-
-			events: []flow.Event{
-				{
-					TransactionID: id1,
-					Type:          "deposit",
-					Payload:       depositEventPayload,
-					EventIndex:    0,
-				},
-				{
-					TransactionID: id1,
-					Type:          "withdrawal",
-					Payload:       withdrawalEventPayload,
-					EventIndex:    1,
-				},
-				{
-					TransactionID: id2,
-					Type:          "deposit",
-					Payload:       depositEventPayload,
-					EventIndex:    2,
-				},
-				{
-					TransactionID: id2,
-					Type:          "withdrawal",
-					Payload:       withdrawalEventPayload,
-					EventIndex:    3,
-				},
-			},
-
-			wantErr: assert.NoError,
-			wantTransactions: []*object.Transaction{
-				testTransaction1,
-				testTransaction2,
-			},
-		},
-		{
-			description: "wrong amount of fields",
-
-			events: []flow.Event{{
-				Payload: threeFieldsEventPayload,
-			}},
-
-			wantErr: assert.Error,
-		},
-		{
-			description: "missing amount field",
-
-			events: []flow.Event{{
-				Payload: missingAmountEventPayload,
-			}},
-
-			wantErr: assert.Error,
-		},
-		{
-			description: "missing address field",
-
-			events: []flow.Event{{
-				Payload: missingAddressEventPayload,
-			}},
-
-			wantErr: assert.Error,
-		},
-	}
-
-	for _, test := range tests {
-		test := test
-		t.Run(test.description, func(t *testing.T) {
-			t.Parallel()
-
-			got, err := decodeTransactions(test.events, "withdrawal")
-
-			test.wantErr(t, err)
-
-			// Since the result is a map, use assert.Contains in order not to rely on order.
-			for _, gotTransaction := range got {
-				assert.Contains(t, test.wantTransactions, gotTransaction)
-			}
-		})
-	}
 }
