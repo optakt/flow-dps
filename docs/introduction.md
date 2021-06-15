@@ -427,7 +427,7 @@ You can then copy part of this data folder to be used in DPS:
 * `data/consensus/NodeID/checkpoint.00000001` can be given as `root.checkpoint`
 
 You can then run the `flow-dps-indexer`, and it should properly build its index based on the given information.
-Be careful, since the indexer uses the `BypassLockGuard` option, there should never be multiple indexers running in parallel sharing the same `index` folder.
+Be careful, there should never be multiple indexers running in parallel sharing the same `index` folder as they might end up corrupting the contents of the database.
 It is however safe to run the indexer and any command that uses the database in read-only mode with the same `index` folder.
 
 ## More Resources
