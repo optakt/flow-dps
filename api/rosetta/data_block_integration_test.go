@@ -56,6 +56,15 @@ func TestGetBlock(t *testing.T) {
 		lastHeader  = knownHeaders(425) // header of last indexed block
 	)
 
+	const (
+		rootAccount     = "8c5303eaa26202d6"
+		senderAccount   = "754aed9de6197641"
+		receiverAccount = "631e88ae7f1d7c20"
+
+		initialLoadTx = "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1"
+		transferTx    = "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c"
+	)
+
 	tests := []struct {
 		name string
 
@@ -82,7 +91,7 @@ func TestGetBlock(t *testing.T) {
 			wantTimestamp:        rosettaTime(midHeader1.Timestamp),
 			wantParentHash:       midHeader1.ParentID.String(),
 			validateBlock:        validatorFromHeader(t, midHeader1),
-			validateTransactions: validateTransfer(t, "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1", "8c5303eaa26202d6", "754aed9de6197641", 100_00000000),
+			validateTransactions: validateTransfer(t, initialLoadTx, rootAccount, senderAccount, 100_00000000),
 		},
 		{
 			name:    "block mid-chain without transactions",
@@ -100,7 +109,7 @@ func TestGetBlock(t *testing.T) {
 			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
 			validateBlock:        validatorFromHeader(t, midHeader3),
-			validateTransactions: validateTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
+			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
 		},
 		{
 			name: "lookup of a block mid-chain by index only",
@@ -111,7 +120,7 @@ func TestGetBlock(t *testing.T) {
 
 			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
-			validateTransactions: validateTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
+			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
 			validateBlock:        validateBlockID(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
 		},
 		{
