@@ -49,11 +49,11 @@ func TestGetBlock(t *testing.T) {
 
 	// headers of known blocks we want to verify
 	var (
-		firstBlockHeader       = knownHeaders(1)
-		midChainBlockHeader1   = knownHeaders(13)
-		midChainBlockHeader2   = knownHeaders(43)
-		midChainBlockHeader3   = knownHeaders(44)
-		lastIndexedBlockHeader = knownHeaders(425)
+		firstHeader = knownHeaders(1)
+		midHeader1  = knownHeaders(13)
+		midHeader2  = knownHeaders(43)
+		midHeader3  = knownHeaders(44)
+		lastHeader  = knownHeaders(425) // header of last indexed block
 	)
 
 	tests := []struct {
@@ -63,59 +63,59 @@ func TestGetBlock(t *testing.T) {
 
 		wantTimestamp        int64
 		wantParentHash       string
-		transactionValidator transactionValidationFn
-		blockIDValidator     blockIDValidationFn
+		validateTransactions transactionValidationFn
+		validateBlock        blockIDValidationFn
 	}{
 		{
 			// TODO: check - you can just save the header and use timestamp/parent id hash/blockIDValidatorFromHeader from there
-			name:             "child of first block",
-			request:          blockRequest(firstBlockHeader),
-			wantTimestamp:    rosettaTimestamp(firstBlockHeader.Timestamp),
-			wantParentHash:   firstBlockHeader.ParentID.String(),
-			blockIDValidator: blockIDValidatorFromHeader(t, firstBlockHeader),
+			name:           "child of first block",
+			request:        blockRequest(firstHeader),
+			wantTimestamp:  rosettaTime(firstHeader.Timestamp),
+			wantParentHash: firstHeader.ParentID.String(),
+			validateBlock:  validatorFromHeader(t, firstHeader),
 		},
 		{
 			// initial transfer of currency from the root account to the user - 100 tokens
 			name:                 "block mid-chain with transactions",
-			request:              blockRequest(midChainBlockHeader1),
-			wantTimestamp:        rosettaTimestamp(midChainBlockHeader1.Timestamp),
-			wantParentHash:       midChainBlockHeader1.ParentID.String(),
-			blockIDValidator:     blockIDValidatorFromHeader(t, midChainBlockHeader1),
-			transactionValidator: validateSingleTransfer(t, "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1", "8c5303eaa26202d6", "754aed9de6197641", 100_00000000),
+			request:              blockRequest(midHeader1),
+			wantTimestamp:        rosettaTime(midHeader1.Timestamp),
+			wantParentHash:       midHeader1.ParentID.String(),
+			validateBlock:        validatorFromHeader(t, midHeader1),
+			validateTransactions: validateSingleTransfer(t, "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1", "8c5303eaa26202d6", "754aed9de6197641", 100_00000000),
 		},
 		{
-			name:             "block mid-chain without transactions",
-			request:          blockRequest(midChainBlockHeader2),
-			wantTimestamp:    rosettaTimestamp(midChainBlockHeader2.Timestamp),
-			blockIDValidator: blockIDValidatorFromHeader(t, midChainBlockHeader2),
-			wantParentHash:   midChainBlockHeader2.ParentID.String(),
+			name:           "block mid-chain without transactions",
+			request:        blockRequest(midHeader2),
+			wantTimestamp:  rosettaTime(midHeader2.Timestamp),
+			validateBlock:  validatorFromHeader(t, midHeader2),
+			wantParentHash: midHeader2.ParentID.String(),
 		},
 		{
 			// transaction between two users
 			name:                 "second block mid-chain with transactions",
-			request:              blockRequest(midChainBlockHeader3),
-			wantTimestamp:        rosettaTimestamp(midChainBlockHeader3.Timestamp),
-			wantParentHash:       midChainBlockHeader3.ParentID.String(),
-			blockIDValidator:     blockIDValidatorFromHeader(t, midChainBlockHeader3),
-			transactionValidator: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
+			request:              blockRequest(midHeader3),
+			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
+			wantParentHash:       midHeader3.ParentID.String(),
+			validateBlock:        validatorFromHeader(t, midHeader3),
+			validateTransactions: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
 		},
 		{
 			name: "lookup of a block mid-chain by index only",
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetworkID(),
-				BlockID:   identifier.Block{Index: midChainBlockHeader3.Height},
+				BlockID:   identifier.Block{Index: midHeader3.Height},
 			},
-			wantTimestamp:        rosettaTimestamp(midChainBlockHeader3.Timestamp),
-			wantParentHash:       midChainBlockHeader3.ParentID.String(),
-			transactionValidator: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
-			blockIDValidator:     validateBlockID(t, midChainBlockHeader3.Height, midChainBlockHeader3.ID().String()), // verify that the returned block ID has both height and hash
+			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
+			wantParentHash:       midHeader3.ParentID.String(),
+			validateTransactions: validateSingleTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
+			validateBlock:        validateBlockID(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
 		},
 		{
-			name:             "last indexed block",
-			request:          blockRequest(lastIndexedBlockHeader),
-			wantTimestamp:    rosettaTimestamp(lastIndexedBlockHeader.Timestamp),
-			blockIDValidator: blockIDValidatorFromHeader(t, lastIndexedBlockHeader),
-			wantParentHash:   lastIndexedBlockHeader.ParentID.String(),
+			name:           "last indexed block",
+			request:        blockRequest(lastHeader),
+			wantTimestamp:  rosettaTime(lastHeader.Timestamp),
+			validateBlock:  validatorFromHeader(t, lastHeader),
+			wantParentHash: lastHeader.ParentID.String(),
 		},
 	}
 
@@ -145,7 +145,7 @@ func TestGetBlock(t *testing.T) {
 
 			if assert.NotNil(t, blockResponse.Block) {
 
-				test.blockIDValidator(blockResponse.Block.ID)
+				test.validateBlock(blockResponse.Block.ID)
 
 				// verify the parent block index is correct
 				assert.Equal(t, test.request.BlockID.Index-1, blockResponse.Block.ParentID.Index)
@@ -153,10 +153,10 @@ func TestGetBlock(t *testing.T) {
 
 				assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
 
-				if test.transactionValidator != nil {
+				if test.validateTransactions != nil {
 
 					if assert.GreaterOrEqual(t, len(blockResponse.Block.Transactions), 1) {
-						test.transactionValidator(blockResponse.Block.Transactions[0])
+						test.validateTransactions(blockResponse.Block.Transactions[0])
 					}
 				}
 			}
@@ -170,16 +170,16 @@ func TestBlockErrors(t *testing.T) {
 	api := setupAPI(t, db)
 
 	const (
-		invalidBlockchainName = "not-flow"
-		invalidNetworkName    = "not-flow-testnet"
+		invalidBlockchain = "invalid-blockchain"
+		invalidNetwork    = "invalid-network"
 
 		validBlockID     = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
 		validBlockHeight = 44
 
-		trimmedBlockID       = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
-		invalidBlockHash     = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
-		validBlockIDLength   = 64
-		lastKnownBlockHeight = 425
+		trimmedBlockID = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
+		invalidBlockID = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+		validLength    = 64
+		lastHeight     = 425
 	)
 
 	tests := []struct {
@@ -217,7 +217,7 @@ func TestBlockErrors(t *testing.T) {
 			name: "wrong network blockchain name",
 			request: rosetta.BlockRequest{
 				NetworkID: identifier.Network{
-					Blockchain: invalidBlockchainName,
+					Blockchain: invalidBlockchain,
 					Network:    dps.FlowTestnet.String(),
 				},
 				BlockID: identifier.Block{
@@ -228,8 +228,8 @@ func TestBlockErrors(t *testing.T) {
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchainName, dps.FlowBlockchain),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchainName, "network": dps.FlowTestnet.String()},
+			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
+			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchain, "network": dps.FlowTestnet.String()},
 		},
 		{
 			name: "missing network name",
@@ -254,7 +254,7 @@ func TestBlockErrors(t *testing.T) {
 			request: rosetta.BlockRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
-					Network:    invalidNetworkName,
+					Network:    invalidNetwork,
 				},
 				BlockID: identifier.Block{
 					Index: validBlockHeight,
@@ -264,8 +264,8 @@ func TestBlockErrors(t *testing.T) {
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetworkName, dps.FlowTestnet.String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetworkName},
+			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
+			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetwork},
 		},
 		{
 			name: "missing block height and hash",
@@ -294,7 +294,7 @@ func TestBlockErrors(t *testing.T) {
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockID), validBlockIDLength),
+			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockID), validLength),
 			wantRosettaErrorDetails:     nil,
 		},
 		{
@@ -317,27 +317,27 @@ func TestBlockErrors(t *testing.T) {
 				NetworkID: defaultNetworkID(),
 				BlockID: identifier.Block{
 					Index: 13,
-					Hash:  invalidBlockHash,
+					Hash:  invalidBlockID,
 				},
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidBlock,
 			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockID},
 		},
 		{
 			name: "unknown block",
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetworkID(),
 				BlockID: identifier.Block{
-					Index: lastKnownBlockHeight + 1,
+					Index: lastHeight + 1,
 				},
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorUnknownBlock,
-			wantRosettaErrorDescription: fmt.Sprintf("block index is above last indexed block (last: %d)", lastKnownBlockHeight),
+			wantRosettaErrorDescription: fmt.Sprintf("block index is above last indexed block (last: %d)", lastHeight),
 			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(426), "hash": ""},
 		},
 		{
@@ -544,11 +544,11 @@ func validateBlockID(t *testing.T, height uint64, hash string) blockIDValidation
 	}
 }
 
-func blockIDValidatorFromHeader(t *testing.T, header flow.Header) blockIDValidationFn {
+func validatorFromHeader(t *testing.T, header flow.Header) blockIDValidationFn {
 	return validateBlockID(t, header.Height, header.ID().String())
 }
 
-func rosettaTimestamp(t time.Time) int64 {
+func rosettaTime(t time.Time) int64 {
 	return t.UnixNano() / 1_000_000
 }
 
