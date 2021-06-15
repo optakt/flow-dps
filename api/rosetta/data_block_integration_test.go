@@ -67,33 +67,36 @@ func TestGetBlock(t *testing.T) {
 		validateBlock        blockIDValidationFn
 	}{
 		{
-			// TODO: check - you can just save the header and use timestamp/parent id hash/blockIDValidatorFromHeader from there
-			name:           "child of first block",
-			request:        blockRequest(firstHeader),
+			name:    "child of first block",
+			request: blockRequest(firstHeader),
+
 			wantTimestamp:  rosettaTime(firstHeader.Timestamp),
 			wantParentHash: firstHeader.ParentID.String(),
 			validateBlock:  validatorFromHeader(t, firstHeader),
 		},
 		{
 			// initial transfer of currency from the root account to the user - 100 tokens
-			name:                 "block mid-chain with transactions",
-			request:              blockRequest(midHeader1),
+			name:    "block mid-chain with transactions",
+			request: blockRequest(midHeader1),
+
 			wantTimestamp:        rosettaTime(midHeader1.Timestamp),
 			wantParentHash:       midHeader1.ParentID.String(),
 			validateBlock:        validatorFromHeader(t, midHeader1),
 			validateTransactions: validateTransfer(t, "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1", "8c5303eaa26202d6", "754aed9de6197641", 100_00000000),
 		},
 		{
-			name:           "block mid-chain without transactions",
-			request:        blockRequest(midHeader2),
+			name:    "block mid-chain without transactions",
+			request: blockRequest(midHeader2),
+
 			wantTimestamp:  rosettaTime(midHeader2.Timestamp),
 			validateBlock:  validatorFromHeader(t, midHeader2),
 			wantParentHash: midHeader2.ParentID.String(),
 		},
 		{
 			// transaction between two users
-			name:                 "second block mid-chain with transactions",
-			request:              blockRequest(midHeader3),
+			name:    "second block mid-chain with transactions",
+			request: blockRequest(midHeader3),
+
 			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
 			validateBlock:        validatorFromHeader(t, midHeader3),
@@ -105,14 +108,16 @@ func TestGetBlock(t *testing.T) {
 				NetworkID: defaultNetworkID(),
 				BlockID:   identifier.Block{Index: midHeader3.Height},
 			},
+
 			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
 			validateTransactions: validateTransfer(t, "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c", "754aed9de6197641", "631e88ae7f1d7c20", 1),
 			validateBlock:        validateBlockID(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
 		},
 		{
-			name:           "last indexed block",
-			request:        blockRequest(lastHeader),
+			name:    "last indexed block",
+			request: blockRequest(lastHeader),
+
 			wantTimestamp:  rosettaTime(lastHeader.Timestamp),
 			validateBlock:  validatorFromHeader(t, lastHeader),
 			wantParentHash: lastHeader.ParentID.String(),
@@ -142,22 +147,21 @@ func TestGetBlock(t *testing.T) {
 			// unpack response
 			var blockResponse rosetta.BlockResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &blockResponse))
+			require.NotNil(t, blockResponse.Block)
 
-			if assert.NotNil(t, blockResponse.Block) {
+			// validate index/hash of returned block
+			test.validateBlock(blockResponse.Block.ID)
 
-				test.validateBlock(blockResponse.Block.ID)
+			// verify the index/hash of the parent block
+			assert.Equal(t, test.request.BlockID.Index-1, blockResponse.Block.ParentID.Index)
+			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 
-				// verify the parent block index is correct
-				assert.Equal(t, test.request.BlockID.Index-1, blockResponse.Block.ParentID.Index)
-				assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
+			assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
 
-				assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
+			if test.validateTransactions != nil {
 
-				if test.validateTransactions != nil {
-
-					if assert.GreaterOrEqual(t, len(blockResponse.Block.Transactions), 1) {
-						test.validateTransactions(blockResponse.Block.Transactions[0])
-					}
+				if assert.GreaterOrEqual(t, len(blockResponse.Block.Transactions), 1) {
+					test.validateTransactions(blockResponse.Block.Transactions[0])
 				}
 			}
 		})
@@ -521,46 +525,70 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 		assert.Equal(t, tx.ID.Hash, hash)
 		assert.Equal(t, len(tx.Operations), 2)
 
-		relatedOperations := make(map[uint]uint)
+		// operations come in pairs
+		// - one is a negative transfer of funds (for the sender) and another one is a positive one (for the receiver)
 
-		for _, op := range tx.Operations {
+		require.Equal(t, len(tx.Operations), 2)
 
-			// save related operation IDs in a map so we can cross reference them
-			// TODO: check - is this special-casing the test too much perhaps?
-			// operation can have multiple related operations,
-			// but also this function does state that it's verifying a single transfer
+		op1 := tx.Operations[0]
+		op2 := tx.Operations[1]
 
-			if assert.Len(t, op.RelatedIDs, 1) {
-				relatedOperations[op.ID.Index] = op.RelatedIDs[0].Index
-			}
+		// verify the first operation data
 
-			// validate operation and status
-			assert.Equal(t, op.Type, dps.OperationTransfer)
-			assert.Equal(t, op.Status, dps.StatusCompleted)
+		// validate operation and status
+		assert.Equal(t, op1.Type, dps.OperationTransfer)
+		assert.Equal(t, op1.Status, dps.StatusCompleted)
 
-			// validate currency
-			assert.Equal(t, op.Amount.Currency.Symbol, dps.FlowSymbol)
-			assert.Equal(t, op.Amount.Currency.Decimals, uint(dps.FlowDecimals))
+		// validate currency
+		assert.Equal(t, op1.Amount.Currency.Symbol, dps.FlowSymbol)
+		assert.Equal(t, op1.Amount.Currency.Decimals, uint(dps.FlowDecimals))
 
-			// validate address
-			address := op.AccountID.Address
-			if address != from && address != to {
-				t.Errorf("unexpected account address (%v)", address)
-			}
-
-			// validate transfered amount
-			wantValue := strconv.FormatInt(amount, 10)
-			if address == from {
-				wantValue = "-" + wantValue
-			}
-
-			assert.Equal(t, op.Amount.Value, wantValue)
+		// validate address
+		address := op1.AccountID.Address
+		if address != from && address != to {
+			t.Errorf("unexpected account address (%v)", address)
 		}
 
-		// cross-reference related operations - verify that the related operation backlinks to the original one
-		for id, relatedID := range relatedOperations {
-			assert.Contains(t, relatedOperations, relatedID)
-			assert.Equal(t, id, relatedOperations[relatedID])
+		// validate transfered amount
+		wantValue := strconv.FormatInt(amount, 10)
+		if address == from {
+			wantValue = "-" + wantValue
+		}
+
+		assert.Equal(t, op1.Amount.Value, wantValue)
+
+		// validate related operation is op2
+		if assert.Len(t, op1.RelatedIDs, 1) {
+			assert.Equal(t, op1.RelatedIDs[0], op2.ID)
+		}
+
+		// verify the second operation
+
+		// validate operation and status
+		assert.Equal(t, op2.Type, dps.OperationTransfer)
+		assert.Equal(t, op2.Status, dps.StatusCompleted)
+
+		// validate currency
+		assert.Equal(t, op2.Amount.Currency.Symbol, dps.FlowSymbol)
+		assert.Equal(t, op2.Amount.Currency.Decimals, uint(dps.FlowDecimals))
+
+		// validate address
+		address = op2.AccountID.Address
+		if address != from && address != to {
+			t.Errorf("unexpected account address (%v)", address)
+		}
+
+		// validate transfered amount
+		wantValue = strconv.FormatInt(amount, 10)
+		if address == from {
+			wantValue = "-" + wantValue
+		}
+
+		assert.Equal(t, op2.Amount.Value, wantValue)
+
+		// validate related operation is op1
+		if assert.Len(t, op2.RelatedIDs, 1) {
+			assert.Equal(t, op2.RelatedIDs[0], op1.ID)
 		}
 	}
 }
