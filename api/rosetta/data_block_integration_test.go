@@ -40,7 +40,7 @@ import (
 )
 
 type blockIDValidationFn func(identifier.Block)
-type transactionValidationFn func(*object.Transaction)
+type transactionValidationFn func([]*object.Transaction)
 
 func TestGetBlock(t *testing.T) {
 
@@ -159,10 +159,7 @@ func TestGetBlock(t *testing.T) {
 			assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
 
 			if test.validateTransactions != nil {
-
-				if assert.GreaterOrEqual(t, len(blockResponse.Block.Transactions), 1) {
-					test.validateTransactions(blockResponse.Block.Transactions[0])
-				}
+				test.validateTransactions(blockResponse.Block.Transactions)
 			}
 		})
 	}
@@ -520,7 +517,11 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 
 	t.Helper()
 
-	return func(tx *object.Transaction) {
+	return func(transactions []*object.Transaction) {
+
+		require.Len(t, transactions, 1)
+
+		tx := transactions[0]
 
 		assert.Equal(t, tx.ID.Hash, hash)
 		assert.Equal(t, len(tx.Operations), 2)
