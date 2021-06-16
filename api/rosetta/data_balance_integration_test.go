@@ -174,9 +174,9 @@ func TestBalanceErrors(t *testing.T) {
 
 	// defined valid balance request fields
 	var (
-		testAccountAddress = identifier.Account{Address: "754aed9de6197641"}
+		testAccount = identifier.Account{Address: "754aed9de6197641"}
 
-		testBlockID = identifier.Block{
+		testBlock = identifier.Block{
 			Index: 13,
 			Hash:  "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23",
 		}
@@ -186,15 +186,15 @@ func TestBalanceErrors(t *testing.T) {
 
 	// TODO: when blocl tests get merged, this can be global for the tests perhaps
 	const (
-		invalidBlockchainName = "not-flow"
-		invalidNetworkName    = "not-flow-testnet"
-		invalidTokenSymbol    = "not-flow"
-		invalidAccountAddress = "0000000000000000" // valid 16-digit hex value but not a valid account ID
+		invalidBlockchain = "invalid-blockchain"
+		invalidNetwork    = "invalid-network"
+		invalidToken      = "invalid-token"
+		invalidAddress    = "0000000000000000" // valid 16-digit hex value but not a valid account ID
 
-		trimmedBlockID     = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2"  // block hash a character short
-		invalidBlockHash   = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
-		trimmedAccountID   = "754aed9de619764"                                                  // account ID a character short
-		validBlockIDLength = 64
+		trimmedBlockHash      = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2"  // block hash a character short
+		invalidBlockHash      = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+		trimmedAccountAddress = "754aed9de619764"                                                  // account ID a character short
+		validLength           = 64
 	)
 
 	tests := []struct {
@@ -223,8 +223,8 @@ func TestBalanceErrors(t *testing.T) {
 					Blockchain: "",
 					Network:    dps.FlowTestnet.String(),
 				},
-				AccountID:  testAccountAddress,
-				BlockID:    testBlockID,
+				AccountID:  testAccount,
+				BlockID:    testBlock,
 				Currencies: defaultCurrencySpec(),
 			},
 
@@ -237,18 +237,18 @@ func TestBalanceErrors(t *testing.T) {
 			name: "wrong network blockchain identifier",
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
-					Blockchain: invalidBlockchainName,
+					Blockchain: invalidBlockchain,
 					Network:    dps.FlowTestnet.String(),
 				},
-				AccountID:  testAccountAddress,
-				BlockID:    testBlockID,
+				AccountID:  testAccount,
+				BlockID:    testBlock,
 				Currencies: defaultCurrencySpec(),
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchainName, dps.FlowBlockchain),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchainName, "network": dps.FlowTestnet.String()},
+			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
+			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchain, "network": dps.FlowTestnet.String()},
 		},
 		{
 			name: "missing network identifier",
@@ -257,8 +257,8 @@ func TestBalanceErrors(t *testing.T) {
 					Blockchain: dps.FlowBlockchain,
 					Network:    "",
 				},
-				AccountID:  testAccountAddress,
-				BlockID:    testBlockID,
+				AccountID:  testAccount,
+				BlockID:    testBlock,
 				Currencies: defaultCurrencySpec(),
 			},
 
@@ -272,23 +272,23 @@ func TestBalanceErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
-					Network:    invalidNetworkName,
+					Network:    invalidNetwork,
 				},
-				AccountID:  testAccountAddress,
-				BlockID:    testBlockID,
+				AccountID:  testAccount,
+				BlockID:    testBlock,
 				Currencies: defaultCurrencySpec(),
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetworkName, dps.FlowTestnet.String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetworkName},
+			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
+			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetwork},
 		},
 		{
 			name: "missing block index and height",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
+				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: 0, Hash: ""},
 				Currencies: defaultCurrencySpec(),
 			},
@@ -301,21 +301,21 @@ func TestBalanceErrors(t *testing.T) {
 			name: "wrong length of block id",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
-				BlockID:    identifier.Block{Index: 13, Hash: trimmedBlockID},
+				AccountID:  testAccount,
+				BlockID:    identifier.Block{Index: 13, Hash: trimmedBlockHash},
 				Currencies: defaultCurrencySpec(),
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockID), validBlockIDLength),
+			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validLength),
 		},
 		{
 			name: "missing account address",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
 				AccountID:  identifier.Account{Address: ""},
-				BlockID:    testBlockID,
+				BlockID:    testBlock,
 				Currencies: defaultCurrencySpec(),
 			},
 			wantStatusCode:              http.StatusBadRequest,
@@ -326,20 +326,20 @@ func TestBalanceErrors(t *testing.T) {
 			name: "wrong length of account address",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  identifier.Account{Address: trimmedAccountID},
-				BlockID:    testBlockID,
+				AccountID:  identifier.Account{Address: trimmedAccountAddress},
+				BlockID:    testBlock,
 				Currencies: defaultCurrencySpec(),
 			},
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("account identifier: address field has wrong length (have: %d, want: %d)", len(trimmedAccountID), validAddressSize),
+			wantRosettaErrorDescription: fmt.Sprintf("account identifier: address field has wrong length (have: %d, want: %d)", len(trimmedAccountAddress), validAddressSize),
 		},
 		{
 			name: "missing currency data",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
-				BlockID:    testBlockID,
+				AccountID:  testAccount,
+				BlockID:    testBlock,
 				Currencies: []identifier.Currency{},
 			},
 			wantStatusCode:              http.StatusBadRequest,
@@ -350,8 +350,8 @@ func TestBalanceErrors(t *testing.T) {
 			name: "missing currency symbol",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
-				BlockID:    testBlockID,
+				AccountID:  testAccount,
+				BlockID:    testBlock,
 				Currencies: []identifier.Currency{{Symbol: "", Decimals: 8}},
 			},
 			wantStatusCode:              http.StatusBadRequest,
@@ -362,8 +362,8 @@ func TestBalanceErrors(t *testing.T) {
 			name: "some currency symbols missing",
 			request: rosetta.BalanceRequest{
 				NetworkID: defaultNetworkID(),
-				AccountID: testAccountAddress,
-				BlockID:   testBlockID,
+				AccountID: testAccount,
+				BlockID:   testBlock,
 				Currencies: []identifier.Currency{
 					{Symbol: dps.FlowSymbol, Decimals: 8},
 					{Symbol: "", Decimals: 8},
@@ -378,7 +378,7 @@ func TestBalanceErrors(t *testing.T) {
 			name: "missing block height",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
+				AccountID:  testAccount,
 				BlockID:    identifier.Block{Hash: "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"},
 				Currencies: defaultCurrencySpec(),
 			},
@@ -390,7 +390,7 @@ func TestBalanceErrors(t *testing.T) {
 			name: "invalid block hash",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
+				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: 13, Hash: invalidBlockHash},
 				Currencies: defaultCurrencySpec(),
 			},
@@ -403,7 +403,7 @@ func TestBalanceErrors(t *testing.T) {
 			name: "unkown block requested",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
+				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: 426},
 				Currencies: defaultCurrencySpec(),
 			},
@@ -416,7 +416,7 @@ func TestBalanceErrors(t *testing.T) {
 			name: "mismatched block id and height",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
+				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: 13, Hash: "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"},
 				Currencies: defaultCurrencySpec(),
 			},
@@ -430,7 +430,7 @@ func TestBalanceErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
 				AccountID:  identifier.Account{Address: "zzzzzzzzzzzzzzzz"},
-				BlockID:    testBlockID,
+				BlockID:    testBlock,
 				Currencies: defaultCurrencySpec(),
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
@@ -442,34 +442,34 @@ func TestBalanceErrors(t *testing.T) {
 			name: "invalid account ID",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  identifier.Account{Address: invalidAccountAddress},
-				BlockID:    testBlockID,
+				AccountID:  identifier.Account{Address: invalidAddress},
+				BlockID:    testBlock,
 				Currencies: defaultCurrencySpec(),
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidAccount,
 			wantRosettaErrorDescription: "account address is not valid for configured chain",
-			wantRosettaErrorDetails:     map[string]interface{}{"address": invalidAccountAddress, "chain": dps.FlowTestnet.String()},
+			wantRosettaErrorDetails:     map[string]interface{}{"address": invalidAddress, "chain": dps.FlowTestnet.String()},
 		},
 		{
 			name: "unknown currency requested",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
-				BlockID:    testBlockID,
-				Currencies: []identifier.Currency{{Symbol: invalidTokenSymbol, Decimals: 8}},
+				AccountID:  testAccount,
+				BlockID:    testBlock,
+				Currencies: []identifier.Currency{{Symbol: invalidToken, Decimals: 8}},
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorUnknownCurrency,
 			wantRosettaErrorDescription: "currency symbol has not been configured",
-			wantRosettaErrorDetails:     map[string]interface{}{"symbol": invalidTokenSymbol, "decimals": uint(8)},
+			wantRosettaErrorDetails:     map[string]interface{}{"symbol": invalidToken, "decimals": uint(8)},
 		},
 		{
 			name: "invalid currency decimal count",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetworkID(),
-				AccountID:  testAccountAddress,
-				BlockID:    testBlockID,
+				AccountID:  testAccount,
+				BlockID:    testBlock,
 				Currencies: []identifier.Currency{{Symbol: dps.FlowSymbol, Decimals: 7}},
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
@@ -481,8 +481,8 @@ func TestBalanceErrors(t *testing.T) {
 			name: "invalid currency decimal count in a list of currencies",
 			request: rosetta.BalanceRequest{
 				NetworkID: defaultNetworkID(),
-				AccountID: testAccountAddress,
-				BlockID:   testBlockID,
+				AccountID: testAccount,
+				BlockID:   testBlock,
 				Currencies: []identifier.Currency{
 					{Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals},
 					{Symbol: dps.FlowSymbol, Decimals: 7},
