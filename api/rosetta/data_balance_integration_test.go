@@ -236,9 +236,7 @@ func TestBalanceErrors(t *testing.T) {
 
 		accFirstOccurrence = 13
 
-		// FIXME: when it's checked, see how to handle this error;
-		// it's cadence internal and might change, but also something we want to check
-		kludgyCadenceRuntimeError = "could not invoke script: script execution encountered error: [Error Code: 1101] cadence runtime error Execution failed:\nerror: panic: Could not borrow Balance reference to the Vault\n  --> d6b84b6f36db7d880d4ecc2a6a952094301873657e204e86d4cc9282c0df4b3d:11:11\n   |\n11 |         ?? panic(\"Could not borrow Balance reference to the Vault\")\n   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
+		cadenceVaultNotFoundErr = "could not invoke script: script execution encountered error: [Error Code: 1101] cadence runtime error Execution failed:\nerror: panic: Could not borrow Balance reference to the Vault\n  --> d6b84b6f36db7d880d4ecc2a6a952094301873657e204e86d4cc9282c0df4b3d:11:11\n   |\n11 |         ?? panic(\"Could not borrow Balance reference to the Vault\")\n   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
 	)
 
 	tests := []struct {
@@ -538,19 +536,20 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDescription: fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
 			wantRosettaErrorDetails:     map[string]interface{}{"symbol": dps.FlowSymbol, "decimals": uint(7)},
 		},
-		// TODO: check - the error description we return is the cadence runtime error we get;
-		// should the API relay this to the client at all?
 		{
-			name: "account does not exist yet",
+			// request the account balance before the account is created, so the account/vault does not exist.
+			// TODO: differentiate between vault and account not existing
+			// => https://github.com/optakt/flow-dps/issues/204
+			name: "account vault does not exist",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: accFirstOccurrence - 1}, // one block before it's created
+				BlockID:    identifier.Block{Index: accFirstOccurrence - 1}, // one block before the account is created
 				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusInternalServerError,
 			wantRosettaError:            configuration.ErrorInternal,
-			wantRosettaErrorDescription: kludgyCadenceRuntimeError,
+			wantRosettaErrorDescription: cadenceVaultNotFoundErr,
 		},
 	}
 
