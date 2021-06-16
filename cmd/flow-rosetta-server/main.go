@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
+	"github.com/ziflex/lecho/v2"
 	"google.golang.org/grpc"
 
 	"github.com/onflow/flow-go/model/flow"
@@ -80,6 +80,7 @@ func run() int {
 		return failure
 	}
 	log = log.Level(level)
+	elog := lecho.From(log)
 
 	// Check if the configured chain ID is valid.
 	params, ok := dps.FlowParams[flow.ChainID(flagChain)]
@@ -106,14 +107,11 @@ func run() int {
 	retrieve := retriever.New(params, index, validate, generate, invoke)
 	ctrl := rosetta.NewData(config, retrieve)
 
-	// TODO: Implement custom echo logger middleware that wraps around our own
-	// zerolog instance:
-	// => https://github.com/optakt/flow-dps/issues/121
-
 	server := echo.New()
 	server.HideBanner = true
 	server.HidePort = true
-	server.Use(middleware.Logger())
+	server.Logger = elog
+	server.Use(lecho.Middleware(lecho.Config{Logger: elog}))
 	server.POST("/network/list", ctrl.Networks)
 	server.POST("/network/options", ctrl.Options)
 	server.POST("/network/status", ctrl.Status)
