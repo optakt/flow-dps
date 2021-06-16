@@ -114,14 +114,14 @@ func TestGetBlock(t *testing.T) {
 		{
 			name: "lookup of a block mid-chain by index only",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID:   identifier.Block{Index: midHeader3.Height},
 			},
 
 			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
 			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
-			validateBlock:        validateBlockID(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
+			validateBlock:        validateBlock(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
 		},
 		{
 			name:    "last indexed block",
@@ -180,15 +180,10 @@ func TestBlockErrors(t *testing.T) {
 	api := setupAPI(t, db)
 
 	const (
-		invalidBlockchain = "invalid-blockchain"
-		invalidNetwork    = "invalid-network"
-
 		validBlockHash   = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
 		validBlockHeight = 44
 
-		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
-		invalidBlockHash = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
-		validLength      = 64
+		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character short
 		lastHeight       = 425
 	)
 
@@ -273,7 +268,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "missing block height and hash",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: 0,
 					Hash:  "",
@@ -288,7 +283,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "wrong length of block id",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: 43,
 					Hash:  trimmedBlockHash,
@@ -297,13 +292,13 @@ func TestBlockErrors(t *testing.T) {
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validLength),
+			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
 			wantRosettaErrorDetails:     nil,
 		},
 		{
 			name: "missing block height",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Hash: validBlockHash,
 				},
@@ -317,7 +312,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "invalid block hash",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: 13,
 					Hash:  invalidBlockHash,
@@ -332,7 +327,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "unknown block",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: lastHeight + 1,
 				},
@@ -346,7 +341,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "mismatched block height and hash",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: validBlockHeight - 1,
 					Hash:  validBlockHash,
@@ -507,7 +502,7 @@ func TestMalformedBlockRequest(t *testing.T) {
 func blockRequest(header flow.Header) rosetta.BlockRequest {
 
 	return rosetta.BlockRequest{
-		NetworkID: defaultNetworkID(),
+		NetworkID: defaultNetwork(),
 		BlockID: identifier.Block{
 			Index: header.Height,
 			Hash:  header.ID().String(),
@@ -596,7 +591,7 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 	}
 }
 
-func validateBlockID(t *testing.T, height uint64, hash string) blockIDValidationFn {
+func validateBlock(t *testing.T, height uint64, hash string) blockIDValidationFn {
 
 	t.Helper()
 
@@ -607,7 +602,7 @@ func validateBlockID(t *testing.T, height uint64, hash string) blockIDValidation
 }
 
 func validatorFromHeader(t *testing.T, header flow.Header) blockIDValidationFn {
-	return validateBlockID(t, header.Height, header.ID().String())
+	return validateBlock(t, header.Height, header.ID().String())
 }
 
 func rosettaTime(t time.Time) int64 {
