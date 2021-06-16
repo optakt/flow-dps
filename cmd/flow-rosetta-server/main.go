@@ -59,12 +59,14 @@ func run() int {
 	// Command line parameter initialization.
 	var (
 		flagAPI   string
+		flagCache uint64
 		flagChain string
 		flagLevel string
 		flagPort  uint16
 	)
 
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
+	pflag.Uint64VarP(&flagCache, "cache", "e", 1e9, "maximum cache size for register reads in bytes")
 	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowTestnet.String(), "chain ID for Flow network core contracts")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
@@ -103,7 +105,11 @@ func run() int {
 	config := configuration.New(params.ChainID)
 	validate := validator.New(params, index)
 	generate := scripts.NewGenerator(params)
-	invoke := invoker.New(index)
+	invoke, err := invoker.New(index, invoker.WithCacheSize(flagCache))
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize invoker")
+		return failure
+	}
 	retrieve := retriever.New(params, index, validate, generate, invoke)
 	ctrl := rosetta.NewData(config, retrieve)
 
