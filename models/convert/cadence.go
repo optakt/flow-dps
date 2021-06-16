@@ -173,7 +173,8 @@ func ParseCadenceArgument(param string) (cadence.Value, error) {
 
 	case "String":
 		return cadence.NewString(val), nil
-	}
 
-	return nil, nil
+	default:
+		return nil, fmt.Errorf("unknown type for Cadence conversion (%s)", typ)
+	}
 }
