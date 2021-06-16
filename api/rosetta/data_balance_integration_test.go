@@ -94,6 +94,10 @@ func TestGetBalance(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
+	const (
+		testAccount = "754aed9de6197641"
+	)
+
 	tests := []struct {
 		name string
 
@@ -104,17 +108,17 @@ func TestGetBalance(t *testing.T) {
 	}{
 		{
 			name:        "valid balance request - first occurrence of the account",
-			request:     balanceRequest("754aed9de6197641", 13, "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"),
+			request:     balanceRequest(testAccount, 13, "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"),
 			wantBalance: "10000100000",
 		},
 		{
 			name:        "valid balance request - mid chain",
-			request:     balanceRequest("754aed9de6197641", 50, "d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df"),
+			request:     balanceRequest(testAccount, 50, "d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df"),
 			wantBalance: "10000099999",
 		},
 		{
 			name:        "valid balance request - last indexed block",
-			request:     balanceRequest("754aed9de6197641", 425, "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683"),
+			request:     balanceRequest(testAccount, 425, "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683"),
 			wantBalance: "10000100002",
 		},
 		// TODO: think - what about multiple currencies of the same token? e.g. []token{ "flow", "flow" }?
@@ -225,7 +229,7 @@ func TestBalanceErrors(t *testing.T) {
 				},
 				AccountID:  testAccount,
 				BlockID:    testBlock,
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
@@ -242,7 +246,7 @@ func TestBalanceErrors(t *testing.T) {
 				},
 				AccountID:  testAccount,
 				BlockID:    testBlock,
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
@@ -259,7 +263,7 @@ func TestBalanceErrors(t *testing.T) {
 				},
 				AccountID:  testAccount,
 				BlockID:    testBlock,
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
@@ -276,7 +280,7 @@ func TestBalanceErrors(t *testing.T) {
 				},
 				AccountID:  testAccount,
 				BlockID:    testBlock,
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
@@ -287,10 +291,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "missing block index and height",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: 0, Hash: ""},
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
@@ -300,10 +304,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "wrong length of block id",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: 13, Hash: trimmedBlockHash},
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
@@ -313,10 +317,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "missing account address",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: ""},
 				BlockID:    testBlock,
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
@@ -325,10 +329,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "wrong length of account address",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: trimmedAccountAddress},
 				BlockID:    testBlock,
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
@@ -337,7 +341,7 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "missing currency data",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    testBlock,
 				Currencies: []identifier.Currency{},
@@ -349,7 +353,7 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "missing currency symbol",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    testBlock,
 				Currencies: []identifier.Currency{{Symbol: "", Decimals: 8}},
@@ -361,7 +365,7 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "some currency symbols missing",
 			request: rosetta.BalanceRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				AccountID: testAccount,
 				BlockID:   testBlock,
 				Currencies: []identifier.Currency{
@@ -377,10 +381,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "missing block height",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Hash: "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"},
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusInternalServerError,
 			wantRosettaError:            configuration.ErrorInternal,
@@ -389,10 +393,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "invalid block hash",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: 13, Hash: invalidBlockHash},
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidBlock,
@@ -402,10 +406,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "unkown block requested",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: 426},
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorUnknownBlock,
@@ -415,10 +419,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "mismatched block id and height",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: 13, Hash: "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"},
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidBlock,
@@ -428,10 +432,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "invalid account ID hex",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: "zzzzzzzzzzzzzzzz"},
 				BlockID:    testBlock,
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidAccount,
@@ -441,10 +445,10 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "invalid account ID",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: invalidAddress},
 				BlockID:    testBlock,
-				Currencies: defaultCurrencySpec(),
+				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidAccount,
@@ -454,7 +458,7 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "unknown currency requested",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    testBlock,
 				Currencies: []identifier.Currency{{Symbol: invalidToken, Decimals: 8}},
@@ -467,7 +471,7 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "invalid currency decimal count",
 			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetworkID(),
+				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    testBlock,
 				Currencies: []identifier.Currency{{Symbol: dps.FlowSymbol, Decimals: 7}},
@@ -480,7 +484,7 @@ func TestBalanceErrors(t *testing.T) {
 		{
 			name: "invalid currency decimal count in a list of currencies",
 			request: rosetta.BalanceRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				AccountID: testAccount,
 				BlockID:   testBlock,
 				Currencies: []identifier.Currency{
@@ -642,7 +646,7 @@ func TestMalformedBalanceRequest(t *testing.T) {
 func balanceRequest(address string, blockIndex uint64, blockHash string) rosetta.BalanceRequest {
 
 	return rosetta.BalanceRequest{
-		NetworkID: defaultNetworkID(),
+		NetworkID: defaultNetwork(),
 		AccountID: identifier.Account{
 			Address: address,
 		},
@@ -650,21 +654,21 @@ func balanceRequest(address string, blockIndex uint64, blockHash string) rosetta
 			Index: blockIndex,
 			Hash:  blockHash,
 		},
-		Currencies: defaultCurrencySpec(),
+		Currencies: defaultCurrency(),
 	}
 }
 
-// defaultNetworkID returns the Network identifier common for all requests.
-func defaultNetworkID() identifier.Network {
+// defaultNetwork returns the Network identifier common for all requests.
+func defaultNetwork() identifier.Network {
 	return identifier.Network{
 		Blockchain: dps.FlowBlockchain,
 		Network:    dps.FlowTestnet.String(),
 	}
 }
 
-// defaultCurrencySpec returns the Currency spec common for all requests.
+// defaultCurrency returns the Currency spec common for all requests.
 // At the moment only get the FLOW tokens, perhaps in the future it will support multiple.
-func defaultCurrencySpec() []identifier.Currency {
+func defaultCurrency() []identifier.Currency {
 	return []identifier.Currency{
 		{
 			Symbol:   dps.FlowSymbol,

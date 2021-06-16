@@ -114,7 +114,7 @@ func TestGetBlock(t *testing.T) {
 		{
 			name: "lookup of a block mid-chain by index only",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID:   identifier.Block{Index: midHeader3.Height},
 			},
 
@@ -273,7 +273,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "missing block height and hash",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: 0,
 					Hash:  "",
@@ -288,7 +288,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "wrong length of block id",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: 43,
 					Hash:  trimmedBlockHash,
@@ -303,7 +303,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "missing block height",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Hash: validBlockHash,
 				},
@@ -317,7 +317,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "invalid block hash",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: 13,
 					Hash:  invalidBlockHash,
@@ -332,7 +332,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "unknown block",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: lastHeight + 1,
 				},
@@ -346,7 +346,7 @@ func TestBlockErrors(t *testing.T) {
 		{
 			name: "mismatched block height and hash",
 			request: rosetta.BlockRequest{
-				NetworkID: defaultNetworkID(),
+				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: validBlockHeight - 1,
 					Hash:  validBlockHash,
@@ -507,7 +507,7 @@ func TestMalformedBlockRequest(t *testing.T) {
 func blockRequest(header flow.Header) rosetta.BlockRequest {
 
 	return rosetta.BlockRequest{
-		NetworkID: defaultNetworkID(),
+		NetworkID: defaultNetwork(),
 		BlockID: identifier.Block{
 			Index: header.Height,
 			Hash:  header.ID().String(),
