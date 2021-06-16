@@ -180,15 +180,10 @@ func TestBlockErrors(t *testing.T) {
 	api := setupAPI(t, db)
 
 	const (
-		invalidBlockchain = "invalid-blockchain"
-		invalidNetwork    = "invalid-network"
-
 		validBlockHash   = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
 		validBlockHeight = 44
 
-		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e"  // blockID a character short
-		invalidBlockHash = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
-		validLength      = 64
+		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character short
 		lastHeight       = 425
 	)
 
@@ -297,7 +292,7 @@ func TestBlockErrors(t *testing.T) {
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validLength),
+			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
 			wantRosettaErrorDetails:     nil,
 		},
 		{

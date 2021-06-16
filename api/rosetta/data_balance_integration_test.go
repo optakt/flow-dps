@@ -49,6 +49,16 @@ import (
 	"github.com/optakt/flow-dps/testing/snapshots"
 )
 
+const (
+	invalidBlockchain = "invalid-blockchain"
+	invalidNetwork    = "invalid-network"
+	invalidToken      = "invalid-token"
+
+	invalidBlockHash = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+
+	validBlockHashLen = 64
+)
+
 func setupDB(t *testing.T) *badger.DB {
 	t.Helper()
 
@@ -188,19 +198,13 @@ func TestBalanceErrors(t *testing.T) {
 		validAddressSize = 2 * flow.AddressLength
 	)
 
-	// TODO: when blocl tests get merged, this can be global for the tests perhaps
 	const (
-		invalidBlockchain = "invalid-blockchain"
-		invalidNetwork    = "invalid-network"
-		invalidToken      = "invalid-token"
-		invalidAddress    = "0000000000000000" // valid 16-digit hex value but not a valid account ID
+		invalidAddress = "0000000000000000" // valid 16-digit hex value but not a valid account ID
 
-		trimmedBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2"  // block hash a character short
-		invalidBlockHash = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+		trimmedBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2" // block hash a character short
 
 		trimmedAddress    = "754aed9de619764"  // account ID a character short
 		invalidAddressHex = "zzzzzzzzzzzzzzzz" // invalid hex string
-		validLength       = 64
 	)
 
 	tests := []struct {
@@ -314,7 +318,7 @@ func TestBalanceErrors(t *testing.T) {
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validLength),
+			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
 		},
 		{
 			name: "missing account address",
