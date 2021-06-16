@@ -195,10 +195,12 @@ func TestBalanceErrors(t *testing.T) {
 		invalidToken      = "invalid-token"
 		invalidAddress    = "0000000000000000" // valid 16-digit hex value but not a valid account ID
 
-		trimmedBlockHash      = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2"  // block hash a character short
-		invalidBlockHash      = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
-		trimmedAccountAddress = "754aed9de619764"                                                  // account ID a character short
-		validLength           = 64
+		trimmedBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2"  // block hash a character short
+		invalidBlockHash = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+
+		trimmedAddress    = "754aed9de619764"  // account ID a character short
+		invalidAddressHex = "zzzzzzzzzzzzzzzz" // invalid hex string
+		validLength       = 64
 	)
 
 	tests := []struct {
@@ -330,13 +332,13 @@ func TestBalanceErrors(t *testing.T) {
 			name: "wrong length of account address",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
-				AccountID:  identifier.Account{Address: trimmedAccountAddress},
+				AccountID:  identifier.Account{Address: trimmedAddress},
 				BlockID:    testBlock,
 				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("account identifier: address field has wrong length (have: %d, want: %d)", len(trimmedAccountAddress), validAddressSize),
+			wantRosettaErrorDescription: fmt.Sprintf("account identifier: address field has wrong length (have: %d, want: %d)", len(trimmedAddress), validAddressSize),
 		},
 		{
 			name: "missing currency data",
@@ -433,14 +435,14 @@ func TestBalanceErrors(t *testing.T) {
 			name: "invalid account ID hex",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
-				AccountID:  identifier.Account{Address: "zzzzzzzzzzzzzzzz"},
+				AccountID:  identifier.Account{Address: invalidAddressHex},
 				BlockID:    testBlock,
 				Currencies: defaultCurrency(),
 			},
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidAccount,
 			wantRosettaErrorDescription: "account address is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"address": "zzzzzzzzzzzzzzzz", "chain": dps.FlowTestnet.String()},
+			wantRosettaErrorDetails:     map[string]interface{}{"address": invalidAddressHex, "chain": dps.FlowTestnet.String()},
 		},
 		{
 			name: "invalid account ID",
