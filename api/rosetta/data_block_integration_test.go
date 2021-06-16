@@ -121,7 +121,7 @@ func TestGetBlock(t *testing.T) {
 			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
 			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
-			validateBlock:        validateBlockID(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
+			validateBlock:        validateBlock(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
 		},
 		{
 			name:    "last indexed block",
@@ -591,7 +591,7 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 	}
 }
 
-func validateBlockID(t *testing.T, height uint64, hash string) blockIDValidationFn {
+func validateBlock(t *testing.T, height uint64, hash string) blockIDValidationFn {
 
 	t.Helper()
 
@@ -602,7 +602,7 @@ func validateBlockID(t *testing.T, height uint64, hash string) blockIDValidation
 }
 
 func validatorFromHeader(t *testing.T, header flow.Header) blockIDValidationFn {
-	return validateBlockID(t, header.Height, header.ID().String())
+	return validateBlock(t, header.Height, header.ID().String())
 }
 
 func rosettaTime(t time.Time) int64 {

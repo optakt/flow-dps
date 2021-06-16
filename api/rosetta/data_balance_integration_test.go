@@ -54,7 +54,7 @@ const (
 	invalidNetwork    = "invalid-network"
 	invalidToken      = "invalid-token"
 
-	invalidBlockHash = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // invalid hex value
+	invalidBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2z" // invalid hex value
 
 	validBlockHashLen = 64
 )
@@ -110,19 +110,19 @@ func TestGetBalance(t *testing.T) {
 
 	var (
 		// block where the account first appears
-		first = identifier.Block{
+		firstBlock = identifier.Block{
 			Index: 13,
 			Hash:  "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23",
 		}
 
 		// a block mid-chain
-		second = identifier.Block{
+		secondBlock = identifier.Block{
 			Index: 50,
 			Hash:  "d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df",
 		}
 
 		// last indexed block
-		last = identifier.Block{
+		lastBlock = identifier.Block{
 			Index: 425,
 			Hash:  "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683",
 		}
@@ -134,49 +134,33 @@ func TestGetBalance(t *testing.T) {
 		request rosetta.BalanceRequest
 
 		wantStatusCode int
-		wantBalances   []string
+		wantBalance    string
 		validateBlock  blockIDValidationFn
 	}{
 		{
 			name:          "first occurrence of the account",
-			request:       balanceRequest(testAccount, first),
-			wantBalances:  []string{"10000100000"},
-			validateBlock: validateBlockID(t, first.Index, first.Hash),
+			request:       requestBalance(testAccount, firstBlock),
+			wantBalance:   "10000100000",
+			validateBlock: validateBlock(t, firstBlock.Index, firstBlock.Hash),
 		},
 		{
 			name:          "mid chain",
-			request:       balanceRequest(testAccount, second),
-			wantBalances:  []string{"10000099999"},
-			validateBlock: validateBlockID(t, second.Index, second.Hash),
+			request:       requestBalance(testAccount, secondBlock),
+			wantBalance:   "10000099999",
+			validateBlock: validateBlock(t, secondBlock.Index, secondBlock.Hash),
 		},
 		{
 			name:          "last indexed block",
-			request:       balanceRequest(testAccount, last),
-			wantBalances:  []string{"10000100002"},
-			validateBlock: validateBlockID(t, last.Index, last.Hash),
+			request:       requestBalance(testAccount, lastBlock),
+			wantBalance:   "10000100002",
+			validateBlock: validateBlock(t, lastBlock.Index, lastBlock.Hash),
 		},
 		{
 			// use block height only to retrieve data, but verify hash is set in the response
 			name:          "get block via height only",
-			request:       balanceRequest(testAccount, identifier.Block{Index: second.Index}),
-			wantBalances:  []string{"10000099999"},
-			validateBlock: validateBlockID(t, second.Index, second.Hash),
-		},
-		{
-			// we currently have only the one token, so we can't really request different currencies
-			name: "get multiple currencies",
-			request: rosetta.BalanceRequest{
-				NetworkID: defaultNetwork(),
-				AccountID: identifier.Account{Address: testAccount},
-				BlockID:   last,
-				Currencies: []identifier.Currency{
-					{Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals},
-					{Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals},
-					{Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals},
-				},
-			},
-			wantBalances:  []string{"10000100002", "10000100002", "10000100002"},
-			validateBlock: validateBlockID(t, last.Index, last.Hash),
+			request:       requestBalance(testAccount, identifier.Block{Index: secondBlock.Index}),
+			wantBalance:   "10000099999",
+			validateBlock: validateBlock(t, secondBlock.Index, secondBlock.Hash),
 		},
 	}
 
@@ -211,18 +195,15 @@ func TestGetBalance(t *testing.T) {
 
 			test.validateBlock(balanceResponse.BlockID)
 
-			// verify that we have the same amount of balances as requested
-			if assert.Equal(t, len(balanceResponse.Balances), len(test.wantBalances)) {
+			// verify that we have one balance in the response
+			if assert.Len(t, balanceResponse.Balances, 1) {
 
-				// verify returned balances - both the value and that the output matches the input spec
-				for i, wanted := range test.wantBalances {
+				// verify returned balance - both the value and that the output matches the input spec
+				balance := balanceResponse.Balances[0]
 
-					balance := balanceResponse.Balances[i]
-
-					assert.Equal(t, test.request.Currencies[i].Symbol, balance.Currency.Symbol)
-					assert.Equal(t, test.request.Currencies[i].Decimals, balance.Currency.Decimals)
-					assert.Equal(t, wanted, balance.Value)
-				}
+				assert.Equal(t, test.request.Currencies[0].Symbol, balance.Currency.Symbol)
+				assert.Equal(t, test.request.Currencies[0].Decimals, balance.Currency.Decimals)
+				assert.Equal(t, test.wantBalance, balance.Value)
 			}
 		})
 	}
@@ -251,7 +232,7 @@ func TestBalanceErrors(t *testing.T) {
 		trimmedBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2" // block hash a character short
 
 		trimmedAddress    = "754aed9de619764"  // account ID a character short
-		invalidAddressHex = "zzzzzzzzzzzzzzzz" // invalid hex string
+		invalidAddressHex = "754aed9de619764z" // invalid hex string
 
 		accFirstOccurrence = 13
 
@@ -713,8 +694,8 @@ func TestMalformedBalanceRequest(t *testing.T) {
 	}
 }
 
-// balanceRequest generates a BalanceRequest with the specified parameters.
-func balanceRequest(address string, id identifier.Block) rosetta.BalanceRequest {
+// requestBalance generates a BalanceRequest with the specified parameters.
+func requestBalance(address string, id identifier.Block) rosetta.BalanceRequest {
 
 	return rosetta.BalanceRequest{
 		NetworkID: defaultNetwork(),
