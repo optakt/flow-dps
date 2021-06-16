@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/dgraph-io/badger/v2 v2.2007.2
+	github.com/dgraph-io/ristretto v0.0.3-0.20200630154024-f66de99634de
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/gammazero/deque v0.1.0
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2 v2.0.0-rc.2
