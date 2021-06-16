@@ -15,6 +15,7 @@
 package convert
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/onflow/cadence"
@@ -25,8 +26,6 @@ import (
 
 func TestParseCadenceArgument(t *testing.T) {
 
-	fixed, _ := cadence.NewUFix64FromParts(13, 37)
-
 	vectors := []struct {
 		name     string
 		param    string
@@ -36,19 +35,19 @@ func TestParseCadenceArgument(t *testing.T) {
 		{
 			name:     "parse valid normal integer",
 			param:    "Int16(1337)",
-			wantArg:  cadence.NewInt16(1337),
+			wantArg:  cadence.Int16(1337),
 			checkErr: require.NoError,
 		},
 		{
 			name:     "parse valid big integer",
 			param:    "UInt256(1337)",
-			wantArg:  cadence.NewUInt256(1337),
+			wantArg:  cadence.UInt256{Value: big.NewInt(1337)},
 			checkErr: require.NoError,
 		},
 		{
 			name:     "parse valid fixed point",
 			param:    "UFix64(13.37)",
-			wantArg:  fixed,
+			wantArg:  cadence.UFix64(1337),
 			checkErr: require.NoError,
 		},
 		{
