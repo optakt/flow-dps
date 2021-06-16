@@ -51,8 +51,7 @@ func TestBytesToValues(t *testing.T) {
 
 	bb := [][]byte{val1b, val2b, val3b}
 
-	got, err := BytesToValues(bb)
+	got := BytesToValues(bb)
 
-	assert.NoError(t, err)
 	assert.Equal(t, wantVals, got)
 }

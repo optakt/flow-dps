@@ -156,7 +156,7 @@ func TestSaveAndRetrieve_Payload(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	path, _ := ledger.ToPath([]byte("aac513eb1a0457700ac3fa8d292513e1"))
+	path := ledger.Path{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1}
 	key := ledger.NewKey([]ledger.KeyPart{
 		ledger.NewKeyPart(0, []byte(`owner`)),
 		ledger.NewKeyPart(1, []byte(`controller`)),
@@ -220,7 +220,7 @@ func TestSaveAndRetrieve_Payload(t *testing.T) {
 
 	t.Run("should fail if path does not match", func(t *testing.T) {
 		var got ledger.Payload
-		unknownPath, _ := ledger.ToPath([]byte("ffffffffffffffffffffffffffffffff"))
+		unknownPath := ledger.Path{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 		err := db.View(RetrievePayload(42, unknownPath, &got))
 
 		assert.Error(t, err)

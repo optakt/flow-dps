@@ -12,27 +12,8 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package convert
+package mocks
 
-import (
-	"github.com/onflow/flow-go/ledger"
-)
+import "errors"
 
-func ValuesToBytes(values []ledger.Value) [][]byte {
-	bb := make([][]byte, 0, len(values))
-	for _, value := range values {
-		b := make([]byte, len(value))
-		copy(b, value[:])
-		bb = append(bb, b)
-	}
-	return bb
-}
-
-func BytesToValues(bb [][]byte) []ledger.Value {
-	values := make([]ledger.Value, 0, len(bb))
-	for _, b := range bb {
-		value := ledger.Value(b)
-		values = append(values, value)
-	}
-	return values
-}
+var DummyError = errors.New("dummy error")

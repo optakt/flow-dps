@@ -34,7 +34,7 @@ type Index struct {
 	client APIClient
 }
 
-// IndexAPI creates a new instance of an index reader that uses the provided
+// IndexFromAPI creates a new instance of an index reader that uses the provided
 // GRPC API client to retrieve state from the index.
 func IndexFromAPI(client APIClient) *Index {
 
@@ -113,11 +113,7 @@ func (i *Index) Commit(height uint64) (flow.StateCommitment, error) {
 // finalized block at the given height. It can optionally filter them by event
 // type; if no event types are given, all events are returned.
 func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-
-	tt := make([]string, 0, len(types))
-	for _, typ := range types {
-		tt = append(tt, string(typ))
-	}
+	tt := convert.TypesToStrings(types)
 
 	req := GetEventsRequest{
 		Height: height,
@@ -152,10 +148,7 @@ func (i *Index) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, e
 		return nil, fmt.Errorf("could not get registers: %w", err)
 	}
 
-	values, err := convert.BytesToValues(res.Values)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert values: %w", err)
-	}
+	values := convert.BytesToValues(res.Values)
 
 	return values, nil
 }
