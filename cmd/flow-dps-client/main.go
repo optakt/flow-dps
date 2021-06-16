@@ -116,24 +116,6 @@ func run() int {
 		}
 		args = append(args, arg)
 	}
-	if flagParams != "" {
-		data, err := os.ReadFile(flagParams)
-		if err != nil {
-			log.Error().Err(err).Msg("could not read parameters")
-			return failure
-		}
-		val, err := json.Decode(data)
-		if err != nil {
-			log.Error().Err(err).Msg("could not decode parameters")
-			return failure
-		}
-		array, ok := val.(cadence.Array)
-		if !ok {
-			log.Error().Str("type", fmt.Sprintf("%T", val)).Msg("invalid type for parameters")
-			return failure
-		}
-		args = array.Values
-	}
 
 	// Execute the script using remote lookup and read.
 	client := dps.NewAPIClient(conn)
