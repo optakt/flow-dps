@@ -23,6 +23,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
@@ -66,7 +67,7 @@ func run() int {
 	)
 
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
-	pflag.Uint64VarP(&flagCache, "cache", "e", 1e9, "maximum cache size for register reads in bytes")
+	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
 	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowTestnet.String(), "chain ID for Flow network core contracts")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")

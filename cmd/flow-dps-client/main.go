@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
@@ -59,7 +60,7 @@ func run() int {
 	)
 
 	pflag.StringVarP(&flagAPI, "api", "a", "", "host for GRPC API server")
-	pflag.Uint64VarP(&flagCache, "cache", "e", 1e9, "maximum cache size for register reads in bytes")
+	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
 	pflag.Uint64VarP(&flagHeight, "height", "h", 0, "block height to execute the script at")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagParams, "params", "p", "", "comma-separated list of Cadence parameters")

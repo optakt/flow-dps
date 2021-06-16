@@ -17,6 +17,7 @@ package invoker
 import (
 	"fmt"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/dgraph-io/ristretto"
 	"github.com/rs/zerolog"
 
@@ -44,7 +45,7 @@ func New(index index.Reader, options ...func(*Config)) (*Invoker, error) {
 
 	// Initialize the invoker configuration with conservative default values.
 	cfg := Config{
-		CacheSize: 1e8, // ~100 MB default size
+		CacheSize: uint64(100 * datasize.MB), // ~100 MB default size
 	}
 
 	// Apply the option parameters provided by consumer.
