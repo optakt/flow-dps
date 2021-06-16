@@ -67,7 +67,12 @@ jobs:
       - name: Verify compilation
         run: CGO_ENABLED=0 go build ./...
 
-      # This check runs all test with verbose output and ensures that all of the
-      # tests pass successfully.
+      # This check runs all unit tests with verbose output and ensures that all
+      # of the tests pass successfully.
       - name: Verify unit tests
         run: go test -v ./...
+
+      # This check runs all integration tests with verbose output and ensures
+      # that they pass successfully.
+      - name: Verify integration tests
+        run: go test -v -tags integration ./...
