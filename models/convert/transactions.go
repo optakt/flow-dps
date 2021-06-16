@@ -77,8 +77,8 @@ func EventsToTransactions(ee []flow.Event, withdrawal string) (map[string]*objec
 				Index: uint(event.EventIndex),
 			},
 			RelatedIDs: nil,
-			Type:       "TRANSFER",
-			Status:     "COMPLETED",
+			Type:       dps.OperationTransfer,
+			Status:     dps.StatusCompleted,
 			AccountID: identifier.Account{
 				Address: address.String(),
 			},
