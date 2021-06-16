@@ -20,12 +20,12 @@ Usage of flow-dps-client:
 Cadence parameters can be provided as a list of comma-separated `Type(Value)` pairs.
 Whenever raw bytes are represented,they should be given in hexadecimal format.
 
-Example: `-p "UFix64(123.456),Address(436164656E636521),Bytes(436164656E6365214675726576657)"`.
+`-p "UFix64(123.456),String(/storage/FlowTokenVault),Bytes(43F164656E636521467572AC76657)"`.
 
 ## Example
 
 The following executes a Cadence script by using state retrieved from the given GRPC API.
 
 ```sh
-./flow-dps-client -a "127.0.0.1:5005" -s "get_balance.cdc" -p "String(Flow),UFix64(10.0)"
+./flow-dps-client -a "127.0.0.1:5005" -s "get_balance.cdc" -p "Address(436164656E636521)"
 ```
