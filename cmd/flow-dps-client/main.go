@@ -109,7 +109,7 @@ func run() int {
 	var args []cadence.Value
 	params := strings.Split(flagParams, ",")
 	for _, param := range params {
-		arg, err := convert.ParseCadence(param)
+		arg, err := convert.ParseCadenceArgument(param)
 		if err != nil {
 			log.Error().Err(err).Msg("invalid Cadence value")
 			return failure

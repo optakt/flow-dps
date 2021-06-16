@@ -18,26 +18,23 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/onflow/cadence"
 )
 
-func ParseCadence(param string) (cadence.Value, error) {
+func ParseCadenceArgument(param string) (cadence.Value, error) {
 
 	// Cadence values should be provided in the form of Type(Value), so that we
 	// can unambiguously determine the type.
-	parts := strings.Split(param, "(")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid format, want Type(Value)")
+	re := regexp.MustCompile(`(\S+)\((\S+)\)`)
+	parts := re.FindStringSubmatch(param)
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid parameter format (%s)", param)
 	}
-	typ := parts[0]
-	val := parts[1]
-	if val[len(val)-1] != ')' {
-		return nil, fmt.Errorf("invalid format, want Type(Value)")
-	}
-	val = strings.TrimSuffix(val, ")")
+	typ := parts[1]
+	val := parts[2]
 
 	// Now, we can switch on the type and parse accordingly.
 	switch typ {
