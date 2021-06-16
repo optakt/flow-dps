@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -28,6 +29,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 
 	"github.com/optakt/flow-dps/api/dps"
+	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 )
 
@@ -58,7 +60,7 @@ func run() int {
 	pflag.StringVarP(&flagAPI, "api", "a", "", "host for GRPC API server")
 	pflag.Uint64VarP(&flagHeight, "height", "h", 0, "block height to execute the script at")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagParams, "params", "p", "", "path to file with JSON-encoded list of Cadence arguments")
+	pflag.StringVarP(&flagParams, "params", "p", "", "comma-separated list of Cadence parameters")
 	pflag.StringVarP(&flagScript, "script", "s", "script.cdc", "path to file with Cadence script")
 
 	pflag.Parse()
@@ -105,6 +107,15 @@ func run() int {
 
 	// Decode the arguments
 	var args []cadence.Value
+	params := strings.Split(flagParams, ",")
+	for _, param := range params {
+		arg, err := convert.ParseCadence(param)
+		if err != nil {
+			log.Error().Err(err).Msg("invalid Cadence value")
+			return failure
+		}
+		args = append(args, arg)
+	}
 	if flagParams != "" {
 		data, err := os.ReadFile(flagParams)
 		if err != nil {

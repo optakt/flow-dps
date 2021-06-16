@@ -13,7 +13,7 @@ Usage of flow-dps-client:
   -a, --api string      host for GRPC API server (default "127.0.0.1:5005")
   -h, --height uint     block height to execute the script at
   -l, --log string      log output level (default "info")
-  -p, --params string   JSON encoded Cadence parameters for script execution
+  -p, --params string   comma-separated list of Cadence parameters
   -s, --script string   path to Cadence script file (default "script.cdc")
 ```
 
