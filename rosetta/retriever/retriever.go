@@ -246,10 +246,6 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		return nil, err
 	}
 
-	for _, tr := range transactions {
-		fmt.Printf("%+#v\n", tr)
-	}
-
 	transaction, found := transactions[id.Hash]
 	if !found {
 		return nil, fmt.Errorf("no transaction found with id %q at block %s", id, block.Hash)
