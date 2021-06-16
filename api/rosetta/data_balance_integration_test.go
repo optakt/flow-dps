@@ -534,38 +534,73 @@ func TestBalanceErrors(t *testing.T) {
 	}
 }
 
-// TestGetBalanceMalformedJSON tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
-func TestGetBalanceMalformedJSON(t *testing.T) {
+// TestMalformedBalanceRequest tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
+func TestMalformedBalanceRequest(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	// TODO: content type test case?
+	const (
+		wrongFieldType = `{
+			"network_identifier": {
+				"blockchain": "flow",
+				"network": 99
+			}
+		}`
+
+		unclosedBracket = `{
+			"network_identifier": {
+				"blockchain" : "flow",
+				"network" : "flow-testnet"
+			},
+			"block_identifier" : {
+				"index" : 13,
+				"hash" : "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+			},
+			"account_identifier" : {
+				"address" : "754aed9de6197641"
+			},
+			"currencies" : [
+				{ "symbol" : "FLOW" , "decimals" : 8 }
+			]`
+
+		validJSON = `{
+			"network_identifier": {
+				"blockchain" : "flow",
+				"network" : "flow-testnet"
+			},
+			"block_identifier" : {
+				"index" : 13,
+				"hash" : "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+			},
+			"account_identifier" : {
+				"address" : "754aed9de6197641"
+			},
+			"currencies" : [
+				{ "symbol" : "FLOW" , "decimals" : 8 }
+			]
+		}`
+	)
+
 	tests := []struct {
-		name string
-
-		request []byte
-
-		wantStatusCode   int
-		wantRosettaError meta.ErrorDefinition
+		name     string
+		payload  []byte
+		mimeType string
 	}{
 		{
-			name:    "wrong field type",
-			request: []byte(`{ "network_identifier": { "blockchain": "flow", "network": 99} }`),
-
-			wantStatusCode:   http.StatusBadRequest,
-			wantRosettaError: configuration.ErrorInvalidFormat,
+			name:     "wrong field type",
+			payload:  []byte(wrongFieldType),
+			mimeType: echo.MIMEApplicationJSON,
 		},
 		{
-			name: "unclosed bracket",
-			request: []byte(`{
-				"network_identifier": {"blockchain":"flow","network":"flow-testnet"},
-				"block_identifier":{"index":13,"hash":"af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"},
-				"account_identifier":{"address":"754aed9de6197641"},
-				"currencies":[{"symbol":"FLOW","decimals":8}]`),
-
-			wantStatusCode:   http.StatusBadRequest,
-			wantRosettaError: configuration.ErrorInvalidFormat,
+			name:     "unclosed bracket",
+			payload:  []byte(unclosedBracket),
+			mimeType: echo.MIMEApplicationJSON,
+		},
+		{
+			name:     "valid payload with no mime type set",
+			payload:  []byte(validJSON),
+			mimeType: "",
 		},
 	}
 
@@ -577,8 +612,8 @@ func TestGetBalanceMalformedJSON(t *testing.T) {
 			t.Parallel()
 
 			// create request
-			req := httptest.NewRequest(http.MethodPost, "/account/balance", bytes.NewReader(test.request))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			req := httptest.NewRequest(http.MethodPost, "/account/balance", bytes.NewReader(test.payload))
+			req.Header.Set(echo.HeaderContentType, test.mimeType)
 
 			rec := httptest.NewRecorder()
 
@@ -586,16 +621,19 @@ func TestGetBalanceMalformedJSON(t *testing.T) {
 
 			// execute the request
 			err := api.Balance(ctx)
+
+			// verify the errors
+
 			assert.Error(t, err)
 
 			echoErr, ok := err.(*echo.HTTPError)
 			require.True(t, ok)
 
-			assert.Equal(t, test.wantStatusCode, echoErr.Code)
+			assert.Equal(t, http.StatusBadRequest, echoErr.Code)
 			gotErr, ok := echoErr.Message.(rosetta.Error)
 			require.True(t, ok)
 
-			assert.Equal(t, test.wantRosettaError, gotErr.ErrorDefinition)
+			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
 		})
 	}
 }
