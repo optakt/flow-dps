@@ -17,6 +17,8 @@ package invoker
 import (
 	"fmt"
 
+	"github.com/c2h5oh/datasize"
+	"github.com/dgraph-io/ristretto"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/cadence"
@@ -36,21 +38,44 @@ import (
 type Invoker struct {
 	index index.Reader
 	vm    *fvm.VirtualMachine
-	reads map[uint64]delta.GetRegisterFunc
+	cache *ristretto.Cache
 }
 
-func New(index index.Reader) *Invoker {
+func New(index index.Reader, options ...func(*Config)) (*Invoker, error) {
 
+	// Initialize the invoker configuration with conservative default values.
+	cfg := Config{
+		CacheSize: uint64(100 * datasize.MB), // ~100 MB default size
+	}
+
+	// Apply the option parameters provided by consumer.
+	for _, option := range options {
+		option(&cfg)
+	}
+
+	// Initialize interpreter and virtual machine for execution.
 	rt := fvm.NewInterpreterRuntime()
 	vm := fvm.NewVirtualMachine(rt)
+
+	// Initialize the Ristretto cache with the size limit. Ristretto recommends
+	// keeping ten times as many counters as items in the cache when full.
+	// Assuming an average item size of 1 kilobyte, this is what we get.
+	cache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: int64(cfg.CacheSize) / 1000 * 10,
+		MaxCost:     int64(cfg.CacheSize),
+		BufferItems: 64,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize cache: %w", err)
+	}
 
 	i := Invoker{
 		index: index,
 		vm:    vm,
-		reads: make(map[uint64]delta.GetRegisterFunc),
+		cache: cache,
 	}
 
-	return &i
+	return &i, nil
 }
 
 // TODO: Find a way to batch up register requests for Cadence execution so we
@@ -79,12 +104,11 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	// that parameters related to the block are available from within the script
 	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
 
-	// get the read function, if it was already initialized, to use the cache
-	read, ok := i.reads[height]
-	if !ok {
-		read = readRegister(i.index, height)
-		i.reads[height] = read
-	}
+	// Initialize the read function. We use a shared cache between all heights
+	// here. It's a smart cache, which means that items that are accessed often
+	// are more likely to be kept, regardless of height. This allows us to put
+	// an upper bound on total cache size while using it for all heights.
+	read := readRegister(i.index, i.cache, height)
 
 	// we initialize the view of the execution state on top of our ledger by
 	// using the read function at a specific commit
