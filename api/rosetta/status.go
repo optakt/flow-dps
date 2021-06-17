@@ -31,7 +31,7 @@ type StatusRequest struct {
 type StatusResponse struct {
 	CurrentBlockID        identifier.Block `json:"current_block_identifier"`
 	CurrentBlockTimestamp int64            `json:"current_block_timestamp"`
-	OldestBlockIdentifier identifier.Block `json:"oldest_block_identifier"`
+	OldestBlockID         identifier.Block `json:"oldest_block_identifier"`
 }
 
 func (d *Data) Status(ctx echo.Context) error {
@@ -73,7 +73,7 @@ func (d *Data) Status(ctx echo.Context) error {
 	res := StatusResponse{
 		CurrentBlockID:        current,
 		CurrentBlockTimestamp: timestamp.UnixNano() / 1_000_000,
-		OldestBlockIdentifier: oldest,
+		OldestBlockID:         oldest,
 	}
 
 	return ctx.JSON(http.StatusOK, res)
