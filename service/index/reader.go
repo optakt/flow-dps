@@ -134,3 +134,17 @@ func (r *Reader) Height(blockID flow.Identifier) (uint64, error) {
 	err := r.db.View(storage.RetrieveHeight(blockID, &height))
 	return height, err
 }
+
+// Transaction returns the transaction with the given ID.
+func (r *Reader) Transaction(transactionID flow.Identifier) (*flow.Transaction, error) {
+	var transaction flow.Transaction
+	err := r.db.View(storage.RetrieveTransaction(transactionID, &transaction))
+	return &transaction, err
+}
+
+// Transactions returns the transaction IDs within the block with the given ID.
+func (r *Reader) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
+	var transactions []flow.Identifier
+	err := r.db.View(storage.RetrieveTransactions(blockID, &transactions))
+	return transactions, err
+}

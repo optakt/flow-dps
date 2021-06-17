@@ -417,14 +417,65 @@ func TestIndex_Height(t *testing.T) {
 	})
 }
 
+func TestIndex_Transaction(t *testing.T) {
+	testTransactionID := flow.Identifier{0x98, 0x82, 0x78, 0x08, 0xc6, 0x1a, 0xf6, 0xb2, 0x9c, 0x7f, 0x16, 0x07, 0x1e, 0x69, 0xa9, 0xbb, 0xfb, 0xa4, 0x0d, 0x0f, 0x96, 0xb5, 0x72, 0xce, 0x23, 0x99, 0x4b, 0x3a, 0xa6, 0x05, 0xc7, 0xc2}
+	testTransaction := flow.Transaction{
+		TransactionBody: flow.TransactionBody{
+			ReferenceBlockID: flow.Identifier{0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a},
+			Payer:            flow.Address{0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a},
+		},
+	}
+	testTransactionB, err := cbor.Marshal(testTransaction)
+	require.NoError(t, err)
+
+	t.Run("nominal case", func(t *testing.T) {
+		index := Index{
+			client: &apiMock{
+				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
+					assert.Equal(t, testTransactionID[:], in.TransactionID)
+
+					return &GetTransactionResponse{
+						TransactionID:   testTransactionID[:],
+						TransactionData: testTransactionB,
+					}, nil
+				},
+			},
+		}
+
+		got, err := index.Transaction(testTransactionID)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, &testTransaction, got)
+		}
+	})
+
+	t.Run("handles index failures", func(t *testing.T) {
+		index := Index{
+			client: &apiMock{
+				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
+					assert.Equal(t, testTransactionID[:], in.TransactionID)
+
+					return nil, mocks.DummyError
+				},
+			},
+		}
+
+		_, err := index.Transaction(testTransactionID)
+
+		assert.Error(t, err)
+	})
+}
+
 type apiMock struct {
-	GetFirstFunc     func(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
-	GetLastFunc      func(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
-	GetHeaderFunc    func(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
-	GetCommitFunc    func(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
-	GetEventsFunc    func(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
-	GetRegistersFunc func(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
-	GetHeightFunc    func(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error)
+	GetFirstFunc        func(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
+	GetLastFunc         func(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
+	GetHeaderFunc       func(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
+	GetCommitFunc       func(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
+	GetEventsFunc       func(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
+	GetRegistersFunc    func(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
+	GetHeightFunc       func(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error)
+	GetTransactionFunc  func(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
+	GetTransactionsFunc func(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, error)
 }
 
 func (a *apiMock) GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error) {
@@ -453,4 +504,12 @@ func (a *apiMock) GetRegisters(ctx context.Context, in *GetRegistersRequest, opt
 
 func (a *apiMock) GetHeight(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error) {
 	return a.GetHeightFunc(ctx, in, opts...)
+}
+
+func (a *apiMock) GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error) {
+	return a.GetTransactionFunc(ctx, in, opts...)
+}
+
+func (a *apiMock) GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, error) {
+	return a.GetTransactionsFunc(ctx, in, opts...)
 }

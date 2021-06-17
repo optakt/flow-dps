@@ -187,3 +187,50 @@ func (s *Server) GetHeight(_ context.Context, req *GetHeightRequest) (*GetHeight
 
 	return &res, nil
 }
+
+// GetTransaction implements the `GetTransaction` function of the generated GRPC
+// server.
+func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
+	transactionID := flow.HashToID(req.TransactionID)
+
+	transaction, err := s.index.Transaction(transactionID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
+	}
+
+	transactionData, err := cbor.Marshal(transaction)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode transaction: %w", err)
+	}
+
+	res := GetTransactionResponse{
+		TransactionID:   req.TransactionID,
+		TransactionData: transactionData,
+	}
+
+	return &res, nil
+}
+
+// GetTransactions implements the `GetTransactions` function of the generated GRPC
+// server.
+func (s *Server) GetTransactions(_ context.Context, req *GetTransactionsRequest) (*GetTransactionsResponse, error) {
+	var blockID flow.Identifier
+	copy(blockID[:], req.BlockID)
+
+	tt, err := s.index.Transactions(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
+	}
+
+	var transactions [][]byte
+	for _, t := range tt {
+		transactions = append(transactions, t[:])
+	}
+
+	res := GetTransactionsResponse{
+		BlockID:        req.BlockID,
+		TransactionIDs: transactions,
+	}
+
+	return &res, nil
+}

@@ -166,3 +166,48 @@ func (i *Index) Height(blockID flow.Identifier) (uint64, error) {
 
 	return res.Height, nil
 }
+
+// Transaction returns the transaction with the given ID.
+func (i *Index) Transaction(transactionID flow.Identifier) (*flow.Transaction, error) {
+
+	req := GetTransactionRequest{
+		TransactionID: transactionID[:],
+	}
+	res, err := i.client.GetTransaction(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get transaction: %w", err)
+	}
+
+	var transaction flow.Transaction
+	err = cbor.Unmarshal(res.TransactionData, &transaction)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode transaction: %w", err)
+	}
+
+	return &transaction, nil
+}
+
+// Transactions returns the transaction IDs within the given block.
+func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
+
+	req := GetTransactionsRequest{
+		BlockID: blockID[:],
+	}
+	res, err := i.client.GetTransactions(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get transaction: %w", err)
+	}
+
+	var transactions []flow.Identifier
+	for _, id := range res.TransactionIDs {
+		var transactionID flow.Identifier
+		err = cbor.Unmarshal(id, &transactionID)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode transaction ID: %w", err)
+		}
+
+		transactions = append(transactions, transactionID)
+	}
+
+	return transactions, nil
+}

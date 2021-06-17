@@ -93,3 +93,33 @@ func (d *Disk) Events(height uint64) ([]flow.Event, error) {
 
 	return events, nil
 }
+
+func (d *Disk) Transactions(height uint64) ([]flow.Transaction, error) {
+	var blockID flow.Identifier
+	err := operation.LookupBlockHeight(height, &blockID)(d.db.NewTransaction(false))
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, dps.ErrFinished
+	}
+
+	var tt []flow.TransactionResult
+	err = operation.LookupTransactionResultsByBlockID(blockID, &tt)(d.db.NewTransaction(false))
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, dps.ErrFinished
+	}
+
+	// FIXME: It seems that there's no way to get the rest of the transaction info from the chain, but the missing info
+	//        is available to us in the mapper so it shouldn't be a problem.
+	//        https://github.com/optakt/flow-dps/issues/170#issuecomment-861345995
+	var transactions []flow.Transaction
+	for _, t := range tt {
+		var tb flow.TransactionBody
+		err := operation.RetrieveTransaction(t.TransactionID, &tb)(d.db.NewTransaction(false))
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, dps.ErrFinished
+		}
+
+		transactions = append(transactions, flow.Transaction{TransactionBody: tb})
+	}
+
+	return transactions, nil
+}

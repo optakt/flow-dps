@@ -27,4 +27,6 @@ type Reader interface {
 	Events(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error)
 	Height(blockID flow.Identifier) (uint64, error)
+	Transaction(transactionID flow.Identifier) (*flow.Transaction, error)
+	Transactions(blockID flow.Identifier) ([]flow.Identifier, error)
 }

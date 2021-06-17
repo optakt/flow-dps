@@ -45,7 +45,7 @@ func TestServer_GetFirst(t *testing.T) {
 		testHeight = uint64(128)
 	)
 
-	vectors := []struct {
+	tests := []struct {
 		description string
 
 		mockHeight uint64
@@ -79,24 +79,24 @@ func TestServer_GetFirst(t *testing.T) {
 		},
 	}
 
-	for _, vector := range vectors {
-		vector := vector
-		t.Run(vector.description, func(t *testing.T) {
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
 			s := Server{index: index}
 
 			index.FirstFunc = func() (uint64, error) {
-				return vector.mockHeight, vector.mockErr
+				return test.mockHeight, test.mockErr
 			}
 
 			req := &GetFirstRequest{}
 
 			gotRes, gotErr := s.GetFirst(context.Background(), req)
-			vector.checkErr(t, gotErr)
+			test.checkErr(t, gotErr)
 			if gotErr == nil {
-				assert.Equal(t, vector.wantRes, gotRes)
+				assert.Equal(t, test.wantRes, gotRes)
 			}
 		})
 	}
@@ -108,7 +108,7 @@ func TestServer_GetLast(t *testing.T) {
 		testHeight = uint64(128)
 	)
 
-	vectors := []struct {
+	tests := []struct {
 		description string
 
 		mockHeight uint64
@@ -142,24 +142,24 @@ func TestServer_GetLast(t *testing.T) {
 		},
 	}
 
-	for _, vector := range vectors {
-		vector := vector
-		t.Run(vector.description, func(t *testing.T) {
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
 			s := Server{index: index}
 
 			index.LastFunc = func() (uint64, error) {
-				return vector.mockHeight, vector.mockErr
+				return test.mockHeight, test.mockErr
 			}
 
 			req := &GetLastRequest{}
 
 			gotRes, gotErr := s.GetLast(context.Background(), req)
-			vector.checkErr(t, gotErr)
+			test.checkErr(t, gotErr)
 			if gotErr == nil {
-				assert.Equal(t, vector.wantRes, gotRes)
+				assert.Equal(t, test.wantRes, gotRes)
 			}
 		})
 	}
@@ -174,7 +174,7 @@ func TestServer_GetHeader(t *testing.T) {
 		testData, _  = testCodec.Marshal(testHeader)
 	)
 
-	vectors := []struct {
+	tests := []struct {
 		description string
 
 		reqHeight uint64
@@ -218,9 +218,9 @@ func TestServer_GetHeader(t *testing.T) {
 		},
 	}
 
-	for _, vector := range vectors {
-		vector := vector
-		t.Run(vector.description, func(t *testing.T) {
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -232,18 +232,18 @@ func TestServer_GetHeader(t *testing.T) {
 			var gotHeight uint64
 			index.HeaderFunc = func(height uint64) (*flow.Header, error) {
 				gotHeight = height
-				return vector.mockHeader, vector.mockErr
+				return test.mockHeader, test.mockErr
 			}
 
 			req := &GetHeaderRequest{
-				Height: vector.reqHeight,
+				Height: test.reqHeight,
 			}
 			gotRes, gotErr := s.GetHeader(context.Background(), req)
 
-			vector.checkErr(t, gotErr)
-			assert.Equal(t, vector.wantHeight, gotHeight)
+			test.checkErr(t, gotErr)
+			assert.Equal(t, test.wantHeight, gotHeight)
 			if gotErr == nil {
-				assert.Equal(t, vector.wantRes, gotRes)
+				assert.Equal(t, test.wantRes, gotRes)
 			}
 		})
 	}
@@ -256,7 +256,7 @@ func TestServer_GetCommit(t *testing.T) {
 		testCommit = flow.StateCommitment{0x1, 0x2}
 	)
 
-	vectors := []struct {
+	tests := []struct {
 		description string
 
 		reqHeight uint64
@@ -300,9 +300,9 @@ func TestServer_GetCommit(t *testing.T) {
 		},
 	}
 
-	for _, vector := range vectors {
-		vector := vector
-		t.Run(vector.description, func(t *testing.T) {
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -311,18 +311,18 @@ func TestServer_GetCommit(t *testing.T) {
 			var gotHeight uint64
 			index.CommitFunc = func(height uint64) (flow.StateCommitment, error) {
 				gotHeight = height
-				return vector.mockCommit, vector.mockErr
+				return test.mockCommit, test.mockErr
 			}
 
 			req := &GetCommitRequest{
-				Height: vector.reqHeight,
+				Height: test.reqHeight,
 			}
 			gotRes, gotErr := s.GetCommit(context.Background(), req)
 
-			vector.checkErr(t, gotErr)
-			assert.Equal(t, vector.wantHeight, gotHeight)
+			test.checkErr(t, gotErr)
+			assert.Equal(t, test.wantHeight, gotHeight)
 			if gotErr == nil {
-				assert.Equal(t, vector.wantRes, gotRes)
+				assert.Equal(t, test.wantRes, gotRes)
 			}
 		})
 	}
@@ -344,7 +344,7 @@ func TestServer_GetEvents(t *testing.T) {
 		}
 	)
 
-	vectors := []struct {
+	tests := []struct {
 		description string
 
 		reqHeight uint64
@@ -395,9 +395,9 @@ func TestServer_GetEvents(t *testing.T) {
 		},
 	}
 
-	for _, vector := range vectors {
-		vector := vector
-		t.Run(vector.description, func(t *testing.T) {
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -411,20 +411,20 @@ func TestServer_GetEvents(t *testing.T) {
 			index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 				gotHeight = height
 				gotTypes = types
-				return vector.mockEvents, vector.mockErr
+				return test.mockEvents, test.mockErr
 			}
 
 			req := &GetEventsRequest{
-				Height: vector.reqHeight,
-				Types:  convert.TypesToStrings(vector.reqTypes),
+				Height: test.reqHeight,
+				Types:  convert.TypesToStrings(test.reqTypes),
 			}
 			gotRes, gotErr := s.GetEvents(context.Background(), req)
 
-			vector.checkErr(t, gotErr)
-			assert.Equal(t, vector.wantHeight, gotHeight)
-			assert.Equal(t, vector.wantTypes, gotTypes)
+			test.checkErr(t, gotErr)
+			assert.Equal(t, test.wantHeight, gotHeight)
+			assert.Equal(t, test.wantTypes, gotTypes)
 			if gotErr == nil {
-				assert.Equal(t, vector.wantRes, gotRes)
+				assert.Equal(t, test.wantRes, gotRes)
 			}
 		})
 	}
@@ -444,7 +444,7 @@ func TestServer_GetRegisters(t *testing.T) {
 		}
 	)
 
-	vectors := []struct {
+	tests := []struct {
 		description string
 
 		reqHeight uint64
@@ -495,9 +495,9 @@ func TestServer_GetRegisters(t *testing.T) {
 		},
 	}
 
-	for _, vector := range vectors {
-		vector := vector
-		t.Run(vector.description, func(t *testing.T) {
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -508,22 +508,22 @@ func TestServer_GetRegisters(t *testing.T) {
 			index.RegistersFunc = func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 				gotHeight = height
 				gotPaths = paths
-				return vector.mockValues, vector.mockErr
+				return test.mockValues, test.mockErr
 			}
 
 			req := &GetRegistersRequest{
-				Height: vector.reqHeight,
-				Paths:  convert.PathsToBytes(vector.reqPaths),
+				Height: test.reqHeight,
+				Paths:  convert.PathsToBytes(test.reqPaths),
 			}
 			gotRes, gotErr := s.GetRegisters(context.Background(), req)
 
-			vector.checkErr(t, gotErr)
-			assert.Equal(t, vector.wantHeight, gotHeight)
-			assert.Equal(t, vector.wantPaths, gotPaths)
+			test.checkErr(t, gotErr)
+			assert.Equal(t, test.wantHeight, gotHeight)
+			assert.Equal(t, test.wantPaths, gotPaths)
 			if gotErr == nil {
-				assert.Equal(t, vector.wantRes.Height, gotRes.Height)
-				assert.EqualValues(t, vector.wantRes.Paths, gotRes.Paths)
-				assert.EqualValues(t, vector.wantRes.Values, gotRes.Values)
+				assert.Equal(t, test.wantRes.Height, gotRes.Height)
+				assert.EqualValues(t, test.wantRes.Paths, gotRes.Paths)
+				assert.EqualValues(t, test.wantRes.Values, gotRes.Values)
 			}
 		})
 	}
@@ -536,7 +536,7 @@ func TestServer_GetHeight(t *testing.T) {
 		testBlockID, _ = flow.HexStringToIdentifier("98827808c61af6b29c7f16071e69a9bbfba40d0f96b572ce23994b3aa605c7c2")
 	)
 
-	vectors := []struct {
+	tests := []struct {
 		description string
 
 		reqBlockID flow.Identifier
@@ -573,16 +573,16 @@ func TestServer_GetHeight(t *testing.T) {
 		},
 	}
 
-	for _, vector := range vectors {
-		vector := vector
-		t.Run(vector.description, func(t *testing.T) {
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
 			s := Server{index: index}
 
 			index.HeightFunc = func(blockID flow.Identifier) (uint64, error) {
-				return vector.mockHeight, vector.mockErr
+				return test.mockHeight, test.mockErr
 			}
 
 			req := &GetHeightRequest{
@@ -590,10 +590,158 @@ func TestServer_GetHeight(t *testing.T) {
 			}
 			gotRes, gotErr := s.GetHeight(context.Background(), req)
 
-			vector.checkErr(t, gotErr)
+			test.checkErr(t, gotErr)
 			if gotErr == nil {
-				assert.Equal(t, vector.wantHeight, gotRes.Height)
-				assert.Equal(t, vector.wantBlockID[:], gotRes.BlockID)
+				assert.Equal(t, test.wantHeight, gotRes.Height)
+				assert.Equal(t, test.wantBlockID[:], gotRes.BlockID)
+			}
+		})
+	}
+}
+
+func TestServer_GetTransaction(t *testing.T) {
+
+	testTransactionID := flow.Identifier{0x98, 0x82, 0x78, 0x08, 0xc6, 0x1a, 0xf6, 0xb2, 0x9c, 0x7f, 0x16, 0x07, 0x1e, 0x69, 0xa9, 0xbb, 0xfb, 0xa4, 0x0d, 0x0f, 0x96, 0xb5, 0x72, 0xce, 0x23, 0x99, 0x4b, 0x3a, 0xa6, 0x05, 0xc7, 0xc2}
+	testTransaction := flow.Transaction{
+		TransactionBody: flow.TransactionBody{
+			ReferenceBlockID:   flow.Identifier{},
+			Script:             nil,
+			Arguments:          nil,
+			GasLimit:           0,
+			ProposalKey:        flow.ProposalKey{},
+			Payer:              flow.Address{},
+			Authorizers:        nil,
+			PayloadSignatures:  nil,
+			EnvelopeSignatures: nil,
+		},
+		Status:           0,
+		Events:           nil,
+		ComputationSpent: 0,
+		StartState:       flow.StateCommitment{},
+		EndState:         flow.StateCommitment{},
+	}
+
+	tests := []struct {
+		description string
+
+		reqTransactionID flow.Identifier
+
+		mockTransaction flow.Transaction
+		mockErr         error
+
+		wantTransaction flow.Transaction
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			description: "happy case",
+
+			reqTransactionID: testTransactionID,
+
+			mockTransaction: testTransaction,
+
+			wantTransaction: testTransaction,
+			checkErr:        assert.NoError,
+		},
+		{
+			description: "handles index failure",
+
+			reqTransactionID: testTransactionID,
+
+			mockErr: mocks.DummyError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
+			t.Parallel()
+
+			index := &mocks.Reader{}
+			s := Server{index: index}
+
+			index.TransactionFunc = func(transactionID flow.Identifier) (*flow.Transaction, error) {
+				return &test.mockTransaction, test.mockErr
+			}
+
+			req := &GetTransactionRequest{
+				TransactionID: testTransactionID[:],
+			}
+			gotRes, gotErr := s.GetTransaction(context.Background(), req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, gotRes.TransactionID, testTransactionID[:])
+				assert.NotEmpty(t, gotRes.TransactionData)
+			}
+		})
+	}
+}
+
+func TestServer_GetTransactions(t *testing.T) {
+
+	testBlockID := flow.Identifier{0x98, 0x82, 0x78, 0x08, 0xc6, 0x1a, 0xf6, 0xb2, 0x9c, 0x7f, 0x16, 0x07, 0x1e, 0x69, 0xa9, 0xbb, 0xfb, 0xa4, 0x0d, 0x0f, 0x96, 0xb5, 0x72, 0xce, 0x23, 0x99, 0x4b, 0x3a, 0xa6, 0x05, 0xc7, 0xc2}
+	testTransactionID1 := flow.Identifier{0x2a, 0x33, 0x55, 0xc2, 0x59, 0x92, 0xb0, 0xfb, 0xfc, 0x9f, 0x17, 0xd2, 0x78, 0xd2, 0xe9, 0x32, 0xbd, 0xc1, 0x1a, 0xad, 0x63, 0x59, 0x2f, 0xd1, 0xf1, 0xe5, 0x75, 0x71, 0x88, 0xee, 0x47, 0xbc}
+	testTransactionID2 := flow.Identifier{0xc9, 0xdc, 0x08, 0x94, 0xc7, 0xee, 0x97, 0x29, 0x95, 0xed, 0x97, 0xe9, 0x8b, 0x07, 0x57, 0xa6, 0x71, 0xde, 0x3a, 0x00, 0x2d, 0xd8, 0xf5, 0xc0, 0xde, 0xfe, 0xfa, 0xbd, 0x1e, 0x6d, 0x92, 0x3a}
+	testTransactionID3 := flow.Identifier{0x11, 0xb0, 0xd9, 0xdf, 0xdc, 0x37, 0xe2, 0x0b, 0x71, 0xf4, 0x56, 0x76, 0x10, 0x67, 0x8c, 0xf7, 0xf6, 0xbb, 0xbf, 0xd4, 0xd7, 0x31, 0x6b, 0x2a, 0xa5, 0xe4, 0x9f, 0x35, 0xca, 0x6b, 0xd5, 0x29}
+	testTransactions := []flow.Identifier{testTransactionID1, testTransactionID2, testTransactionID3}
+
+	tests := []struct {
+		description string
+
+		reqBlockID flow.Identifier
+
+		mockTransactions []flow.Identifier
+		mockErr          error
+
+		wantTransactions []flow.Identifier
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			description: "happy case",
+
+			reqBlockID: testBlockID,
+
+			mockTransactions: testTransactions,
+
+			wantTransactions: testTransactions,
+			checkErr:         assert.NoError,
+		},
+		{
+			description: "handles index failure",
+
+			reqBlockID: testBlockID,
+
+			mockErr: mocks.DummyError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.description, func(t *testing.T) {
+			t.Parallel()
+
+			index := &mocks.Reader{}
+			s := Server{index: index}
+
+			index.TransactionsFunc = func(blockID flow.Identifier) ([]flow.Identifier, error) {
+				return test.mockTransactions, test.mockErr
+			}
+
+			req := &GetTransactionsRequest{
+				BlockID: testBlockID[:],
+			}
+			gotRes, gotErr := s.GetTransactions(context.Background(), req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, gotRes.BlockID, testBlockID[:])
+				assert.Len(t, gotRes.TransactionIDs, 3)
 			}
 		})
 	}

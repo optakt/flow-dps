@@ -20,13 +20,15 @@ import (
 )
 
 type Writer struct {
-	FirstFunc    func(height uint64) error
-	LastFunc     func(height uint64) error
-	HeaderFunc   func(height uint64, header *flow.Header) error
-	CommitFunc   func(height uint64, commit flow.StateCommitment) error
-	EventsFunc   func(height uint64, events []flow.Event) error
-	PayloadsFunc func(height uint64, paths []ledger.Path, value []*ledger.Payload) error
-	HeightFunc   func(blockID flow.Identifier, height uint64) error
+	FirstFunc        func(height uint64) error
+	LastFunc         func(height uint64) error
+	HeaderFunc       func(height uint64, header *flow.Header) error
+	CommitFunc       func(height uint64, commit flow.StateCommitment) error
+	EventsFunc       func(height uint64, events []flow.Event) error
+	PayloadsFunc     func(height uint64, paths []ledger.Path, value []*ledger.Payload) error
+	HeightFunc       func(blockID flow.Identifier, height uint64) error
+	TransactionFunc  func(transaction flow.Transaction) error
+	TransactionsFunc func(blockID flow.Identifier, transactions []flow.Identifier) error
 }
 
 func (w *Writer) First(height uint64) error {
@@ -55,4 +57,12 @@ func (w *Writer) Payloads(height uint64, paths []ledger.Path, values []*ledger.P
 
 func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
 	return w.HeightFunc(blockID, height)
+}
+
+func (w *Writer) Transaction(transaction flow.Transaction) error {
+	return w.TransactionFunc(transaction)
+}
+
+func (w *Writer) Transactions(blockID flow.Identifier, transactions []flow.Identifier) error {
+	return w.TransactionsFunc(blockID, transactions)
 }

@@ -18,6 +18,8 @@ This document describes the internal components that the Flow Data Provisioning 
          5. [Events Index](#events-index)
          6. [Path Deltas Index](#path-deltas-index)
          7. [Height Index](#height-index)
+         8. [Transaction Index](#transaction-index)
+         9. [Transactions Index](#transactions-index)
 
 ## Chain
 
@@ -153,3 +155,27 @@ In this index, keys map the block IDs to their height.
 | **Example Value**  | `7`               | `45D66Q565F5DEDB[...]` |
 
 The value stored at that key is the **block height** of the referenced block ID.
+
+##### Transaction Index
+
+In this index, transactions are mapped by their IDs.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Transaction ID         |
+| **Example Value**  | `8`               | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **CBOR-encoded [flow.Transaction](https://pkg.go.dev/github.com/onflow/model/flow#Transaction)** with the referenced ID.
+
+##### Transactions Index
+
+In this index, block IDs are mapped to the IDs of the transaction within their block.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Block ID               |
+| **Example Value**  | `9`               | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/model/flow#Identifier)** for the transactions within the referenced block.

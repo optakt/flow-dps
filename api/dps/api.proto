@@ -24,6 +24,8 @@ service API {
   rpc GetEvents (GetEventsRequest) returns (GetEventsResponse) {}
   rpc GetRegisters (GetRegistersRequest) returns (GetRegistersResponse) {}
   rpc GetHeight (GetHeightRequest) returns (GetHeightResponse) {}
+  rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse) {}
+  rpc GetTransactions (GetTransactionsRequest) returns (GetTransactionsResponse) {}
 }
 
 message GetFirstRequest {
@@ -87,4 +89,22 @@ message GetHeightRequest {
 message GetHeightResponse {
   bytes blockID = 1;
   uint64 height = 2;
+}
+
+message GetTransactionRequest {
+  bytes transactionID = 1;
+}
+
+message GetTransactionResponse {
+  bytes transactionID = 1;
+  bytes transactionData = 2;
+}
+
+message GetTransactionsRequest {
+  bytes blockID = 1;
+}
+
+message GetTransactionsResponse {
+  bytes blockID = 1;
+  repeated bytes transactionIDs = 2;
 }

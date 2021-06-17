@@ -35,8 +35,10 @@ const (
 )
 
 var (
-	testCommit  = flow.StateCommitment{132, 131, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 19, 18, 17, 16, 15, 14, 13, 12, 11}
-	testBlockID = flow.Identifier{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
+	testCommit         = flow.StateCommitment{132, 131, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 19, 18, 17, 16, 15, 14, 13, 12, 11}
+	testBlockID        = flow.Identifier{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
+	testTransactionID1 = flow.Identifier{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+	testTransactionID2 = flow.Identifier{0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a}
 )
 
 func TestDisk_Root(t *testing.T) {
@@ -90,6 +92,19 @@ func TestDisk_Events(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDisk_Transactions(t *testing.T) {
+	db := populatedDB(t)
+	defer db.Close()
+	c := chain.FromDisk(db)
+
+	tt, err := c.Transactions(testHeight)
+	assert.NoError(t, err)
+	assert.Len(t, tt, 2)
+
+	_, err = c.Transactions(math.MaxUint64)
+	assert.Error(t, err)
+}
+
 func populatedDB(t *testing.T) *badger.DB {
 	t.Helper()
 
@@ -133,6 +148,38 @@ func populatedDB(t *testing.T) *badger.DB {
 			return err
 		}
 		err = operation.InsertEvent(testBlockID, events[1])(tx)
+		if err != nil {
+			return err
+		}
+
+		transactions := []*flow.TransactionBody{
+			{
+				ReferenceBlockID: testBlockID,
+				GasLimit:         42,
+				Payer:            flow.Address{0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12},
+			},
+			{
+				ReferenceBlockID: testBlockID,
+				GasLimit:         84,
+				Payer:            flow.Address{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+			},
+		}
+
+		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: testTransactionID1})(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: testTransactionID2})(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransaction(testTransactionID1, transactions[0])(tx)
+		if err != nil {
+			return err
+		}
+		err = operation.InsertTransaction(testTransactionID2, transactions[1])(tx)
 		if err != nil {
 			return err
 		}
