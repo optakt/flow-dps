@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -28,6 +29,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 
 	"github.com/optakt/flow-dps/api/dps"
+	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 )
 
@@ -58,7 +60,7 @@ func run() int {
 	pflag.StringVarP(&flagAPI, "api", "a", "", "host for GRPC API server")
 	pflag.Uint64VarP(&flagHeight, "height", "h", 0, "block height to execute the script at")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagParams, "params", "p", "", "path to file with JSON-encoded list of Cadence arguments")
+	pflag.StringVarP(&flagParams, "params", "p", "", "comma-separated list of Cadence parameters")
 	pflag.StringVarP(&flagScript, "script", "s", "script.cdc", "path to file with Cadence script")
 
 	pflag.Parse()
@@ -105,23 +107,14 @@ func run() int {
 
 	// Decode the arguments
 	var args []cadence.Value
-	if flagParams != "" {
-		data, err := os.ReadFile(flagParams)
+	params := strings.Split(flagParams, ",")
+	for _, param := range params {
+		arg, err := convert.ParseCadenceArgument(param)
 		if err != nil {
-			log.Error().Err(err).Msg("could not read parameters")
+			log.Error().Err(err).Msg("invalid Cadence value")
 			return failure
 		}
-		val, err := json.Decode(data)
-		if err != nil {
-			log.Error().Err(err).Msg("could not decode parameters")
-			return failure
-		}
-		array, ok := val.(cadence.Array)
-		if !ok {
-			log.Error().Str("type", fmt.Sprintf("%T", val)).Msg("invalid type for parameters")
-			return failure
-		}
-		args = array.Values
+		args = append(args, arg)
 	}
 
 	// Execute the script using remote lookup and read.
