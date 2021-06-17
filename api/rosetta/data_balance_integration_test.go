@@ -33,12 +33,58 @@ import (
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
+	"github.com/optakt/flow-dps/rosetta/converter"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
-func TestAPI_Balance(t *testing.T) {
+func setupDB(t *testing.T) *badger.DB {
+	t.Helper()
 
+	opts := badger.DefaultOptions("").
+		WithInMemory(true).
+		WithReadOnly(true).
+		WithLogger(nil)
+
+	db, err := badger.Open(opts)
+	require.NoError(t, err)
+
+	reader := hex.NewDecoder(strings.NewReader(snapshots.Rosetta))
+	dict, _ := hex.DecodeString(dictionaries.Payload)
+
+	decompressor, err := zstd.NewReader(reader,
+		zstd.WithDecoderDicts(dict),
+	)
+	require.NoError(t, err)
+
+	err = db.Load(decompressor, runtime.GOMAXPROCS(0))
+	require.NoError(t, err)
+
+	return db
+}
+
+func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
+	t.Helper()
+
+	index := index.NewReader(db)
+
+	params := dps.FlowParams[dps.FlowTestnet]
+	config := configuration.New(params.ChainID)
+	validate := validator.New(params, index)
+	generate := scripts.NewGenerator(params)
+	invoke, err := invoker.New(index)
+	require.NoError(t, err)
+
+	convert, err := converter.New(generate)
+	require.NoError(t, err)
+
+	retrieve := retriever.New(params, index, validate, generate, invoke, convert)
+	controller := rosetta.NewData(config, retrieve)
+
+	return controller
+}
+
+func TestAPI_Balance(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
