@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package convert
+package converter
 
 import (
 	"testing"
@@ -24,13 +24,68 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/testing/mocks"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-func TestEventsToTransactions(t *testing.T) {
+func TestNew(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		generatorMock := &mocks.Generator{
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "deposit", nil
+			},
+			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "withdrawal", nil
+			},
+		}
+
+		cvt, err := New(generatorMock)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, cvt.deposit, flow.EventType("deposit"))
+			assert.Equal(t, cvt.withdrawal, flow.EventType("withdrawal"))
+		}
+	})
+
+	t.Run("handles generator failure for deposit event type", func(t *testing.T) {
+		generatorMock := &mocks.Generator{
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "", mocks.DummyError
+			},
+		}
+
+		cvt, err := New(generatorMock)
+
+		assert.Error(t, err)
+		assert.Nil(t, cvt)
+	})
+
+	t.Run("handles generator failure for withdrawal event type", func(t *testing.T) {
+		generatorMock := &mocks.Generator{
+			TokensDepositedFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "deposit", nil
+			},
+			TokensWithdrawnFunc: func(symbol string) (string, error) {
+				assert.Equal(t, dps.FlowSymbol, symbol)
+				return "", mocks.DummyError
+			},
+		}
+
+		cvt, err := New(generatorMock)
+
+		assert.Error(t, err)
+		assert.Nil(t, cvt)
+	})
+}
+
+func TestConverter_EventToOperation(t *testing.T) {
 	depositType := &cadence.EventType{
 		Location:            utils.TestLocation,
 		QualifiedIdentifier: "deposit",
@@ -75,13 +130,10 @@ func TestEventsToTransactions(t *testing.T) {
 	).WithType(withdrawalType)
 	withdrawalEventPayload := json.MustEncode(withdrawalEvent)
 
-	testDepositOp1 := object.Operation{
+	testDepositOp := object.Operation{
 		ID: identifier.Operation{
 			Index: 0,
 		},
-		RelatedIDs: []identifier.Operation{
-			{Index: 1},
-		},
 		Type:   dps.OperationTransfer,
 		Status: dps.StatusCompleted,
 		AccountID: identifier.Account{
@@ -95,53 +147,10 @@ func TestEventsToTransactions(t *testing.T) {
 			},
 		},
 	}
-	testWithdrawalOp1 := object.Operation{
+	testWithdrawalOp := object.Operation{
 		ID: identifier.Operation{
 			Index: 1,
 		},
-		RelatedIDs: []identifier.Operation{
-			{Index: 0},
-		},
-		Type:   dps.OperationTransfer,
-		Status: dps.StatusCompleted,
-		AccountID: identifier.Account{
-			Address: "0203040506070809",
-		},
-		Amount: object.Amount{
-			Value: "-42",
-			Currency: identifier.Currency{
-				Symbol:   dps.FlowSymbol,
-				Decimals: dps.FlowDecimals,
-			},
-		},
-	}
-	testDepositOp2 := object.Operation{
-		ID: identifier.Operation{
-			Index: 2,
-		},
-		RelatedIDs: []identifier.Operation{
-			{Index: 3},
-		},
-		Type:   dps.OperationTransfer,
-		Status: dps.StatusCompleted,
-		AccountID: identifier.Account{
-			Address: "0102030405060708",
-		},
-		Amount: object.Amount{
-			Value: "42",
-			Currency: identifier.Currency{
-				Symbol:   dps.FlowSymbol,
-				Decimals: dps.FlowDecimals,
-			},
-		},
-	}
-	testWithdrawalOp2 := object.Operation{
-		ID: identifier.Operation{
-			Index: 3,
-		},
-		RelatedIDs: []identifier.Operation{
-			{Index: 2},
-		},
 		Type:   dps.OperationTransfer,
 		Status: dps.StatusCompleted,
 		AccountID: identifier.Account{
@@ -156,30 +165,8 @@ func TestEventsToTransactions(t *testing.T) {
 		},
 	}
 
-	id1, err := flow.HexStringToIdentifier("a4c4194eae1a2dd0de4f4d51a884db4255bf265a40ddd98477a1d60ef45909ec")
+	id, err := flow.HexStringToIdentifier("a4c4194eae1a2dd0de4f4d51a884db4255bf265a40ddd98477a1d60ef45909ec")
 	require.NoError(t, err)
-
-	id2, err := flow.HexStringToIdentifier("e956563a78d74f927ccf1e81b4c3a012e691e9c30393bcfdb8b3db5060d4075b")
-	require.NoError(t, err)
-
-	testTransaction1 := &object.Transaction{
-		ID: identifier.Transaction{
-			Hash: id1.String(),
-		},
-		Operations: []object.Operation{
-			testDepositOp1,
-			testWithdrawalOp1,
-		},
-	}
-	testTransaction2 := &object.Transaction{
-		ID: identifier.Transaction{
-			Hash: id2.String(),
-		},
-		Operations: []object.Operation{
-			testDepositOp2,
-			testWithdrawalOp2,
-		},
-	}
 
 	threeFieldsType := &cadence.EventType{
 		Location:            utils.TestLocation,
@@ -255,93 +242,85 @@ func TestEventsToTransactions(t *testing.T) {
 	tests := []struct {
 		description string
 
-		events []flow.Event
+		event flow.Event
 
-		wantTransactions []*object.Transaction
-		wantErr          assert.ErrorAssertionFunc
+		wantOperation *object.Operation
+		wantRelevant  assert.BoolAssertionFunc
+		wantErr       assert.ErrorAssertionFunc
 	}{
 		{
-			description: "nominal case with one single transaction",
+			description: "nominal case with deposit event",
 
-			events: []flow.Event{{
-				TransactionID: id1,
+			event: flow.Event{
+				TransactionID: id,
 				Type:          "deposit",
 				Payload:       depositEventPayload,
 				EventIndex:    0,
-			}, {
-				TransactionID: id1,
+			},
+
+			wantErr:       assert.NoError,
+			wantRelevant:  assert.True,
+			wantOperation: &testDepositOp,
+		},
+		{
+			description: "nominal case with withdrawal event",
+
+			event: flow.Event{
+				TransactionID: id,
 				Type:          "withdrawal",
 				Payload:       withdrawalEventPayload,
 				EventIndex:    1,
-			}},
-
-			wantErr: assert.NoError,
-			wantTransactions: []*object.Transaction{
-				testTransaction1,
 			},
+
+			wantErr:       assert.NoError,
+			wantRelevant:  assert.True,
+			wantOperation: &testWithdrawalOp,
 		},
 		{
-			description: "nominal case with multiple transactions",
+			description: "irrelevant event",
 
-			events: []flow.Event{
-				{
-					TransactionID: id1,
-					Type:          "deposit",
-					Payload:       depositEventPayload,
-					EventIndex:    0,
-				},
-				{
-					TransactionID: id1,
-					Type:          "withdrawal",
-					Payload:       withdrawalEventPayload,
-					EventIndex:    1,
-				},
-				{
-					TransactionID: id2,
-					Type:          "deposit",
-					Payload:       depositEventPayload,
-					EventIndex:    2,
-				},
-				{
-					TransactionID: id2,
-					Type:          "withdrawal",
-					Payload:       withdrawalEventPayload,
-					EventIndex:    3,
-				},
+			event: flow.Event{
+				TransactionID: id,
+				Type:          flow.EventType("irrelevant"),
+				Payload:       []byte(`whatever`),
+				EventIndex:    2,
 			},
 
-			wantErr: assert.NoError,
-			wantTransactions: []*object.Transaction{
-				testTransaction1,
-				testTransaction2,
-			},
+			wantRelevant: assert.False,
+			wantErr:      assert.NoError,
 		},
 		{
 			description: "wrong amount of fields",
 
-			events: []flow.Event{{
+			event: flow.Event{
+				Type:    "deposit",
 				Payload: threeFieldsEventPayload,
-			}},
+			},
 
-			wantErr: assert.Error,
+			wantRelevant: assert.True,
+			wantErr:      assert.Error,
 		},
 		{
 			description: "missing amount field",
 
-			events: []flow.Event{{
+			event: flow.Event{
+				Type:    "deposit",
 				Payload: missingAmountEventPayload,
-			}},
+			},
 
-			wantErr: assert.Error,
+			wantRelevant: assert.True,
+			wantErr:      assert.Error,
 		},
 		{
 			description: "missing address field",
 
-			events: []flow.Event{{
+			event: flow.Event{
+				Type:    "deposit",
 				Payload: missingAddressEventPayload,
-			}},
+			},
 
-			wantErr: assert.Error,
+			wantRelevant: assert.True,
+			wantErr:      assert.Error,
 		},
 	}
 
@@ -350,14 +329,17 @@ func TestEventsToTransactions(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := EventsToTransactions(test.events, "withdrawal")
+			cvt := &Converter{
+				deposit:    "deposit",
+				withdrawal: "withdrawal",
+			}
+
+			got, relevant, err := cvt.EventToOperation(test.event)
 
 			test.wantErr(t, err)
+			test.wantRelevant(t, relevant)
 
-			// Since the result is a map, use assert.Contains in order not to rely on order.
-			for _, gotTransaction := range got {
-				assert.Contains(t, test.wantTransactions, gotTransaction)
-			}
+			assert.Equal(t, test.wantOperation, got)
 		})
 	}
 }
