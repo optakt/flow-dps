@@ -14,12 +14,12 @@
 
 package invoker
 
+type Config struct {
+	CacheSize uint64
+}
+
 func WithCacheSize(size uint64) func(*Config) {
 	return func(cfg *Config) {
 		cfg.CacheSize = size
 	}
-}
-
-type Config struct {
-	CacheSize uint64
 }
