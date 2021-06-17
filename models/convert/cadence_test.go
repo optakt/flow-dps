@@ -38,10 +38,25 @@ func TestParseCadenceArgument(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
+			name:     "parse invalid normal integer",
+			param:    "Int16(a337)",
+			checkErr: assert.Error,
+		},
+		{
+			name:     "parse invalid unsigned integer",
+			param:    "UInt64(-1337)",
+			checkErr: assert.Error,
+		},
+		{
 			name:     "parse valid big integer",
 			param:    "UInt256(1337)",
 			wantArg:  cadence.UInt256{Value: big.NewInt(1337)},
 			checkErr: assert.NoError,
+		},
+		{
+			name:     "parse invalid big integer",
+			param:    "Uint128(a337)",
+			checkErr: assert.Error,
 		},
 		{
 			name:     "parse valid fixed point",
@@ -50,16 +65,31 @@ func TestParseCadenceArgument(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
+			name:     "parse invalid fixed point",
+			param:    "Fix64(13,37)",
+			checkErr: assert.Error,
+		},
+		{
 			name:     "parse valid address",
 			param:    "Address(43AC64656E636521)",
 			wantArg:  cadence.Address{0x43, 0xac, 0x64, 0x65, 0x6e, 0x63, 0x65, 0x21},
 			checkErr: assert.NoError,
 		},
 		{
+			name:     "parse invalid address",
+			param:    "Address(X3AC64656E636521)",
+			checkErr: assert.Error,
+		},
+		{
 			name:     "parse valid bytes",
 			param:    "Bytes(43AC64656E636521)",
 			wantArg:  cadence.Bytes{0x43, 0xac, 0x64, 0x65, 0x6e, 0x63, 0x65, 0x21},
 			checkErr: assert.NoError,
+		},
+		{
+			name:     "parse invalid bytes",
+			param:    "Bytes(X3AC64656E636521)",
+			checkErr: assert.Error,
 		},
 		{
 			name:     "parse valid string",

@@ -28,7 +28,7 @@ func ParseCadenceArgument(param string) (cadence.Value, error) {
 
 	// Cadence values should be provided in the form of Type(Value), so that we
 	// can unambiguously determine the type.
-	re := regexp.MustCompile(`(\S+)\((\S+)\)`)
+	re := regexp.MustCompile(`(\w+)\((.+)\)`)
 	parts := re.FindStringSubmatch(param)
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("invalid parameter format (%s)", param)
