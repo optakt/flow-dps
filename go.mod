@@ -9,6 +9,7 @@ require (
 	github.com/dgraph-io/ristretto v0.0.3-0.20200630154024-f66de99634de
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/gammazero/deque v0.1.0
+	github.com/go-git/go-git/v5 v5.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2 v2.0.0-rc.2
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-20200501113911-9a95f0fdbfea
 	github.com/hashicorp/go-multierror v1.0.0
@@ -21,6 +22,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/ziflex/lecho/v2 v2.3.1
+	golang.org/x/mod v0.3.0
 	google.golang.org/grpc v1.37.1
 	google.golang.org/protobuf v1.26.0
 )
