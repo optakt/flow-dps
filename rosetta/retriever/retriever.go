@@ -21,8 +21,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/models/convert"
-
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/index"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -35,9 +33,10 @@ type Retriever struct {
 	validate  Validator
 	generator Generator
 	invoke    Invoker
+	convert   Converter
 }
 
-func New(params dps.Params, index index.Reader, validate Validator, generator Generator, invoke Invoker) *Retriever {
+func New(params dps.Params, index index.Reader, validate Validator, generator Generator, invoke Invoker, convert Converter) *Retriever {
 
 	r := Retriever{
 		params:    params,
@@ -45,6 +44,7 @@ func New(params dps.Params, index index.Reader, validate Validator, generator Ge
 		validate:  validate,
 		generator: generator,
 		invoke:    invoke,
+		convert:   convert,
 	}
 
 	return &r
@@ -171,16 +171,41 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		return nil, nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	// Next, we step through all the transactions and accumulate events by transaction ID.
-	// NOTE: We consider transactions that don't generate any fund movements as irrelevant for now.
-	tmap, err := convert.EventsToTransactions(events, withdrawal)
-	if err != nil {
-		return nil, nil, err
+	// Convert events to operations and group them by transaction ID.
+	operations := make(map[string][]object.Operation)
+	for _, event := range events {
+		op, isRelevant, err := r.convert.EventToOperation(event)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not convert event: %w", err)
+		}
+
+		if !isRelevant {
+			continue
+		}
+
+		tID := event.TransactionID.String()
+		operations[tID] = append(operations[tID], *op)
 	}
 
+	// Iterate over all transactionIDs to create transactions with all relevant operations.
 	var transactions []*object.Transaction
-	for _, transaction := range tmap {
-		transactions = append(transactions, transaction)
+	for transactionID, ops := range operations {
+		// Set RelatedIDs for all operations for the same transaction.
+		for i := range ops {
+			for j := range ops {
+				if i == j {
+					continue
+				}
+
+				ops[i].RelatedIDs = append(ops[i].RelatedIDs, ops[j].ID)
+			}
+		}
+
+		transaction := object.Transaction{
+			ID:         identifier.Transaction{Hash: transactionID},
+			Operations: ops,
+		}
+		transactions = append(transactions, &transaction)
 	}
 
 	// Now we just need to build the block.
@@ -241,15 +266,41 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	transactions, err := convert.EventsToTransactions(events, withdrawal)
-	if err != nil {
-		return nil, err
+	// Convert events to operations and group them by transaction ID.
+	var ops []object.Operation
+	for _, event := range events {
+		// Ignore events that are related to other transactions.
+		if event.TransactionID.String() != id.Hash {
+			continue
+		}
+
+		op, isRelevant, err := r.convert.EventToOperation(event)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert event: %w", err)
+		}
+
+		if !isRelevant {
+			continue
+		}
+
+		ops = append(ops, *op)
 	}
 
-	transaction, found := transactions[id.Hash]
-	if !found {
-		return nil, fmt.Errorf("no transaction found with id %q at block %s", id, block.Hash)
+	// Set RelatedIDs for all operations for the same transaction.
+	for i := range ops {
+		for j := range ops {
+			if i == j {
+				continue
+			}
+
+			ops[i].RelatedIDs = append(ops[i].RelatedIDs, ops[j].ID)
+		}
+
+	}
+	transaction := object.Transaction{
+		ID:         id,
+		Operations: ops,
 	}
 
-	return transaction, nil
+	return &transaction, nil
 }
