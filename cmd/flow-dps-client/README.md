@@ -18,7 +18,7 @@ Usage of flow-dps-client:
 ```
 
 Cadence parameters can be provided as a list of comma-separated `Type(Value)` pairs.
-Whenever raw bytes are represented,they should be given in hexadecimal format.
+Whenever raw bytes are represented, they should be given in hexadecimal format.
 
 `-p "UFix64(123.456),String(/storage/FlowTokenVault),Bytes(43F164656E636521467572AC76657)"`.
 
