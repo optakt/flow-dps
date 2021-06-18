@@ -85,6 +85,7 @@ func TestGetTransaction(t *testing.T) {
 			request:              requestTransaction(lastHeader, lastTx),
 			validateTransactions: validateTransfer(t, lastTx, "0x668b91e2995c2eba", "0x89c61aa64423504c", 1),
 		},
+		// TODO: verify: tx that does not exist in a block is not an error
 	}
 
 	for _, test := range tests {
@@ -128,11 +129,15 @@ func TestTransactionErrors(t *testing.T) {
 	api := setupAPI(t, db)
 
 	const (
+		lastHeight = 425
+
 		testHeight    = 106
 		testBlockHash = "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
+		testTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
 
-		trimmedBlockHash = "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d27" // block hash a character short
-
+		trimmedBlockHash = "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d27"  // block hash a character short
+		trimmedTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c68"  // tx hash a character short
+		invalidTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c68z" // testTxHash with a hex-invalid last character
 	)
 
 	var (
@@ -142,7 +147,7 @@ func TestTransactionErrors(t *testing.T) {
 		}
 
 		// corresponds to the block above
-		testTx = identifier.Transaction{Hash: "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"}
+		testTx = identifier.Transaction{Hash: testTxHash}
 	)
 
 	tests := []struct {
@@ -167,7 +172,7 @@ func TestTransactionErrors(t *testing.T) {
 			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
 		},
 		{
-			name: "missing blockchain",
+			name: "missing blockchain name",
 			request: rosetta.TransactionRequest{
 				NetworkID: identifier.Network{
 					Blockchain: "",
@@ -182,7 +187,7 @@ func TestTransactionErrors(t *testing.T) {
 			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
 		},
 		{
-			name: "invalid blockchain",
+			name: "invalid blockchain name",
 			request: rosetta.TransactionRequest{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
@@ -198,7 +203,7 @@ func TestTransactionErrors(t *testing.T) {
 			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchain, "network": dps.FlowTestnet.String()},
 		},
 		{
-			name: "missing network",
+			name: "missing network name",
 			request: rosetta.TransactionRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
@@ -213,7 +218,7 @@ func TestTransactionErrors(t *testing.T) {
 			wantRosettaErrorDescription: "blockchain identifier: network field is empty",
 		},
 		{
-			name: "invalid network",
+			name: "invalid network name",
 			request: rosetta.TransactionRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
@@ -258,6 +263,112 @@ func TestTransactionErrors(t *testing.T) {
 			wantRosettaError:            configuration.ErrorInvalidFormat,
 			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
 		},
+		{
+			name: "missing block height",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID: identifier.Block{
+					Hash: testBlockHash,
+				},
+				TransactionID: testTx,
+			},
+			wantStatusCode:              http.StatusInternalServerError,
+			wantRosettaError:            configuration.ErrorInternal,
+			wantRosettaErrorDescription: "could not validate block: block access with hash currently not supported",
+		},
+		{
+			name: "invalid block hash",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID: identifier.Block{
+					Index: testHeight,
+					Hash:  invalidBlockHash,
+				},
+				TransactionID: testTx,
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidBlock,
+			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(testHeight), "hash": invalidBlockHash},
+		},
+		{
+			name: "unknown block",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID: identifier.Block{
+					Index: lastHeight + 1,
+				},
+				TransactionID: testTx,
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorUnknownBlock,
+			wantRosettaErrorDescription: fmt.Sprintf("block index is above last indexed block (last: %d)", lastHeight),
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(lastHeight + 1), "hash": ""},
+		},
+		{
+			name: "mismatched block height and hash",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID: identifier.Block{
+					Index: 44,
+					Hash:  testBlockHash,
+				},
+				TransactionID: testTx,
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidBlock,
+			wantRosettaErrorDescription: fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeaders(44).ID().String()),
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(44), "hash": testBlockHash},
+		},
+		{
+			name: "missing transaction id",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID:   testBlock,
+				TransactionID: identifier.Transaction{
+					Hash: "",
+				},
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "transaction identifier: hash field is empty",
+		},
+		{
+			name: "missing transaction id",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID:   testBlock,
+				TransactionID: identifier.Transaction{
+					Hash: trimmedTxHash,
+				},
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: fmt.Sprintf("transaction identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedTxHash), validBlockHashLen),
+		},
+		{
+			name: "invalid transaction id",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID:   testBlock,
+				TransactionID: identifier.Transaction{
+					Hash: invalidTxHash,
+				},
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidTransaction,
+			wantRosettaErrorDescription: "transaction hash is not a valid hex-encoded string",
+			wantRosettaErrorDetails:     map[string]interface{}{"hash": invalidTxHash},
+		},
+		// TODO: add - transaction that has no events/transfers
+		// TODO: add - transaction that does not exist in a block
+		// 	=> https://github.com/optakt/flow-dps/issues/195
 	}
 
 	for _, test := range tests {
