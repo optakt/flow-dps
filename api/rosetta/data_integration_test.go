@@ -87,7 +87,8 @@ func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	config := configuration.New(params.ChainID)
 	validate := validator.New(params, index)
 	generate := scripts.NewGenerator(params)
-	invoke := invoker.New(index)
+	invoke, err := invoker.New(index)
+	require.NoError(t, err)
 	retrieve := retriever.New(params, index, validate, generate, invoke)
 	controller := rosetta.NewData(config, retrieve)
 
