@@ -35,8 +35,6 @@ type TransactionResponse struct {
 	Transaction *object.Transaction `json:"transaction"`
 }
 
-// TODO: integration testing of Rosetta transaction endpoint
-// => https://github.com/optakt/flow-dps/issues/46
 func (d *Data) Transaction(ctx echo.Context) error {
 
 	var req TransactionRequest

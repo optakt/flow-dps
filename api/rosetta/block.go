@@ -35,8 +35,6 @@ type BlockResponse struct {
 	OtherTransactions []identifier.Transaction `json:"other_transactions,omitempty"`
 }
 
-// TODO: integration testing of Rosetta block endpoint
-// => https://github.com/optakt/flow-dps/issues/47
 func (d *Data) Block(ctx echo.Context) error {
 
 	var req BlockRequest

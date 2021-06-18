@@ -259,7 +259,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "missing network blockchain identifier",
+			name: "missing blockchain name",
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
 					Blockchain: "",
@@ -276,7 +276,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "wrong network blockchain identifier",
+			name: "invalid blockchain name",
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
@@ -293,7 +293,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchain, "network": dps.FlowTestnet.String()},
 		},
 		{
-			name: "missing network identifier",
+			name: "missing network name",
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
@@ -310,7 +310,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "wrong network identifier",
+			name: "invalid network name",
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
@@ -340,7 +340,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
 		},
 		{
-			name: "wrong length of block id",
+			name: "invalid length of block id",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
@@ -365,7 +365,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDescription: "account identifier: address field is empty",
 		},
 		{
-			name: "wrong length of account address",
+			name: "invalid length of account address",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: trimmedAddress},

@@ -37,8 +37,6 @@ type BalanceResponse struct {
 	Balances []object.Amount  `json:"balances"`
 }
 
-// TODO: integration testing of Rosetta balance endpoint
-// => https://github.com/optakt/flow-dps/issues/45
 func (d *Data) Balance(ctx echo.Context) error {
 
 	var req BalanceRequest

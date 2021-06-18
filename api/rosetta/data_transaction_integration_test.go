@@ -275,7 +275,7 @@ func TestTransactionErrors(t *testing.T) {
 			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
 		},
 		{
-			name: "wrong length of block id",
+			name: "invalid length of block id",
 			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
@@ -434,6 +434,109 @@ func TestTransactionErrors(t *testing.T) {
 			assert.Equal(t, test.wantRosettaErrorDetails, gotErr.Details)
 		})
 	}
+}
+
+func TestMalformedTransactionRequest(t *testing.T) {
+
+	db := setupDB(t)
+	api := setupAPI(t, db)
+
+	const (
+		// network field is an integer instead of a string
+		wrongFieldType = `
+		{ 
+			"network_identifier": { 
+				"blockchain": "flow", 
+				"network": 99
+			}
+		}`
+
+		unclosedBracket = `
+		{
+			"network_identifier" : {
+				"blockchain": "flow",
+				"network": "flow-testnet"
+			},
+			"block_identifier": {
+				"index": 106,
+				"hash": "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
+			},
+			"transaction_identifier": {
+				"hash": "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
+			}`
+
+		validJSON = `
+		{
+			"network_identifier" : {
+				"blockchain": "flow",
+				"network": "flow-testnet"
+			},
+			"block_identifier": {
+				"index": 106,
+				"hash": "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
+			},
+			"transaction_identifier": {
+				"hash": "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
+			}
+		}`
+	)
+
+	tests := []struct {
+		name     string
+		payload  []byte
+		mimeType string
+	}{
+		{
+			name:     "empty request",
+			payload:  []byte(``),
+			mimeType: echo.MIMEApplicationJSON,
+		},
+		{
+			name:     "wrong field type",
+			payload:  []byte(wrongFieldType),
+			mimeType: echo.MIMEApplicationJSON,
+		},
+		{
+			name:     "unclosed bracket",
+			payload:  []byte(unclosedBracket),
+			mimeType: echo.MIMEApplicationJSON,
+		},
+		{
+			name:     "valid payload with no mime type set",
+			payload:  []byte(validJSON),
+			mimeType: "",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(test.payload))
+			req.Header.Set(echo.HeaderContentType, test.mimeType)
+
+			rec := httptest.NewRecorder()
+			ctx := echo.New().NewContext(req, rec)
+
+			err := api.Block(ctx)
+			assert.Error(t, err)
+
+			echoErr, ok := err.(*echo.HTTPError)
+			require.True(t, ok)
+
+			assert.Equal(t, http.StatusBadRequest, echoErr.Code)
+
+			gotErr, ok := echoErr.Message.(rosetta.Error)
+			require.True(t, ok)
+
+			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.NotEmpty(t, gotErr.Description)
+		})
+	}
+
 }
 
 func requestTransaction(header flow.Header, txID string) rosetta.TransactionRequest {

@@ -206,7 +206,7 @@ func TestBlockErrors(t *testing.T) {
 		wantRosettaErrorDetails     map[string]interface{}
 	}{
 		{
-			name: "missing network blockchain name",
+			name: "missing blockchain name",
 			request: rosetta.BlockRequest{
 				NetworkID: identifier.Network{
 					Blockchain: "",
@@ -221,7 +221,7 @@ func TestBlockErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "wrong network blockchain name",
+			name: "invalid blockchain name",
 			request: rosetta.BlockRequest{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
@@ -251,7 +251,7 @@ func TestBlockErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "wrong network name",
+			name: "invalid network name",
 			request: rosetta.BlockRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
@@ -281,7 +281,7 @@ func TestBlockErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "wrong length of block id",
+			name: "invalid length of block id",
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
