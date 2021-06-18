@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/go-git/go-git/v5"
@@ -52,9 +53,18 @@ const (
 )
 `
 
+const (
+	defaultMiddlewareVersion = "0.0.0"
+	rosettaVersion           = "1.4.10"
+
+	pathToRepoRoot         = "../"
+	pathToGoMod            = "../go.mod"
+	rosettaVersionFilePath = "../rosetta/configuration/version.go"
+
+	flowModPath = "github.com/onflow/flow-go"
+)
+
 func main() {
-	const rosettaVersion = "v1.4.10"
-	const rosettaVersionFilePath = "../rosetta/configuration/version.go"
 
 	fmt.Println("Using rosetta version", rosettaVersion)
 
@@ -97,7 +107,7 @@ func main() {
 
 func NodeVersion() (string, error) {
 	// Fetch Node version from the go.mod file.
-	gomod, err := os.ReadFile("../go.mod")
+	gomod, err := os.ReadFile(pathToGoMod)
 	if err != nil {
 		return "", fmt.Errorf("could not read go mod file: %v", err)
 	}
@@ -107,24 +117,20 @@ func NodeVersion() (string, error) {
 		return "", fmt.Errorf("could not parse go mod file: %v", err)
 	}
 
-	var nodeVersion string
 	for _, module := range modfile.Require {
-		if module.Mod.Path == "github.com/onflow/flow-go" {
-			nodeVersion = module.Mod.Version
-			break
+		if module.Mod.Path == flowModPath {
+			// Strip leading `v` from the tag if it exists.
+			nodeVersion := strings.TrimPrefix(module.Mod.Version, "v")
+			return nodeVersion, nil
 		}
 	}
 
-	if nodeVersion == "" {
-		return "", fmt.Errorf("could not find github.com/onflow/flow-go dependency in go mod file")
-	}
-
-	return nodeVersion, nil
+	return "", fmt.Errorf("could not find github.com/onflow/flow-go dependency in go mod file")
 }
 
 func MiddlewareVersion() (string, error) {
 	// Fetch middleware version by looking at the latest tag on the repository.
-	repo, err := git.PlainOpen("../")
+	repo, err := git.PlainOpen(pathToRepoRoot)
 	if err != nil {
 		return "", fmt.Errorf("unable to open local git repository: %w", err)
 	}
@@ -171,15 +177,18 @@ func MiddlewareVersion() (string, error) {
 
 	// Repository does not have any tags, return placeholder.
 	if tag == nil {
-		return "v0.0.0", nil
+		return defaultMiddlewareVersion, nil
 	}
+
+	// Strip leading `v` from the tag if it exists.
+	tagName := strings.TrimPrefix(tag.Name().Short(), "v")
 
 	// If the current branch was just tagged, the version is precisely this tag.
 	if count == 0 {
-		return fmt.Sprint(tag.Name().Short()), nil
+		return tagName, nil
 	}
 
 	// Otherwise, generate a version name from the latest tag name with HEAD's commit hash.
-	tagName := fmt.Sprintf("%v-%v", tag.Name().Short(), head.Hash())
-	return tagName, nil
+	t := fmt.Sprintf("%v-%v", tagName, head.Hash().String()[:8])
+	return t, nil
 }
