@@ -25,15 +25,17 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
-	"github.com/onflow/flow-go/model/flow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/meta"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 func TestGetTransaction(t *testing.T) {
@@ -60,12 +62,10 @@ func TestGetTransaction(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request rosetta.TransactionRequest
-		// TODO: validate block
+		request              rosetta.TransactionRequest
 		validateTransactions transactionValidationFn
 	}{
 		{
-			// TODO: perhaps do the first ever?
 			name:                 "some cherry picked transaction",
 			request:              requestTransaction(firstHeader, firstTx),
 			validateTransactions: validateTransfer(t, firstTx, "754aed9de6197641", "631e88ae7f1d7c20", 1),
@@ -85,7 +85,34 @@ func TestGetTransaction(t *testing.T) {
 			request:              requestTransaction(lastHeader, lastTx),
 			validateTransactions: validateTransfer(t, lastTx, "668b91e2995c2eba", "89c61aa64423504c", 1),
 		},
-		// TODO: verify: tx that does not exist in a block is not an error
+		{
+			name: "lookup using height and transaction hash",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID: identifier.Block{
+					Index: 165,
+				},
+				TransactionID: identifier.Transaction{
+					Hash: secondOfTwoTx,
+				},
+			},
+			validateTransactions: validateTransfer(t, secondOfTwoTx, "89c61aa64423504c", "82ec283f88a62e65", 1),
+		},
+
+		/* TODO: this is an invalid test case - looking up a transaction that does not exist in a block or does not move funds
+			is not differentiated at the moment and returns no error.
+
+			But it probably should (see https://github.com/optakt/flow-dps/issues/195)
+
+			This test case could be of use to document the current behaviour, so once the behaviour is changed the test will fail
+			and would signal that they should be updated.
+		{
+			// looking up a transaction in a wrong block
+			name:                 "missing transaction is not an error",
+			request:              requestTransaction(firstHeader, lastTx),
+			validateTransactions: func([]*object.Transaction) {}, // no-op
+		},
+		*/
 	}
 
 	for _, test := range tests {
@@ -113,15 +140,11 @@ func TestGetTransaction(t *testing.T) {
 
 			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-			// TODO: remove
-			fmt.Printf("%s\n", string(rec.Body.Bytes()))
-
 			// unpack the response
 			var res rosetta.TransactionResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
 
-			// TODO: change this so it doesn't take an array
-			// test.validateTransactions([]*object.Transaction{res.Transaction})
+			test.validateTransactions([]*object.Transaction{res.Transaction})
 		})
 	}
 }

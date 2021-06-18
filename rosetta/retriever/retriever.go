@@ -324,6 +324,11 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 	for _, event := range events {
 
+		// ignore events belonging to other transactions
+		if event.TransactionID.String() != id.Hash {
+			continue
+		}
+
 		// Decode the event payload into a Cadence value and cast to Cadence event.
 		value, err := json.Decode(event.Payload)
 		if err != nil {
