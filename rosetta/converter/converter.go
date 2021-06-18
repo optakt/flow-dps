@@ -42,6 +42,9 @@ func New(gen Generator) (*Converter, error) {
 		return nil, fmt.Errorf("unable to generate withdrawal event type: %w", err)
 	}
 
+	// TODO: Generate more event types (stake/unstake, delegate/lock, etc.)
+	//		 https://github.com/optakt/flow-dps/issues/214
+
 	c := Converter{
 		deposit:    flow.EventType(deposit),
 		withdrawal: flow.EventType(withdrawal),
@@ -51,26 +54,20 @@ func New(gen Generator) (*Converter, error) {
 }
 
 func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operation, isRelevant bool, err error) {
-	switch event.Type {
-	case c.deposit, c.withdrawal:
-		isRelevant = true // Supported types, event is relevant for us.
-	default:
-		return nil, false, nil // This type of event is irrelevant for us.
-	}
 
 	// Decode the event payload into a Cadence value and cast it to a Cadence event.
 	value, err := json.Decode(event.Payload)
 	if err != nil {
-		return nil, isRelevant, fmt.Errorf("could not decode event: %w", err)
+		return nil, false, fmt.Errorf("could not decode event: %w", err)
 	}
 	e, ok := value.(cadence.Event)
 	if !ok {
-		return nil, isRelevant, fmt.Errorf("could not cast event: %w", err)
+		return nil, false, fmt.Errorf("could not cast event: %w", err)
 	}
 
 	// Ensure that there are the correct amount of fields.
 	if len(e.Fields) != 2 {
-		return nil, isRelevant, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
+		return nil, false, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
 	}
 
 	// The first field is always the amount and the second one the address.
@@ -79,12 +76,12 @@ func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operat
 	vAmount := e.Fields[0].ToGoValue()
 	uAmount, ok := vAmount.(uint64)
 	if !ok {
-		return nil, isRelevant, fmt.Errorf("could not cast amount (%T)", vAmount)
+		return nil, false, fmt.Errorf("could not cast amount (%T)", vAmount)
 	}
 	vAddress := e.Fields[1].ToGoValue()
 	bAddress, ok := vAddress.([flow.AddressLength]byte)
 	if !ok {
-		return nil, isRelevant, fmt.Errorf("could not cast address (%T)", vAddress)
+		return nil, false, fmt.Errorf("could not cast address (%T)", vAddress)
 	}
 
 	// Convert the amount to a signed integer that it can be inverted.
@@ -92,27 +89,35 @@ func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operat
 	// Convert the address bytes into a native Flow address.
 	address := flow.Address(bAddress)
 
-	// In the case of a withdrawal, invert the amount value.
-	if event.Type == c.withdrawal {
-		amount = -amount
-	}
-
 	op := object.Operation{
 		ID: identifier.Operation{
 			Index: uint(event.EventIndex),
 		},
-		RelatedIDs: nil,
-		Type:       dps.OperationTransfer,
-		Status:     dps.StatusCompleted,
+		Status: dps.StatusCompleted,
 		AccountID: identifier.Account{
 			Address: address.String(),
 		},
-		Amount: object.Amount{
-			Value: strconv.FormatInt(amount, 10),
-			Currency: identifier.Currency{
-				Symbol:   dps.FlowSymbol,
-				Decimals: dps.FlowDecimals,
-			},
+	}
+
+	switch event.Type {
+	// TODO: Support more event types (stake/unstake, delegate/lock, etc.)
+	//		 https://github.com/optakt/flow-dps/issues/214
+	case c.deposit:
+		op.Type = dps.OperationTransfer
+
+	// In the case of a withdrawal, invert the amount value.
+	case c.withdrawal:
+		op.Type = dps.OperationTransfer
+		amount = -amount
+	default:
+		return nil, false, nil // This type of event is irrelevant for us.
+	}
+
+	op.Amount = object.Amount{
+		Value: strconv.FormatInt(amount, 10),
+		Currency: identifier.Currency{
+			Symbol:   dps.FlowSymbol,
+			Decimals: dps.FlowDecimals,
 		},
 	}
 
