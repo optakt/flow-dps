@@ -24,11 +24,11 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/testing/mocks"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestNew(t *testing.T) {
@@ -282,7 +282,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 			event: flow.Event{
 				TransactionID: id,
 				Type:          flow.EventType("irrelevant"),
-				Payload:       []byte(`whatever`),
+				Payload:       withdrawalEventPayload,
 				EventIndex:    2,
 			},
 
@@ -297,7 +297,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 				Payload: threeFieldsEventPayload,
 			},
 
-			wantRelevant: assert.True,
+			wantRelevant: assert.False,
 			wantErr:      assert.Error,
 		},
 		{
@@ -308,7 +308,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 				Payload: missingAmountEventPayload,
 			},
 
-			wantRelevant: assert.True,
+			wantRelevant: assert.False,
 			wantErr:      assert.Error,
 		},
 		{
@@ -319,7 +319,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 				Payload: missingAddressEventPayload,
 			},
 
-			wantRelevant: assert.True,
+			wantRelevant: assert.False,
 			wantErr:      assert.Error,
 		},
 	}
