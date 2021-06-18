@@ -134,9 +134,8 @@ func TestGetBalance(t *testing.T) {
 
 		request rosetta.BalanceRequest
 
-		wantStatusCode int
-		wantBalance    string
-		validateBlock  blockIDValidationFn
+		wantBalance   string
+		validateBlock blockIDValidationFn
 	}{
 		{
 			name:          "first occurrence of the account",
