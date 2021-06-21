@@ -115,7 +115,6 @@ func defaultCurrency() []identifier.Currency {
 }
 
 func validateBlock(t *testing.T, height uint64, hash string) blockIDValidationFn {
-
 	t.Helper()
 
 	return func(blockID identifier.Block) {

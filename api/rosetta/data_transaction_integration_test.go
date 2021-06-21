@@ -76,6 +76,7 @@ func TestGetTransaction(t *testing.T) {
 			validateTransactions: validateTransfer(t, firstOfTwoTx, "8c5303eaa26202d6", "72157877737ce077", 100_00000000),
 		},
 		{
+			// we had no blocks with more than two transactions, so this will do as 'get the last transaction from a block
 			name:                 "second in a block with multiple",
 			request:              requestTransaction(multipleTxHeader, secondOfTwoTx),
 			validateTransactions: validateTransfer(t, secondOfTwoTx, "89c61aa64423504c", "82ec283f88a62e65", 1),
@@ -279,7 +280,7 @@ func TestTransactionErrors(t *testing.T) {
 			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: 0,
+					Index: testHeight,
 					Hash:  trimmedBlockHash,
 				},
 				TransactionID: testTx,
