@@ -33,8 +33,10 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
 
 	api "github.com/optakt/flow-dps/api/dps"
+	"github.com/optakt/flow-dps/encoding/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/index"
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 const (
@@ -83,6 +85,14 @@ func run() int {
 	}
 	defer db.Close()
 
+	// Initialize storage library.
+	codec, err := zbor.NewCodec()
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize storage codec")
+		return failure
+	}
+	storage := storage.NewLibrary(codec)
+
 	// GRPC API initialization.
 	opts := []logging.Option{
 		logging.WithLevels(logging.DefaultServerCodeToLevel),
@@ -97,7 +107,7 @@ func run() int {
 			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
 		),
 	)
-	index := index.NewReader(db)
+	index := index.NewReader(db, storage)
 	server := api.NewServer(index)
 
 	// This section launches the main executing components in their own

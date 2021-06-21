@@ -17,7 +17,6 @@ package storage
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/dgraph-io/badger/v2"
@@ -25,13 +24,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/encoding/zbor"
+	"github.com/optakt/flow-dps/testing/mocks"
 
 	"github.com/optakt/flow-dps/testing/helpers"
 )
 
-func TestFallback(t *testing.T) {
+func TestLibrary_Fallback(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 	txn := db.NewTransaction(false)
@@ -182,7 +181,7 @@ func TestCombine(t *testing.T) {
 	})
 }
 
-func TestRetrieve(t *testing.T) {
+func TestLibrary_Retrieve(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
@@ -191,23 +190,37 @@ func TestRetrieve(t *testing.T) {
 	testKey := []byte{42}
 
 	t.Run("nominal case", func(t *testing.T) {
+		wantEncodedValue := []byte{0x28, 0xb5, 0x2f, 0xfd, 0x4, 0x0, 0x11, 0x0, 0x0, 0x18, 0x2a, 0xc5, 0xb, 0xd5, 0x9d}
+
 		err := insertKeyValue(t, db, testKey, testValue)
 		require.NoError(t, err)
 
-		txn := db.NewTransaction(false)
+		l := &Library{
+			codec: &mocks.Codec{
+				UnmarshalFunc: func(b []byte, v interface{}) error {
+					assert.Equal(t, wantEncodedValue, b)
+
+					ptr, ok := v.(*uint64)
+					assert.True(t, ok)
+
+					*ptr = 42
+					return nil
+				},
+			},
+		}
 
 		var got uint64
-		err = retrieve(testKey, &got)(txn)
+		err = db.View(l.retrieve(testKey, &got))
 
 		assert.NoError(t, err)
-		assert.Equal(t, got, testValue)
+		assert.Equal(t, testValue, got)
 	})
 
 	t.Run("unknown key, should fail", func(t *testing.T) {
-		txn := db.NewTransaction(false)
+		l := &Library{}
 
 		var got uint64
-		err := retrieve([]byte{13, 37}, &got)(txn)
+		err := db.View(l.retrieve([]byte{13, 37}, &got))
 
 		if assert.Error(t, err) {
 			assert.True(t, errors.Is(err, badger.ErrKeyNotFound))
@@ -215,60 +228,68 @@ func TestRetrieve(t *testing.T) {
 	})
 
 	t.Run("badly encoded value, should fail", func(t *testing.T) {
+		wantUnencodedValue := []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a}
+
 		err := insertUnencodedKeyValue(t, db, testKey, testValue)
 		require.NoError(t, err)
 
-		txn := db.NewTransaction(false)
+		l := &Library{
+			codec: &mocks.Codec{
+				UnmarshalFunc: func(b []byte, v interface{}) error {
+					assert.Equal(t, wantUnencodedValue, b)
+					return mocks.DummyError
+				},
+			},
+		}
 
 		var got uint64
-		err = retrieve(testKey, &got)(txn)
+		err = db.View(l.retrieve(testKey, &got))
 
 		assert.Error(t, err)
 	})
 }
 
-func TestSave(t *testing.T) {
+func TestLibrary_Save(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
 	t.Run("nominal case", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-		err := save([]byte{13, 37}, uint64(42))(txn)
+		l := &Library{
+			codec: &mocks.Codec{
+				MarshalFunc: func(v interface{}) ([]byte, error) {
+					assert.IsType(t, uint64(0), v)
+					return []byte{}, nil
+				}},
+		}
+
+		err := db.Update(l.save([]byte{13, 37}, uint64(42)))
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("saving a nil value should work", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-		err := save([]byte{13, 37}, nil)(txn)
+		l := &Library{
+			codec: &mocks.Codec{
+				MarshalFunc: func(v interface{}) ([]byte, error) {
+					assert.Nil(t, v)
+					return []byte{}, nil
+				}},
+		}
 
-		assert.NoError(t, err)
-	})
-
-	t.Run("saving a flow header value should use the headerCompressor", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-		err := save([]byte{13, 37}, &flow.Header{})(txn)
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("saving a ledger payload value should use the payloadCompressor", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-		err := save([]byte{13, 37}, &ledger.Payload{})(txn)
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("saving a flow event slice value should use the eventsCompressor", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-		err := save([]byte{13, 37}, []flow.Event{})(txn)
+		err := db.Update(l.save([]byte{13, 37}, nil))
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("saving a value at an empty key should fail", func(t *testing.T) {
-		txn := db.NewTransaction(true)
-		err := save([]byte{}, uint64(42))(txn)
+		l := &Library{
+			codec: &mocks.Codec{
+				MarshalFunc: func(v interface{}) ([]byte, error) {
+					return []byte{13, 37}, nil
+				}},
+		}
+
+		err := db.Update(l.save([]byte{}, uint64(42)))
 
 		assert.Error(t, err)
 	})
@@ -278,12 +299,11 @@ func insertKeyValue(t *testing.T, db *badger.DB, key []byte, value uint64) error
 	t.Helper()
 
 	err := db.Update(func(txn *badger.Txn) error {
-		val, err := codec.Marshal(value)
-		if err != nil {
-			return fmt.Errorf("unable to encode value: %w", err)
-		}
+		enc, err := zbor.NewCodec()
+		require.NoError(t, err)
 
-		val = defaultCompressor.EncodeAll(val, nil)
+		val, err := enc.Marshal(value)
+		require.NoError(t, err)
 
 		return txn.Set(key, val)
 	})

@@ -21,22 +21,23 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-
-	"github.com/optakt/flow-dps/service/storage"
 )
 
 // Writer implements the `index.Writer` interface to write indexing data to
 // an underlying Badger database.
 type Writer struct {
+	storage StorageLibrary
+
 	db *badger.DB
 }
 
 // NewWriter creates a new index writer that writes new indexing data to the
 // given Badger database.
-func NewWriter(db *badger.DB) *Writer {
+func NewWriter(db *badger.DB, lib StorageLibrary) *Writer {
 
 	w := Writer{
-		db: db,
+		db:      db,
+		storage: lib,
 	}
 
 	return &w
@@ -44,23 +45,23 @@ func NewWriter(db *badger.DB) *Writer {
 
 // First indexes the height of the first finalized block.
 func (w *Writer) First(height uint64) error {
-	return w.db.Update(storage.SaveFirst(height))
+	return w.db.Update(w.storage.SaveFirst(height))
 }
 
 // Last indexes the height of the last finalized block.
 func (w *Writer) Last(height uint64) error {
-	return w.db.Update(storage.SaveLast(height))
+	return w.db.Update(w.storage.SaveLast(height))
 }
 
 // Header indexes the given header of a finalized block at the given height.
 func (w *Writer) Header(height uint64, header *flow.Header) error {
-	return w.db.Update(storage.SaveHeader(height, header))
+	return w.db.Update(w.storage.SaveHeader(height, header))
 }
 
 // Commit indexes the given commitment of the execution state as it was after
 // the execution of the finalized block at the given height.
 func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
-	return w.db.Update(storage.SaveCommit(height, commit))
+	return w.db.Update(w.storage.SaveCommit(height, commit))
 }
 
 // Events indexes the events, which should represent all events of the finalized
@@ -72,7 +73,7 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 	}
 	err := w.db.Update(func(tx *badger.Txn) error {
 		for typ, evts := range buckets {
-			err := storage.SaveEvents(height, typ, evts)(tx)
+			err := w.storage.SaveEvents(height, typ, evts)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist events: %w", err)
 			}
@@ -95,7 +96,7 @@ func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger
 	return w.db.Update(func(tx *badger.Txn) error {
 		for i, path := range paths {
 			payload := payloads[i]
-			err := storage.SavePayload(height, path, payload)(tx)
+			err := w.storage.SavePayload(height, path, payload)(tx)
 			if err != nil {
 				return fmt.Errorf("could not save payload (path: %x): %w", path, err)
 			}
@@ -106,7 +107,7 @@ func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger
 
 // Height indexes the height of the block.
 func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
-	return w.db.Update(storage.SaveHeight(blockID, height))
+	return w.db.Update(w.storage.SaveHeight(blockID, height))
 }
 
 // Transactions indexes collection IDs for the given blockID, collections themselves and the transactions that they contain.
@@ -114,7 +115,7 @@ func (w *Writer) Transactions(blockID flow.Identifier, collections []flow.LightC
 	// Index each collection by ID, and build the slice of collection IDs for the block index.
 	var cIDs []flow.Identifier
 	for _, collection := range collections {
-		err := w.db.Update(storage.SaveCollection(collection))
+		err := w.db.Update(w.storage.SaveCollection(collection))
 		if err != nil {
 			return err
 		}
@@ -125,7 +126,7 @@ func (w *Writer) Transactions(blockID flow.Identifier, collections []flow.LightC
 	// Index each transaction by ID, and build the slice of transaction IDs for the block index.
 	var tIDs []flow.Identifier
 	for _, transaction := range transactions {
-		err := w.db.Update(storage.SaveTransaction(transaction))
+		err := w.db.Update(w.storage.SaveTransaction(transaction))
 		if err != nil {
 			return err
 		}
@@ -134,13 +135,13 @@ func (w *Writer) Transactions(blockID flow.Identifier, collections []flow.LightC
 	}
 
 	// Index all collection IDs within a block.
-	err := w.db.Update(storage.SaveCollections(blockID, cIDs))
+	err := w.db.Update(w.storage.SaveCollections(blockID, cIDs))
 	if err != nil {
 		return err
 	}
 
 	// Index all transaction IDs within a block.
-	err = w.db.Update(storage.SaveTransactions(blockID, tIDs))
+	err = w.db.Update(w.storage.SaveTransactions(blockID, tIDs))
 	if err != nil {
 		return err
 	}

@@ -35,7 +35,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/encoding/zbor"
 	"github.com/optakt/flow-dps/rosetta/converter"
+	"github.com/optakt/flow-dps/service/storage"
 
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
@@ -95,7 +97,10 @@ func setupDB(t *testing.T) *badger.DB {
 func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	t.Helper()
 
-	index := index.NewReader(db)
+	codec, err := zbor.NewCodec()
+	require.NoError(t, err)
+	storage := storage.NewLibrary(codec)
+	index := index.NewReader(db, storage)
 
 	params := dps.FlowParams[dps.FlowTestnet]
 	config := configuration.New(params.ChainID)
