@@ -1,4 +1,4 @@
-// Copyright 2021 Alvalor S.A.
+// Copyright 2021 Optakt Labs OÜ
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy of
@@ -30,7 +30,7 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-const versionFileTemplate = `// Copyright 2021 Alvalor S.A.
+const versionFileTemplate = `// Copyright 2021 Optakt Labs OÜ
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy of
