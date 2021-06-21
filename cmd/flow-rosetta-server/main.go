@@ -36,7 +36,6 @@ import (
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
-	"github.com/optakt/flow-dps/rosetta/converter"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
@@ -112,14 +111,7 @@ func run() int {
 		log.Error().Err(err).Msg("could not initialize invoker")
 		return failure
 	}
-
-	convert, err := converter.New(generate)
-	if err != nil {
-		log.Error().Err(err).Msg("could not generate transaction event types")
-		return failure
-	}
-
-	retrieve := retriever.New(params, index, validate, generate, invoke, convert)
+	retrieve := retriever.New(params, index, validate, generate, invoke)
 	ctrl := rosetta.NewData(config, retrieve)
 
 	server := echo.New()

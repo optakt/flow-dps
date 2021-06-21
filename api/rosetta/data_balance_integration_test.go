@@ -38,7 +38,6 @@ import (
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
-	"github.com/optakt/flow-dps/rosetta/converter"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/meta"
@@ -96,11 +95,7 @@ func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	generate := scripts.NewGenerator(params)
 	invoke, err := invoker.New(index)
 	require.NoError(t, err)
-
-	convert, err := converter.New(generate)
-	require.NoError(t, err)
-
-	retrieve := retriever.New(params, index, validate, generate, invoke, convert)
+	retrieve := retriever.New(params, index, validate, generate, invoke)
 	controller := rosetta.NewData(config, retrieve)
 
 	return controller
