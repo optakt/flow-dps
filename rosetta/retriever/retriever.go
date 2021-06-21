@@ -20,10 +20,12 @@ import (
 	"time"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/index"
+	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -34,10 +36,9 @@ type Retriever struct {
 	validate  Validator
 	generator Generator
 	invoke    Invoker
-	convert   Converter
 }
 
-func New(params dps.Params, index index.Reader, validate Validator, generator Generator, invoke Invoker, convert Converter) *Retriever {
+func New(params dps.Params, index index.Reader, validate Validator, generator Generator, invoke Invoker) *Retriever {
 
 	r := Retriever{
 		params:    params,
@@ -45,7 +46,6 @@ func New(params dps.Params, index index.Reader, validate Validator, generator Ge
 		validate:  validate,
 		generator: generator,
 		invoke:    invoke,
-		convert:   convert,
 	}
 
 	return &r
@@ -55,12 +55,12 @@ func (r *Retriever) Oldest() (identifier.Block, time.Time, error) {
 
 	first, err := r.index.First()
 	if err != nil {
-		return identifier.Block{}, time.Time{}, fmt.Errorf("could not find first indexed block: %w", err)
+		return identifier.Block{}, time.Time{}, nil
 	}
 
 	header, err := r.index.Header(first)
 	if err != nil {
-		return identifier.Block{}, time.Time{}, fmt.Errorf("could not find block header: %w", err)
+		return identifier.Block{}, time.Time{}, nil
 	}
 
 	block := identifier.Block{
@@ -75,12 +75,12 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 
 	last, err := r.index.Last()
 	if err != nil {
-		return identifier.Block{}, time.Time{}, fmt.Errorf("could not find last indexed block: %w", err)
+		return identifier.Block{}, time.Time{}, nil
 	}
 
 	header, err := r.index.Header(last)
 	if err != nil {
-		return identifier.Block{}, time.Time{}, fmt.Errorf("could not find block header: %w", err)
+		return identifier.Block{}, time.Time{}, nil
 	}
 
 	block := identifier.Block{
@@ -108,12 +108,12 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 
 	// Run validation on the currencies. This checks basically if we know the
 	// currency and if it has the correct decimals set, if they are set.
-	for idx, currency := range currencies {
+	for index, currency := range currencies {
 		completeCurrency, err := r.validate.Currency(currency)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not validate currency: %w", err)
 		}
-		currencies[idx] = completeCurrency
+		currencies[index] = completeCurrency
 	}
 
 	// get the cadence value that is the result of the script execution
@@ -172,39 +172,89 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		return nil, nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	// Convert events to operations and group them by transaction ID.
-	operations := make(map[string][]object.Operation)
+	// Next, we step through all the transactions and accumulate events by transaction ID.
+	// NOTE: We consider transactions that don't generate any fund movements as irrelevant for now.
+	buckets := make(map[flow.Identifier][]object.Operation)
 	for _, event := range events {
-		op, isRelevant, err := r.convert.EventToOperation(event)
+
+		// Decode the event payload into a Cadence value and cast to Cadence event.
+		value, err := json.Decode(event.Payload)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not convert event: %w", err)
+			return nil, nil, fmt.Errorf("could not decode event: %w", err)
+		}
+		e, ok := value.(cadence.Event)
+		if !ok {
+			return nil, nil, fmt.Errorf("could not cast event: %w", err)
 		}
 
-		if !isRelevant {
-			continue
+		// Check we have the necessary amount of fields.
+		if len(e.Fields) != 2 {
+			return nil, nil, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
 		}
 
-		tID := event.TransactionID.String()
-		operations[tID] = append(operations[tID], *op)
+		// Now we have access to the fields for the events; the first one is always
+		// the amount, the second one the address. The types coming from Cadence
+		// are not native Flow types, so we need to use primitive types first.
+		vAmount := e.Fields[0].ToGoValue()
+		uAmount, ok := vAmount.(uint64)
+		if !ok {
+			return nil, nil, fmt.Errorf("could not cast amount (%T)", vAmount)
+		}
+		vAddress := e.Fields[1].ToGoValue()
+		bAddress, ok := vAddress.([flow.AddressLength]byte)
+		if !ok {
+			return nil, nil, fmt.Errorf("could not cast address (%T)", vAddress)
+		}
+
+		// Then, we can convert the amount to a signed integer so we can invert
+		// it and the address to a native Flow address.
+		amount := int64(uAmount)
+		address := flow.Address(bAddress)
+
+		// For the witdrawal event, we invert the amount into a negative number.
+		if event.Type == flow.EventType(withdrawal) {
+			amount = -amount
+		}
+
+		// Now we have everything to assemble the respective operation.
+		op := object.Operation{
+			ID: identifier.Operation{
+				Index: uint(event.EventIndex),
+			},
+			RelatedIDs: nil,
+			Type:       "TRANSFER",
+			Status:     "COMPLETED",
+			AccountID: identifier.Account{
+				Address: address.String(),
+			},
+			Amount: object.Amount{
+				Value: strconv.FormatInt(amount, 10),
+				Currency: identifier.Currency{
+					Symbol:   dps.FlowSymbol,
+					Decimals: dps.FlowDecimals,
+				},
+			},
+		}
+
+		// We store all operations for a transaction together in a bucket.
+		buckets[event.TransactionID] = append(buckets[event.TransactionID], op)
 	}
 
-	// Iterate over all transactionIDs to create transactions with all relevant operations.
+	// Finally, we batch all of the operations together into the transactions.
 	var transactions []*object.Transaction
-	for transactionID, ops := range operations {
-		// Set RelatedIDs for all operations for the same transaction.
-		for i := range ops {
-			for j := range ops {
-				if i == j {
-					continue
-				}
-
-				ops[i].RelatedIDs = append(ops[i].RelatedIDs, ops[j].ID)
-			}
-		}
-
+	for transactionID, operations := range buckets {
 		transaction := object.Transaction{
-			ID:         identifier.Transaction{Hash: transactionID},
-			Operations: ops,
+			ID: identifier.Transaction{
+				Hash: transactionID.String(),
+			},
+			Operations: operations,
+		}
+		for _, op := range operations {
+			for index := range transaction.Operations {
+				if transaction.Operations[index].ID != op.ID {
+					transaction.Operations[index].RelatedIDs = append(transaction.Operations[index].RelatedIDs, op.ID)
+				}
+			}
 		}
 		transactions = append(transactions, &transaction)
 	}
@@ -267,40 +317,83 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	// Convert events to operations and group them by transaction ID.
-	var ops []object.Operation
-	for _, event := range events {
-		// Ignore events that are related to other transactions.
-		if event.TransactionID.String() != id.Hash {
-			continue
-		}
-
-		op, isRelevant, err := r.convert.EventToOperation(event)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert event: %w", err)
-		}
-
-		if !isRelevant {
-			continue
-		}
-
-		ops = append(ops, *op)
-	}
-
-	// Set RelatedIDs for all operations for the same transaction.
-	for i := range ops {
-		for j := range ops {
-			if i == j {
-				continue
-			}
-
-			ops[i].RelatedIDs = append(ops[i].RelatedIDs, ops[j].ID)
-		}
-
-	}
+	// Go through the events, but only look at the ones with the given transaction ID.
 	transaction := object.Transaction{
 		ID:         id,
-		Operations: ops,
+		Operations: []object.Operation{},
+	}
+	for _, event := range events {
+
+		// Decode the event payload into a Cadence value and cast to Cadence event.
+		value, err := json.Decode(event.Payload)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode event: %w", err)
+		}
+		e, ok := value.(cadence.Event)
+		if !ok {
+			return nil, fmt.Errorf("could not cast event: %w", err)
+		}
+
+		// Check we have the necessary amount of fields.
+		if len(e.Fields) != 2 {
+			return nil, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
+		}
+
+		// Now we have access to the fields for the events; the first one is always
+		// the amount, the second one the address. The types coming from Cadence
+		// are not native Flow types, so we need to use primitive types first.
+		vAmount := e.Fields[0].ToGoValue()
+		uAmount, ok := vAmount.(uint64)
+		if !ok {
+			return nil, fmt.Errorf("could not cast amount (%T)", vAmount)
+		}
+		vAddress := e.Fields[1].ToGoValue()
+		bAddress, ok := vAddress.([flow.AddressLength]byte)
+		if !ok {
+			return nil, fmt.Errorf("could not cast address (%T)", vAddress)
+		}
+
+		// Then, we can convert the amount to a signed integer so we can invert
+		// it and the address to a native Flow address.
+		amount := int64(uAmount)
+		address := flow.Address(bAddress)
+
+		// For the witdrawal event, we invert the amount into a negative number.
+		if event.Type == flow.EventType(withdrawal) {
+			amount = -amount
+		}
+
+		// Now we have everything to assemble the respective operation.
+		op := object.Operation{
+			ID: identifier.Operation{
+				Index: uint(event.EventIndex),
+			},
+			RelatedIDs: nil,
+			Type:       configuration.OperationTransfer,
+			Status:     configuration.StatusCompleted.Status,
+			AccountID: identifier.Account{
+				Address: address.String(),
+			},
+			Amount: object.Amount{
+				Value: strconv.FormatInt(amount, 10),
+				Currency: identifier.Currency{
+					Symbol:   dps.FlowSymbol,
+					Decimals: dps.FlowDecimals,
+				},
+			},
+		}
+
+		// Add the operation to the transaction.
+		transaction.Operations = append(transaction.Operations, op)
+	}
+
+	// Assign the related operation IDs.
+	for _, op := range transaction.Operations {
+		for index := range transaction.Operations {
+			if transaction.Operations[index].ID != op.ID {
+				transaction.Operations[index].RelatedIDs = append(transaction.Operations[index].RelatedIDs, op.ID)
+			}
+		}
 	}
 
 	return &transaction, nil
