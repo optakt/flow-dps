@@ -12,10 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package retriever
+package mocks
 
-type Generator interface {
-	GetBalance(symbol string) ([]byte, error)
-	TokensDeposited(symbol string) (string, error)
-	TokensWithdrawn(symbol string) (string, error)
+type Generator struct {
+	GetBalanceFunc      func(symbol string) ([]byte, error)
+	TokensDepositedFunc func(symbol string) (string, error)
+	TokensWithdrawnFunc func(symbol string) (string, error)
+}
+
+func (g *Generator) GetBalance(symbol string) ([]byte, error) {
+	return g.GetBalanceFunc(symbol)
+}
+
+func (g *Generator) TokensDeposited(symbol string) (string, error) {
+	return g.TokensDepositedFunc(symbol)
+}
+
+func (g *Generator) TokensWithdrawn(symbol string) (string, error) {
+	return g.TokensWithdrawnFunc(symbol)
 }

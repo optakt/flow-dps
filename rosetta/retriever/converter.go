@@ -14,8 +14,12 @@
 
 package retriever
 
-type Generator interface {
-	GetBalance(symbol string) ([]byte, error)
-	TokensDeposited(symbol string) (string, error)
-	TokensWithdrawn(symbol string) (string, error)
+import (
+	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/rosetta/object"
+)
+
+type Converter interface {
+	EventToOperation(event flow.Event) (transaction *object.Operation, isRelevant bool, err error)
 }
