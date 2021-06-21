@@ -24,4 +24,5 @@ type Chain interface {
 	Commit(height uint64) (flow.StateCommitment, error)
 	Events(height uint64) ([]flow.Event, error)
 	Transactions(height uint64) ([]flow.Transaction, error)
+	Collections(height uint64) ([]flow.LightCollection, error)
 }

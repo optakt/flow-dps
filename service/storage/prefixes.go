@@ -23,5 +23,7 @@ const (
 	prefixPayload      = 6
 	prefixHeight       = 7
 	prefixTransaction  = 8
-	prefixTransactions = 8
+	prefixTransactions = 9
+	prefixCollection   = 10
+	prefixCollections  = 11
 )

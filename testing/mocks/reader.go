@@ -29,6 +29,8 @@ type Reader struct {
 	HeightFunc       func(blockID flow.Identifier) (uint64, error)
 	TransactionFunc  func(transactionID flow.Identifier) (*flow.Transaction, error)
 	TransactionsFunc func(blockID flow.Identifier) ([]flow.Identifier, error)
+	CollectionFunc   func(collectionID flow.Identifier) (*flow.LightCollection, error)
+	CollectionsFunc  func(blockID flow.Identifier) ([]flow.Identifier, error)
 }
 
 func (r *Reader) First() (uint64, error) {
@@ -65,4 +67,12 @@ func (r *Reader) Transaction(transactionID flow.Identifier) (*flow.Transaction, 
 
 func (r *Reader) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
 	return r.TransactionsFunc(blockID)
+}
+
+func (r *Reader) Collection(transactionID flow.Identifier) (*flow.LightCollection, error) {
+	return r.CollectionFunc(transactionID)
+}
+
+func (r *Reader) Collections(blockID flow.Identifier) ([]flow.Identifier, error) {
+	return r.CollectionsFunc(blockID)
 }

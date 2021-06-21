@@ -64,6 +64,14 @@ func SaveTransactions(blockID flow.Identifier, transactions []flow.Identifier) f
 	return save(encodeKey(prefixTransactions, blockID), transactions)
 }
 
+func SaveCollection(collection flow.LightCollection) func(*badger.Txn) error {
+	return save(encodeKey(prefixCollection, collection.ID()), collection)
+}
+
+func SaveCollections(blockID flow.Identifier, collections []flow.Identifier) func(*badger.Txn) error {
+	return save(encodeKey(prefixCollections, blockID), collections)
+}
+
 func RetrieveFirst(height *uint64) func(*badger.Txn) error {
 	return retrieve(encodeKey(prefixFirst), height)
 }
@@ -173,4 +181,12 @@ func RetrieveTransaction(transactionID flow.Identifier, transaction *flow.Transa
 
 func RetrieveTransactions(blockID flow.Identifier, transactions *[]flow.Identifier) func(*badger.Txn) error {
 	return retrieve(encodeKey(prefixTransactions, blockID), transactions)
+}
+
+func RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixCollection, collectionID), collection)
+}
+
+func RetrieveCollections(blockID flow.Identifier, collections *[]flow.Identifier) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixCollections, blockID), collections)
 }

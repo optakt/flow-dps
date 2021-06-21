@@ -406,6 +406,10 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not retrieve transactions: %w (height: %d)", err, height)
 		}
+		collections, err := m.chain.Collections(height)
+		if err != nil {
+			return fmt.Errorf("could not retrieve collections: %w (height: %d)", err, height)
+		}
 		blockID := header.ID()
 
 		// We then index the data for the finalized block at the current height.
@@ -429,15 +433,10 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not index transactions: %w", err)
 		}
-
-		// TODO: In order to provide more complete responses for the Rosetta API
-		// and to be able to implement all Access API endpoints, we need
-		// transaction data in our index:
-		// https://github.com/optakt/flow-dps/issues/156
-
-		// TODO: In order to be able to implement Access API endpoints that use
-		// block IDs, we need to start indexing block IDs at each height:
-		// https://github.com/optakt/flow-dps/issues/157
+		err = m.index.Collections(blockID, collections)
+		if err != nil {
+			return fmt.Errorf("could not index collections: %w", err)
+		}
 
 		// In order to index the payloads, we step back from the state
 		// commitment of the finalized block at the current height to the state

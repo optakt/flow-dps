@@ -296,3 +296,50 @@ func TestSaveAndRetrieve_Transactions(t *testing.T) {
 		assert.Equal(t, testTransactions, got)
 	})
 }
+
+func TestSaveAndRetrieve_Collection(t *testing.T) {
+	db := helpers.InMemoryDB(t)
+	defer db.Close()
+
+	testID := flow.Identifier{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x8a, 0xd7, 0xfd, 0x70, 0x06, 0x51, 0x46, 0xb3, 0x5a, 0xb4, 0x8f, 0xa5, 0xa6, 0xca, 0xb0, 0x07}
+	testCollection := flow.LightCollection{
+		Transactions: []flow.Identifier{testID},
+	}
+
+	t.Run("save collection", func(t *testing.T) {
+		err := db.Update(SaveCollection(testCollection))
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("retrieve collection", func(t *testing.T) {
+		var got flow.LightCollection
+		err := db.View(RetrieveCollection(testCollection.ID(), &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, testCollection, got)
+	})
+}
+
+func TestSaveAndRetrieve_Collections(t *testing.T) {
+	db := helpers.InMemoryDB(t)
+	defer db.Close()
+
+	testBlockID := flow.Identifier{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x8a, 0xd7, 0xfd, 0x70, 0x06, 0x51, 0x46, 0xb3, 0x5a, 0xb4, 0x8f, 0xa5, 0xa6, 0xca, 0xb0, 0x07}
+	testCollectionID := flow.Identifier{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+	testCollections := []flow.Identifier{testCollectionID, testCollectionID, testCollectionID, testCollectionID, testCollectionID}
+
+	t.Run("save collections", func(t *testing.T) {
+		err := db.Update(SaveCollections(testBlockID, testCollections))
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("retrieve collections", func(t *testing.T) {
+		var got []flow.Identifier
+		err := db.View(RetrieveCollections(testBlockID, &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, testCollections, got)
+	})
+}

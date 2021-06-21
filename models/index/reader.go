@@ -29,4 +29,6 @@ type Reader interface {
 	Height(blockID flow.Identifier) (uint64, error)
 	Transaction(transactionID flow.Identifier) (*flow.Transaction, error)
 	Transactions(blockID flow.Identifier) ([]flow.Identifier, error)
+	Collection(collectionID flow.Identifier) (*flow.LightCollection, error)
+	Collections(blockID flow.Identifier) ([]flow.Identifier, error)
 }

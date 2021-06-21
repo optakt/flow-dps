@@ -130,3 +130,25 @@ func (w *Writer) Transactions(blockID flow.Identifier, transactions []flow.Trans
 
 	return nil
 }
+
+// Collections indexes collection IDs for the given blockID, and each of the collections.
+func (w *Writer) Collections(blockID flow.Identifier, collections []flow.LightCollection) error {
+	// Index each collection by ID, and build the slice of collection IDs for the second index.
+	var cIDs []flow.Identifier
+	for _, collection := range collections {
+		err := w.db.Update(storage.SaveCollection(collection))
+		if err != nil {
+			return err
+		}
+
+		cIDs = append(cIDs, collection.ID())
+	}
+
+	// Index all collection IDs within a block.
+	err := w.db.Update(storage.SaveCollections(blockID, cIDs))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

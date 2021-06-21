@@ -35,10 +35,8 @@ const (
 )
 
 var (
-	testCommit         = flow.StateCommitment{132, 131, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 19, 18, 17, 16, 15, 14, 13, 12, 11}
-	testBlockID        = flow.Identifier{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
-	testTransactionID1 = flow.Identifier{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	testTransactionID2 = flow.Identifier{0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a}
+	testCommit  = flow.StateCommitment{132, 131, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 19, 18, 17, 16, 15, 14, 13, 12, 11}
+	testBlockID = flow.Identifier{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
 )
 
 func TestDisk_Root(t *testing.T) {
@@ -105,6 +103,19 @@ func TestDisk_Transactions(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDisk_Collections(t *testing.T) {
+	db := populatedDB(t)
+	defer db.Close()
+	c := chain.FromDisk(db)
+
+	tt, err := c.Collections(testHeight)
+	assert.NoError(t, err)
+	assert.Len(t, tt, 2)
+
+	_, err = c.Collections(math.MaxUint64)
+	assert.Error(t, err)
+}
+
 func populatedDB(t *testing.T) *badger.DB {
 	t.Helper()
 
@@ -152,34 +163,76 @@ func populatedDB(t *testing.T) *badger.DB {
 			return err
 		}
 
-		transactions := []*flow.TransactionBody{
-			{
-				ReferenceBlockID: testBlockID,
-				GasLimit:         42,
-				Payer:            flow.Address{0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12},
-			},
-			{
-				ReferenceBlockID: testBlockID,
-				GasLimit:         84,
-				Payer:            flow.Address{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-			},
+		tb1 := flow.TransactionBody{
+			ReferenceBlockID: testBlockID,
+			GasLimit:         42,
+			Payer:            flow.Address{0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12},
+		}
+		tb2 := flow.TransactionBody{
+			ReferenceBlockID: testBlockID,
+			GasLimit:         84,
+			Payer:            flow.Address{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
 		}
 
-		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: testTransactionID1})(tx)
+		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: tb1.ID()})(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: testTransactionID2})(tx)
+		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: tb2.ID()})(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.InsertTransaction(testTransactionID1, transactions[0])(tx)
+		err = operation.InsertTransaction(tb1.ID(), &tb1)(tx)
 		if err != nil {
 			return err
 		}
-		err = operation.InsertTransaction(testTransactionID2, transactions[1])(tx)
+		err = operation.InsertTransaction(tb2.ID(), &tb2)(tx)
+		if err != nil {
+			return err
+		}
+
+		tb3 := flow.TransactionBody{
+			ReferenceBlockID: testBlockID,
+			GasLimit:         21,
+			Payer:            flow.Address{0xb0, 0x20, 0xe8, 0x58, 0x72, 0xc8, 0x12, 0x59},
+		}
+		tb4 := flow.TransactionBody{
+			ReferenceBlockID: testBlockID,
+			GasLimit:         168,
+			Payer:            flow.Address{0x94, 0x2f, 0x2f, 0xf3, 0x50, 0x6b, 0xa8, 0xde},
+		}
+
+		collection1 := flow.LightCollection{Transactions: []flow.Identifier{tb1.ID(), tb2.ID()}}
+		collection2 := flow.LightCollection{Transactions: []flow.Identifier{tb3.ID(), tb4.ID()}}
+
+		err = operation.IndexCollectionByTransaction(tb1.ID(), collection1.ID())(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.IndexCollectionByTransaction(tb2.ID(), collection1.ID())(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.IndexCollectionByTransaction(tb3.ID(), collection2.ID())(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.IndexCollectionByTransaction(tb4.ID(), collection2.ID())(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertCollection(&collection1)(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertCollection(&collection2)(tx)
 		if err != nil {
 			return err
 		}

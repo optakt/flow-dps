@@ -211,3 +211,51 @@ func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error)
 
 	return transactions, nil
 }
+
+// Collection returns the collection with the given ID.
+func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection, error) {
+
+	req := GetCollectionRequest{
+		CollectionID: collectionID[:],
+	}
+	res, err := i.client.GetCollection(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get collection: %w", err)
+	}
+
+	// Convert [][]byte into []flow.Identifier which is in the flow.LightCollection.
+	var collection flow.LightCollection
+	for _, t := range res.TransactionIDs {
+		var transactionID flow.Identifier
+		copy(transactionID[:], t)
+
+		collection.Transactions = append(collection.Transactions, transactionID)
+	}
+
+	return &collection, nil
+}
+
+// Collections returns the collection IDs within the given block.
+func (i *Index) Collections(blockID flow.Identifier) ([]flow.Identifier, error) {
+
+	req := GetCollectionsRequest{
+		BlockID: blockID[:],
+	}
+	res, err := i.client.GetCollections(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get collection: %w", err)
+	}
+
+	var collections []flow.Identifier
+	for _, id := range res.CollectionIDs {
+		var collectionID flow.Identifier
+		err = cbor.Unmarshal(id, &collectionID)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode collection ID: %w", err)
+		}
+
+		collections = append(collections, collectionID)
+	}
+
+	return collections, nil
+}
