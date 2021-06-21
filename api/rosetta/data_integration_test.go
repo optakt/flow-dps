@@ -17,7 +17,12 @@
 package rosetta_test
 
 import (
+	"bytes"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"runtime"
 	"strings"
 	"testing"
@@ -25,6 +30,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/klauspost/compress/zstd"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -36,6 +42,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/invoker"
+	"github.com/optakt/flow-dps/rosetta/meta"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
@@ -45,6 +52,13 @@ import (
 )
 
 const (
+	balanceEndpoint     = "/account/balance"
+	blockEndpoint       = "/block"
+	transactionEndpoint = "/block/transaction"
+	listEndpoint        = "/network/list"
+	optionsEndpoint     = "/network/options"
+	statusEndpoint      = "/network/status"
+
 	invalidBlockchain = "invalid-blockchain"
 	invalidNetwork    = "invalid-network"
 	invalidToken      = "invalid-token"
@@ -95,6 +109,68 @@ func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	controller := rosetta.NewData(config, retrieve)
 
 	return controller
+}
+
+func setupRecorder(endpoint string, input interface{}, options ...func(*http.Request)) (*httptest.ResponseRecorder, echo.Context, error) {
+
+	var payload []byte
+
+	switch input.(type) {
+
+	case []byte:
+		payload = input.([]byte)
+
+	default:
+		enc, err := json.Marshal(input)
+		if err != nil {
+			return nil, echo.New().AcquireContext(), fmt.Errorf("could not encode input: %w", err)
+		}
+
+		payload = enc
+	}
+
+	req := httptest.NewRequest(http.MethodPost, endpoint, bytes.NewReader(payload))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+	for _, opt := range options {
+		opt(req)
+	}
+
+	rec := httptest.NewRecorder()
+
+	ctx := echo.New().NewContext(req, rec)
+
+	return rec, ctx, nil
+}
+
+func checkRosettaError(statusCode int, def meta.ErrorDefinition, desc string, details map[string]interface{}) func(t assert.TestingT, err error, v ...interface{}) bool {
+
+	return func(t assert.TestingT, err error, v ...interface{}) bool {
+
+		// return false if any of the asserts failed
+
+		success := true
+
+		success = success && assert.Error(t, err)
+
+		echoErr, ok := err.(*echo.HTTPError)
+		if !assert.True(t, ok) {
+			return false
+		}
+
+		success = success && assert.Equal(t, statusCode, echoErr.Code)
+
+		gotErr, ok := echoErr.Message.(rosetta.Error)
+		if !assert.True(t, ok) {
+			return false
+		}
+
+		success = success && assert.Equal(t, def, gotErr.ErrorDefinition)
+		success = success && assert.Equal(t, desc, gotErr.Description)
+		success = success && assert.Equal(t, details, gotErr.Details)
+
+		return success
+	}
 }
 
 // defaultNetwork returns the Network identifier common for all requests.

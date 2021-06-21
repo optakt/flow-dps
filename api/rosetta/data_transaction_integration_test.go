@@ -17,11 +17,9 @@
 package rosetta_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -109,17 +107,8 @@ func TestAPI_Transaction(t *testing.T) {
 
 			t.Parallel()
 
-			// prepare request payload
-			enc, err := json.Marshal(test.request)
+			rec, ctx, err := setupRecorder(transactionEndpoint, test.request)
 			require.NoError(t, err)
-
-			// create the request
-			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(enc))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-			rec := httptest.NewRecorder()
-
-			ctx := echo.New().NewContext(req, rec)
 
 			// execute the request
 			err = api.Transaction(ctx)
@@ -391,17 +380,8 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 
 			t.Parallel()
 
-			// prepare request payload
-			enc, err := json.Marshal(test.request)
+			_, ctx, err := setupRecorder(transactionEndpoint, test.request)
 			require.NoError(t, err)
-
-			// create the request
-			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(enc))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-			rec := httptest.NewRecorder()
-
-			ctx := echo.New().NewContext(req, rec)
 
 			// execute the request
 			err = api.Transaction(ctx)
@@ -469,29 +449,37 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 	)
 
 	tests := []struct {
-		name     string
-		payload  []byte
-		mimeType string
+		name    string
+		payload []byte
+		prepare func(*http.Request)
 	}{
 		{
-			name:     "empty request",
-			payload:  []byte(``),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "empty request",
+			payload: []byte(``),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "wrong field type",
-			payload:  []byte(wrongFieldType),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "wrong field type",
+			payload: []byte(wrongFieldType),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "unclosed bracket",
-			payload:  []byte(unclosedBracket),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "unclosed bracket",
+			payload: []byte(unclosedBracket),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "valid payload with no mime type set",
-			payload:  []byte(validJSON),
-			mimeType: "",
+			name:    "valid payload with no MIME type set",
+			payload: []byte(validJSON),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, "")
+			},
 		},
 	}
 
@@ -502,13 +490,10 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(test.payload))
-			req.Header.Set(echo.HeaderContentType, test.mimeType)
+			_, ctx, err := setupRecorder(transactionEndpoint, test.payload, test.prepare)
+			require.NoError(t, err)
 
-			rec := httptest.NewRecorder()
-			ctx := echo.New().NewContext(req, rec)
-
-			err := api.Block(ctx)
+			err = api.Block(ctx)
 			assert.Error(t, err)
 
 			echoErr, ok := err.(*echo.HTTPError)
