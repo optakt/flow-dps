@@ -37,7 +37,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
-func TestGetBalance(t *testing.T) {
+func TestAPI_Balance(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -72,7 +72,7 @@ func TestGetBalance(t *testing.T) {
 		request rosetta.BalanceRequest
 
 		wantBalance   string
-		validateBlock blockIDValidationFn
+		validateBlock validateBlockFunc
 	}{
 		{
 			name:          "first occurrence of the account",
@@ -146,7 +146,7 @@ func TestGetBalance(t *testing.T) {
 	}
 }
 
-func TestBalanceErrors(t *testing.T) {
+func TestAPI_BalanceHandlesErrors(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -526,8 +526,8 @@ func TestBalanceErrors(t *testing.T) {
 	}
 }
 
-// TestMalformedBalanceRequest tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
-func TestMalformedBalanceRequest(t *testing.T) {
+// TestAPI_BalanceHandlesMalformedRequest tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
+func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)

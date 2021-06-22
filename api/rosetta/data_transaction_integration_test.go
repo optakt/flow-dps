@@ -53,8 +53,8 @@ func TestAPI_Transaction(t *testing.T) {
 		firstTx = "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c"
 
 		// two transactions in a single block
-		firstOfTwoTx  = "23c486cfd54bca7138b519203322327bf46e43a780a237d1c5bb0a82f0a06c1d"
-		secondOfTwoTx = "3d6922d6c6fd161a76cec23b11067f22cac6409a49b28b905989db64f5cb05a5"
+		oneOfTwoTx = "23c486cfd54bca7138b519203322327bf46e43a780a237d1c5bb0a82f0a06c1d"
+		twoOfTwoTx = "3d6922d6c6fd161a76cec23b11067f22cac6409a49b28b905989db64f5cb05a5"
 
 		lastTx = "780bafaf4721ca4270986ea51e659951a8912c2eb99fb1bfedeb753b023cd4d9"
 	)
@@ -62,29 +62,29 @@ func TestAPI_Transaction(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request              rosetta.TransactionRequest
-		validateTransactions transactionValidationFn
+		request    rosetta.TransactionRequest
+		validateTx validateTxFunc
 	}{
 		{
-			name:                 "some cherry picked transaction",
-			request:              requestTransaction(firstHeader, firstTx),
-			validateTransactions: validateTransfer(t, firstTx, "754aed9de6197641", "631e88ae7f1d7c20", 1),
+			name:       "some cherry picked transaction",
+			request:    requestTransaction(firstHeader, firstTx),
+			validateTx: validateTransfer(t, firstTx, "754aed9de6197641", "631e88ae7f1d7c20", 1),
 		},
 		{
-			name:                 "first in a block with multiple",
-			request:              requestTransaction(multipleTxHeader, firstOfTwoTx),
-			validateTransactions: validateTransfer(t, firstOfTwoTx, "8c5303eaa26202d6", "72157877737ce077", 100_00000000),
+			name:       "first in a block with multiple",
+			request:    requestTransaction(multipleTxHeader, oneOfTwoTx),
+			validateTx: validateTransfer(t, oneOfTwoTx, "8c5303eaa26202d6", "72157877737ce077", 100_00000000),
 		},
 		{
 			// we had no blocks with more than two transactions, so this will do as 'get the last transaction from a block
-			name:                 "second in a block with multiple",
-			request:              requestTransaction(multipleTxHeader, secondOfTwoTx),
-			validateTransactions: validateTransfer(t, secondOfTwoTx, "89c61aa64423504c", "82ec283f88a62e65", 1),
+			name:       "second in a block with multiple",
+			request:    requestTransaction(multipleTxHeader, twoOfTwoTx),
+			validateTx: validateTransfer(t, twoOfTwoTx, "89c61aa64423504c", "82ec283f88a62e65", 1),
 		},
 		{
-			name:                 "last transaction recorded",
-			request:              requestTransaction(lastHeader, lastTx),
-			validateTransactions: validateTransfer(t, lastTx, "668b91e2995c2eba", "89c61aa64423504c", 1),
+			name:       "last transaction recorded",
+			request:    requestTransaction(lastHeader, lastTx),
+			validateTx: validateTransfer(t, lastTx, "668b91e2995c2eba", "89c61aa64423504c", 1),
 		},
 		{
 			name: "lookup using height and transaction hash",
@@ -94,10 +94,10 @@ func TestAPI_Transaction(t *testing.T) {
 					Index: 165,
 				},
 				TransactionID: identifier.Transaction{
-					Hash: secondOfTwoTx,
+					Hash: twoOfTwoTx,
 				},
 			},
-			validateTransactions: validateTransfer(t, secondOfTwoTx, "89c61aa64423504c", "82ec283f88a62e65", 1),
+			validateTx: validateTransfer(t, twoOfTwoTx, "89c61aa64423504c", "82ec283f88a62e65", 1),
 		},
 	}
 
@@ -130,7 +130,7 @@ func TestAPI_Transaction(t *testing.T) {
 			var res rosetta.TransactionResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
 
-			test.validateTransactions([]*object.Transaction{res.Transaction})
+			test.validateTx([]*object.Transaction{res.Transaction})
 		})
 	}
 }

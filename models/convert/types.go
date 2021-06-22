@@ -15,6 +15,8 @@
 package convert
 
 import (
+	"time"
+
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -24,4 +26,8 @@ func TypesToStrings(types []flow.EventType) []string {
 		ss = append(ss, string(typ))
 	}
 	return ss
+}
+
+func RosettaTime(t time.Time) int64 {
+	return t.UnixNano() / 1_000_000
 }

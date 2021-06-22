@@ -58,7 +58,6 @@ func setupDB(t *testing.T) *badger.DB {
 
 	opts := badger.DefaultOptions("").
 		WithInMemory(true).
-		WithReadOnly(true).
 		WithLogger(nil)
 
 	db, err := badger.Open(opts)
@@ -114,7 +113,7 @@ func defaultCurrency() []identifier.Currency {
 	}
 }
 
-func validateBlock(t *testing.T, height uint64, hash string) blockIDValidationFn {
+func validateBlock(t *testing.T, height uint64, hash string) validateBlockFunc {
 	t.Helper()
 
 	return func(blockID identifier.Block) {
@@ -123,12 +122,8 @@ func validateBlock(t *testing.T, height uint64, hash string) blockIDValidationFn
 	}
 }
 
-func validatorFromHeader(t *testing.T, header flow.Header) blockIDValidationFn {
+func validateByHeader(t *testing.T, header flow.Header) validateBlockFunc {
 	return validateBlock(t, header.Height, header.ID().String())
-}
-
-func rosettaTime(t time.Time) int64 {
-	return t.UnixNano() / 1_000_000
 }
 
 // add header for block 165 and 181

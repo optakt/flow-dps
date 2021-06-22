@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/optakt/flow-dps/api/rosetta"
+	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -38,10 +39,10 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-type blockIDValidationFn func(identifier.Block)
-type transactionValidationFn func([]*object.Transaction)
+type validateBlockFunc func(identifier.Block)
+type validateTxFunc func([]*object.Transaction)
 
-func TestGetBlock(t *testing.T) {
+func TestAPI_Block(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -71,33 +72,33 @@ func TestGetBlock(t *testing.T) {
 
 		wantTimestamp        int64
 		wantParentHash       string
-		validateTransactions transactionValidationFn
-		validateBlock        blockIDValidationFn
+		validateTransactions validateTxFunc
+		validateBlock        validateBlockFunc
 	}{
 		{
 			name:    "child of first block",
 			request: blockRequest(firstHeader),
 
-			wantTimestamp:  rosettaTime(firstHeader.Timestamp),
+			wantTimestamp:  convert.RosettaTime(firstHeader.Timestamp),
 			wantParentHash: firstHeader.ParentID.String(),
-			validateBlock:  validatorFromHeader(t, firstHeader),
+			validateBlock:  validateByHeader(t, firstHeader),
 		},
 		{
 			// initial transfer of currency from the root account to the user - 100 tokens
 			name:    "block mid-chain with transactions",
 			request: blockRequest(midHeader1),
 
-			wantTimestamp:        rosettaTime(midHeader1.Timestamp),
+			wantTimestamp:        convert.RosettaTime(midHeader1.Timestamp),
 			wantParentHash:       midHeader1.ParentID.String(),
-			validateBlock:        validatorFromHeader(t, midHeader1),
+			validateBlock:        validateByHeader(t, midHeader1),
 			validateTransactions: validateTransfer(t, initialLoadTx, rootAccount, senderAccount, 100_00000000),
 		},
 		{
 			name:    "block mid-chain without transactions",
 			request: blockRequest(midHeader2),
 
-			wantTimestamp:  rosettaTime(midHeader2.Timestamp),
-			validateBlock:  validatorFromHeader(t, midHeader2),
+			wantTimestamp:  convert.RosettaTime(midHeader2.Timestamp),
+			validateBlock:  validateByHeader(t, midHeader2),
 			wantParentHash: midHeader2.ParentID.String(),
 		},
 		{
@@ -105,9 +106,9 @@ func TestGetBlock(t *testing.T) {
 			name:    "second block mid-chain with transactions",
 			request: blockRequest(midHeader3),
 
-			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
+			wantTimestamp:        convert.RosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
-			validateBlock:        validatorFromHeader(t, midHeader3),
+			validateBlock:        validateByHeader(t, midHeader3),
 			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
 		},
 		{
@@ -117,7 +118,7 @@ func TestGetBlock(t *testing.T) {
 				BlockID:   identifier.Block{Index: midHeader3.Height},
 			},
 
-			wantTimestamp:        rosettaTime(midHeader3.Timestamp),
+			wantTimestamp:        convert.RosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
 			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
 			validateBlock:        validateBlock(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
@@ -126,8 +127,8 @@ func TestGetBlock(t *testing.T) {
 			name:    "last indexed block",
 			request: blockRequest(lastHeader),
 
-			wantTimestamp:  rosettaTime(lastHeader.Timestamp),
-			validateBlock:  validatorFromHeader(t, lastHeader),
+			wantTimestamp:  convert.RosettaTime(lastHeader.Timestamp),
+			validateBlock:  validateByHeader(t, lastHeader),
 			wantParentHash: lastHeader.ParentID.String(),
 		},
 	}
@@ -173,7 +174,7 @@ func TestGetBlock(t *testing.T) {
 	}
 }
 
-func TestBlockErrors(t *testing.T) {
+func TestAPI_BlockHandlesErrors(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -400,7 +401,7 @@ func TestBlockErrors(t *testing.T) {
 	}
 }
 
-func TestMalformedBlockRequest(t *testing.T) {
+func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -509,7 +510,7 @@ func blockRequest(header flow.Header) rosetta.BlockRequest {
 	}
 }
 
-func validateTransfer(t *testing.T, hash string, from string, to string, amount int64) transactionValidationFn {
+func validateTransfer(t *testing.T, hash string, from string, to string, amount int64) validateTxFunc {
 
 	t.Helper()
 
