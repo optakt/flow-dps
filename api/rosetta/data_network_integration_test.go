@@ -46,6 +46,39 @@ func TestAPI_Status(t *testing.T) {
 
 	lastBlock := knownHeaders(425)
 
+	request := rosetta.StatusRequest{
+		NetworkID: defaultNetwork(),
+	}
+
+	rec, ctx, err := setupRecorder(statusEndpoint, request)
+	require.NoError(t, err)
+
+	err = api.Status(ctx)
+	assert.NoError(t, err)
+
+	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
+
+	// unpack response
+	var status rosetta.StatusResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &status))
+
+	// verify current block
+	assert.Equal(t, status.CurrentBlockID.Index, lastBlock.Height)
+	assert.Equal(t, status.CurrentBlockID.Hash, lastBlock.ID().String())
+	assert.Equal(t, status.CurrentBlockTimestamp, convert.RosettaTime(lastBlock.Timestamp))
+
+	// verify oldest block
+	assert.Equal(t, status.OldestBlockID.Hash, oldestBlockID)
+
+	// this is actually omitted from JSON, due to height being zero, and JSON having the 'omitempty' tag
+	assert.Equal(t, status.OldestBlockID.Index, uint64(0))
+}
+
+func TestAPI_StatusHandlesErrors(t *testing.T) {
+
+	db := setupDB(t)
+	api := setupAPI(t, db)
+
 	tests := []struct {
 		name string
 
@@ -53,12 +86,6 @@ func TestAPI_Status(t *testing.T) {
 
 		checkError assert.ErrorAssertionFunc
 	}{
-		{
-			name: "network status",
-			request: rosetta.StatusRequest{
-				NetworkID: defaultNetwork(),
-			},
-		},
 		{
 			name: "missing blockchain",
 			request: rosetta.StatusRequest{
@@ -136,35 +163,11 @@ func TestAPI_Status(t *testing.T) {
 
 			t.Parallel()
 
-			rec, ctx, err := setupRecorder(statusEndpoint, test.request)
+			_, ctx, err := setupRecorder(statusEndpoint, test.request)
 			require.NoError(t, err)
 
 			err = api.Status(ctx)
-
-			// if it's an error test case, verify we failed correctly
-			if test.checkError != nil {
-				test.checkError(t, err)
-				return
-			}
-
-			// verify nominal case
-			assert.NoError(t, err)
-
-			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
-
-			// unpack response
-			var status rosetta.StatusResponse
-			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &status))
-
-			// verify current block
-			assert.Equal(t, status.CurrentBlockID.Index, lastBlock.Height)
-			assert.Equal(t, status.CurrentBlockID.Hash, lastBlock.ID().String())
-			assert.Equal(t, status.CurrentBlockTimestamp, convert.RosettaTime(lastBlock.Timestamp))
-
-			// verify oldest block
-			assert.Equal(t, status.OldestBlockID.Hash, oldestBlockID)
-			// this is actually omitted from JSON, due to height being zero, and JSON having the 'omitempty' tag
-			assert.Equal(t, status.OldestBlockID.Index, uint64(0))
+			test.checkError(t, err)
 		})
 	}
 }
@@ -201,12 +204,100 @@ func TestAPI_Options(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
+	const errorCount = 9
+
 	// verify version string is in the format of x.y.z
 	versionRe := regexp.MustCompile(`\d+\.\d+\.\d+`)
 
-	const (
-		errorCount = 9
-	)
+	request := rosetta.OptionsRequest{
+		NetworkID: defaultNetwork(),
+	}
+
+	rec, ctx, err := setupRecorder(optionsEndpoint, request)
+
+	err = api.Options(ctx)
+	require.NoError(t, err)
+
+	// verify nominal case
+	assert.NoError(t, err)
+
+	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
+
+	var options rosetta.OptionsResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &options))
+
+	// verify the version info
+	// TODO: we're not currently doing exact match of the version, only of the format
+	// check - should we?
+	assert.Regexp(t, versionRe, options.Version.RosettaVersion)
+	assert.Regexp(t, versionRe, options.Version.NodeVersion)
+	assert.Regexp(t, versionRe, options.Version.MiddlewareVersion)
+
+	assert.True(t, options.Allow.HistoricalBalanceLookup)
+
+	if assert.Len(t, options.Allow.OperationStatuses, 1) {
+
+		status := options.Allow.OperationStatuses[0]
+		assert.Equal(t, status.Status, dps.StatusCompleted)
+		assert.True(t, status.Successful)
+	}
+
+	if assert.Len(t, options.Allow.OperationTypes, 1) {
+		assert.Equal(t, options.Allow.OperationTypes[0], dps.OperationTransfer)
+	}
+
+	if assert.Len(t, options.Allow.Errors, errorCount) {
+
+		for i := uint(0); i < errorCount; i++ {
+
+			rosettaErr := options.Allow.Errors[i]
+
+			expectedCode := i + 1 // error codes start from 1
+
+			assert.Equal(t, expectedCode, rosettaErr.Code)
+
+			switch expectedCode {
+
+			case 1:
+				assert.Equal(t, configuration.ErrorInternal.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInternal.Retriable, rosettaErr.Retriable)
+			case 2:
+				assert.Equal(t, configuration.ErrorInvalidFormat.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidFormat.Retriable, rosettaErr.Retriable)
+			case 3:
+				assert.Equal(t, configuration.ErrorInvalidNetwork.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidNetwork.Retriable, rosettaErr.Retriable)
+			case 4:
+				assert.Equal(t, configuration.ErrorInvalidAccount.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidAccount.Retriable, rosettaErr.Retriable)
+			case 5:
+				assert.Equal(t, configuration.ErrorInvalidCurrency.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidCurrency.Retriable, rosettaErr.Retriable)
+			case 6:
+				assert.Equal(t, configuration.ErrorInvalidBlock.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidBlock.Retriable, rosettaErr.Retriable)
+			case 7:
+				assert.Equal(t, configuration.ErrorInvalidTransaction.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidTransaction.Retriable, rosettaErr.Retriable)
+			case 8:
+				assert.Equal(t, configuration.ErrorUnknownBlock.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorUnknownBlock.Retriable, rosettaErr.Retriable)
+			case 9:
+				assert.Equal(t, configuration.ErrorUnknownCurrency.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorUnknownCurrency.Retriable, rosettaErr.Retriable)
+
+			default:
+				t.Errorf("unknown rosetta error received: (code: %v, message: '%v', retriable: %v", rosettaErr.Code, rosettaErr.Message, rosettaErr.Retriable)
+			}
+		}
+	}
+
+}
+
+func TestAPI_OptionsHandlesErrors(t *testing.T) {
+
+	db := setupDB(t)
+	api := setupAPI(t, db)
 
 	tests := []struct {
 		name string
@@ -215,12 +306,6 @@ func TestAPI_Options(t *testing.T) {
 
 		checkError assert.ErrorAssertionFunc
 	}{
-		{
-			name: "nominal case",
-			request: rosetta.OptionsRequest{
-				NetworkID: defaultNetwork(),
-			},
-		},
 		{
 			name: "missing blockchain",
 			request: rosetta.OptionsRequest{
@@ -300,90 +385,11 @@ func TestAPI_Options(t *testing.T) {
 
 			t.Parallel()
 
-			rec, ctx, err := setupRecorder(optionsEndpoint, test.request)
+			_, ctx, err := setupRecorder(optionsEndpoint, test.request)
 			require.NoError(t, err)
 
 			err = api.Options(ctx)
-
-			// if it's an error test case, verify we failed correctly
-			if test.checkError != nil {
-				test.checkError(t, err)
-				return
-			}
-
-			// verify nominal case
-			assert.NoError(t, err)
-
-			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
-
-			var options rosetta.OptionsResponse
-			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &options))
-
-			// verify the version info
-			// TODO: we're not currently doing exact match of the version, only of the format
-			// check - should we?
-			assert.Regexp(t, versionRe, options.Version.RosettaVersion)
-			assert.Regexp(t, versionRe, options.Version.NodeVersion)
-			assert.Regexp(t, versionRe, options.Version.MiddlewareVersion)
-
-			assert.True(t, options.Allow.HistoricalBalanceLookup)
-
-			if assert.Len(t, options.Allow.OperationStatuses, 1) {
-
-				status := options.Allow.OperationStatuses[0]
-				assert.Equal(t, status.Status, dps.StatusCompleted)
-				assert.True(t, status.Successful)
-			}
-
-			if assert.Len(t, options.Allow.OperationTypes, 1) {
-				assert.Equal(t, options.Allow.OperationTypes[0], dps.OperationTransfer)
-			}
-
-			if assert.Len(t, options.Allow.Errors, errorCount) {
-
-				for i := uint(0); i < errorCount; i++ {
-
-					rosettaErr := options.Allow.Errors[i]
-
-					expectedCode := i + 1 // error codes start from 1
-
-					assert.Equal(t, expectedCode, rosettaErr.Code)
-
-					switch expectedCode {
-
-					case 1:
-						assert.Equal(t, configuration.ErrorInternal.Message, rosettaErr.Message)
-						assert.Equal(t, configuration.ErrorInternal.Retriable, rosettaErr.Retriable)
-					case 2:
-						assert.Equal(t, configuration.ErrorInvalidFormat.Message, rosettaErr.Message)
-						assert.Equal(t, configuration.ErrorInvalidFormat.Retriable, rosettaErr.Retriable)
-					case 3:
-						assert.Equal(t, configuration.ErrorInvalidNetwork.Message, rosettaErr.Message)
-						assert.Equal(t, configuration.ErrorInvalidNetwork.Retriable, rosettaErr.Retriable)
-					case 4:
-						assert.Equal(t, configuration.ErrorInvalidAccount.Message, rosettaErr.Message)
-						assert.Equal(t, configuration.ErrorInvalidAccount.Retriable, rosettaErr.Retriable)
-					case 5:
-						assert.Equal(t, configuration.ErrorInvalidCurrency.Message, rosettaErr.Message)
-						assert.Equal(t, configuration.ErrorInvalidCurrency.Retriable, rosettaErr.Retriable)
-					case 6:
-						assert.Equal(t, configuration.ErrorInvalidBlock.Message, rosettaErr.Message)
-						assert.Equal(t, configuration.ErrorInvalidBlock.Retriable, rosettaErr.Retriable)
-					case 7:
-						assert.Equal(t, configuration.ErrorInvalidTransaction.Message, rosettaErr.Message)
-						assert.Equal(t, configuration.ErrorInvalidTransaction.Retriable, rosettaErr.Retriable)
-					case 8:
-						assert.Equal(t, configuration.ErrorUnknownBlock.Message, rosettaErr.Message)
-						assert.Equal(t, configuration.ErrorUnknownBlock.Retriable, rosettaErr.Retriable)
-					case 9:
-						assert.Equal(t, configuration.ErrorUnknownCurrency.Message, rosettaErr.Message)
-						assert.Equal(t, configuration.ErrorUnknownCurrency.Retriable, rosettaErr.Retriable)
-
-					default:
-						t.Errorf("unknown rosetta error received: (code: %v, message: '%v', retriable: %v", rosettaErr.Code, rosettaErr.Message, rosettaErr.Retriable)
-					}
-				}
-			}
+			test.checkError(t, err)
 		})
 	}
 
