@@ -429,13 +429,9 @@ Outer:
 		if err != nil {
 			return fmt.Errorf("could not index block heights: %w", err)
 		}
-		err = m.index.Transactions(blockID, transactions)
+		err = m.index.Transactions(blockID, collections, transactions)
 		if err != nil {
 			return fmt.Errorf("could not index transactions: %w", err)
-		}
-		err = m.index.Collections(blockID, collections)
-		if err != nil {
-			return fmt.Errorf("could not index collections: %w", err)
 		}
 
 		// In order to index the payloads, we step back from the state

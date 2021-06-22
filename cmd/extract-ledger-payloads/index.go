@@ -49,10 +49,6 @@ func (*Index) Height(blockID flow.Identifier, height uint64) error {
 	return nil
 }
 
-func (*Index) Transactions(blockID flow.Identifier, transactions []flow.Transaction) error {
-	return nil
-}
-
-func (*Index) Collections(blockID flow.Identifier, collections []flow.LightCollection) error {
+func (*Index) Transactions(blockID flow.Identifier, collections []flow.LightCollection, transactions []flow.Transaction) error {
 	return nil
 }

@@ -179,7 +179,7 @@ func (i *Index) Transaction(transactionID flow.Identifier) (*flow.Transaction, e
 	}
 
 	var transaction flow.Transaction
-	err = cbor.Unmarshal(res.TransactionData, &transaction)
+	err = cbor.Unmarshal(res.Data, &transaction)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode transaction: %w", err)
 	}
@@ -190,10 +190,10 @@ func (i *Index) Transaction(transactionID flow.Identifier) (*flow.Transaction, e
 // Transactions returns the transaction IDs within the given block.
 func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
 
-	req := GetTransactionsRequest{
+	req := ListTransactionsRequest{
 		BlockID: blockID[:],
 	}
-	res, err := i.client.GetTransactions(context.Background(), &req)
+	res, err := i.client.ListTransactions(context.Background(), &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not get transaction: %w", err)
 	}
@@ -215,10 +215,10 @@ func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error)
 // Collection returns the collection with the given ID.
 func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection, error) {
 
-	req := GetCollectionRequest{
+	req := ListTransactionsForCollectionRequest{
 		CollectionID: collectionID[:],
 	}
-	res, err := i.client.GetCollection(context.Background(), &req)
+	res, err := i.client.ListTransactionsForCollection(context.Background(), &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not get collection: %w", err)
 	}
@@ -238,10 +238,10 @@ func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection,
 // Collections returns the collection IDs within the given block.
 func (i *Index) Collections(blockID flow.Identifier) ([]flow.Identifier, error) {
 
-	req := GetCollectionsRequest{
+	req := ListTransactionsForBlockRequest{
 		BlockID: blockID[:],
 	}
-	res, err := i.client.GetCollections(context.Background(), &req)
+	res, err := i.client.ListTransactionsForBlock(context.Background(), &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not get collection: %w", err)
 	}

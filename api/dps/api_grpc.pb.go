@@ -26,9 +26,9 @@ type APIClient interface {
 	GetRegisters(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
 	GetHeight(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error)
 	GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
-	GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, error)
-	GetCollection(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error)
-	GetCollections(ctx context.Context, in *GetCollectionsRequest, opts ...grpc.CallOption) (*GetCollectionsResponse, error)
+	ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error)
+	ListTransactionsForCollection(ctx context.Context, in *ListTransactionsForCollectionRequest, opts ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error)
+	ListTransactionsForBlock(ctx context.Context, in *ListTransactionsForBlockRequest, opts ...grpc.CallOption) (*ListTransactionsForBlockResponse, error)
 }
 
 type aPIClient struct {
@@ -111,27 +111,27 @@ func (c *aPIClient) GetTransaction(ctx context.Context, in *GetTransactionReques
 	return out, nil
 }
 
-func (c *aPIClient) GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, error) {
-	out := new(GetTransactionsResponse)
-	err := c.cc.Invoke(ctx, "/API/GetTransactions", in, out, opts...)
+func (c *aPIClient) ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error) {
+	out := new(ListTransactionsResponse)
+	err := c.cc.Invoke(ctx, "/API/ListTransactions", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *aPIClient) GetCollection(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error) {
-	out := new(GetCollectionResponse)
-	err := c.cc.Invoke(ctx, "/API/GetCollection", in, out, opts...)
+func (c *aPIClient) ListTransactionsForCollection(ctx context.Context, in *ListTransactionsForCollectionRequest, opts ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error) {
+	out := new(ListTransactionsForCollectionResponse)
+	err := c.cc.Invoke(ctx, "/API/ListTransactionsForCollection", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *aPIClient) GetCollections(ctx context.Context, in *GetCollectionsRequest, opts ...grpc.CallOption) (*GetCollectionsResponse, error) {
-	out := new(GetCollectionsResponse)
-	err := c.cc.Invoke(ctx, "/API/GetCollections", in, out, opts...)
+func (c *aPIClient) ListTransactionsForBlock(ctx context.Context, in *ListTransactionsForBlockRequest, opts ...grpc.CallOption) (*ListTransactionsForBlockResponse, error) {
+	out := new(ListTransactionsForBlockResponse)
+	err := c.cc.Invoke(ctx, "/API/ListTransactionsForBlock", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -150,9 +150,9 @@ type APIServer interface {
 	GetRegisters(context.Context, *GetRegistersRequest) (*GetRegistersResponse, error)
 	GetHeight(context.Context, *GetHeightRequest) (*GetHeightResponse, error)
 	GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error)
-	GetTransactions(context.Context, *GetTransactionsRequest) (*GetTransactionsResponse, error)
-	GetCollection(context.Context, *GetCollectionRequest) (*GetCollectionResponse, error)
-	GetCollections(context.Context, *GetCollectionsRequest) (*GetCollectionsResponse, error)
+	ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error)
+	ListTransactionsForCollection(context.Context, *ListTransactionsForCollectionRequest) (*ListTransactionsForCollectionResponse, error)
+	ListTransactionsForBlock(context.Context, *ListTransactionsForBlockRequest) (*ListTransactionsForBlockResponse, error)
 }
 
 // UnimplementedAPIServer should be embedded to have forward compatible implementations.
@@ -183,14 +183,14 @@ func (UnimplementedAPIServer) GetHeight(context.Context, *GetHeightRequest) (*Ge
 func (UnimplementedAPIServer) GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransaction not implemented")
 }
-func (UnimplementedAPIServer) GetTransactions(context.Context, *GetTransactionsRequest) (*GetTransactionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTransactions not implemented")
+func (UnimplementedAPIServer) ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTransactions not implemented")
 }
-func (UnimplementedAPIServer) GetCollection(context.Context, *GetCollectionRequest) (*GetCollectionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetCollection not implemented")
+func (UnimplementedAPIServer) ListTransactionsForCollection(context.Context, *ListTransactionsForCollectionRequest) (*ListTransactionsForCollectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTransactionsForCollection not implemented")
 }
-func (UnimplementedAPIServer) GetCollections(context.Context, *GetCollectionsRequest) (*GetCollectionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetCollections not implemented")
+func (UnimplementedAPIServer) ListTransactionsForBlock(context.Context, *ListTransactionsForBlockRequest) (*ListTransactionsForBlockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTransactionsForBlock not implemented")
 }
 
 // UnsafeAPIServer may be embedded to opt out of forward compatibility for this service.
@@ -348,56 +348,56 @@ func _API_GetTransaction_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_GetTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetTransactionsRequest)
+func _API_ListTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTransactionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).GetTransactions(ctx, in)
+		return srv.(APIServer).ListTransactions(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/API/GetTransactions",
+		FullMethod: "/API/ListTransactions",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetTransactions(ctx, req.(*GetTransactionsRequest))
+		return srv.(APIServer).ListTransactions(ctx, req.(*ListTransactionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_GetCollection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCollectionRequest)
+func _API_ListTransactionsForCollection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTransactionsForCollectionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).GetCollection(ctx, in)
+		return srv.(APIServer).ListTransactionsForCollection(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/API/GetCollection",
+		FullMethod: "/API/ListTransactionsForCollection",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetCollection(ctx, req.(*GetCollectionRequest))
+		return srv.(APIServer).ListTransactionsForCollection(ctx, req.(*ListTransactionsForCollectionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_GetCollections_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCollectionsRequest)
+func _API_ListTransactionsForBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTransactionsForBlockRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).GetCollections(ctx, in)
+		return srv.(APIServer).ListTransactionsForBlock(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/API/GetCollections",
+		FullMethod: "/API/ListTransactionsForBlock",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetCollections(ctx, req.(*GetCollectionsRequest))
+		return srv.(APIServer).ListTransactionsForBlock(ctx, req.(*ListTransactionsForBlockRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -442,16 +442,16 @@ var API_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _API_GetTransaction_Handler,
 		},
 		{
-			MethodName: "GetTransactions",
-			Handler:    _API_GetTransactions_Handler,
+			MethodName: "ListTransactions",
+			Handler:    _API_ListTransactions_Handler,
 		},
 		{
-			MethodName: "GetCollection",
-			Handler:    _API_GetCollection_Handler,
+			MethodName: "ListTransactionsForCollection",
+			Handler:    _API_ListTransactionsForCollection_Handler,
 		},
 		{
-			MethodName: "GetCollections",
-			Handler:    _API_GetCollections_Handler,
+			MethodName: "ListTransactionsForBlock",
+			Handler:    _API_ListTransactionsForBlock_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

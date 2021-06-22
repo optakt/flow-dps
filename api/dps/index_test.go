@@ -435,8 +435,8 @@ func TestIndex_Transaction(t *testing.T) {
 					assert.Equal(t, testTransactionID[:], in.TransactionID)
 
 					return &GetTransactionResponse{
-						TransactionID:   testTransactionID[:],
-						TransactionData: testTransactionB,
+						TransactionID: testTransactionID[:],
+						Data:          testTransactionB,
 					}, nil
 				},
 			},
@@ -474,7 +474,7 @@ func TestIndex_Collection(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
-				GetCollectionFunc: func(_ context.Context, in *GetCollectionRequest, _ ...grpc.CallOption) (*GetCollectionResponse, error) {
+				ListTransactionsForCollectionFunc: func(_ context.Context, in *ListTransactionsForCollectionRequest, _ ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error) {
 					assert.Equal(t, testCollectionID[:], in.CollectionID)
 
 					var transactionIDs [][]byte
@@ -482,7 +482,7 @@ func TestIndex_Collection(t *testing.T) {
 						transactionIDs = append(transactionIDs, transaction[:])
 					}
 
-					return &GetCollectionResponse{
+					return &ListTransactionsForCollectionResponse{
 						CollectionID:   testCollectionID[:],
 						TransactionIDs: transactionIDs,
 					}, nil
@@ -500,7 +500,7 @@ func TestIndex_Collection(t *testing.T) {
 	t.Run("handles index failures", func(t *testing.T) {
 		index := Index{
 			client: &apiMock{
-				GetCollectionFunc: func(_ context.Context, in *GetCollectionRequest, _ ...grpc.CallOption) (*GetCollectionResponse, error) {
+				ListTransactionsForCollectionFunc: func(_ context.Context, in *ListTransactionsForCollectionRequest, _ ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error) {
 					assert.Equal(t, testCollectionID[:], in.CollectionID)
 
 					return nil, mocks.DummyError
@@ -515,17 +515,17 @@ func TestIndex_Collection(t *testing.T) {
 }
 
 type apiMock struct {
-	GetFirstFunc        func(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
-	GetLastFunc         func(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
-	GetHeaderFunc       func(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
-	GetCommitFunc       func(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
-	GetEventsFunc       func(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
-	GetRegistersFunc    func(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
-	GetHeightFunc       func(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error)
-	GetTransactionFunc  func(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
-	GetTransactionsFunc func(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, error)
-	GetCollectionFunc   func(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error)
-	GetCollectionsFunc  func(ctx context.Context, in *GetCollectionsRequest, opts ...grpc.CallOption) (*GetCollectionsResponse, error)
+	GetFirstFunc                      func(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
+	GetLastFunc                       func(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
+	GetHeaderFunc                     func(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
+	GetCommitFunc                     func(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
+	GetEventsFunc                     func(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
+	GetRegistersFunc                  func(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
+	GetHeightFunc                     func(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error)
+	GetTransactionFunc                func(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
+	ListTransactionsFunc              func(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error)
+	ListTransactionsForCollectionFunc func(ctx context.Context, in *ListTransactionsForCollectionRequest, opts ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error)
+	ListTransactionsForBlockFunc      func(ctx context.Context, in *ListTransactionsForBlockRequest, opts ...grpc.CallOption) (*ListTransactionsForBlockResponse, error)
 }
 
 func (a *apiMock) GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error) {
@@ -560,14 +560,14 @@ func (a *apiMock) GetTransaction(ctx context.Context, in *GetTransactionRequest,
 	return a.GetTransactionFunc(ctx, in, opts...)
 }
 
-func (a *apiMock) GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*GetTransactionsResponse, error) {
-	return a.GetTransactionsFunc(ctx, in, opts...)
+func (a *apiMock) ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error) {
+	return a.ListTransactionsFunc(ctx, in, opts...)
 }
 
-func (a *apiMock) GetCollection(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error) {
-	return a.GetCollectionFunc(ctx, in, opts...)
+func (a *apiMock) ListTransactionsForCollection(ctx context.Context, in *ListTransactionsForCollectionRequest, opts ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error) {
+	return a.ListTransactionsForCollectionFunc(ctx, in, opts...)
 }
 
-func (a *apiMock) GetCollections(ctx context.Context, in *GetCollectionsRequest, opts ...grpc.CallOption) (*GetCollectionsResponse, error) {
-	return a.GetCollectionsFunc(ctx, in, opts...)
+func (a *apiMock) ListTransactionsForBlock(ctx context.Context, in *ListTransactionsForBlockRequest, opts ...grpc.CallOption) (*ListTransactionsForBlockResponse, error) {
+	return a.ListTransactionsForBlockFunc(ctx, in, opts...)
 }
