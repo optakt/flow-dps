@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/optakt/flow-dps/api/rosetta"
+	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -158,7 +159,7 @@ func TestAPI_Status(t *testing.T) {
 			// verify current block
 			assert.Equal(t, status.CurrentBlockID.Index, lastBlock.Height)
 			assert.Equal(t, status.CurrentBlockID.Hash, lastBlock.ID().String())
-			assert.Equal(t, status.CurrentBlockTimestamp, rosettaTime(lastBlock.Timestamp))
+			assert.Equal(t, status.CurrentBlockTimestamp, convert.RosettaTime(lastBlock.Timestamp))
 
 			// verify oldest block
 			assert.Equal(t, status.OldestBlockID.Hash, oldestBlockID)
