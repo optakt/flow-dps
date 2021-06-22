@@ -38,7 +38,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-func TestGetTransaction(t *testing.T) {
+func TestAPI_Transaction(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -99,21 +99,6 @@ func TestGetTransaction(t *testing.T) {
 			},
 			validateTransactions: validateTransfer(t, secondOfTwoTx, "89c61aa64423504c", "82ec283f88a62e65", 1),
 		},
-
-		/* TODO: this is an invalid test case - looking up a transaction that does not exist in a block or does not move funds
-			is not differentiated at the moment and returns no error.
-
-			But it probably should (see https://github.com/optakt/flow-dps/issues/195)
-
-			This test case could be of use to document the current behaviour, so once the behaviour is changed the test will fail
-			and would signal that they should be updated.
-		{
-			// looking up a transaction in a wrong block
-			name:                 "missing transaction is not an error",
-			request:              requestTransaction(firstHeader, lastTx),
-			validateTransactions: func([]*object.Transaction) {}, // no-op
-		},
-		*/
 	}
 
 	for _, test := range tests {
@@ -150,7 +135,7 @@ func TestGetTransaction(t *testing.T) {
 	}
 }
 
-func TestTransactionErrors(t *testing.T) {
+func TestAPI_TransactionHandlesErrors(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -437,7 +422,7 @@ func TestTransactionErrors(t *testing.T) {
 	}
 }
 
-func TestMalformedTransactionRequest(t *testing.T) {
+func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
