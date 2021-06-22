@@ -38,7 +38,6 @@ import (
 )
 
 func TestAPI_Balance(t *testing.T) {
-
 	db := setupDB(t)
 	api := setupAPI(t, db)
 

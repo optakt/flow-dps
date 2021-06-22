@@ -12,10 +12,18 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package retriever
+package mocks
 
-type Generator interface {
-	GetBalance(symbol string) ([]byte, error)
-	TokensDeposited(symbol string) (string, error)
-	TokensWithdrawn(symbol string) (string, error)
+import (
+	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/rosetta/object"
+)
+
+type Converter struct {
+	EventToOperationFunc func(flow.Event) (*object.Operation, error)
+}
+
+func (c *Converter) EventToOperation(event flow.Event) (transaction *object.Operation, err error) {
+	return c.EventToOperationFunc(event)
 }

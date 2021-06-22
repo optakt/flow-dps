@@ -12,10 +12,9 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package retriever
+package converter
 
 type Generator interface {
-	GetBalance(symbol string) ([]byte, error)
 	TokensDeposited(symbol string) (string, error)
 	TokensWithdrawn(symbol string) (string, error)
 }
