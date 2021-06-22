@@ -18,17 +18,12 @@ package rosetta_test
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"runtime"
-	"strings"
 	"testing"
 
-	"github.com/dgraph-io/badger/v2"
-	"github.com/klauspost/compress/zstd"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,68 +34,10 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/meta"
-	"github.com/optakt/flow-dps/rosetta/retriever"
-	"github.com/optakt/flow-dps/rosetta/scripts"
-	"github.com/optakt/flow-dps/rosetta/validator"
-	"github.com/optakt/flow-dps/service/dictionaries"
-	"github.com/optakt/flow-dps/service/index"
-	"github.com/optakt/flow-dps/testing/snapshots"
 )
 
-const (
-	invalidBlockchain = "invalid-blockchain"
-	invalidNetwork    = "invalid-network"
-	invalidToken      = "invalid-token"
-
-	invalidBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2z" // invalid hex value
-
-	validBlockHashLen = 64
-)
-
-func setupDB(t *testing.T) *badger.DB {
-	t.Helper()
-
-	opts := badger.DefaultOptions("").
-		WithInMemory(true).
-		WithReadOnly(true).
-		WithLogger(nil)
-
-	db, err := badger.Open(opts)
-	require.NoError(t, err)
-
-	reader := hex.NewDecoder(strings.NewReader(snapshots.Rosetta))
-	dict, _ := hex.DecodeString(dictionaries.Payload)
-
-	decompressor, err := zstd.NewReader(reader,
-		zstd.WithDecoderDicts(dict),
-	)
-	require.NoError(t, err)
-
-	err = db.Load(decompressor, runtime.GOMAXPROCS(0))
-	require.NoError(t, err)
-
-	return db
-}
-
-func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
-	t.Helper()
-
-	index := index.NewReader(db)
-
-	params := dps.FlowParams[dps.FlowTestnet]
-	config := configuration.New(params.ChainID)
-	validate := validator.New(params, index)
-	generate := scripts.NewGenerator(params)
-	invoke, err := invoker.New(index)
-	require.NoError(t, err)
-	retrieve := retriever.New(params, index, validate, generate, invoke)
-	controller := rosetta.NewData(config, retrieve)
-
-	return controller
-}
-func TestGetBalance(t *testing.T) {
+func TestAPI_Balance(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -134,9 +71,8 @@ func TestGetBalance(t *testing.T) {
 
 		request rosetta.BalanceRequest
 
-		wantStatusCode int
-		wantBalance    string
-		validateBlock  blockIDValidationFn
+		wantBalance   string
+		validateBlock validateBlockFunc
 	}{
 		{
 			name:          "first occurrence of the account",
@@ -210,7 +146,7 @@ func TestGetBalance(t *testing.T) {
 	}
 }
 
-func TestBalanceErrors(t *testing.T) {
+func TestAPI_BalanceHandlesErrors(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -260,7 +196,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "missing network blockchain identifier",
+			name: "missing blockchain name",
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
 					Blockchain: "",
@@ -277,7 +213,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "wrong network blockchain identifier",
+			name: "invalid blockchain name",
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
@@ -294,7 +230,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchain, "network": dps.FlowTestnet.String()},
 		},
 		{
-			name: "missing network identifier",
+			name: "missing network name",
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
@@ -311,7 +247,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDetails:     nil,
 		},
 		{
-			name: "wrong network identifier",
+			name: "invalid network name",
 			request: rosetta.BalanceRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
@@ -341,7 +277,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
 		},
 		{
-			name: "wrong length of block id",
+			name: "invalid length of block id",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
@@ -366,7 +302,7 @@ func TestBalanceErrors(t *testing.T) {
 			wantRosettaErrorDescription: "account identifier: address field is empty",
 		},
 		{
-			name: "wrong length of account address",
+			name: "invalid length of account address",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: trimmedAddress},
@@ -590,8 +526,8 @@ func TestBalanceErrors(t *testing.T) {
 	}
 }
 
-// TestMalformedBalanceRequest tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
-func TestMalformedBalanceRequest(t *testing.T) {
+// TestAPI_BalanceHandlesMalformedRequest tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
+func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -704,24 +640,5 @@ func requestBalance(address string, id identifier.Block) rosetta.BalanceRequest 
 		},
 		BlockID:    id,
 		Currencies: defaultCurrency(),
-	}
-}
-
-// defaultNetwork returns the Network identifier common for all requests.
-func defaultNetwork() identifier.Network {
-	return identifier.Network{
-		Blockchain: dps.FlowBlockchain,
-		Network:    dps.FlowTestnet.String(),
-	}
-}
-
-// defaultCurrency returns the Currency spec common for all requests.
-// At the moment only get the FLOW tokens, perhaps in the future it will support multiple.
-func defaultCurrency() []identifier.Currency {
-	return []identifier.Currency{
-		{
-			Symbol:   dps.FlowSymbol,
-			Decimals: dps.FlowDecimals,
-		},
 	}
 }

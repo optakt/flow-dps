@@ -22,16 +22,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
 	"github.com/labstack/echo/v4"
-	"github.com/onflow/flow-go/model/flow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/api/rosetta"
-	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -39,97 +38,67 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-type validateBlockFunc func(identifier.Block)
-type validateTxFunc func([]*object.Transaction)
-
-func TestAPI_Block(t *testing.T) {
+func TestAPI_Transaction(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	// headers of known blocks we want to verify
 	var (
-		firstHeader = knownHeaders(1)
-		midHeader1  = knownHeaders(13)
-		midHeader2  = knownHeaders(43)
-		midHeader3  = knownHeaders(44)
-		lastHeader  = knownHeaders(425) // header of last indexed block
+		firstHeader      = knownHeaders(44)
+		multipleTxHeader = knownHeaders(165)
+		lastHeader       = knownHeaders(181)
+
+		// two transactions in a single block
+		midBlockTxs = []string{
+			"23c486cfd54bca7138b519203322327bf46e43a780a237d1c5bb0a82f0a06c1d",
+			"3d6922d6c6fd161a76cec23b11067f22cac6409a49b28b905989db64f5cb05a5",
+		}
 	)
 
 	const (
-		rootAccount     = "8c5303eaa26202d6"
-		senderAccount   = "754aed9de6197641"
-		receiverAccount = "631e88ae7f1d7c20"
-
-		initialLoadTx = "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1"
-		transferTx    = "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c"
+		firstTx = "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c"
+		lastTx  = "780bafaf4721ca4270986ea51e659951a8912c2eb99fb1bfedeb753b023cd4d9"
 	)
 
 	tests := []struct {
 		name string
 
-		request rosetta.BlockRequest
-
-		wantTimestamp        int64
-		wantParentHash       string
-		validateTransactions validateTxFunc
-		validateBlock        validateBlockFunc
+		request    rosetta.TransactionRequest
+		validateTx validateTxFunc
 	}{
 		{
-			name:    "child of first block",
-			request: blockRequest(firstHeader),
-
-			wantTimestamp:  convert.RosettaTime(firstHeader.Timestamp),
-			wantParentHash: firstHeader.ParentID.String(),
-			validateBlock:  validateByHeader(t, firstHeader),
+			name:       "some cherry picked transaction",
+			request:    requestTransaction(firstHeader, firstTx),
+			validateTx: validateTransfer(t, firstTx, "754aed9de6197641", "631e88ae7f1d7c20", 1),
 		},
 		{
-			// initial transfer of currency from the root account to the user - 100 tokens
-			name:    "block mid-chain with transactions",
-			request: blockRequest(midHeader1),
-
-			wantTimestamp:        convert.RosettaTime(midHeader1.Timestamp),
-			wantParentHash:       midHeader1.ParentID.String(),
-			validateBlock:        validateByHeader(t, midHeader1),
-			validateTransactions: validateTransfer(t, initialLoadTx, rootAccount, senderAccount, 100_00000000),
+			name:       "first in a block with multiple",
+			request:    requestTransaction(multipleTxHeader, midBlockTxs[0]),
+			validateTx: validateTransfer(t, midBlockTxs[0], "8c5303eaa26202d6", "72157877737ce077", 100_00000000),
 		},
 		{
-			name:    "block mid-chain without transactions",
-			request: blockRequest(midHeader2),
-
-			wantTimestamp:  convert.RosettaTime(midHeader2.Timestamp),
-			validateBlock:  validateByHeader(t, midHeader2),
-			wantParentHash: midHeader2.ParentID.String(),
+			// we had no blocks with more than two transactions, so this will do as 'get the last transaction from a block
+			name:       "second in a block with multiple",
+			request:    requestTransaction(multipleTxHeader, midBlockTxs[1]),
+			validateTx: validateTransfer(t, midBlockTxs[1], "89c61aa64423504c", "82ec283f88a62e65", 1),
 		},
 		{
-			// transaction between two users
-			name:    "second block mid-chain with transactions",
-			request: blockRequest(midHeader3),
-
-			wantTimestamp:        convert.RosettaTime(midHeader3.Timestamp),
-			wantParentHash:       midHeader3.ParentID.String(),
-			validateBlock:        validateByHeader(t, midHeader3),
-			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
+			name:       "last transaction recorded",
+			request:    requestTransaction(lastHeader, lastTx),
+			validateTx: validateTransfer(t, lastTx, "668b91e2995c2eba", "89c61aa64423504c", 1),
 		},
 		{
-			name: "lookup of a block mid-chain by index only",
-			request: rosetta.BlockRequest{
+			name: "lookup using height and transaction hash",
+			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
-				BlockID:   identifier.Block{Index: midHeader3.Height},
+				BlockID: identifier.Block{
+					Index: 165,
+				},
+				TransactionID: identifier.Transaction{
+					Hash: midBlockTxs[1],
+				},
 			},
-
-			wantTimestamp:        convert.RosettaTime(midHeader3.Timestamp),
-			wantParentHash:       midHeader3.ParentID.String(),
-			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
-			validateBlock:        validateBlock(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
-		},
-		{
-			name:    "last indexed block",
-			request: blockRequest(lastHeader),
-
-			wantTimestamp:  convert.RosettaTime(lastHeader.Timestamp),
-			validateBlock:  validateByHeader(t, lastHeader),
-			wantParentHash: lastHeader.ParentID.String(),
+			validateTx: validateTransfer(t, midBlockTxs[1], "89c61aa64423504c", "82ec283f88a62e65", 1),
 		},
 	}
 
@@ -140,62 +109,64 @@ func TestAPI_Block(t *testing.T) {
 
 			t.Parallel()
 
+			// prepare request payload
 			enc, err := json.Marshal(test.request)
 			require.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodPost, "/block", bytes.NewReader(enc))
+			// create the request
+			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(enc))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
 			rec := httptest.NewRecorder()
 
 			ctx := echo.New().NewContext(req, rec)
 
-			err = api.Block(ctx)
+			// execute the request
+			err = api.Transaction(ctx)
 			assert.NoError(t, err)
 
-			// unpack response
-			var blockResponse rosetta.BlockResponse
-			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &blockResponse))
-			require.NotNil(t, blockResponse.Block)
+			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-			// validate index/hash of returned block
-			test.validateBlock(blockResponse.Block.ID)
+			// unpack the response
+			var res rosetta.TransactionResponse
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
 
-			// verify the index/hash of the parent block
-			assert.Equal(t, test.request.BlockID.Index-1, blockResponse.Block.ParentID.Index)
-			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
-
-			assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
-
-			if test.validateTransactions != nil {
-				test.validateTransactions(blockResponse.Block.Transactions)
-			}
+			test.validateTx([]*object.Transaction{res.Transaction})
 		})
 	}
 }
 
-func TestAPI_BlockHandlesErrors(t *testing.T) {
+func TestAPI_TransactionHandlesErrors(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
 	const (
-		validBlockHash   = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
-		validBlockHeight = 44
+		lastHeight = 425
 
-		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character short
-		lastHeight       = 425
+		testHeight    = 106
+		testBlockHash = "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
+		testTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
+
+		trimmedBlockHash = "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d27"  // block hash a character short
+		trimmedTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c68"  // tx hash a character short
+		invalidTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c68z" // testTxHash with a hex-invalid last character
 	)
 
-	var validBlockID = identifier.Block{
-		Index: validBlockHeight,
-		Hash:  validBlockHash,
-	}
+	var (
+		testBlock = identifier.Block{
+			Index: testHeight,
+			Hash:  testBlockHash,
+		}
+
+		// corresponds to the block above
+		testTx = identifier.Transaction{Hash: testTxHash}
+	)
 
 	tests := []struct {
 		name string
 
-		request rosetta.BlockRequest
+		request rosetta.TransactionRequest
 
 		// HTTP/handler errors
 		wantStatusCode int
@@ -206,28 +177,37 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		wantRosettaErrorDetails     map[string]interface{}
 	}{
 		{
+			name:    "empty transaction request",
+			request: rosetta.TransactionRequest{},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
+		},
+		{
 			name: "missing blockchain name",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: identifier.Network{
 					Blockchain: "",
 					Network:    dps.FlowTestnet.String(),
 				},
-				BlockID: validBlockID,
+				BlockID:       testBlock,
+				TransactionID: testTx,
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
 			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
-			wantRosettaErrorDetails:     nil,
 		},
 		{
 			name: "invalid blockchain name",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
 					Network:    dps.FlowTestnet.String(),
 				},
-				BlockID: validBlockID,
+				BlockID:       testBlock,
+				TransactionID: testTx,
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
@@ -237,27 +217,28 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing network name",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    "",
 				},
-				BlockID: validBlockID,
+				BlockID:       testBlock,
+				TransactionID: testTx,
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
 			wantRosettaErrorDescription: "blockchain identifier: network field is empty",
-			wantRosettaErrorDetails:     nil,
 		},
 		{
 			name: "invalid network name",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    invalidNetwork,
 				},
-				BlockID: validBlockID,
+				BlockID:       testBlock,
+				TransactionID: testTx,
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
@@ -267,122 +248,163 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing block height and hash",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: 0,
 					Hash:  "",
 				},
+				TransactionID: testTx,
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
 			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
-			wantRosettaErrorDetails:     nil,
 		},
 		{
 			name: "invalid length of block id",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: 43,
+					Index: testHeight,
 					Hash:  trimmedBlockHash,
 				},
+				TransactionID: testTx,
 			},
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
 			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
-			wantRosettaErrorDetails:     nil,
 		},
 		{
 			name: "missing block height",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Hash: validBlockHash,
+					Hash: testBlockHash,
 				},
+				TransactionID: testTx,
 			},
-
 			wantStatusCode:              http.StatusInternalServerError,
 			wantRosettaError:            configuration.ErrorInternal,
 			wantRosettaErrorDescription: "could not validate block: block access with hash currently not supported",
-			wantRosettaErrorDetails:     nil,
 		},
 		{
 			name: "invalid block hash",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: 13,
+					Index: testHeight,
 					Hash:  invalidBlockHash,
 				},
+				TransactionID: testTx,
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidBlock,
 			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(testHeight), "hash": invalidBlockHash},
 		},
 		{
 			name: "unknown block",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: lastHeight + 1,
 				},
+				TransactionID: testTx,
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorUnknownBlock,
 			wantRosettaErrorDescription: fmt.Sprintf("block index is above last indexed block (last: %d)", lastHeight),
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(426), "hash": ""},
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(lastHeight + 1), "hash": ""},
 		},
 		{
 			name: "mismatched block height and hash",
-			request: rosetta.BlockRequest{
+			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: validBlockHeight - 1,
-					Hash:  validBlockHash,
+					Index: 44,
+					Hash:  testBlockHash,
 				},
+				TransactionID: testTx,
 			},
 
 			wantStatusCode:              http.StatusUnprocessableEntity,
 			wantRosettaError:            configuration.ErrorInvalidBlock,
-			wantRosettaErrorDescription: fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeaders(validBlockHeight-1).ID().String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(validBlockHeight - 1), "hash": validBlockHash},
+			wantRosettaErrorDescription: fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeaders(44).ID().String()),
+			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(44), "hash": testBlockHash},
 		},
 		{
-			// effectively the same as the 'missing blockchain name' test case, since it's the first check we'll do
-			name:    "empty block request",
-			request: rosetta.BlockRequest{},
+			name: "missing transaction id",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID:   testBlock,
+				TransactionID: identifier.Transaction{
+					Hash: "",
+				},
+			},
 
 			wantStatusCode:              http.StatusBadRequest,
 			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
-			wantRosettaErrorDetails:     nil,
+			wantRosettaErrorDescription: "transaction identifier: hash field is empty",
 		},
+		{
+			name: "missing transaction id",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID:   testBlock,
+				TransactionID: identifier.Transaction{
+					Hash: trimmedTxHash,
+				},
+			},
+
+			wantStatusCode:              http.StatusBadRequest,
+			wantRosettaError:            configuration.ErrorInvalidFormat,
+			wantRosettaErrorDescription: fmt.Sprintf("transaction identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedTxHash), validBlockHashLen),
+		},
+		{
+			name: "invalid transaction id",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				BlockID:   testBlock,
+				TransactionID: identifier.Transaction{
+					Hash: invalidTxHash,
+				},
+			},
+
+			wantStatusCode:              http.StatusUnprocessableEntity,
+			wantRosettaError:            configuration.ErrorInvalidTransaction,
+			wantRosettaErrorDescription: "transaction hash is not a valid hex-encoded string",
+			wantRosettaErrorDetails:     map[string]interface{}{"hash": invalidTxHash},
+		},
+		// TODO: add - transaction that has no events/transfers
+		// TODO: add - transaction that does not exist in a block
+		// 	=> https://github.com/optakt/flow-dps/issues/195
 	}
 
 	for _, test := range tests {
-		test := test
 
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 
 			t.Parallel()
 
+			// prepare request payload
 			enc, err := json.Marshal(test.request)
 			require.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodPost, "/block", bytes.NewReader(enc))
+			// create the request
+			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(enc))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
 			rec := httptest.NewRecorder()
+
 			ctx := echo.New().NewContext(req, rec)
 
 			// execute the request
-			err = api.Block(ctx)
+			err = api.Transaction(ctx)
 			assert.Error(t, err)
 
 			echoErr, ok := err.(*echo.HTTPError)
@@ -401,7 +423,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 	}
 }
 
-func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
+func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -418,24 +440,30 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 
 		unclosedBracket = `
 		{
-			"network_identifier": {
+			"network_identifier" : {
 				"blockchain": "flow",
 				"network": "flow-testnet"
 			},
 			"block_identifier": {
-				"index": 13,
-				"hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+				"index": 106,
+				"hash": "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
+			},
+			"transaction_identifier": {
+				"hash": "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
 			}`
 
 		validJSON = `
 		{
-			"network_identifier": {
+			"network_identifier" : {
 				"blockchain": "flow",
 				"network": "flow-testnet"
 			},
 			"block_identifier": {
-				"index": 13,
-				"hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+				"index": 106,
+				"hash": "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
+			},
+			"transaction_identifier": {
+				"hash": "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
 			}
 		}`
 	)
@@ -474,7 +502,7 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodPost, "/block", bytes.NewReader(test.payload))
+			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(test.payload))
 			req.Header.Set(echo.HeaderContentType, test.mimeType)
 
 			rec := httptest.NewRecorder()
@@ -498,95 +526,16 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 
 }
 
-// blockRequest generates a BlockRequest with the specified parameters.
-func blockRequest(header flow.Header) rosetta.BlockRequest {
+func requestTransaction(header flow.Header, txID string) rosetta.TransactionRequest {
 
-	return rosetta.BlockRequest{
+	return rosetta.TransactionRequest{
 		NetworkID: defaultNetwork(),
 		BlockID: identifier.Block{
 			Index: header.Height,
 			Hash:  header.ID().String(),
 		},
-	}
-}
-
-func validateTransfer(t *testing.T, hash string, from string, to string, amount int64) validateTxFunc {
-
-	t.Helper()
-
-	return func(transactions []*object.Transaction) {
-
-		require.Len(t, transactions, 1)
-
-		tx := transactions[0]
-
-		assert.Equal(t, tx.ID.Hash, hash)
-		assert.Equal(t, len(tx.Operations), 2)
-
-		// operations come in pairs
-		// - one is a negative transfer of funds (for the sender) and another one is a positive one (for the receiver)
-
-		require.Equal(t, len(tx.Operations), 2)
-
-		op1 := tx.Operations[0]
-		op2 := tx.Operations[1]
-
-		// verify the first operation data
-
-		// validate operation and status
-		assert.Equal(t, op1.Type, dps.OperationTransfer)
-		assert.Equal(t, op1.Status, dps.StatusCompleted)
-
-		// validate currency
-		assert.Equal(t, op1.Amount.Currency.Symbol, dps.FlowSymbol)
-		assert.Equal(t, op1.Amount.Currency.Decimals, uint(dps.FlowDecimals))
-
-		// validate address
-		address := op1.AccountID.Address
-		if address != from && address != to {
-			t.Errorf("unexpected account address (%v)", address)
-		}
-
-		// validate transfered amount
-		wantValue := strconv.FormatInt(amount, 10)
-		if address == from {
-			wantValue = "-" + wantValue
-		}
-
-		assert.Equal(t, op1.Amount.Value, wantValue)
-
-		// validate related operation is op2
-		if assert.Len(t, op1.RelatedIDs, 1) {
-			assert.Equal(t, op1.RelatedIDs[0], op2.ID)
-		}
-
-		// verify the second operation
-
-		// validate operation and status
-		assert.Equal(t, op2.Type, dps.OperationTransfer)
-		assert.Equal(t, op2.Status, dps.StatusCompleted)
-
-		// validate currency
-		assert.Equal(t, op2.Amount.Currency.Symbol, dps.FlowSymbol)
-		assert.Equal(t, op2.Amount.Currency.Decimals, uint(dps.FlowDecimals))
-
-		// validate address
-		address = op2.AccountID.Address
-		if address != from && address != to {
-			t.Errorf("unexpected account address (%v)", address)
-		}
-
-		// validate transfered amount
-		wantValue = strconv.FormatInt(amount, 10)
-		if address == from {
-			wantValue = "-" + wantValue
-		}
-
-		assert.Equal(t, op2.Amount.Value, wantValue)
-
-		// validate related operation is op1
-		if assert.Len(t, op2.RelatedIDs, 1) {
-			assert.Equal(t, op2.RelatedIDs[0], op1.ID)
-		}
+		TransactionID: identifier.Transaction{
+			Hash: txID,
+		},
 	}
 }
