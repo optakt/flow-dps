@@ -1,4 +1,4 @@
-// Copyright 2021 Alvalor S.A.
+// Copyright 2021 Optakt Labs OÜ
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy of
@@ -21,9 +21,9 @@ import (
 )
 
 type Converter struct {
-	EventToOperationFunc func(flow.Event) (*object.Operation, bool, error)
+	EventToOperationFunc func(flow.Event) (*object.Operation, error)
 }
 
-func (c *Converter) EventToOperation(event flow.Event) (transaction *object.Operation, isRelevant bool, err error) {
+func (c *Converter) EventToOperation(event flow.Event) (transaction *object.Operation, err error) {
 	return c.EventToOperationFunc(event)
 }

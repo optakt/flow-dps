@@ -1,4 +1,4 @@
-// Copyright 2021 Alvalor S.A.
+// Copyright 2021 Optakt Labs OÜ
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy of
@@ -53,21 +53,21 @@ func New(gen Generator) (*Converter, error) {
 	return &c, err
 }
 
-func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operation, isRelevant bool, err error) {
+func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operation, err error) {
 
 	// Decode the event payload into a Cadence value and cast it to a Cadence event.
 	value, err := json.Decode(event.Payload)
 	if err != nil {
-		return nil, false, fmt.Errorf("could not decode event: %w", err)
+		return nil, fmt.Errorf("could not decode event: %w", err)
 	}
 	e, ok := value.(cadence.Event)
 	if !ok {
-		return nil, false, fmt.Errorf("could not cast event: %w", err)
+		return nil, fmt.Errorf("could not cast event: %w", err)
 	}
 
 	// Ensure that there are the correct amount of fields.
 	if len(e.Fields) != 2 {
-		return nil, false, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
+		return nil, fmt.Errorf("invalid number of fields (want: %d, have: %d)", 2, len(e.Fields))
 	}
 
 	// The first field is always the amount and the second one the address.
@@ -76,12 +76,12 @@ func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operat
 	vAmount := e.Fields[0].ToGoValue()
 	uAmount, ok := vAmount.(uint64)
 	if !ok {
-		return nil, false, fmt.Errorf("could not cast amount (%T)", vAmount)
+		return nil, fmt.Errorf("could not cast amount (%T)", vAmount)
 	}
 	vAddress := e.Fields[1].ToGoValue()
 	bAddress, ok := vAddress.([flow.AddressLength]byte)
 	if !ok {
-		return nil, false, fmt.Errorf("could not cast address (%T)", vAddress)
+		return nil, fmt.Errorf("could not cast address (%T)", vAddress)
 	}
 
 	// Convert the amount to a signed integer that it can be inverted.
@@ -110,7 +110,7 @@ func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operat
 		op.Type = dps.OperationTransfer
 		amount = -amount
 	default:
-		return nil, false, nil // This type of event is irrelevant for us.
+		return nil, ErrIrrelevant
 	}
 
 	op.Amount = object.Amount{
@@ -121,5 +121,5 @@ func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operat
 		},
 	}
 
-	return &op, true, nil
+	return &op, nil
 }

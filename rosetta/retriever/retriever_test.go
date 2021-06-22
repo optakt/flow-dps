@@ -1,4 +1,4 @@
-// Copyright 2021 Alvalor S.A.
+// Copyright 2021 Optakt Labs OÜ
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy of
@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/optakt/flow-dps/rosetta/converter"
 
 	"github.com/onflow/flow-go/model/flow"
 
@@ -533,8 +534,8 @@ func TestRetriever_Block(t *testing.T) {
 				return "withdrawal", nil
 			},
 		}
-		converter := &mocks.Converter{
-			EventToOperationFunc: func(event flow.Event) (*object.Operation, bool, error) {
+		cvt := &mocks.Converter{
+			EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
 				assert.Contains(t, testEvents, event)
 
 				var op object.Operation
@@ -546,7 +547,7 @@ func TestRetriever_Block(t *testing.T) {
 				}
 
 				op.RelatedIDs = nil // Unset RelatedIDs to prevent having duplicate related IDs.
-				return &op, true, nil
+				return &op, nil
 			},
 		}
 
@@ -554,7 +555,7 @@ func TestRetriever_Block(t *testing.T) {
 			index:     index,
 			validate:  validator,
 			generator: generator,
-			convert:   converter,
+			convert:   cvt,
 		}
 
 		// TODO: Add verification for transactions when https://github.com/optakt/flow-dps/issues/149 is implemented.
@@ -642,10 +643,10 @@ func TestRetriever_Block(t *testing.T) {
 				return testEvents, nil
 			},
 		}
-		converter := &mocks.Converter{
-			EventToOperationFunc: func(event flow.Event) (*object.Operation, bool, error) {
+		cvt := &mocks.Converter{
+			EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
 				assert.Contains(t, testEvents, event)
-				return &depositOp, false, nil
+				return &depositOp, converter.ErrIrrelevant
 			},
 		}
 
@@ -653,7 +654,7 @@ func TestRetriever_Block(t *testing.T) {
 			validate:  validator,
 			generator: generator,
 			index:     index,
-			convert:   converter,
+			convert:   cvt,
 		}
 
 		got, _, err := r.Block(testBlockID)
@@ -837,9 +838,9 @@ func TestRetriever_Block(t *testing.T) {
 				return testEvents, nil
 			},
 		}
-		converter := &mocks.Converter{
-			EventToOperationFunc: func(event flow.Event) (*object.Operation, bool, error) {
-				return nil, false, mocks.DummyError
+		cvt := &mocks.Converter{
+			EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
+				return nil, mocks.DummyError
 			},
 		}
 
@@ -847,7 +848,7 @@ func TestRetriever_Block(t *testing.T) {
 			validate:  validator,
 			generator: generator,
 			index:     index,
-			convert:   converter,
+			convert:   cvt,
 		}
 
 		_, _, err := r.Block(testBlockID)
@@ -988,8 +989,8 @@ func TestRetriever_Transaction(t *testing.T) {
 				return testEvents, nil
 			},
 		}
-		converter := &mocks.Converter{
-			EventToOperationFunc: func(event flow.Event) (*object.Operation, bool, error) {
+		cvt := &mocks.Converter{
+			EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
 				assert.Contains(t, testEvents, event)
 
 				var op object.Operation
@@ -1001,7 +1002,7 @@ func TestRetriever_Transaction(t *testing.T) {
 				}
 
 				op.RelatedIDs = nil // Unset RelatedIDs to prevent having duplicate related IDs.
-				return &op, true, nil
+				return &op, nil
 			},
 		}
 
@@ -1009,7 +1010,7 @@ func TestRetriever_Transaction(t *testing.T) {
 			validate:  validator,
 			generator: generator,
 			index:     index,
-			convert:   converter,
+			convert:   cvt,
 		}
 
 		got, err := r.Transaction(testBlockID, testTransactionID)
@@ -1051,10 +1052,10 @@ func TestRetriever_Transaction(t *testing.T) {
 				return testEvents, nil
 			},
 		}
-		converter := &mocks.Converter{
-			EventToOperationFunc: func(event flow.Event) (*object.Operation, bool, error) {
+		cvt := &mocks.Converter{
+			EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
 				assert.Contains(t, testEvents, event)
-				return &depositOp, false, nil
+				return &depositOp, converter.ErrIrrelevant
 			},
 		}
 
@@ -1062,7 +1063,7 @@ func TestRetriever_Transaction(t *testing.T) {
 			validate:  validator,
 			generator: generator,
 			index:     index,
-			convert:   converter,
+			convert:   cvt,
 		}
 
 		got, err := r.Transaction(testBlockID, testTransactionID)
@@ -1241,10 +1242,10 @@ func TestRetriever_Transaction(t *testing.T) {
 				return testEvents, nil
 			},
 		}
-		converter := &mocks.Converter{
-			EventToOperationFunc: func(event flow.Event) (*object.Operation, bool, error) {
+		cvt := &mocks.Converter{
+			EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
 				assert.Contains(t, testEvents, event)
-				return nil, false, mocks.DummyError
+				return nil, mocks.DummyError
 			},
 		}
 
@@ -1252,7 +1253,7 @@ func TestRetriever_Transaction(t *testing.T) {
 			validate:  validator,
 			generator: generator,
 			index:     index,
-			convert:   converter,
+			convert:   cvt,
 		}
 
 		_, err := r.Transaction(testBlockID, testTransactionID)

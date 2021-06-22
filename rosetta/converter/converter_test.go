@@ -1,4 +1,4 @@
-// Copyright 2021 Alvalor S.A.
+// Copyright 2021 Optakt Labs OÜ
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy of
@@ -15,6 +15,7 @@
 package converter
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -244,9 +245,9 @@ func TestConverter_EventToOperation(t *testing.T) {
 
 		event flow.Event
 
-		wantOperation *object.Operation
-		wantRelevant  assert.BoolAssertionFunc
-		wantErr       assert.ErrorAssertionFunc
+		wantOperation  *object.Operation
+		wantIrrelevant assert.BoolAssertionFunc
+		wantErr        assert.ErrorAssertionFunc
 	}{
 		{
 			description: "nominal case with deposit event",
@@ -258,9 +259,9 @@ func TestConverter_EventToOperation(t *testing.T) {
 				EventIndex:    0,
 			},
 
-			wantErr:       assert.NoError,
-			wantRelevant:  assert.True,
-			wantOperation: &testDepositOp,
+			wantErr:        assert.NoError,
+			wantIrrelevant: assert.False,
+			wantOperation:  &testDepositOp,
 		},
 		{
 			description: "nominal case with withdrawal event",
@@ -272,9 +273,9 @@ func TestConverter_EventToOperation(t *testing.T) {
 				EventIndex:    1,
 			},
 
-			wantErr:       assert.NoError,
-			wantRelevant:  assert.True,
-			wantOperation: &testWithdrawalOp,
+			wantErr:        assert.NoError,
+			wantIrrelevant: assert.False,
+			wantOperation:  &testWithdrawalOp,
 		},
 		{
 			description: "irrelevant event",
@@ -286,8 +287,8 @@ func TestConverter_EventToOperation(t *testing.T) {
 				EventIndex:    2,
 			},
 
-			wantRelevant: assert.False,
-			wantErr:      assert.NoError,
+			wantIrrelevant: assert.True,
+			wantErr:        assert.Error,
 		},
 		{
 			description: "wrong amount of fields",
@@ -297,8 +298,8 @@ func TestConverter_EventToOperation(t *testing.T) {
 				Payload: threeFieldsEventPayload,
 			},
 
-			wantRelevant: assert.False,
-			wantErr:      assert.Error,
+			wantIrrelevant: assert.False,
+			wantErr:        assert.Error,
 		},
 		{
 			description: "missing amount field",
@@ -308,8 +309,8 @@ func TestConverter_EventToOperation(t *testing.T) {
 				Payload: missingAmountEventPayload,
 			},
 
-			wantRelevant: assert.False,
-			wantErr:      assert.Error,
+			wantIrrelevant: assert.False,
+			wantErr:        assert.Error,
 		},
 		{
 			description: "missing address field",
@@ -319,8 +320,8 @@ func TestConverter_EventToOperation(t *testing.T) {
 				Payload: missingAddressEventPayload,
 			},
 
-			wantRelevant: assert.False,
-			wantErr:      assert.Error,
+			wantIrrelevant: assert.False,
+			wantErr:        assert.Error,
 		},
 	}
 
@@ -334,10 +335,10 @@ func TestConverter_EventToOperation(t *testing.T) {
 				withdrawal: "withdrawal",
 			}
 
-			got, relevant, err := cvt.EventToOperation(test.event)
+			got, err := cvt.EventToOperation(test.event)
 
 			test.wantErr(t, err)
-			test.wantRelevant(t, relevant)
+			test.wantIrrelevant(t, errors.Is(err, ErrIrrelevant))
 
 			assert.Equal(t, test.wantOperation, got)
 		})

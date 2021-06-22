@@ -15,12 +15,14 @@
 package retriever
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/rosetta/converter"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/index"
@@ -175,13 +177,12 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 	// Convert events to operations and group them by transaction ID.
 	operations := make(map[string][]object.Operation)
 	for _, event := range events {
-		op, isRelevant, err := r.convert.EventToOperation(event)
+		op, err := r.convert.EventToOperation(event)
+		if errors.Is(err, converter.ErrIrrelevant) {
+			continue
+		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not convert event: %w", err)
-		}
-
-		if !isRelevant {
-			continue
 		}
 
 		tID := event.TransactionID.String()
@@ -275,13 +276,12 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 			continue
 		}
 
-		op, isRelevant, err := r.convert.EventToOperation(event)
+		op, err := r.convert.EventToOperation(event)
+		if errors.Is(err, converter.ErrIrrelevant) {
+			continue
+		}
 		if err != nil {
 			return nil, fmt.Errorf("could not convert event: %w", err)
-		}
-
-		if !isRelevant {
-			continue
 		}
 
 		ops = append(ops, *op)

@@ -12,14 +12,8 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package retriever
+package converter
 
-import (
-	"github.com/onflow/flow-go/model/flow"
+import "errors"
 
-	"github.com/optakt/flow-dps/rosetta/object"
-)
-
-type Converter interface {
-	EventToOperation(event flow.Event) (transaction *object.Operation, err error)
-}
+var ErrIrrelevant = errors.New("irrelevant value")
