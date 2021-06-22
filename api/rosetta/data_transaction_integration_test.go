@@ -47,16 +47,17 @@ func TestAPI_Transaction(t *testing.T) {
 		firstHeader      = knownHeaders(44)
 		multipleTxHeader = knownHeaders(165)
 		lastHeader       = knownHeaders(181)
+
+		// two transactions in a single block
+		midBlockTxs = []string{
+			"23c486cfd54bca7138b519203322327bf46e43a780a237d1c5bb0a82f0a06c1d",
+			"3d6922d6c6fd161a76cec23b11067f22cac6409a49b28b905989db64f5cb05a5",
+		}
 	)
 
 	const (
 		firstTx = "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c"
-
-		// two transactions in a single block
-		oneOfTwoTx = "23c486cfd54bca7138b519203322327bf46e43a780a237d1c5bb0a82f0a06c1d"
-		twoOfTwoTx = "3d6922d6c6fd161a76cec23b11067f22cac6409a49b28b905989db64f5cb05a5"
-
-		lastTx = "780bafaf4721ca4270986ea51e659951a8912c2eb99fb1bfedeb753b023cd4d9"
+		lastTx  = "780bafaf4721ca4270986ea51e659951a8912c2eb99fb1bfedeb753b023cd4d9"
 	)
 
 	tests := []struct {
@@ -72,14 +73,14 @@ func TestAPI_Transaction(t *testing.T) {
 		},
 		{
 			name:       "first in a block with multiple",
-			request:    requestTransaction(multipleTxHeader, oneOfTwoTx),
-			validateTx: validateTransfer(t, oneOfTwoTx, "8c5303eaa26202d6", "72157877737ce077", 100_00000000),
+			request:    requestTransaction(multipleTxHeader, midBlockTxs[0]),
+			validateTx: validateTransfer(t, midBlockTxs[0], "8c5303eaa26202d6", "72157877737ce077", 100_00000000),
 		},
 		{
 			// we had no blocks with more than two transactions, so this will do as 'get the last transaction from a block
 			name:       "second in a block with multiple",
-			request:    requestTransaction(multipleTxHeader, twoOfTwoTx),
-			validateTx: validateTransfer(t, twoOfTwoTx, "89c61aa64423504c", "82ec283f88a62e65", 1),
+			request:    requestTransaction(multipleTxHeader, midBlockTxs[1]),
+			validateTx: validateTransfer(t, midBlockTxs[1], "89c61aa64423504c", "82ec283f88a62e65", 1),
 		},
 		{
 			name:       "last transaction recorded",
@@ -94,10 +95,10 @@ func TestAPI_Transaction(t *testing.T) {
 					Index: 165,
 				},
 				TransactionID: identifier.Transaction{
-					Hash: twoOfTwoTx,
+					Hash: midBlockTxs[1],
 				},
 			},
-			validateTx: validateTransfer(t, twoOfTwoTx, "89c61aa64423504c", "82ec283f88a62e65", 1),
+			validateTx: validateTransfer(t, midBlockTxs[1], "89c61aa64423504c", "82ec283f88a62e65", 1),
 		},
 	}
 
