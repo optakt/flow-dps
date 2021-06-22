@@ -34,7 +34,6 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/meta"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
@@ -189,13 +188,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 
 		request rosetta.BlockRequest
 
-		// HTTP/handler errors
-		wantStatusCode int
-
-		// rosetta errors - validated separately since it makes reporting mismatches more manageable
-		wantRosettaError            meta.ErrorDefinition
-		wantRosettaErrorDescription string
-		wantRosettaErrorDetails     map[string]interface{}
+		checkErr assert.ErrorAssertionFunc
 	}{
 		{
 			name: "missing blockchain name",
@@ -207,10 +200,12 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(
+				http.StatusBadRequest,
+				configuration.ErrorInvalidFormat,
+				"blockchain identifier: blockchain field is empty",
+				nil,
+			),
 		},
 		{
 			name: "invalid blockchain name",
@@ -222,10 +217,14 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchain, "network": dps.FlowTestnet.String()},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity,
+				configuration.ErrorInvalidNetwork,
+				fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
+				map[string]interface{}{
+					"blockchain": invalidBlockchain,
+					"network":    dps.FlowTestnet.String(),
+				},
+			),
 		},
 		{
 			name: "missing network name",
@@ -237,10 +236,11 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: network field is empty",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusBadRequest,
+				configuration.ErrorInvalidFormat,
+				"blockchain identifier: network field is empty",
+				nil,
+			),
 		},
 		{
 			name: "invalid network name",
@@ -252,10 +252,14 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetwork},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity,
+				configuration.ErrorInvalidNetwork,
+				fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
+				map[string]interface{}{
+					"blockchain": dps.FlowBlockchain,
+					"network":    invalidNetwork,
+				},
+			),
 		},
 		{
 			name: "missing block height and hash",
@@ -267,10 +271,11 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusBadRequest,
+				configuration.ErrorInvalidFormat,
+				"block identifier: at least one of hash or index is required",
+				nil,
+			),
 		},
 		{
 			name: "invalid length of block id",
@@ -282,10 +287,11 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusBadRequest,
+				configuration.ErrorInvalidFormat,
+				fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
+				nil,
+			),
 		},
 		{
 			name: "missing block height",
@@ -296,10 +302,11 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusInternalServerError,
-			wantRosettaError:            configuration.ErrorInternal,
-			wantRosettaErrorDescription: "could not validate block: block access with hash currently not supported",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusInternalServerError,
+				configuration.ErrorInternal,
+				"could not validate block: block access with hash currently not supported",
+				nil,
+			),
 		},
 		{
 			name: "invalid block hash",
@@ -311,10 +318,14 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidBlock,
-			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity,
+				configuration.ErrorInvalidBlock,
+				"block hash is not a valid hex-encoded string",
+				map[string]interface{}{
+					"index": uint64(13),
+					"hash":  invalidBlockHash,
+				},
+			),
 		},
 		{
 			name: "unknown block",
@@ -325,10 +336,14 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorUnknownBlock,
-			wantRosettaErrorDescription: fmt.Sprintf("block index is above last indexed block (last: %d)", lastHeight),
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(426), "hash": ""},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity,
+				configuration.ErrorUnknownBlock,
+				fmt.Sprintf("block index is above last indexed block (last: %d)", lastHeight),
+				map[string]interface{}{
+					"index": uint64(426),
+					"hash":  "",
+				},
+			),
 		},
 		{
 			name: "mismatched block height and hash",
@@ -340,20 +355,25 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidBlock,
-			wantRosettaErrorDescription: fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeaders(validBlockHeight-1).ID().String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(validBlockHeight - 1), "hash": validBlockHash},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity,
+				configuration.ErrorInvalidBlock,
+				fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeaders(validBlockHeight-1).ID().String()),
+				map[string]interface{}{
+					"index": uint64(validBlockHeight - 1),
+					"hash":  validBlockHash,
+				},
+			),
 		},
 		{
 			// effectively the same as the 'missing blockchain name' test case, since it's the first check we'll do
 			name:    "empty block request",
 			request: rosetta.BlockRequest{},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusBadRequest,
+				configuration.ErrorInvalidFormat,
+				"blockchain identifier: blockchain field is empty",
+				nil,
+			),
 		},
 	}
 
@@ -369,20 +389,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 
 			// execute the request
 			err = api.Block(ctx)
-			assert.Error(t, err)
-
-			echoErr, ok := err.(*echo.HTTPError)
-			require.True(t, ok)
-
-			// verify HTTP status code
-			assert.Equal(t, test.wantStatusCode, echoErr.Code)
-
-			gotErr, ok := echoErr.Message.(rosetta.Error)
-			require.True(t, ok)
-
-			assert.Equal(t, test.wantRosettaError, gotErr.ErrorDefinition)
-			assert.Equal(t, test.wantRosettaErrorDescription, gotErr.Description)
-			assert.Equal(t, test.wantRosettaErrorDetails, gotErr.Details)
+			test.checkErr(t, err)
 		})
 	}
 }
