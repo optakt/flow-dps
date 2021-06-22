@@ -25,9 +25,9 @@ service API {
   rpc GetRegisters (GetRegistersRequest) returns (GetRegistersResponse) {}
   rpc GetHeight (GetHeightRequest) returns (GetHeightResponse) {}
   rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse) {}
-  rpc ListTransactions (ListTransactionsRequest) returns (ListTransactionsResponse) {}
-  rpc ListTransactionsForCollection (ListTransactionsForCollectionRequest) returns (ListTransactionsForCollectionResponse) {}
   rpc ListTransactionsForBlock (ListTransactionsForBlockRequest) returns (ListTransactionsForBlockResponse) {}
+  rpc ListTransactionsForCollection (ListTransactionsForCollectionRequest) returns (ListTransactionsForCollectionResponse) {}
+  rpc ListCollectionsForBlock (ListCollectionsForBlockRequest) returns (ListCollectionsForBlockResponse) {}
 }
 
 message GetFirstRequest {
@@ -102,11 +102,11 @@ message GetTransactionResponse {
   bytes data = 2;
 }
 
-message ListTransactionsRequest  {
+message ListTransactionsForBlockRequest {
   bytes blockID = 1;
 }
 
-message ListTransactionsResponse {
+message ListTransactionsForBlockResponse {
   bytes blockID = 1;
   repeated bytes transactionIDs = 2;
 }
@@ -120,11 +120,12 @@ message ListTransactionsForCollectionResponse {
   repeated bytes transactionIDs = 2;
 }
 
-message ListTransactionsForBlockRequest {
+message ListCollectionsForBlockRequest  {
   bytes blockID = 1;
 }
 
-message ListTransactionsForBlockResponse {
+message ListCollectionsForBlockResponse {
   bytes blockID = 1;
   repeated bytes collectionIDs = 2;
 }
+

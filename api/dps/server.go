@@ -211,9 +211,9 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 	return &res, nil
 }
 
-// ListTransactions implements the `ListTransactions` function of the generated GRPC
+// ListTransactionsForBlock implements the `ListTransactionsForBlock` function of the generated GRPC
 // server.
-func (s *Server) ListTransactions(_ context.Context, req *ListTransactionsRequest) (*ListTransactionsResponse, error) {
+func (s *Server) ListTransactionsForBlock(_ context.Context, req *ListTransactionsForBlockRequest) (*ListTransactionsForBlockResponse, error) {
 	var blockID flow.Identifier
 	copy(blockID[:], req.BlockID)
 
@@ -227,7 +227,7 @@ func (s *Server) ListTransactions(_ context.Context, req *ListTransactionsReques
 		transactions = append(transactions, t[:])
 	}
 
-	res := ListTransactionsResponse{
+	res := ListTransactionsForBlockResponse{
 		BlockID:        req.BlockID,
 		TransactionIDs: transactions,
 	}
@@ -258,9 +258,9 @@ func (s *Server) ListTransactionsForCollection(_ context.Context, req *ListTrans
 	return &res, nil
 }
 
-// ListTransactionsForBlock implements the `ListTransactionsForBlock` function of the generated GRPC
+// ListCollectionsForBlock implements the `ListCollectionsForBlock` function of the generated GRPC
 // server.
-func (s *Server) ListTransactionsForBlock(_ context.Context, req *ListTransactionsForBlockRequest) (*ListTransactionsForBlockResponse, error) {
+func (s *Server) ListCollectionsForBlock(_ context.Context, req *ListCollectionsForBlockRequest) (*ListCollectionsForBlockResponse, error) {
 	var blockID flow.Identifier
 	copy(blockID[:], req.BlockID)
 
@@ -274,7 +274,7 @@ func (s *Server) ListTransactionsForBlock(_ context.Context, req *ListTransactio
 		collections = append(collections, c[:])
 	}
 
-	res := ListTransactionsForBlockResponse{
+	res := ListCollectionsForBlockResponse{
 		BlockID:       req.BlockID,
 		CollectionIDs: collections,
 	}

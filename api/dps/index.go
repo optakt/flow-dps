@@ -190,10 +190,10 @@ func (i *Index) Transaction(transactionID flow.Identifier) (*flow.Transaction, e
 // Transactions returns the transaction IDs within the given block.
 func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
 
-	req := ListTransactionsRequest{
+	req := ListTransactionsForBlockRequest{
 		BlockID: blockID[:],
 	}
-	res, err := i.client.ListTransactions(context.Background(), &req)
+	res, err := i.client.ListTransactionsForBlock(context.Background(), &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not get transaction: %w", err)
 	}
@@ -238,10 +238,10 @@ func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection,
 // Collections returns the collection IDs within the given block.
 func (i *Index) Collections(blockID flow.Identifier) ([]flow.Identifier, error) {
 
-	req := ListTransactionsForBlockRequest{
+	req := ListCollectionsForBlockRequest{
 		BlockID: blockID[:],
 	}
-	res, err := i.client.ListTransactionsForBlock(context.Background(), &req)
+	res, err := i.client.ListCollectionsForBlock(context.Background(), &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not get collection: %w", err)
 	}

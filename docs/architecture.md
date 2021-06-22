@@ -19,10 +19,10 @@ the API it exposes.
         5. [Events Index](#events-index)
         6. [Path Deltas Index](#path-deltas-index)
         7. [Height Index](#height-index)
-        8. [Transaction Record](#transaction-record)
-        9. [Transaction Index](#transaction-index)
-        10. [Collection Record](#collection-record)
-        11. [Collection Index](#collection-index)
+        8. [Transaction Records](#transaction-records)
+        9. [Block Transaction Index](#block-transaction-index)
+        10. [Collection Transaction Index](#collection-transaction-index)
+        11. [Block Collection Index](#block-collection-index)
 
 ## Chain
 
@@ -159,7 +159,7 @@ In this index, keys map the block IDs to their height.
 
 The value stored at that key is the **block height** of the referenced block ID.
 
-##### Transaction Record
+##### Transaction Records
 
 In this record, transactions are mapped by their IDs.
 
@@ -171,7 +171,7 @@ In this record, transactions are mapped by their IDs.
 
 The value stored at that key is the **CBOR-encoded [flow.Transaction](https://pkg.go.dev/github.com/onflow/model/flow#Transaction)** with the referenced ID.
 
-##### Transaction Index
+##### Block Transaction Index
 
 In this index, block IDs are mapped to the IDs of the transactions within their block.
 
@@ -183,7 +183,7 @@ In this index, block IDs are mapped to the IDs of the transactions within their 
 
 The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/model/flow#Identifier)** for the transactions within the referenced block.
 
-##### Collection Record
+##### Collection Transaction Index
 
 In this record, collections are mapped by their IDs.
 
@@ -195,7 +195,7 @@ In this record, collections are mapped by their IDs.
 
 The value stored at that key is the **CBOR-encoded [flow.LightCollection](https://pkg.go.dev/github.com/onflow/model/flow#LightCollection)** with the referenced ID.
 
-##### Collection Index
+##### Block Collection Index
 
 In this index, block IDs are mapped to the IDs of the collections within their block.
 

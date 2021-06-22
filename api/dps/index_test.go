@@ -523,9 +523,9 @@ type apiMock struct {
 	GetRegistersFunc                  func(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
 	GetHeightFunc                     func(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error)
 	GetTransactionFunc                func(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
-	ListTransactionsFunc              func(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error)
-	ListTransactionsForCollectionFunc func(ctx context.Context, in *ListTransactionsForCollectionRequest, opts ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error)
 	ListTransactionsForBlockFunc      func(ctx context.Context, in *ListTransactionsForBlockRequest, opts ...grpc.CallOption) (*ListTransactionsForBlockResponse, error)
+	ListTransactionsForCollectionFunc func(ctx context.Context, in *ListTransactionsForCollectionRequest, opts ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error)
+	ListCollectionsForBlockFunc       func(ctx context.Context, in *ListCollectionsForBlockRequest, opts ...grpc.CallOption) (*ListCollectionsForBlockResponse, error)
 }
 
 func (a *apiMock) GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error) {
@@ -560,14 +560,14 @@ func (a *apiMock) GetTransaction(ctx context.Context, in *GetTransactionRequest,
 	return a.GetTransactionFunc(ctx, in, opts...)
 }
 
-func (a *apiMock) ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error) {
-	return a.ListTransactionsFunc(ctx, in, opts...)
+func (a *apiMock) ListTransactionsForBlock(ctx context.Context, in *ListTransactionsForBlockRequest, opts ...grpc.CallOption) (*ListTransactionsForBlockResponse, error) {
+	return a.ListTransactionsForBlockFunc(ctx, in, opts...)
 }
 
 func (a *apiMock) ListTransactionsForCollection(ctx context.Context, in *ListTransactionsForCollectionRequest, opts ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error) {
 	return a.ListTransactionsForCollectionFunc(ctx, in, opts...)
 }
 
-func (a *apiMock) ListTransactionsForBlock(ctx context.Context, in *ListTransactionsForBlockRequest, opts ...grpc.CallOption) (*ListTransactionsForBlockResponse, error) {
-	return a.ListTransactionsForBlockFunc(ctx, in, opts...)
+func (a *apiMock) ListCollectionsForBlock(ctx context.Context, in *ListCollectionsForBlockRequest, opts ...grpc.CallOption) (*ListCollectionsForBlockResponse, error) {
+	return a.ListCollectionsForBlockFunc(ctx, in, opts...)
 }
