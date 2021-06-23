@@ -41,9 +41,9 @@ func TestAPI_Transaction(t *testing.T) {
 	api := setupAPI(t, db)
 
 	var (
-		firstHeader      = knownHeaders(44)
-		multipleTxHeader = knownHeaders(165)
-		lastHeader       = knownHeaders(181)
+		firstHeader      = knownHeader(44)
+		multipleTxHeader = knownHeader(165)
+		lastHeader       = knownHeader(181)
 
 		// two transactions in a single block
 		midBlockTxs = []string{
@@ -354,7 +354,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			checkErr: checkRosettaError(
 				http.StatusUnprocessableEntity,
 				configuration.ErrorInvalidBlock,
-				fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeaders(44).ID().String()),
+				fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeader(44).ID().String()),
 				map[string]interface{}{
 					"index": uint64(44),
 					"hash":  testBlockHash,

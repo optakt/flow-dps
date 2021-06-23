@@ -44,7 +44,7 @@ func TestAPI_Status(t *testing.T) {
 		oldestBlockID = "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"
 	)
 
-	lastBlock := knownHeaders(425)
+	lastBlock := knownHeader(425)
 
 	request := rosetta.StatusRequest{
 		NetworkID: defaultNetwork(),
@@ -99,7 +99,8 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 				http.StatusBadRequest,
 				configuration.ErrorInvalidFormat,
 				"blockchain identifier: blockchain field is missing",
-				nil),
+				nil,
+			),
 		},
 		{
 			name: "invalid blockchain",

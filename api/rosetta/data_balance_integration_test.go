@@ -275,7 +275,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				http.StatusBadRequest,
 				configuration.ErrorInvalidFormat,
 				"block identifier: at least one of hash or index is required",
-				nil),
+				nil,
+			),
 		},
 		{
 			name: "invalid length of block id",
@@ -422,7 +423,10 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				http.StatusUnprocessableEntity,
 				configuration.ErrorUnknownBlock,
 				"block index is above last indexed block (last: 425)",
-				map[string]interface{}{"index": uint64(426), "hash": ""},
+				map[string]interface{}{
+					"index": uint64(426),
+					"hash":  "",
+				},
 			),
 		},
 		{

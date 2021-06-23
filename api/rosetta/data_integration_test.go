@@ -113,20 +113,13 @@ func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 
 func setupRecorder(endpoint string, input interface{}, options ...func(*http.Request)) (*httptest.ResponseRecorder, echo.Context, error) {
 
-	var payload []byte
-
-	switch input.(type) {
-
-	case []byte:
-		payload = input.([]byte)
-
-	default:
-		enc, err := json.Marshal(input)
+	payload, ok := input.([]byte)
+	if !ok {
+		var err error
+		payload, err = json.Marshal(input)
 		if err != nil {
 			return nil, echo.New().AcquireContext(), fmt.Errorf("could not encode input: %w", err)
 		}
-
-		payload = enc
 	}
 
 	req := httptest.NewRequest(http.MethodPost, endpoint, bytes.NewReader(payload))
@@ -205,8 +198,7 @@ func validateByHeader(t *testing.T, header flow.Header) validateBlockFunc {
 	return validateBlock(t, header.Height, header.ID().String())
 }
 
-// add header for block 165 and 181
-func knownHeaders(height uint64) flow.Header {
+func knownHeader(height uint64) flow.Header {
 
 	switch height {
 
