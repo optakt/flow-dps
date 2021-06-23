@@ -25,21 +25,29 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/dictionaries"
 )
 
+// Codec is a structure that combines CBOR-encoding and Zstandard compression, and uses specific dictionaries
+// to reduce the size of compressed data as much as possible.
 type Codec struct {
-	encMode cbor.EncMode
+	// encMode configures the way data gets CBOR-encoded.
+	encoder cbor.EncMode
 
+	// defaultCompressor is used to encode anything that does not have a specialized compressor.
 	defaultCompressor *zstd.Encoder
+
+	// The compressors use specifically built dictionaries to be as efficient as possible.
+	// Each compressor should only be used to compress the type that they are supposed to.
 	headerCompressor  *zstd.Encoder
 	payloadCompressor *zstd.Encoder
 	eventsCompressor  *zstd.Encoder
 
+	// decompressor decompresses any Zstandard-compressed data, regardless of the compressor that generated it.
 	decompressor *zstd.Decoder
 }
 
-// NewCodec creates a new Codec.
+// NewCodec creates a new Codec. It loads specialized dictionaries from the filesystem to create its
+// compression components.
 func NewCodec() (*Codec, error) {
 	codec, _ := dps.Encoding.EncMode()
 
@@ -50,7 +58,7 @@ func NewCodec() (*Codec, error) {
 		return nil, fmt.Errorf("could not initialize default compressor: %w", err)
 	}
 
-	headerDict, err := hex.DecodeString(dictionaries.Header)
+	headerDict, err := hex.DecodeString(Header)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode header dictionary: %w", err)
 	}
@@ -63,7 +71,7 @@ func NewCodec() (*Codec, error) {
 		return nil, fmt.Errorf("could not initialize header compressor: %w", err)
 	}
 
-	payloadDict, err := hex.DecodeString(dictionaries.Payload)
+	payloadDict, err := hex.DecodeString(Payload)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode payload dictionary: %w", err)
 	}
@@ -75,7 +83,7 @@ func NewCodec() (*Codec, error) {
 		return nil, fmt.Errorf("could not initialize payload compressor: %w", err)
 	}
 
-	eventsDict, err := hex.DecodeString(dictionaries.Events)
+	eventsDict, err := hex.DecodeString(Events)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode events dictionary: %w", err)
 	}
@@ -96,7 +104,7 @@ func NewCodec() (*Codec, error) {
 	}
 
 	c := Codec{
-		encMode: codec,
+		encoder: codec,
 
 		defaultCompressor: defaultCompressor,
 		headerCompressor:  headerCompressor,
@@ -124,7 +132,7 @@ func (c *Codec) Unmarshal(b []byte, value interface{}) error {
 }
 
 func (c *Codec) Marshal(v interface{}) ([]byte, error) {
-	b, err := cbor.Marshal(v)
+	b, err := c.encoder.Marshal(v)
 	if err != nil {
 		return nil, fmt.Errorf("unable to encode value: %w", err)
 	}

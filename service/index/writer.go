@@ -26,18 +26,17 @@ import (
 // Writer implements the `index.Writer` interface to write indexing data to
 // an underlying Badger database.
 type Writer struct {
-	storage StorageLibrary
-
-	db *badger.DB
+	db      *badger.DB
+	storage Storage
 }
 
 // NewWriter creates a new index writer that writes new indexing data to the
 // given Badger database.
-func NewWriter(db *badger.DB, lib StorageLibrary) *Writer {
+func NewWriter(db *badger.DB, storage Storage) *Writer {
 
 	w := Writer{
 		db:      db,
-		storage: lib,
+		storage: storage,
 	}
 
 	return &w

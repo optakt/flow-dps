@@ -27,19 +27,18 @@ import (
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
 type Reader struct {
-	storage StorageLibrary
-
-	db *badger.DB
+	db      *badger.DB
+	storage Storage
 }
 
 // NewReader creates a new index reader, using the given database as the
 // underlying state repository. It is recommended to provide a read-only Badger
 // database.
-func NewReader(db *badger.DB, lib StorageLibrary) *Reader {
+func NewReader(db *badger.DB, storage Storage) *Reader {
 
 	r := Reader{
 		db:      db,
-		storage: lib,
+		storage: storage,
 	}
 
 	return &r

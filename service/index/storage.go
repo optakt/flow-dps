@@ -21,19 +21,12 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type StorageLibrary interface {
-	SaveFirst(height uint64) func(*badger.Txn) error
-	SaveLast(height uint64) func(*badger.Txn) error
-	SaveCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error
-	SaveHeader(height uint64, header *flow.Header) func(*badger.Txn) error
-	SaveEvents(height uint64, typ flow.EventType, events []flow.Event) func(*badger.Txn) error
-	SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error
-	SaveHeight(blockID flow.Identifier, height uint64) func(*badger.Txn) error
-	SaveTransaction(transaction flow.Transaction) func(*badger.Txn) error
-	SaveTransactions(blockID flow.Identifier, transactions []flow.Identifier) func(*badger.Txn) error
-	SaveCollection(collection flow.LightCollection) func(*badger.Txn) error
-	SaveCollections(blockID flow.Identifier, collections []flow.Identifier) func(*badger.Txn) error
+type Storage interface {
+	ReadLibrary
+	WriteLibrary
+}
 
+type ReadLibrary interface {
 	RetrieveFirst(height *uint64) func(*badger.Txn) error
 	RetrieveLast(height *uint64) func(*badger.Txn) error
 	RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error
@@ -45,4 +38,18 @@ type StorageLibrary interface {
 	RetrieveTransactions(blockID flow.Identifier, transactions *[]flow.Identifier) func(*badger.Txn) error
 	RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error
 	RetrieveCollections(blockID flow.Identifier, collections *[]flow.Identifier) func(*badger.Txn) error
+}
+
+type WriteLibrary interface {
+	SaveFirst(height uint64) func(*badger.Txn) error
+	SaveLast(height uint64) func(*badger.Txn) error
+	SaveCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error
+	SaveHeader(height uint64, header *flow.Header) func(*badger.Txn) error
+	SaveEvents(height uint64, typ flow.EventType, events []flow.Event) func(*badger.Txn) error
+	SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error
+	SaveHeight(blockID flow.Identifier, height uint64) func(*badger.Txn) error
+	SaveTransaction(transaction flow.Transaction) func(*badger.Txn) error
+	SaveTransactions(blockID flow.Identifier, transactions []flow.Identifier) func(*badger.Txn) error
+	SaveCollection(collection flow.LightCollection) func(*badger.Txn) error
+	SaveCollections(blockID flow.Identifier, collections []flow.Identifier) func(*badger.Txn) error
 }
