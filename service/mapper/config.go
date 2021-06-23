@@ -22,6 +22,14 @@ import (
 type Config struct {
 	CheckpointFile string
 	PostProcessing func(*trie.MTrie)
+
+	indexAll          bool
+	indexBlocks       bool
+	indexEvents       bool
+	indexHeaders      bool
+	indexPayloads     bool
+	indexRegisters    bool
+	indexTransactions bool
 }
 
 // WithCheckpointFile will initialize the mapper's internal trie with the trie
@@ -37,5 +45,54 @@ func WithCheckpointFile(file string) func(*Config) {
 func WithPostProcessing(post func(*trie.MTrie)) func(*Config) {
 	return func(cfg *Config) {
 		cfg.PostProcessing = post
+	}
+}
+
+// WithIndexAll sets up the mapper to build all indexes simultaneously.
+func WithIndexAll(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.indexAll = b
+	}
+}
+
+// WithIndexBlocks sets up the mapper to build the block indexes.
+func WithIndexBlocks(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.indexBlocks = b
+	}
+}
+
+// WithIndexEvents sets up the mapper to build the events index.
+func WithIndexEvents(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.indexEvents = b
+	}
+}
+
+// WithIndexHeaders sets up the mapper to build the headers index.
+func WithIndexHeaders(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.indexHeaders = b
+	}
+}
+
+// WithIndexPayloads sets up the mapper to build the payloads index.
+func WithIndexPayloads(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.indexPayloads = b
+	}
+}
+
+// WithIndexRegisters sets up the mapper to build the registers index.
+func WithIndexRegisters(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.indexRegisters = b
+	}
+}
+
+// WithIndexTransactions sets up the mapper to build the transactions index.
+func WithIndexTransactions(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.indexTransactions = b
 	}
 }

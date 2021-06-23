@@ -51,18 +51,32 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagCheckpoint string
-		flagData       string
-		flagForce      bool
-		flagIndex      string
-		flagLevel      string
-		flagTrie       string
+		flagCheckpoint        string
+		flagData              string
+		flagForce             bool
+		flagIndex             string
+		flagIndexAll          bool
+		flagIndexBlocks       bool
+		flagIndexEvents       bool
+		flagIndexHeaders      bool
+		flagIndexPayloads     bool
+		flagIndexRegisters    bool
+		flagIndexTransactions bool
+		flagLevel             string
+		flagTrie              string
 	)
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
+	pflag.BoolVarP(&flagIndexBlocks, "index-blocks", "b", false, "index blocks")
+	pflag.BoolVarP(&flagIndexEvents, "index-events", "e", false, "index events")
+	pflag.BoolVarP(&flagIndexHeaders, "index-headers", "h", false, "index headers")
+	pflag.BoolVarP(&flagIndexPayloads, "index-payloads", "p", false, "index payloads")
+	pflag.BoolVarP(&flagIndexRegisters, "index-registers", "r", false, "index registers")
+	pflag.BoolVarP(&flagIndexTransactions, "index-transactions", "x", false, "index transactions")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
@@ -77,6 +91,19 @@ func run() int {
 		return failure
 	}
 	log = log.Level(level)
+
+	// Ensure that at least one index is specified.
+	if !flagIndexAll &&
+		!flagIndexRegisters &&
+		!flagIndexTransactions &&
+		!flagIndexBlocks &&
+		!flagIndexEvents &&
+		!flagIndexPayloads &&
+		!flagIndexHeaders {
+		log.Error().Str("level", flagLevel).Msg("no indexing option specified, use -a/--all to build all indexes")
+		pflag.Usage()
+		return failure
+	}
 
 	// Open index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
@@ -123,7 +150,16 @@ func run() int {
 		return failure
 	}
 	index := index.NewWriter(db, storage)
-	mapper, err := mapper.New(log, chain, feeder, index, mapper.WithCheckpointFile(flagCheckpoint))
+	mapper, err := mapper.New(log, chain, feeder, index,
+		mapper.WithCheckpointFile(flagCheckpoint),
+		mapper.WithIndexAll(flagIndexAll),
+		mapper.WithIndexBlocks(flagIndexBlocks),
+		mapper.WithIndexEvents(flagIndexEvents),
+		mapper.WithIndexHeaders(flagIndexHeaders),
+		mapper.WithIndexPayloads(flagIndexPayloads),
+		mapper.WithIndexRegisters(flagIndexRegisters),
+		mapper.WithIndexTransactions(flagIndexTransactions),
+	)
 	if err != nil {
 		log.Error().Str("checkpoint", flagCheckpoint).Err(err).Msg("could not initialize mapper")
 		return failure

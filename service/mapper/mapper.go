@@ -38,14 +38,15 @@ import (
 )
 
 type Mapper struct {
-	log        zerolog.Logger
-	chain      Chain
-	feed       Feeder
-	index      index.Writer
-	checkpoint string
-	post       func(*trie.MTrie)
-	wg         *sync.WaitGroup
-	stop       chan struct{}
+	log zerolog.Logger
+	cfg Config
+
+	chain Chain
+	feed  Feeder
+	index index.Writer
+
+	wg   *sync.WaitGroup
+	stop chan struct{}
 }
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
@@ -75,14 +76,13 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index index.Writer, optio
 	}
 
 	i := Mapper{
-		log:        log,
-		chain:      chain,
-		feed:       feed,
-		index:      index,
-		checkpoint: cfg.CheckpointFile,
-		post:       cfg.PostProcessing,
-		wg:         &sync.WaitGroup{},
-		stop:       make(chan struct{}),
+		log:   log,
+		chain: chain,
+		feed:  feed,
+		index: index,
+		cfg:   cfg,
+		wg:    &sync.WaitGroup{},
+		stop:  make(chan struct{}),
 	}
 
 	return &i, nil
@@ -123,11 +123,11 @@ func (m *Mapper) Run() error {
 	// will load the checkpoint trie.
 	empty := trie.NewEmptyMTrie()
 	var tree *trie.MTrie
-	if m.checkpoint == "" {
+	if m.cfg.CheckpointFile == "" {
 		tree = empty
 	} else {
 		m.log.Info().Msg("checkpoint rebuild started")
-		file, err := os.Open(m.checkpoint)
+		file, err := os.Open(m.cfg.CheckpointFile)
 		if err != nil {
 			return fmt.Errorf("could not open checkpoint file: %w", err)
 		}
@@ -412,26 +412,39 @@ Outer:
 		}
 		blockID := header.ID()
 
+		// TODO: Refactor the mapper in https://github.com/optakt/flow-dps/issues/128
+		// and replace naive if statements around indexing.
+
 		// We then index the data for the finalized block at the current height.
-		err = m.index.Header(height, header)
-		if err != nil {
-			return fmt.Errorf("could not index header: %w", err)
+		if m.cfg.indexAll || m.cfg.indexHeaders {
+			err = m.index.Header(height, header)
+			if err != nil {
+				return fmt.Errorf("could not index header: %w", err)
+			}
 		}
-		err = m.index.Commit(height, commitNext)
-		if err != nil {
-			return fmt.Errorf("could not index commit: %w", err)
+		if m.cfg.indexAll || m.cfg.indexRegisters {
+			err = m.index.Commit(height, commitNext)
+			if err != nil {
+				return fmt.Errorf("could not index commit: %w", err)
+			}
 		}
-		err = m.index.Events(height, events)
-		if err != nil {
-			return fmt.Errorf("could not index events: %w", err)
+		if m.cfg.indexAll || m.cfg.indexEvents {
+			err = m.index.Events(height, events)
+			if err != nil {
+				return fmt.Errorf("could not index events: %w", err)
+			}
 		}
-		err = m.index.Height(blockID, height)
-		if err != nil {
-			return fmt.Errorf("could not index block heights: %w", err)
+		if m.cfg.indexAll || m.cfg.indexBlocks {
+			err = m.index.Height(blockID, height)
+			if err != nil {
+				return fmt.Errorf("could not index block heights: %w", err)
+			}
 		}
-		err = m.index.Transactions(blockID, collections, transactions)
-		if err != nil {
-			return fmt.Errorf("could not index transactions: %w", err)
+		if m.cfg.indexAll || m.cfg.indexTransactions {
+			err = m.index.Transactions(blockID, collections, transactions)
+			if err != nil {
+				return fmt.Errorf("could not index transactions: %w", err)
+			}
 		}
 
 		// In order to index the payloads, we step back from the state
@@ -464,34 +477,36 @@ Outer:
 			// We then divide the remaining paths into chunks of 1000. For each
 			// batch, we retrieve the payloads from the state trie as it was at
 			// the end of this block and index them.
-			count := 0
-			n := 1000
-			total := (len(paths) + n - 1) / n
-			log.Debug().Int("num_paths", len(paths)).Int("num_batches", total).Msg("path batching executed")
-			for start := 0; start < len(paths); start += n {
-				// This loop may take a while, especially for the root checkpoint
-				// updates, so check if we should quit.
-				select {
-				case <-m.stop:
-					break Outer
-				default:
-					// keep going
-				}
+			if m.cfg.indexAll || m.cfg.indexPayloads {
+				count := 0
+				n := 1000
+				total := (len(paths) + n - 1) / n
+				log.Debug().Int("num_paths", len(paths)).Int("num_batches", total).Msg("path batching executed")
+				for start := 0; start < len(paths); start += n {
+					// This loop may take a while, especially for the root checkpoint
+					// updates, so check if we should quit.
+					select {
+					case <-m.stop:
+						break Outer
+					default:
+						// keep going
+					}
 
-				end := start + n
-				if end > len(paths) {
-					end = len(paths)
-				}
-				batch := paths[start:end]
-				payloads := step.Tree.UnsafeRead(batch)
-				err = m.index.Payloads(height, batch, payloads)
-				if err != nil {
-					return fmt.Errorf("could not index payloads: %w", err)
-				}
+					end := start + n
+					if end > len(paths) {
+						end = len(paths)
+					}
+					batch := paths[start:end]
+					payloads := step.Tree.UnsafeRead(batch)
+					err = m.index.Payloads(height, batch, payloads)
+					if err != nil {
+						return fmt.Errorf("could not index payloads: %w", err)
+					}
 
-				count++
+					count++
 
-				log.Debug().Int("batch", count).Int("start", start).Int("end", end).Msg("path batch indexed")
+					log.Debug().Int("batch", count).Int("start", start).Int("end", end).Msg("path batch indexed")
+				}
 			}
 
 			// Finally, we forward the commit to the previous trie update and
@@ -513,13 +528,15 @@ Outer:
 
 		// Last but not least, we take care of properly indexing the height of
 		// the first indexed block and the height of the last indexed block.
-		once.Do(func() { err = m.index.First(height) })
-		if err != nil {
-			return fmt.Errorf("could not index first height: %w", err)
-		}
-		err = m.index.Last(height)
-		if err != nil {
-			return fmt.Errorf("could not index last height: %w", err)
+		if m.cfg.indexAll || m.cfg.indexBlocks {
+			once.Do(func() { err = m.index.First(height) })
+			if err != nil {
+				return fmt.Errorf("could not index first height: %w", err)
+			}
+			err = m.index.Last(height)
+			if err != nil {
+				return fmt.Errorf("could not index last height: %w", err)
+			}
 		}
 
 		// We have now successfully indexed all state trie changes and other
@@ -539,7 +556,7 @@ Outer:
 	m.log.Info().Msg("state indexing finished")
 
 	step := steps[commitPrev]
-	m.post(step.Tree)
+	m.cfg.PostProcessing(step.Tree)
 
 	return nil
 }
