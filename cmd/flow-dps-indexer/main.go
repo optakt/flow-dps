@@ -54,6 +54,7 @@ func run() int {
 		flagIndex      string
 		flagLevel      string
 		flagTrie       string
+		flagForce      bool
 	)
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
@@ -61,6 +62,7 @@ func run() int {
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
+	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 
 	pflag.Parse()
 
@@ -89,6 +91,13 @@ func run() int {
 		return failure
 	}
 	defer data.Close()
+
+	_, err = index.NewReader(db).Last()
+	indexExists := err != nil
+	if indexExists && !flagForce {
+		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
+		return failure
+	}
 
 	// Initialize mapper.
 	chain := chain.FromDisk(data)
