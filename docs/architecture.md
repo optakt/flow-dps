@@ -1,23 +1,28 @@
 # Architecture
 
-This document describes the internal components that the Flow Data Provisioning Service is constituted of, as well as the API it exposes.
+This document describes the internal components that the Flow Data Provisioning Service is constituted of, as well as
+the API it exposes.
 
 **Table of Contents**
 
 1. [Chain](#chain)
-   1. [Disk Chain](#disk-chain)
+    1. [Disk Chain](#disk-chain)
 2. [Feeder](#feeder)
-   1. [Disk Feeder](#disk-feeder)
+    1. [Disk Feeder](#disk-feeder)
 3. [Mapper](#mapper)
 4. [Index](#index)
-   1. [Database Schema](#database-schema)
-         1. [First Height](#first-height)
-         2. [Last Height](#last-height)
-         3. [Header Index](#header-index)
-         4. [Commit Index](#commit-index)
-         5. [Events Index](#events-index)
-         6. [Path Deltas Index](#path-deltas-index)
-         7. [Height Index](#height-index)
+    1. [Database Schema](#database-schema)
+        1. [First Height](#first-height)
+        2. [Last Height](#last-height)
+        3. [Header Index](#header-index)
+        4. [Commit Index](#commit-index)
+        5. [Events Index](#events-index)
+        6. [Path Deltas Index](#path-deltas-index)
+        7. [Height Index](#height-index)
+        8. [Transaction Records](#transaction-records)
+        9. [Block Transaction Index](#block-transaction-index)
+        10. [Collection Transaction Index](#collection-transaction-index)
+        11. [Block Collection Index](#block-collection-index)
 
 ## Chain
 
@@ -153,3 +158,51 @@ In this index, keys map the block IDs to their height.
 | **Example Value**  | `7`               | `45D66Q565F5DEDB[...]` |
 
 The value stored at that key is the **block height** of the referenced block ID.
+
+##### Transaction Records
+
+In this record, transactions are mapped by their IDs.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Transaction ID         |
+| **Example Value**  | `8`               | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **CBOR-encoded [flow.Transaction](https://pkg.go.dev/github.com/onflow/model/flow#Transaction)** with the referenced ID.
+
+##### Block Transaction Index
+
+In this index, block IDs are mapped to the IDs of the transactions within their block.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Block ID               |
+| **Example Value**  | `9`               | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/model/flow#Identifier)** for the transactions within the referenced block.
+
+##### Collection Transaction Index
+
+In this record, collections are mapped by their IDs.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Collection ID         |
+| **Example Value**  | `10`              | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **CBOR-encoded [flow.LightCollection](https://pkg.go.dev/github.com/onflow/model/flow#LightCollection)** with the referenced ID.
+
+##### Block Collection Index
+
+In this index, block IDs are mapped to the IDs of the collections within their block.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Block ID               |
+| **Example Value**  | `11`              | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/model/flow#Identifier)** for the collections within the referenced block.

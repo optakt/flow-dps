@@ -56,6 +56,22 @@ func SaveHeight(blockID flow.Identifier, height uint64) func(*badger.Txn) error 
 	return save(encodeKey(prefixHeight, blockID), height)
 }
 
+func SaveTransaction(transaction flow.Transaction) func(*badger.Txn) error {
+	return save(encodeKey(prefixTransaction, transaction.ID()), transaction)
+}
+
+func SaveTransactions(blockID flow.Identifier, transactions []flow.Identifier) func(*badger.Txn) error {
+	return save(encodeKey(prefixTransactions, blockID), transactions)
+}
+
+func SaveCollection(collection flow.LightCollection) func(*badger.Txn) error {
+	return save(encodeKey(prefixCollection, collection.ID()), collection)
+}
+
+func SaveCollections(blockID flow.Identifier, collections []flow.Identifier) func(*badger.Txn) error {
+	return save(encodeKey(prefixCollections, blockID), collections)
+}
+
 func RetrieveFirst(height *uint64) func(*badger.Txn) error {
 	return retrieve(encodeKey(prefixFirst), height)
 }
@@ -157,4 +173,20 @@ func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) f
 
 func RetrieveHeight(blockID flow.Identifier, height *uint64) func(*badger.Txn) error {
 	return retrieve(encodeKey(prefixHeight, blockID), height)
+}
+
+func RetrieveTransaction(transactionID flow.Identifier, transaction *flow.Transaction) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixTransaction, transactionID), transaction)
+}
+
+func RetrieveTransactions(blockID flow.Identifier, transactions *[]flow.Identifier) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixTransactions, blockID), transactions)
+}
+
+func RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixCollection, collectionID), collection)
+}
+
+func RetrieveCollections(blockID flow.Identifier, collections *[]flow.Identifier) func(*badger.Txn) error {
+	return retrieve(encodeKey(prefixCollections, blockID), collections)
 }

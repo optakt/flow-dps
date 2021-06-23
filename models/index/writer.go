@@ -27,4 +27,5 @@ type Writer interface {
 	Events(height uint64, events []flow.Event) error
 	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
 	Height(blockID flow.Identifier, height uint64) error
+	Transactions(blockID flow.Identifier, collections []flow.LightCollection, transactions []flow.Transaction) error
 }

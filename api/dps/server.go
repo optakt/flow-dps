@@ -187,3 +187,97 @@ func (s *Server) GetHeight(_ context.Context, req *GetHeightRequest) (*GetHeight
 
 	return &res, nil
 }
+
+// GetTransaction implements the `GetTransaction` function of the generated GRPC
+// server.
+func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
+	transactionID := flow.HashToID(req.TransactionID)
+
+	transaction, err := s.index.Transaction(transactionID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
+	}
+
+	transactionData, err := cbor.Marshal(transaction)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode transaction: %w", err)
+	}
+
+	res := GetTransactionResponse{
+		TransactionID: req.TransactionID,
+		Data:          transactionData,
+	}
+
+	return &res, nil
+}
+
+// ListTransactionsForBlock implements the `ListTransactionsForBlock` function of the generated GRPC
+// server.
+func (s *Server) ListTransactionsForBlock(_ context.Context, req *ListTransactionsForBlockRequest) (*ListTransactionsForBlockResponse, error) {
+	var blockID flow.Identifier
+	copy(blockID[:], req.BlockID)
+
+	tt, err := s.index.Transactions(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transactions: %w", err)
+	}
+
+	var transactions [][]byte
+	for _, t := range tt {
+		transactions = append(transactions, t[:])
+	}
+
+	res := ListTransactionsForBlockResponse{
+		BlockID:        req.BlockID,
+		TransactionIDs: transactions,
+	}
+
+	return &res, nil
+}
+
+// ListTransactionsForCollection implements the `ListTransactionsForCollection` function of the generated GRPC
+// server.
+func (s *Server) ListTransactionsForCollection(_ context.Context, req *ListTransactionsForCollectionRequest) (*ListTransactionsForCollectionResponse, error) {
+	collectionID := flow.HashToID(req.CollectionID)
+
+	collection, err := s.index.Collection(collectionID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve collection: %w", err)
+	}
+
+	var transactionIDs [][]byte
+	for _, tr := range collection.Transactions {
+		transactionIDs = append(transactionIDs, tr[:])
+	}
+
+	res := ListTransactionsForCollectionResponse{
+		CollectionID:   req.CollectionID,
+		TransactionIDs: transactionIDs,
+	}
+
+	return &res, nil
+}
+
+// ListCollectionsForBlock implements the `ListCollectionsForBlock` function of the generated GRPC
+// server.
+func (s *Server) ListCollectionsForBlock(_ context.Context, req *ListCollectionsForBlockRequest) (*ListCollectionsForBlockResponse, error) {
+	var blockID flow.Identifier
+	copy(blockID[:], req.BlockID)
+
+	cc, err := s.index.Collections(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve collections: %w", err)
+	}
+
+	var collections [][]byte
+	for _, c := range cc {
+		collections = append(collections, c[:])
+	}
+
+	res := ListCollectionsForBlockResponse{
+		BlockID:       req.BlockID,
+		CollectionIDs: collections,
+	}
+
+	return &res, nil
+}

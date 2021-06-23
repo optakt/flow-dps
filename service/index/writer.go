@@ -108,3 +108,42 @@ func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger
 func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
 	return w.db.Update(storage.SaveHeight(blockID, height))
 }
+
+// Transactions indexes collection IDs for the given blockID, collections themselves and the transactions that they contain.
+func (w *Writer) Transactions(blockID flow.Identifier, collections []flow.LightCollection, transactions []flow.Transaction) error {
+	// Index each collection by ID, and build the slice of collection IDs for the block index.
+	var cIDs []flow.Identifier
+	for _, collection := range collections {
+		err := w.db.Update(storage.SaveCollection(collection))
+		if err != nil {
+			return err
+		}
+
+		cIDs = append(cIDs, collection.ID())
+	}
+
+	// Index each transaction by ID, and build the slice of transaction IDs for the block index.
+	var tIDs []flow.Identifier
+	for _, transaction := range transactions {
+		err := w.db.Update(storage.SaveTransaction(transaction))
+		if err != nil {
+			return err
+		}
+
+		tIDs = append(tIDs, transaction.ID())
+	}
+
+	// Index all collection IDs within a block.
+	err := w.db.Update(storage.SaveCollections(blockID, cIDs))
+	if err != nil {
+		return err
+	}
+
+	// Index all transaction IDs within a block.
+	err = w.db.Update(storage.SaveTransactions(blockID, tIDs))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

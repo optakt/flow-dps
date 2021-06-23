@@ -90,6 +90,32 @@ func TestDisk_Events(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDisk_Transactions(t *testing.T) {
+	db := populatedDB(t)
+	defer db.Close()
+	c := chain.FromDisk(db)
+
+	tt, err := c.Transactions(testHeight)
+	assert.NoError(t, err)
+	assert.Len(t, tt, 2)
+
+	_, err = c.Transactions(math.MaxUint64)
+	assert.Error(t, err)
+}
+
+func TestDisk_Collections(t *testing.T) {
+	db := populatedDB(t)
+	defer db.Close()
+	c := chain.FromDisk(db)
+
+	tt, err := c.Collections(testHeight)
+	assert.NoError(t, err)
+	assert.Len(t, tt, 2)
+
+	_, err = c.Collections(math.MaxUint64)
+	assert.Error(t, err)
+}
+
 func populatedDB(t *testing.T) *badger.DB {
 	t.Helper()
 
@@ -133,6 +159,80 @@ func populatedDB(t *testing.T) *badger.DB {
 			return err
 		}
 		err = operation.InsertEvent(testBlockID, events[1])(tx)
+		if err != nil {
+			return err
+		}
+
+		tb1 := flow.TransactionBody{
+			ReferenceBlockID: testBlockID,
+			GasLimit:         42,
+			Payer:            flow.Address{0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12},
+		}
+		tb2 := flow.TransactionBody{
+			ReferenceBlockID: testBlockID,
+			GasLimit:         84,
+			Payer:            flow.Address{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+		}
+
+		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: tb1.ID()})(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: tb2.ID()})(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransaction(tb1.ID(), &tb1)(tx)
+		if err != nil {
+			return err
+		}
+		err = operation.InsertTransaction(tb2.ID(), &tb2)(tx)
+		if err != nil {
+			return err
+		}
+
+		tb3 := flow.TransactionBody{
+			ReferenceBlockID: testBlockID,
+			GasLimit:         21,
+			Payer:            flow.Address{0xb0, 0x20, 0xe8, 0x58, 0x72, 0xc8, 0x12, 0x59},
+		}
+		tb4 := flow.TransactionBody{
+			ReferenceBlockID: testBlockID,
+			GasLimit:         168,
+			Payer:            flow.Address{0x94, 0x2f, 0x2f, 0xf3, 0x50, 0x6b, 0xa8, 0xde},
+		}
+
+		collection1 := flow.LightCollection{Transactions: []flow.Identifier{tb1.ID(), tb2.ID()}}
+		collection2 := flow.LightCollection{Transactions: []flow.Identifier{tb3.ID(), tb4.ID()}}
+
+		err = operation.IndexCollectionByTransaction(tb1.ID(), collection1.ID())(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.IndexCollectionByTransaction(tb2.ID(), collection1.ID())(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.IndexCollectionByTransaction(tb3.ID(), collection2.ID())(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.IndexCollectionByTransaction(tb4.ID(), collection2.ID())(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertCollection(&collection1)(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertCollection(&collection2)(tx)
 		if err != nil {
 			return err
 		}

@@ -166,3 +166,96 @@ func (i *Index) Height(blockID flow.Identifier) (uint64, error) {
 
 	return res.Height, nil
 }
+
+// Transaction returns the transaction with the given ID.
+func (i *Index) Transaction(transactionID flow.Identifier) (*flow.Transaction, error) {
+
+	req := GetTransactionRequest{
+		TransactionID: transactionID[:],
+	}
+	res, err := i.client.GetTransaction(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get transaction: %w", err)
+	}
+
+	var transaction flow.Transaction
+	err = cbor.Unmarshal(res.Data, &transaction)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode transaction: %w", err)
+	}
+
+	return &transaction, nil
+}
+
+// Transactions returns the transaction IDs within the given block.
+func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
+
+	req := ListTransactionsForBlockRequest{
+		BlockID: blockID[:],
+	}
+	res, err := i.client.ListTransactionsForBlock(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get transaction: %w", err)
+	}
+
+	var transactions []flow.Identifier
+	for _, id := range res.TransactionIDs {
+		var transactionID flow.Identifier
+		err = cbor.Unmarshal(id, &transactionID)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode transaction ID: %w", err)
+		}
+
+		transactions = append(transactions, transactionID)
+	}
+
+	return transactions, nil
+}
+
+// Collection returns the collection with the given ID.
+func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection, error) {
+
+	req := ListTransactionsForCollectionRequest{
+		CollectionID: collectionID[:],
+	}
+	res, err := i.client.ListTransactionsForCollection(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get collection: %w", err)
+	}
+
+	// Convert [][]byte into []flow.Identifier which is in the flow.LightCollection.
+	var collection flow.LightCollection
+	for _, t := range res.TransactionIDs {
+		var transactionID flow.Identifier
+		copy(transactionID[:], t)
+
+		collection.Transactions = append(collection.Transactions, transactionID)
+	}
+
+	return &collection, nil
+}
+
+// Collections returns the collection IDs within the given block.
+func (i *Index) Collections(blockID flow.Identifier) ([]flow.Identifier, error) {
+
+	req := ListCollectionsForBlockRequest{
+		BlockID: blockID[:],
+	}
+	res, err := i.client.ListCollectionsForBlock(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get collection: %w", err)
+	}
+
+	var collections []flow.Identifier
+	for _, id := range res.CollectionIDs {
+		var collectionID flow.Identifier
+		err = cbor.Unmarshal(id, &collectionID)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode collection ID: %w", err)
+		}
+
+		collections = append(collections, collectionID)
+	}
+
+	return collections, nil
+}
