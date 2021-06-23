@@ -20,7 +20,7 @@ import (
 
 // Block contains an array of transactions that occurred at a particular block
 // identifier. A hard requirement for blocks returned by Rosetta implementations
-// is that they must be inalterable: once a client has requested and received a
+// is that they must be unalterable: once a client has requested and received a
 // block identified by a specific block identifier, all future calls for that
 // same block identifier must return the same block contents.
 //

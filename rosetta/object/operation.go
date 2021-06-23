@@ -28,7 +28,7 @@ import (
 // Examples of metadata given in the Rosetta API documentation are
 // "asm" and "hex".
 //
-// The `coin_change` field is ommitted, as the Flow blockchain is an
+// The `coin_change` field is omitted, as the Flow blockchain is an
 // account-based blockchain without utxo set.
 type Operation struct {
 	ID         identifier.Operation   `json:"operation_identifier"`

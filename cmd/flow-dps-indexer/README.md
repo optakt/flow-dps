@@ -3,7 +3,7 @@
 ## Description
 
 The Flow DPS Indexer binary implements the core functionality to create the index for past sporks.
-It needs a reference to the protocol state database of the spork, as well as the trie directory and an execution state checkpoint.
+It needs a reference to the protocol state database of the spork, as well as the trie directory, and an execution state checkpoint.
 The index is generated in the form of a Badger database that allows random access to any ledger register at any block height.
 
 ## Usage

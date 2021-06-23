@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 # A workflow is made up of one or more jobs, which can be run in sequence or in
-# parrallel. In this case, we have a single job, called "check", that runs on
+# parallel. In this case, we have a single job, called "check", that runs on
 # the latest Ubuntu image.
 jobs:
   check:
