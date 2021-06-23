@@ -12,18 +12,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package errors
 
-import (
-	"fmt"
-)
-
-type InvalidNetwork struct {
-	Blockchain string
-	Network    string
-	Message    string
+type InvalidAccount struct {
+	Description string
+	Details     []Detail
 }
 
-func (i InvalidNetwork) Error() string {
-	return fmt.Sprintf("invalid network (blockchain: %s, network: %s): %s", i.Blockchain, i.Network, i.Message)
+func (i InvalidAccount) Error() string {
+	return "invalid account"
+}
+
+func (i InvalidAccount) RosettaError() Error {
+	return newError(ErrorInvalidAccount, i.Description, i.Details...)
 }

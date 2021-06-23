@@ -12,18 +12,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package errors
 
-import (
-	"fmt"
-)
-
-type InvalidBlock struct {
-	Index   uint64
-	Hash    string
-	Message string
+type InvalidTransaction struct {
+	Description string
+	Details     []Detail
 }
 
-func (i InvalidBlock) Error() string {
-	return fmt.Sprintf("invalid block (index: %d, hash: %x): %s", i.Index, i.Hash, i.Message)
+func (i InvalidTransaction) Error() string {
+	return "invalid transaction"
+}
+
+func (i InvalidTransaction) RosettaError() Error {
+	return newError(ErrorInvalidTransaction, i.Description, i.Details...)
 }

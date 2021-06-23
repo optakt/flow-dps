@@ -12,18 +12,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package errors
 
-import (
-	"fmt"
-)
-
-type UnknownBlock struct {
-	Index   uint64
-	Hash    string
-	Message string
+type InvalidNetwork struct {
+	Description string
+	Details     []Detail
 }
 
-func (u UnknownBlock) Error() string {
-	return fmt.Sprintf("unknown block (index: %d, hash: %s): %s", u.Index, u.Hash, u.Message)
+func (i InvalidNetwork) Error() string {
+	return "invalid network"
+}
+
+func (i InvalidNetwork) RosettaError() Error {
+	return newError(ErrorInvalidNetwork, i.Description, i.Details...)
 }

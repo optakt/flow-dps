@@ -15,12 +15,12 @@
 package rosetta
 
 import (
-	"errors"
+	errortype "errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
+	"github.com/optakt/flow-dps/rosetta/errors"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -40,57 +40,67 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	var req TransactionRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("could not unmarshal request", errors.WithError(err)))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: blockchain field is empty"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: blockchain field is empty"))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: network field is empty"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: network field is empty"))
 	}
 
 	if req.BlockID.Index == 0 && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: at least one of hash or index is required"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("block identifier: at least one of hash or index is required"))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: hash field has wrong length (have: %d, want: %d)", len(req.BlockID.Hash), hexIDSize))
+		return httpError(
+			http.StatusBadRequest,
+			errors.InvalidFormat("block identifier: hash field has wrong length",
+				errors.WithInt("have_length", len(req.BlockID.Hash)),
+				errors.WithInt("want_length", hexIDSize),
+			))
 	}
 
 	if req.TransactionID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier: hash field is empty"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("transaction identifier: hash field is empty"))
 	}
 	if len(req.TransactionID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier: hash field has wrong length (have: %d, want: %d)", len(req.TransactionID.Hash), hexIDSize))
+		return httpError(
+			http.StatusBadRequest,
+			errors.InvalidFormat("transaction identifier: hash field has wrong length",
+				errors.WithInt("have_length", len(req.TransactionID.Hash)),
+				errors.WithInt("want_length", hexIDSize),
+			))
 	}
 
 	err = d.config.Check(req.NetworkID)
-	var netErr failure.InvalidNetwork
-	if errors.As(err, &netErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+	var netErr errors.InvalidNetwork
+	if errortype.As(err, &netErr) {
+		return httpError(http.StatusUnprocessableEntity, netErr.RosettaError())
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return httpError(http.StatusInternalServerError, errors.Internal("could not validate network", errors.WithError(err)))
 	}
 
 	transaction, err := d.retrieve.Transaction(req.BlockID, req.TransactionID)
 
-	var ibErr failure.InvalidBlock
-	if errors.As(err, &ibErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidBlock(ibErr))
+	var ibErr errors.InvalidBlock
+	if errortype.As(err, &ibErr) {
+		return httpError(http.StatusUnprocessableEntity, ibErr.RosettaError())
 	}
-	var ubErr failure.UnknownBlock
-	if errors.As(err, &ubErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownBlock(ubErr))
+	var ubErr errors.UnknownBlock
+	if errortype.As(err, &ubErr) {
+		return httpError(http.StatusUnprocessableEntity, ubErr.RosettaError())
 	}
 
-	var itErr failure.InvalidTransaction
-	if errors.As(err, &itErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidTransaction(itErr))
+	var itErr errors.InvalidTransaction
+	if errortype.As(err, &itErr) {
+		return httpError(http.StatusUnprocessableEntity, itErr.RosettaError())
 	}
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return httpError(http.StatusInternalServerError, errors.Internal("could not retrieve transaction", errors.WithError(err)))
 	}
 
 	res := TransactionResponse{

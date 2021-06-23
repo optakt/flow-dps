@@ -17,7 +17,7 @@ package validator
 import (
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
+	"github.com/optakt/flow-dps/rosetta/errors"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -25,9 +25,11 @@ func (v *Validator) Transaction(transaction identifier.Transaction) error {
 
 	_, err := flow.HexStringToIdentifier(transaction.Hash)
 	if err != nil {
-		return failure.InvalidTransaction{
-			Hash:    transaction.Hash,
-			Message: "transaction hash is not a valid hex-encoded string",
+		return errors.InvalidTransaction{
+			Description: "transaction hash is not a valid hex-encoded string",
+			Details: []errors.Detail{
+				errors.WithString("hash", transaction.Hash),
+			},
 		}
 	}
 

@@ -15,12 +15,12 @@
 package rosetta
 
 import (
-	"errors"
+	errortype "errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
+	"github.com/optakt/flow-dps/rosetta/errors"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -39,32 +39,32 @@ func (d *Data) Status(ctx echo.Context) error {
 	var req StatusRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("could not unmarshal request", errors.WithError(err)))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: blockchain field is missing"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: blockchain field is missing"))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: network field is missing"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: network field is missing"))
 	}
 
 	err = d.config.Check(req.NetworkID)
-	var netErr failure.InvalidNetwork
-	if errors.As(err, &netErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+	var netErr errors.InvalidNetwork
+	if errortype.As(err, &netErr) {
+		return httpError(http.StatusUnprocessableEntity, netErr.RosettaError())
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return httpError(http.StatusInternalServerError, errors.Internal("could not validate network", errors.WithError(err)))
 	}
 
 	oldest, _, err := d.retrieve.Oldest()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return httpError(http.StatusInternalServerError, errors.Internal("could not retrieve oldest block", errors.WithError(err)))
 	}
 	current, timestamp, err := d.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return httpError(http.StatusInternalServerError, errors.Internal("could not retrieve current block", errors.WithError(err)))
 	}
 
 	// TODO: See if it makes sense to include the genesis block information:

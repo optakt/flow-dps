@@ -12,18 +12,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package errors
 
-import (
-	"fmt"
-)
-
-type InvalidCurrency struct {
-	Symbol   string
-	Decimals uint
-	Message  string
+type InvalidBlock struct {
+	Description string
+	Details     []Detail
 }
 
-func (i InvalidCurrency) Error() string {
-	return fmt.Sprintf("invalid currency (symbol: %s, decimals: %d): %s", i.Symbol, i.Decimals, i.Message)
+func (i InvalidBlock) Error() string {
+	return "invalid block"
+}
+
+func (i InvalidBlock) RosettaError() Error {
+	return newError(ErrorInvalidBlock, i.Description, i.Details...)
 }

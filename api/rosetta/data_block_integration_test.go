@@ -31,7 +31,7 @@ import (
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/rosetta/configuration"
+	"github.com/optakt/flow-dps/rosetta/errors"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -199,7 +199,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
+			checkErr: checkRosettaError(http.StatusBadRequest, errors.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain name",
@@ -211,7 +211,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, errors.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network name",
@@ -223,7 +223,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
+			checkErr: checkRosettaError(http.StatusBadRequest, errors.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network name",
@@ -235,7 +235,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, errors.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing block height and hash",
@@ -247,7 +247,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
+			checkErr: checkRosettaError(http.StatusBadRequest, errors.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of block id",
@@ -259,7 +259,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
+			checkErr: checkRosettaError(http.StatusBadRequest, errors.ErrorInvalidFormat),
 		},
 		{
 			name: "missing block height",
@@ -270,7 +270,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkErr: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
+			checkErr: checkRosettaError(http.StatusInternalServerError, errors.ErrorInternal),
 		},
 		{
 			name: "invalid block hash",
@@ -282,7 +282,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, errors.ErrorInvalidBlock),
 		},
 		{
 			name: "unknown block",
@@ -293,7 +293,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownBlock),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, errors.ErrorUnknownBlock),
 		},
 		{
 			name: "mismatched block height and hash",
@@ -305,14 +305,14 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, errors.ErrorInvalidBlock),
 		},
 		{
 			// effectively the same as the 'missing blockchain name' test case, since it's the first check we'll do
 			name:    "empty block request",
 			request: rosetta.BlockRequest{},
 
-			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
+			checkErr: checkRosettaError(http.StatusBadRequest, errors.ErrorInvalidFormat),
 		},
 	}
 
@@ -425,10 +425,10 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 
 			assert.Equal(t, http.StatusBadRequest, echoErr.Code)
 
-			gotErr, ok := echoErr.Message.(rosetta.Error)
+			gotErr, ok := echoErr.Message.(errors.Error)
 			require.True(t, ok)
 
-			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.Equal(t, errors.ErrorInvalidFormat, gotErr.ErrorDefinition)
 			assert.NotEmpty(t, gotErr.Description)
 		})
 	}

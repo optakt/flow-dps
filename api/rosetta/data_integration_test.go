@@ -35,12 +35,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/model/flow"
-
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/converter"
+	"github.com/optakt/flow-dps/rosetta/errors"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/meta"
@@ -153,11 +153,11 @@ func checkRosettaError(statusCode int, def meta.ErrorDefinition) func(t assert.T
 
 		success = success && assert.Equal(t, statusCode, echoErr.Code)
 
-		if !assert.IsType(t, rosetta.Error{}, echoErr.Message) {
+		if !assert.IsType(t, errors.Error{}, echoErr.Message) {
 			return false
 		}
 
-		gotErr := echoErr.Message.(rosetta.Error)
+		gotErr := echoErr.Message.(errors.Error)
 
 		success = success && assert.Equal(t, def, gotErr.ErrorDefinition)
 		return success

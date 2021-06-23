@@ -15,10 +15,8 @@
 package validator
 
 import (
-	"fmt"
-
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/rosetta/failure"
+	"github.com/optakt/flow-dps/rosetta/errors"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -28,20 +26,25 @@ func (v *Validator) Currency(currency identifier.Currency) (identifier.Currency,
 	// the token has been configured yet.
 	_, ok := v.params.Tokens[currency.Symbol]
 	if !ok {
-		return identifier.Currency{}, failure.UnknownCurrency{
-			Symbol:   currency.Symbol,
-			Decimals: currency.Decimals,
-			Message:  "currency symbol has not been configured",
+		return identifier.Currency{}, errors.UnknownCurrency{
+			Description: "currency symbol has not been configured",
+			Details: []errors.Detail{
+				errors.WithString("symbol", currency.Symbol),
+				errors.WithUint("decimals", currency.Decimals),
+			},
 		}
 	}
 
 	// If the token is known, there should always be 8 decimals, as we always use
 	// `UFix64` for tokens on Flow.
 	if currency.Decimals != 0 && currency.Decimals != dps.FlowDecimals {
-		return identifier.Currency{}, failure.InvalidCurrency{
-			Symbol:   currency.Symbol,
-			Decimals: currency.Decimals,
-			Message:  fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
+		return identifier.Currency{}, errors.InvalidCurrency{
+			Description: "currency decimals do not match configured default",
+			Details: []errors.Detail{
+				errors.WithString("symbol", currency.Symbol),
+				errors.WithUint("decimals", currency.Decimals),
+				errors.WithUint("decimals_default", dps.FlowDecimals),
+			},
 		}
 	}
 

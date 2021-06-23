@@ -15,12 +15,12 @@
 package rosetta
 
 import (
-	"errors"
+	errortype "errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
+	"github.com/optakt/flow-dps/rosetta/errors"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -42,36 +42,47 @@ func (d *Data) Balance(ctx echo.Context) error {
 	var req BalanceRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("could not unmarshal request", errors.WithError(err)))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: blockchain field is empty"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: blockchain field is empty"))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: network field is empty"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: network field is empty"))
 	}
 
 	if req.BlockID.Index == 0 && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: at least one of hash or index is required"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("block identifier: at least one of hash or index is required"))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: hash field has wrong length (have: %d, want: %d)", len(req.BlockID.Hash), hexIDSize))
+		return httpError(
+			http.StatusBadRequest,
+			errors.InvalidFormat("block identifier: hash field has wrong length",
+				errors.WithInt("have_length", len(req.BlockID.Hash)),
+				errors.WithInt("want_length", hexIDSize),
+			))
 	}
 
 	if req.AccountID.Address == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier: address field is empty"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("account identifier: address field is empty"))
 	}
 	if len(req.AccountID.Address) != hexAddressSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier: address field has wrong length (have: %d, want: %d)", len(req.AccountID.Address), hexAddressSize))
+
+		return httpError(
+			http.StatusBadRequest,
+			errors.InvalidFormat("account identifier: address field has wrong length",
+				errors.WithInt("have_length", len(req.AccountID.Address)),
+				errors.WithInt("want_length", hexAddressSize),
+			))
 	}
 
 	if len(req.Currencies) == 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifiers: currency list is empty"))
+		return httpError(http.StatusBadRequest, errors.InvalidFormat("currency identifiers: currency list is empty"))
 	}
 	for _, currency := range req.Currencies {
 		if currency.Symbol == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifier: symbol field is missing"))
+			return httpError(http.StatusBadRequest, errors.InvalidFormat("currency identifier: symbol field is missing"))
 		}
 	}
 
@@ -80,41 +91,41 @@ func (d *Data) Balance(ctx echo.Context) error {
 	// => https://github.com/optakt/flow-dps/issues/164
 
 	err = d.config.Check(req.NetworkID)
-	var netErr failure.InvalidNetwork
-	if errors.As(err, &netErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+	var netErr errors.InvalidNetwork
+	if errortype.As(err, &netErr) {
+		return httpError(http.StatusUnprocessableEntity, netErr.RosettaError())
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return httpError(http.StatusInternalServerError, errors.Internal("could not validate network", errors.WithError(err)))
 	}
 
 	block, balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
 
-	var ibErr failure.InvalidBlock
-	if errors.As(err, &ibErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidBlock(ibErr))
+	var ibErr errors.InvalidBlock
+	if errortype.As(err, &ibErr) {
+		return httpError(http.StatusUnprocessableEntity, ibErr.RosettaError())
 	}
-	var ubErr failure.UnknownBlock
-	if errors.As(err, &ubErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownBlock(ubErr))
-	}
-
-	var iaErr failure.InvalidAccount
-	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidAccount(iaErr))
+	var ubErr errors.UnknownBlock
+	if errortype.As(err, &ubErr) {
+		return httpError(http.StatusUnprocessableEntity, ubErr.RosettaError())
 	}
 
-	var icErr failure.InvalidCurrency
-	if errors.As(err, &icErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidCurrency(icErr))
+	var iaErr errors.InvalidAccount
+	if errortype.As(err, &iaErr) {
+		return httpError(http.StatusUnprocessableEntity, iaErr.RosettaError())
 	}
-	var ucErr failure.UnknownCurrency
-	if errors.As(err, &ucErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownCurrency(ucErr))
+
+	var icErr errors.InvalidCurrency
+	if errortype.As(err, &icErr) {
+		return httpError(http.StatusUnprocessableEntity, icErr.RosettaError())
+	}
+	var ucErr errors.UnknownCurrency
+	if errortype.As(err, &ucErr) {
+		return httpError(http.StatusUnprocessableEntity, ucErr.RosettaError())
 	}
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return httpError(http.StatusInternalServerError, errors.Internal("could not retrieve balance", errors.WithError(err)))
 	}
 
 	res := BalanceResponse{

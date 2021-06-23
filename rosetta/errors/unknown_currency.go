@@ -12,18 +12,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
-
-import (
-	"fmt"
-)
+package errors
 
 type UnknownCurrency struct {
-	Symbol   string
-	Decimals uint
-	Message  string
+	Description string
+	Details     []Detail
 }
 
 func (u UnknownCurrency) Error() string {
-	return fmt.Sprintf("unknown currency (symbol: %s, decimals: %d): %s", u.Symbol, u.Decimals, u.Message)
+	return "unknown currency"
+}
+
+func (u UnknownCurrency) RosettaError() Error {
+	return newError(ErrorUnknownCurrency, u.Description, u.Details...)
 }

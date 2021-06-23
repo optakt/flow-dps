@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package configuration
+package errors
 
 import (
 	"github.com/optakt/flow-dps/rosetta/meta"

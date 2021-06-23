@@ -15,34 +15,12 @@
 package rosetta
 
 import (
-	"net/http"
-
 	"github.com/labstack/echo/v4"
-
 	"github.com/optakt/flow-dps/rosetta/errors"
-	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-type NetworksRequest struct {
-}
-
-type NetworksResponse struct {
-	NetworkIDs []identifier.Network `json:"network_identifiers"`
-}
-
-func (d *Data) Networks(ctx echo.Context) error {
-
-	// Decode the network list request from the HTTP request JSON body.
-	var req NetworksRequest
-	err := ctx.Bind(&req)
-	if err != nil {
-		return httpError(http.StatusBadRequest, errors.InvalidFormat("could not unmarshal request", errors.WithError(err)))
-	}
-
-	// Get the network we are running on from the configuration.
-	res := NetworksResponse{
-		NetworkIDs: []identifier.Network{d.config.Network()},
-	}
-
-	return ctx.JSON(http.StatusOK, res)
+// This helper function returns an echo.HTTPError that corresponds to the specified
+// rosetta Error. It ensures we don't accidentally return a wrong error type.
+func httpError(code int, err errors.Error) *echo.HTTPError {
+	return echo.NewHTTPError(code, err)
 }

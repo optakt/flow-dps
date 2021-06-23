@@ -12,18 +12,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package errors
 
-import (
-	"fmt"
-)
-
-type InvalidAccount struct {
-	Address string
-	Chain   string
-	Message string
+type UnknownBlock struct {
+	Description string
+	Details     []Detail
 }
 
-func (i InvalidAccount) Error() string {
-	return fmt.Sprintf("invalid account (address: %s, chain: %s): %s", i.Address, i.Message, i.Chain)
+func (u UnknownBlock) Error() string {
+	return "unknown block"
+}
+
+func (u UnknownBlock) RosettaError() Error {
+	return newError(ErrorUnknownBlock, u.Description, u.Details...)
 }
