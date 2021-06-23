@@ -233,31 +233,39 @@ func TestAPI_Options(t *testing.T) {
 
 			switch expectedCode {
 
-			case 1:
+			case configuration.ErrorInternal.Code:
 				assert.Equal(t, configuration.ErrorInternal.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorInternal.Retriable, rosettaErr.Retriable)
-			case 2:
+
+			case configuration.ErrorInvalidFormat.Code:
 				assert.Equal(t, configuration.ErrorInvalidFormat.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorInvalidFormat.Retriable, rosettaErr.Retriable)
-			case 3:
+
+			case configuration.ErrorInvalidNetwork.Code:
 				assert.Equal(t, configuration.ErrorInvalidNetwork.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorInvalidNetwork.Retriable, rosettaErr.Retriable)
-			case 4:
+
+			case configuration.ErrorInvalidAccount.Code:
 				assert.Equal(t, configuration.ErrorInvalidAccount.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorInvalidAccount.Retriable, rosettaErr.Retriable)
-			case 5:
+
+			case configuration.ErrorInvalidCurrency.Code:
 				assert.Equal(t, configuration.ErrorInvalidCurrency.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorInvalidCurrency.Retriable, rosettaErr.Retriable)
-			case 6:
+
+			case configuration.ErrorInvalidBlock.Code:
 				assert.Equal(t, configuration.ErrorInvalidBlock.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorInvalidBlock.Retriable, rosettaErr.Retriable)
-			case 7:
+
+			case configuration.ErrorInvalidTransaction.Code:
 				assert.Equal(t, configuration.ErrorInvalidTransaction.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorInvalidTransaction.Retriable, rosettaErr.Retriable)
-			case 8:
+
+			case configuration.ErrorUnknownBlock.Code:
 				assert.Equal(t, configuration.ErrorUnknownBlock.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorUnknownBlock.Retriable, rosettaErr.Retriable)
-			case 9:
+
+			case configuration.ErrorUnknownCurrency.Code:
 				assert.Equal(t, configuration.ErrorUnknownCurrency.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorUnknownCurrency.Retriable, rosettaErr.Retriable)
 
