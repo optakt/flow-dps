@@ -14,16 +14,15 @@
 
 package storage
 
-type Codec interface {
-	Marshal(v interface{}) ([]byte, error)
-	Unmarshal(b []byte, v interface{}) error
-}
+import (
+	"github.com/optakt/flow-dps/models/index"
+)
 
 type Library struct {
-	codec Codec
+	codec index.Codec
 }
 
-func NewLibrary(codec Codec) *Library {
+func NewLibrary(codec index.Codec) *Library {
 	lib := Library{
 		codec: codec,
 	}

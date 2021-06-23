@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
-	"github.com/optakt/flow-dps/encoding/zbor"
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -81,9 +81,8 @@ func run() int {
 
 	// We can then create a compressor to make sure we only pipe compressed
 	// bytes into the writer.
-	dict, _ := hex.DecodeString(zbor.Payload)
 	compressor, err := zstd.NewWriter(writer,
-		zstd.WithEncoderDict(dict),
+		zstd.WithEncoderDict(zbor.Dictionary),
 	)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize compressor")

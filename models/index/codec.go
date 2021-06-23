@@ -12,14 +12,9 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package dps
+package index
 
-import (
-	"github.com/fxamacker/cbor/v2"
-)
-
-var Encoding = cbor.CanonicalEncOptions()
-
-func init() {
-	Encoding.Time = cbor.TimeRFC3339Nano
+type Codec interface {
+	Marshal(v interface{}) ([]byte, error)
+	Unmarshal(b []byte, v interface{}) error
 }

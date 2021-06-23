@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/optakt/flow-dps/encoding/zbor"
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/testing/mocks"
 
 	"github.com/optakt/flow-dps/testing/helpers"

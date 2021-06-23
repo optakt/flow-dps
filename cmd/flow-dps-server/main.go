@@ -33,7 +33,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
 
 	api "github.com/optakt/flow-dps/api/dps"
-	"github.com/optakt/flow-dps/encoding/zbor"
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/storage"
@@ -108,7 +108,7 @@ func run() int {
 		),
 	)
 	index := index.NewReader(db, storage)
-	server := api.NewServer(index)
+	server := api.NewServer(index, codec)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
