@@ -136,7 +136,7 @@ func setupRecorder(endpoint string, input interface{}, options ...func(*http.Req
 	return rec, ctx, nil
 }
 
-func checkRosettaError(statusCode int, def meta.ErrorDefinition, desc string, details map[string]interface{}) func(t assert.TestingT, err error, v ...interface{}) bool {
+func checkRosettaError(statusCode int, def meta.ErrorDefinition) func(t assert.TestingT, err error, v ...interface{}) bool {
 
 	return func(t assert.TestingT, err error, v ...interface{}) bool {
 
@@ -159,8 +159,6 @@ func checkRosettaError(statusCode int, def meta.ErrorDefinition, desc string, de
 		}
 
 		success = success && assert.Equal(t, def, gotErr.ErrorDefinition)
-		success = success && assert.Equal(t, desc, gotErr.Description)
-		success = success && assert.Equal(t, details, gotErr.Details)
 
 		return success
 	}

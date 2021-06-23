@@ -18,7 +18,6 @@ package rosetta_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"regexp"
 	"testing"
@@ -95,12 +94,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: blockchain field is missing",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain",
@@ -111,15 +105,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidNetwork,
-				fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
-				map[string]interface{}{
-					"blockchain": invalidBlockchain,
-					"network":    dps.FlowTestnet.String(),
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network",
@@ -130,11 +116,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: network field is missing",
-				nil),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network",
@@ -145,15 +127,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidNetwork,
-				fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
-				map[string]interface{}{
-					"blockchain": dps.FlowBlockchain,
-					"network":    invalidNetwork,
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 	}
 
@@ -316,12 +290,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: blockchain field is missing",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain",
@@ -332,15 +301,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidNetwork,
-				fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
-				map[string]interface{}{
-					"blockchain": invalidBlockchain,
-					"network":    dps.FlowTestnet.String(),
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network",
@@ -351,12 +312,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: network field is missing",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network",
@@ -367,15 +323,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidNetwork,
-				fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
-				map[string]interface{}{
-					"blockchain": dps.FlowBlockchain,
-					"network":    invalidNetwork,
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 	}
 

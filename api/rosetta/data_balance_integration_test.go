@@ -18,15 +18,12 @@ package rosetta_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
@@ -146,8 +143,6 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			Index: 13,
 			Hash:  "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23",
 		}
-
-		validAddressSize = 2 * flow.AddressLength
 	)
 
 	const (
@@ -174,12 +169,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			name:    "empty balance request",
 			request: rosetta.BalanceRequest{},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: blockchain field is empty",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing blockchain name",
@@ -193,12 +183,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: blockchain field is empty",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain name",
@@ -212,15 +197,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidNetwork,
-				fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
-				map[string]interface{}{
-					"blockchain": invalidBlockchain,
-					"network":    dps.FlowTestnet.String(),
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network name",
@@ -233,12 +210,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: defaultCurrency(),
 			},
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: network field is empty",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network name",
@@ -252,15 +224,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidNetwork,
-				fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
-				map[string]interface{}{
-					"blockchain": dps.FlowBlockchain,
-					"network":    invalidNetwork,
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing block index and height",
@@ -271,12 +235,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"block identifier: at least one of hash or index is required",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of block id",
@@ -287,12 +246,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing account address",
@@ -303,12 +257,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"account identifier: address field is empty",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of account address",
@@ -319,12 +268,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				fmt.Sprintf("account identifier: address field has wrong length (have: %d, want: %d)", len(trimmedAddress), validAddressSize),
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing currency data",
@@ -335,12 +279,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: []identifier.Currency{},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"currency identifiers: currency list is empty",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing currency symbol",
@@ -351,12 +290,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: []identifier.Currency{{Symbol: "", Decimals: 8}},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"currency identifier: symbol field is missing",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "some currency symbols missing",
@@ -371,12 +305,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"currency identifier: symbol field is missing",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing block height",
@@ -387,12 +316,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusInternalServerError,
-				configuration.ErrorInternal,
-				"could not validate block: block access with hash currently not supported",
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
 		},
 		{
 			name: "invalid block hash",
@@ -403,12 +327,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidBlock,
-				"block hash is not a valid hex-encoded string",
-				map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			name: "unkown block requested",
@@ -419,15 +338,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorUnknownBlock,
-				"block index is above last indexed block (last: 425)",
-				map[string]interface{}{
-					"index": uint64(426),
-					"hash":  "",
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownBlock),
 		},
 		{
 			name: "mismatched block id and height",
@@ -438,15 +349,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidBlock,
-				"block hash does not match known hash for height (known: af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23)",
-				map[string]interface{}{
-					"index": uint64(13),
-					"hash":  "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc",
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			name: "invalid account ID hex",
@@ -457,15 +360,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidAccount,
-				"account address is not a valid hex-encoded string",
-				map[string]interface{}{
-					"address": invalidAddressHex,
-					"chain":   dps.FlowTestnet.String(),
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidAccount),
 		},
 		{
 			name: "invalid account ID",
@@ -476,15 +371,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidAccount,
-				"account address is not valid for configured chain",
-				map[string]interface{}{
-					"address": invalidAddress,
-					"chain":   dps.FlowTestnet.String(),
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidAccount),
 		},
 		{
 			name: "unknown currency requested",
@@ -495,15 +382,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: []identifier.Currency{{Symbol: invalidToken, Decimals: 8}},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorUnknownCurrency,
-				"currency symbol has not been configured",
-				map[string]interface{}{
-					"symbol":   invalidToken,
-					"decimals": uint(8),
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownCurrency),
 		},
 		{
 			name: "invalid currency decimal count",
@@ -514,15 +393,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: []identifier.Currency{{Symbol: dps.FlowSymbol, Decimals: 7}},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidCurrency,
-				fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
-				map[string]interface{}{
-					"symbol":   dps.FlowSymbol,
-					"decimals": uint(7),
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidCurrency),
 		},
 		{
 			name: "invalid currency decimal count in a list of currencies",
@@ -537,15 +408,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidCurrency,
-				fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
-				map[string]interface{}{
-					"symbol":   dps.FlowSymbol,
-					"decimals": uint(7),
-				},
-			),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidCurrency),
 		},
 		{
 			// request the account balance before the account is created, so the account/vault does not exist.
@@ -559,12 +422,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			checkError: checkRosettaError(
-				http.StatusInternalServerError,
-				configuration.ErrorInternal,
-				cadenceVaultNotFoundErr,
-				nil,
-			),
+			checkError: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
 		},
 	}
 

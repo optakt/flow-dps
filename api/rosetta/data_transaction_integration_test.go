@@ -18,7 +18,6 @@ package rosetta_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -162,12 +161,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			name:    "empty transaction request",
 			request: rosetta.TransactionRequest{},
 
-			checkErr: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: blockchain field is empty",
-				nil,
-			),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing blockchain name",
@@ -180,12 +174,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: blockchain field is empty",
-				nil,
-			),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain name",
@@ -198,15 +187,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidNetwork,
-				fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
-				map[string]interface{}{
-					"blockchain": invalidBlockchain,
-					"network":    dps.FlowTestnet.String(),
-				},
-			),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network name",
@@ -219,12 +200,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"blockchain identifier: network field is empty",
-				nil,
-			),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network name",
@@ -237,15 +213,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidNetwork,
-				fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
-				map[string]interface{}{
-					"blockchain": dps.FlowBlockchain,
-					"network":    invalidNetwork,
-				},
-			),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing block height and hash",
@@ -258,12 +226,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"block identifier: at least one of hash or index is required",
-				nil,
-			),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of block id",
@@ -276,12 +239,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
-				nil,
-			),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing block height",
@@ -292,12 +250,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				},
 				TransactionID: testTx,
 			},
-			checkErr: checkRosettaError(
-				http.StatusInternalServerError,
-				configuration.ErrorInternal,
-				"could not validate block: block access with hash currently not supported",
-				nil,
-			),
+			checkErr: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
 		},
 		{
 			name: "invalid block hash",
@@ -310,15 +263,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidBlock,
-				"block hash is not a valid hex-encoded string",
-				map[string]interface{}{
-					"index": uint64(testHeight),
-					"hash":  invalidBlockHash,
-				},
-			),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			name: "unknown block",
@@ -330,15 +275,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorUnknownBlock,
-				fmt.Sprintf("block index is above last indexed block (last: %d)", lastHeight),
-				map[string]interface{}{
-					"index": uint64(lastHeight + 1),
-					"hash":  "",
-				},
-			),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownBlock),
 		},
 		{
 			name: "mismatched block height and hash",
@@ -351,15 +288,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidBlock,
-				fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeader(44).ID().String()),
-				map[string]interface{}{
-					"index": uint64(44),
-					"hash":  testBlockHash,
-				},
-			),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			name: "missing transaction id",
@@ -371,12 +300,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				"transaction identifier: hash field is empty",
-				nil,
-			),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing transaction id",
@@ -388,12 +312,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-				fmt.Sprintf("transaction identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedTxHash), validBlockHashLen),
-				nil,
-			),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid transaction id",
@@ -405,14 +324,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkErr: checkRosettaError(
-				http.StatusUnprocessableEntity,
-				configuration.ErrorInvalidTransaction,
-				"transaction hash is not a valid hex-encoded string",
-				map[string]interface{}{
-					"hash": invalidTxHash,
-				},
-			),
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidTransaction),
 		},
 		// TODO: add - transaction that has no events/transfers
 		// TODO: add - transaction that does not exist in a block
