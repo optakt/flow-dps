@@ -21,34 +21,34 @@ import (
 
 type Index struct{}
 
-func (*Index) First(height uint64) error {
+func (*Index) First(_ uint64) error {
 	return nil
 }
 
-func (*Index) Last(height uint64) error {
+func (*Index) Last(_ uint64) error {
 	return nil
 }
 
-func (*Index) Header(height uint64, header *flow.Header) error {
+func (*Index) Header(_ uint64, _ *flow.Header) error {
 	return nil
 }
 
-func (*Index) Commit(height uint64, commit flow.StateCommitment) error {
+func (*Index) Commit(_ uint64, _ flow.StateCommitment) error {
 	return nil
 }
 
-func (*Index) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
+func (*Index) Payloads(_ uint64, _ []ledger.Path, _ []*ledger.Payload) error {
 	return nil
 }
 
-func (*Index) Events(height uint64, events []flow.Event) error {
+func (*Index) Events(_ uint64, _ []flow.Event) error {
 	return nil
 }
 
-func (*Index) Height(blockID flow.Identifier, height uint64) error {
+func (*Index) Height(_ flow.Identifier, _ uint64) error {
 	return nil
 }
 
-func (*Index) Transactions(blockID flow.Identifier, collections []flow.LightCollection, transactions []flow.Transaction) error {
+func (*Index) Transactions(_ flow.Identifier, _ []flow.LightCollection, _ []flow.Transaction) error {
 	return nil
 }

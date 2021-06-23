@@ -26,9 +26,10 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
-	"github.com/onflow/flow-go/model/flow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/convert"
@@ -547,7 +548,7 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 			t.Errorf("unexpected account address (%v)", address)
 		}
 
-		// validate transfered amount
+		// validate transferred amount
 		wantValue := strconv.FormatInt(amount, 10)
 		if address == from {
 			wantValue = "-" + wantValue
@@ -576,7 +577,7 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 			t.Errorf("unexpected account address (%v)", address)
 		}
 
-		// validate transfered amount
+		// validate transferred amount
 		wantValue = strconv.FormatInt(amount, 10)
 		if address == from {
 			wantValue = "-" + wantValue

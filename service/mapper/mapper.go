@@ -50,12 +50,12 @@ type Mapper struct {
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
 // and then passes on the details to the indexer for indexing.
-func New(log zerolog.Logger, chain Chain, feed Feeder, index index.Writer, options ...func(*MapperConfig)) (*Mapper, error) {
+func New(log zerolog.Logger, chain Chain, feed Feeder, index index.Writer, options ...func(*Config)) (*Mapper, error) {
 
 	// We don't use a checkpoint by default. The options can set one, in which
 	// case we will add the checkpoint as a finalized state commitment in our
 	// trie registry.
-	cfg := MapperConfig{
+	cfg := Config{
 		CheckpointFile: "",
 		PostProcessing: PostNoop,
 	}
