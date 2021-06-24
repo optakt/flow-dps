@@ -94,14 +94,6 @@ func run() int {
 	}
 	defer data.Close()
 
-	// Check if index already exists.
-	_, err = index.NewReader(db).First()
-	indexExists := err != nil
-	if indexExists && !flagForce {
-		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
-		return failure
-	}
-
 	// Initialize storage library.
 	codec, err := zbor.NewCodec()
 	if err != nil {
@@ -109,6 +101,14 @@ func run() int {
 		return failure
 	}
 	storage := storage.New(codec)
+
+	// Check if index already exists.
+	_, err = index.NewReader(db, storage).First()
+	indexExists := err != nil
+	if indexExists && !flagForce {
+		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
+		return failure
+	}
 
 	// Initialize mapper.
 	chain := chain.FromDisk(data)
