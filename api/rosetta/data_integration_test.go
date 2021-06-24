@@ -139,27 +139,24 @@ func setupRecorder(endpoint string, input interface{}, options ...func(*http.Req
 func checkRosettaError(statusCode int, def meta.ErrorDefinition) func(t assert.TestingT, err error, v ...interface{}) bool {
 
 	return func(t assert.TestingT, err error, v ...interface{}) bool {
-
 		// return false if any of the asserts failed
-
 		success := true
-
 		success = success && assert.Error(t, err)
 
-		echoErr, ok := err.(*echo.HTTPError)
-		if !assert.True(t, ok) {
+		if !assert.IsType(t, &echo.HTTPError{}, err) {
 			return false
 		}
+		echoErr := err.(*echo.HTTPError)
 
 		success = success && assert.Equal(t, statusCode, echoErr.Code)
 
-		gotErr, ok := echoErr.Message.(rosetta.Error)
-		if !assert.True(t, ok) {
+		if !assert.IsType(t, rosetta.Error{}, echoErr.Message) {
 			return false
 		}
 
-		success = success && assert.Equal(t, def, gotErr.ErrorDefinition)
+		gotErr := echoErr.Message.(rosetta.Error)
 
+		success = success && assert.Equal(t, def, gotErr.ErrorDefinition)
 		return success
 	}
 }

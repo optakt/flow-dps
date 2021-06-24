@@ -179,7 +179,7 @@ func TestAPI_Options(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const errorCount = 9
+	const wantErrorCount = 9
 
 	// verify version string is in the format of x.y.z
 	versionRe := regexp.MustCompile(`\d+\.\d+\.\d+`)
@@ -221,9 +221,9 @@ func TestAPI_Options(t *testing.T) {
 		assert.Equal(t, options.Allow.OperationTypes[0], dps.OperationTransfer)
 	}
 
-	if assert.Len(t, options.Allow.Errors, errorCount) {
+	if assert.Len(t, options.Allow.Errors, wantErrorCount) {
 
-		for i := uint(0); i < errorCount; i++ {
+		for i := uint(0); i < wantErrorCount; i++ {
 
 			rosettaErr := options.Allow.Errors[i]
 

@@ -312,10 +312,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			name:    "empty block request",
 			request: rosetta.BlockRequest{},
 
-			checkErr: checkRosettaError(
-				http.StatusBadRequest,
-				configuration.ErrorInvalidFormat,
-			),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 	}
 
