@@ -1,6 +1,6 @@
 # Rosetta snapshot
 
-This document describes the content of the index snapshot defined in `testing/snapshots/rosetta.go`.
+This document describes the contents of the index snapshot defined in `testing/snapshots/rosetta.go`.
 
 **Table of Contents**
 
@@ -1757,4 +1757,3 @@ transactions:
 | 754aed9de6197641 | 13           | 10000100000 |
 | 754aed9de6197641 | 50           | 10000099999 |
 | 754aed9de6197641 | 425          | 10000100002 |
-
