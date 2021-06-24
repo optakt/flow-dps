@@ -22,13 +22,19 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// NetworksRequest implements the empty request schema for the /network/list endpoint as described
+// in https://www.rosetta-api.org/docs/NetworkApi.html#request.
 type NetworksRequest struct {
 }
 
+// NetworksResponse implements the successful response schema for the /network/list endpoint
+// as described in https://www.rosetta-api.org/docs/NetworkApi.html#200---ok.
 type NetworksResponse struct {
 	NetworkIDs []identifier.Network `json:"network_identifiers"`
 }
 
+// Networks implements the /network/list endpoint of the Rosetta Data API as described in
+// https://www.rosetta-api.org/docs/NetworkApi.html#networklist.
 func (d *Data) Networks(ctx echo.Context) error {
 
 	// Decode the network list request from the HTTP request JSON body.
@@ -38,7 +44,7 @@ func (d *Data) Networks(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
 	}
 
-	// Get the network we are running on from the configuration.
+	// Get the current network from the configuration.
 	res := NetworksResponse{
 		NetworkIDs: []identifier.Network{d.config.Network()},
 	}

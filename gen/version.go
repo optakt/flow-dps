@@ -132,12 +132,12 @@ func MiddlewareVersion() (string, error) {
 	// Fetch middleware version by looking at the latest tag on the repository.
 	repo, err := git.PlainOpen(pathToRepoRoot)
 	if err != nil {
-		return "", fmt.Errorf("unable to open local git repository: %w", err)
+		return "", fmt.Errorf("could not open local git repository: %w", err)
 	}
 
 	tags, err := repo.Tags()
 	if err != nil {
-		return "", fmt.Errorf("unable to find local git tags: %w", err)
+		return "", fmt.Errorf("could not find local git tags: %w", err)
 	}
 
 	// Fetch all tags and which commit they reference.
@@ -149,7 +149,7 @@ func MiddlewareVersion() (string, error) {
 
 	head, err := repo.Head()
 	if err != nil {
-		return "", fmt.Errorf("unable to find local git HEAD: %w", err)
+		return "", fmt.Errorf("could not find local git HEAD: %w", err)
 	}
 
 	// Fetch the reference log.
@@ -158,7 +158,7 @@ func MiddlewareVersion() (string, error) {
 		Order: git.LogOrderCommitterTime,
 	})
 	if err != nil {
-		return "", fmt.Errorf("unable to read local git log: %w", err)
+		return "", fmt.Errorf("could not read local git log: %w", err)
 	}
 
 	// Search for the latest tag on the current branch.

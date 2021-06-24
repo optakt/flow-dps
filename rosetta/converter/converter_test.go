@@ -241,7 +241,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 	missingAddressEventPayload := json.MustEncode(missingAddressEvent)
 
 	tests := []struct {
-		description string
+		name string
 
 		event flow.Event
 
@@ -250,7 +250,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 		wantErr        assert.ErrorAssertionFunc
 	}{
 		{
-			description: "nominal case with deposit event",
+			name: "nominal case with deposit event",
 
 			event: flow.Event{
 				TransactionID: id,
@@ -264,7 +264,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 			wantOperation:  &testDepositOp,
 		},
 		{
-			description: "nominal case with withdrawal event",
+			name: "nominal case with withdrawal event",
 
 			event: flow.Event{
 				TransactionID: id,
@@ -278,7 +278,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 			wantOperation:  &testWithdrawalOp,
 		},
 		{
-			description: "irrelevant event",
+			name: "irrelevant event",
 
 			event: flow.Event{
 				TransactionID: id,
@@ -291,7 +291,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 			wantErr:        assert.Error,
 		},
 		{
-			description: "wrong amount of fields",
+			name: "wrong amount of fields",
 
 			event: flow.Event{
 				Type:    "deposit",
@@ -302,7 +302,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 			wantErr:        assert.Error,
 		},
 		{
-			description: "missing amount field",
+			name: "missing amount field",
 
 			event: flow.Event{
 				Type:    "deposit",
@@ -313,7 +313,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 			wantErr:        assert.Error,
 		},
 		{
-			description: "missing address field",
+			name: "missing address field",
 
 			event: flow.Event{
 				Type:    "deposit",
@@ -327,7 +327,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			cvt := &Converter{

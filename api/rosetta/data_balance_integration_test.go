@@ -40,19 +40,19 @@ func TestAPI_Balance(t *testing.T) {
 	)
 
 	var (
-		// block where the account first appears
+		// Block where the account first appears.
 		firstBlock = identifier.Block{
 			Index: 13,
 			Hash:  "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23",
 		}
 
-		// a block mid-chain
+		// A block mid-chain.
 		secondBlock = identifier.Block{
 			Index: 50,
 			Hash:  "d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df",
 		}
 
-		// last indexed block
+		// Last indexed block.
 		lastBlock = identifier.Block{
 			Index: 425,
 			Hash:  "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683",
@@ -86,7 +86,7 @@ func TestAPI_Balance(t *testing.T) {
 			validateBlock: validateBlock(t, lastBlock.Index, lastBlock.Hash),
 		},
 		{
-			// use block height only to retrieve data, but verify hash is set in the response
+			// Use block height only to retrieve data, but verify hash is set in the response.
 			name:          "get block via height only",
 			request:       requestBalance(testAccount, identifier.Block{Index: secondBlock.Index}),
 			wantBalance:   "10000099999",
@@ -104,22 +104,22 @@ func TestAPI_Balance(t *testing.T) {
 			rec, ctx, err := setupRecorder(balanceEndpoint, test.request)
 			require.NoError(t, err)
 
-			// execute the request
+			// Execute the request.
 			err = api.Balance(ctx)
 			assert.NoError(t, err)
 
 			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-			// unpack response
+			// Unpack response..
 			var balanceResponse rosetta.BalanceResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &balanceResponse))
 
 			test.validateBlock(balanceResponse.BlockID)
 
-			// verify that we have one balance in the response
+			// Verify that there is one balance in the response.
 			if assert.Len(t, balanceResponse.Balances, 1) {
 
-				// verify returned balance - both the value and that the output matches the input spec
+				// Verify returned balance - both the value and that the output matches the input spec.
 				balance := balanceResponse.Balances[0]
 
 				assert.Equal(t, test.request.Currencies[0].Symbol, balance.Currency.Symbol)
@@ -135,7 +135,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	// defined valid balance request fields
+	// Defined valid balance request fields.
 	var (
 		testAccount = identifier.Account{Address: "754aed9de6197641"}
 
@@ -146,12 +146,12 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 	)
 
 	const (
-		invalidAddress = "0000000000000000" // valid 16-digit hex value but not a valid account ID
+		invalidAddress = "0000000000000000" // Valid 16-digit hex value but not a valid account ID
 
-		trimmedBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2" // block hash a character short
+		trimmedBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2" // Block hash a character short
 
-		trimmedAddress    = "754aed9de619764"  // account ID a character short
-		invalidAddressHex = "754aed9de619764z" // invalid hex string
+		trimmedAddress    = "754aed9de619764" // Account ID a character short
+		invalidAddressHex = "Not Hexadecimal "
 
 		accFirstOccurrence = 13
 
@@ -411,14 +411,14 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidCurrency),
 		},
 		{
-			// request the account balance before the account is created, so the account/vault does not exist.
+			// Request the account balance before the account is created, so the account/vault does not exist.
 			// TODO: differentiate between vault and account not existing
 			// => https://github.com/optakt/flow-dps/issues/204
 			name: "account vault does not exist",
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: accFirstOccurrence - 1}, // one block before the account is created
+				BlockID:    identifier.Block{Index: accFirstOccurrence - 1}, // One block before the account is created
 				Currencies: defaultCurrency(),
 			},
 
@@ -436,14 +436,14 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			_, ctx, err := setupRecorder(balanceEndpoint, test.request)
 			require.NoError(t, err)
 
-			// execute the request
+			// Execute the request.
 			err = api.Balance(ctx)
 			test.checkError(t, err)
 		})
 	}
 }
 
-// TestAPI_BalanceHandlesMalformedRequest tests whether an improper JSON (e.g. wrong field types) will cause a '400 Bad Request' error
+// TestAPI_BalanceHandlesMalformedRequest tests whether an improper JSON (e.g. wrong field types) results in a '400 Bad Request' error.
 func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 
 	db := setupDB(t)
@@ -529,10 +529,8 @@ func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 			_, ctx, err := setupRecorder(balanceEndpoint, test.payload, test.prepare)
 			require.NoError(t, err)
 
-			// execute the request
+			// Execute the request.
 			err = api.Balance(ctx)
-
-			// verify the errors
 
 			assert.Error(t, err)
 

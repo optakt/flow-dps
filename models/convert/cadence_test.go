@@ -25,12 +25,23 @@ import (
 
 func TestParseCadenceArgument(t *testing.T) {
 
-	vectors := []struct {
+	tests := []struct {
 		name     string
 		param    string
 		wantArg  cadence.Value
 		checkErr assert.ErrorAssertionFunc
 	}{
+		{
+			name:     "parse valid boolean",
+			param:    "Bool(true)",
+			wantArg:  cadence.Bool(true),
+			checkErr: assert.NoError,
+		},
+		{
+			name:     "parse invalid boolean",
+			param:    "Bool(horse)",
+			checkErr: assert.Error,
+		},
 		{
 			name:     "parse valid normal integer",
 			param:    "Int16(1337)",
@@ -55,7 +66,7 @@ func TestParseCadenceArgument(t *testing.T) {
 		},
 		{
 			name:     "parse invalid big integer",
-			param:    "Uint128(a337)",
+			param:    "UInt128(a337)",
 			checkErr: assert.Error,
 		},
 		{
@@ -97,15 +108,20 @@ func TestParseCadenceArgument(t *testing.T) {
 			wantArg:  cadence.String("MN7wrJh359Kx+J*#"),
 			checkErr: assert.NoError,
 		},
+		{
+			name:     "unsupported type",
+			param:    "Doughnut(vanilla)",
+			checkErr: assert.Error,
+		},
 	}
 
-	for _, vector := range vectors {
+	for _, test := range tests {
 
-		gotArg, err := ParseCadenceArgument(vector.param)
-		vector.checkErr(t, err)
+		gotArg, err := ParseCadenceArgument(test.param)
+		test.checkErr(t, err)
 
 		if err == nil {
-			assert.Equal(t, vector.wantArg, gotArg)
+			assert.Equal(t, test.wantArg, gotArg)
 		}
 	}
 }

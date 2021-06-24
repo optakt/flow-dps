@@ -71,16 +71,14 @@ func run() int {
 	}
 	defer db.Close()
 
-	// We write to stdout; if we want hex output, we wrap the writer into a
-	// hex encoder as well.
+	// Write to stdout and wrap the writer into a hex encoder if output is set to be hexadecimal.
 	var writer io.Writer
 	writer = os.Stdout
 	if !flagRaw {
 		writer = hex.NewEncoder(writer)
 	}
 
-	// We can then create a compressor to make sure we only pipe compressed
-	// bytes into the writer.
+	// Create a compressor to make sure only compressed bytes are piped into the writer.
 	compressor, err := zstd.NewWriter(writer,
 		zstd.WithEncoderDict(zbor.Dictionary),
 	)
@@ -90,7 +88,7 @@ func run() int {
 	}
 	defer compressor.Close()
 
-	// We can then run the DB backup mechanism on top of the writer to directly
+	// Run the DB backup mechanism on top of the writer to directly
 	// write the output.
 	_, err = db.Backup(compressor, 0)
 	if err != nil {

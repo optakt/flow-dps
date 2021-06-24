@@ -44,7 +44,7 @@ func TestServer_GetFirst(t *testing.T) {
 	testHeight := uint64(128)
 
 	tests := []struct {
-		description string
+		name string
 
 		mockHeight uint64
 		mockErr    error
@@ -54,7 +54,7 @@ func TestServer_GetFirst(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			mockHeight: testHeight,
 			mockErr:    nil,
@@ -66,7 +66,7 @@ func TestServer_GetFirst(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
-			description: "error case",
+			name: "error case",
 
 			mockHeight: testHeight,
 			mockErr:    errors.New("dummy error"),
@@ -79,7 +79,7 @@ func TestServer_GetFirst(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -107,7 +107,7 @@ func TestServer_GetLast(t *testing.T) {
 	)
 
 	tests := []struct {
-		description string
+		name string
 
 		mockHeight uint64
 		mockErr    error
@@ -117,7 +117,7 @@ func TestServer_GetLast(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			mockHeight: testHeight,
 			mockErr:    nil,
@@ -129,7 +129,7 @@ func TestServer_GetLast(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
-			description: "error case",
+			name: "error case",
 
 			mockHeight: testHeight,
 			mockErr:    errors.New("dummy error"),
@@ -142,7 +142,7 @@ func TestServer_GetLast(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -171,7 +171,7 @@ func TestServer_GetHeader(t *testing.T) {
 	)
 
 	tests := []struct {
-		description string
+		name string
 
 		reqHeight uint64
 
@@ -184,7 +184,7 @@ func TestServer_GetHeader(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			reqHeight: testHeight,
 
@@ -200,7 +200,7 @@ func TestServer_GetHeader(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
-			description: "error case",
+			name: "error case",
 
 			reqHeight: testHeight,
 
@@ -216,7 +216,7 @@ func TestServer_GetHeader(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			codec := &mocks.Codec{
@@ -259,7 +259,7 @@ func TestServer_GetCommit(t *testing.T) {
 	)
 
 	tests := []struct {
-		description string
+		name string
 
 		reqHeight uint64
 
@@ -272,7 +272,7 @@ func TestServer_GetCommit(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			reqHeight: testHeight,
 
@@ -288,7 +288,7 @@ func TestServer_GetCommit(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
-			description: "error case",
+			name: "error case",
 
 			reqHeight: testHeight,
 
@@ -304,7 +304,7 @@ func TestServer_GetCommit(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -345,7 +345,7 @@ func TestServer_GetEvents(t *testing.T) {
 	)
 
 	tests := []struct {
-		description string
+		name string
 
 		reqHeight uint64
 		reqTypes  []flow.EventType
@@ -360,7 +360,7 @@ func TestServer_GetEvents(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			reqHeight: testHeight,
 			reqTypes:  testTypes,
@@ -379,7 +379,7 @@ func TestServer_GetEvents(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
-			description: "error case",
+			name: "error case",
 
 			reqHeight: testHeight,
 			reqTypes:  testTypes,
@@ -397,7 +397,7 @@ func TestServer_GetEvents(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			codec := &mocks.Codec{
@@ -451,7 +451,7 @@ func TestServer_GetRegisters(t *testing.T) {
 	)
 
 	tests := []struct {
-		description string
+		name string
 
 		reqHeight uint64
 		reqPaths  []ledger.Path
@@ -466,7 +466,7 @@ func TestServer_GetRegisters(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			reqHeight: testHeight,
 			reqPaths:  testPaths,
@@ -485,7 +485,7 @@ func TestServer_GetRegisters(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
-			description: "error case",
+			name: "error case",
 
 			reqHeight: testHeight,
 			reqPaths:  testPaths,
@@ -503,7 +503,7 @@ func TestServer_GetRegisters(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -543,7 +543,7 @@ func TestServer_GetHeight(t *testing.T) {
 	)
 
 	tests := []struct {
-		description string
+		name string
 
 		reqBlockID flow.Identifier
 
@@ -556,7 +556,7 @@ func TestServer_GetHeight(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			reqBlockID: testBlockID,
 
@@ -569,7 +569,7 @@ func TestServer_GetHeight(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
-			description: "error handling",
+			name: "error handling",
 
 			reqBlockID: testBlockID,
 
@@ -581,7 +581,7 @@ func TestServer_GetHeight(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -628,7 +628,7 @@ func TestServer_GetTransaction(t *testing.T) {
 	}
 
 	tests := []struct {
-		description string
+		name string
 
 		reqTransactionID flow.Identifier
 
@@ -640,7 +640,7 @@ func TestServer_GetTransaction(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			reqTransactionID: testTransactionID,
 
@@ -650,7 +650,7 @@ func TestServer_GetTransaction(t *testing.T) {
 			checkErr:        assert.NoError,
 		},
 		{
-			description: "handles index failure",
+			name: "handles index failure",
 
 			reqTransactionID: testTransactionID,
 
@@ -662,7 +662,7 @@ func TestServer_GetTransaction(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -695,7 +695,7 @@ func TestServer_ListTransactionsForBlock(t *testing.T) {
 	testTransactions := []flow.Identifier{testTransactionID1, testTransactionID2, testTransactionID3}
 
 	tests := []struct {
-		description string
+		name string
 
 		reqBlockID flow.Identifier
 
@@ -707,7 +707,7 @@ func TestServer_ListTransactionsForBlock(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			reqBlockID: testBlockID,
 
@@ -717,7 +717,7 @@ func TestServer_ListTransactionsForBlock(t *testing.T) {
 			checkErr:         assert.NoError,
 		},
 		{
-			description: "handles index failure",
+			name: "handles index failure",
 
 			reqBlockID: testBlockID,
 
@@ -729,7 +729,7 @@ func TestServer_ListTransactionsForBlock(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -759,7 +759,7 @@ func TestServer_ListTransactionsForCollection(t *testing.T) {
 	testCollection := flow.LightCollection{Transactions: []flow.Identifier{testTransactionID, testTransactionID, testTransactionID, testTransactionID, testTransactionID}}
 
 	tests := []struct {
-		description string
+		name string
 
 		reqCollectionID flow.Identifier
 
@@ -771,7 +771,7 @@ func TestServer_ListTransactionsForCollection(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			reqCollectionID: testCollectionID,
 
@@ -781,7 +781,7 @@ func TestServer_ListTransactionsForCollection(t *testing.T) {
 			checkErr:       assert.NoError,
 		},
 		{
-			description: "handles index failure",
+			name: "handles index failure",
 
 			reqCollectionID: testCollectionID,
 
@@ -793,7 +793,7 @@ func TestServer_ListTransactionsForCollection(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}
@@ -826,7 +826,7 @@ func TestServer_ListCollectionsForBlock(t *testing.T) {
 	testCollections := []flow.Identifier{testCollectionID1, testCollectionID2, testCollectionID3}
 
 	tests := []struct {
-		description string
+		name string
 
 		reqBlockID flow.Identifier
 
@@ -838,7 +838,7 @@ func TestServer_ListCollectionsForBlock(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			description: "happy case",
+			name: "happy case",
 
 			reqBlockID: testBlockID,
 
@@ -848,7 +848,7 @@ func TestServer_ListCollectionsForBlock(t *testing.T) {
 			checkErr:        assert.NoError,
 		},
 		{
-			description: "handles index failure",
+			name: "handles index failure",
 
 			reqBlockID: testBlockID,
 
@@ -860,7 +860,7 @@ func TestServer_ListCollectionsForBlock(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			index := &mocks.Reader{}

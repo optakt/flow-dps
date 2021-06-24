@@ -28,8 +28,8 @@ import (
 
 // Server is a simple implementation of the generated APIServer interface. It
 // uses an index reader interface as the backend to retrieve the desired data.
-// This will generally be an on-disk interface, but it could be a GRPC-based
-// index as well, in which case there would be a double redirection.
+// This is generally an on-disk interface, but could be a GRPC-based index as
+// well, in which case there is be a double redirection.
 type Server struct {
 	index index.Reader
 	codec index.Codec
@@ -47,7 +47,7 @@ func NewServer(index index.Reader, codec index.Codec) *Server {
 	return &s
 }
 
-// GetFirst implements the `GetFirst` function of the generated GRPC server.
+// GetFirst implements the `GetFirst` method of the generated GRPC server.
 func (s *Server) GetFirst(_ context.Context, _ *GetFirstRequest) (*GetFirstResponse, error) {
 
 	height, err := s.index.First()
@@ -62,7 +62,7 @@ func (s *Server) GetFirst(_ context.Context, _ *GetFirstRequest) (*GetFirstRespo
 	return &res, nil
 }
 
-// GetLast implements the `GetLast` function of the generated GRPC server.
+// GetLast implements the `GetLast` method of the generated GRPC server.
 func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse, error) {
 
 	height, err := s.index.Last()
@@ -77,7 +77,7 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
-// GetHeader implements the `GetHeader` function of the generated GRPC server.
+// GetHeader implements the `GetHeader` method of the generated GRPC server.
 func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
 
 	header, err := s.index.Header(req.Height)
@@ -99,7 +99,7 @@ func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeader
 	return &res, nil
 }
 
-// GetCommit implements the `GetCommit` function of the generated GRPC server.
+// GetCommit implements the `GetCommit` method of the generated GRPC server.
 func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
 
 	commit, err := s.index.Commit(req.Height)
@@ -115,7 +115,7 @@ func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommit
 	return &res, nil
 }
 
-// GetEvents implements the `GetEvents` function of the generated GRPC server.
+// GetEvents implements the `GetEvents` method of the generated GRPC server.
 func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
 
 	types := make([]flow.EventType, 0, len(req.Types))
@@ -128,7 +128,7 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	// The events are encoded using CBOR with canonical encoding options.
+	// The events are CBOR-encoded with canonical encoding options.
 	data, err := s.codec.Marshal(events)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode events: %w", err)

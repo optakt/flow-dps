@@ -25,10 +25,14 @@ import (
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
+// OptionsRequest implements the empty request schema for the /network/options endpoint as described
+// in https://www.rosetta-api.org/docs/NetworkApi.html#request-1.
 type OptionsRequest struct {
 	NetworkID identifier.Network `json:"network_identifier"`
 }
 
+// OptionsResponse implements the successful response schema for the /network/options endpoint
+// as described in https://www.rosetta-api.org/docs/NetworkApi.html#200---ok-1.
 type OptionsResponse struct {
 	Version meta.Version `json:"version"`
 	Allow   Allow        `json:"allow"`
@@ -41,6 +45,8 @@ type Allow struct {
 	HistoricalBalanceLookup bool                    `json:"historical_balance_lookup"`
 }
 
+// Options implements the /network/options endpoint of the Rosetta Data API as described in
+// https://www.rosetta-api.org/docs/NetworkApi.html#networkoptions.
 func (d *Data) Options(ctx echo.Context) error {
 
 	// Decode the network list request from the HTTP request JSON body.

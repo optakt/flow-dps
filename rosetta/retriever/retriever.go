@@ -129,7 +129,7 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 		currencies[idx] = completeCurrency
 	}
 
-	// get the cadence value that is the result of the script execution
+	// Get the Cadence value that is the result of the script execution.
 	amounts := make([]object.Amount, 0, len(currencies))
 	address := cadence.NewAddress(flow.HexToAddress(account.Address))
 	for _, currency := range currencies {
@@ -173,7 +173,7 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		return nil, nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
 	}
 
-	// Then, we get the header; it will give us the block ID, parent ID and timestamp.
+	// Then, get the header; it contains the block ID, parent ID and timestamp.
 	header, err := r.index.Header(completed.Index)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get header: %w", err)

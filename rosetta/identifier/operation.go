@@ -14,8 +14,8 @@
 
 package identifier
 
-// Operation uniquely identifies an operation within a transaction. We don't use
-// a network index because we don't have a sharded chain.
+// Operation uniquely identifies an operation within a transaction. No network index is
+// needed because of the absence of a shared chain.
 type Operation struct {
 	Index uint `json:"index"`
 }

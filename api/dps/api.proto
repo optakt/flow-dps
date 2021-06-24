@@ -17,40 +17,17 @@ syntax = "proto3";
 option go_package = "github.com/optakt/flow-dps/api/dps";
 
 service API {
-  rpc GetFirst (GetFirstRequest) returns (GetFirstResponse) {}
-  rpc GetLast (GetLastRequest) returns (GetLastResponse) {}
-  rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
   rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
   rpc GetEvents (GetEventsRequest) returns (GetEventsResponse) {}
-  rpc GetRegisters (GetRegistersRequest) returns (GetRegistersResponse) {}
+  rpc GetFirst (GetFirstRequest) returns (GetFirstResponse) {}
+  rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
   rpc GetHeight (GetHeightRequest) returns (GetHeightResponse) {}
+  rpc GetLast (GetLastRequest) returns (GetLastResponse) {}
+  rpc GetRegisters (GetRegistersRequest) returns (GetRegistersResponse) {}
   rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse) {}
+  rpc ListCollectionsForBlock (ListCollectionsForBlockRequest) returns (ListCollectionsForBlockResponse) {}
   rpc ListTransactionsForBlock (ListTransactionsForBlockRequest) returns (ListTransactionsForBlockResponse) {}
   rpc ListTransactionsForCollection (ListTransactionsForCollectionRequest) returns (ListTransactionsForCollectionResponse) {}
-  rpc ListCollectionsForBlock (ListCollectionsForBlockRequest) returns (ListCollectionsForBlockResponse) {}
-}
-
-message GetFirstRequest {
-}
-
-message GetFirstResponse {
-  uint64 height = 1;
-}
-
-message GetLastRequest {
-}
-
-message GetLastResponse {
-  uint64 height = 1;
-}
-
-message GetHeaderRequest {
-  uint64 height = 1;
-}
-
-message GetHeaderResponse {
-  uint64 height = 1;
-  bytes data = 2;
 }
 
 message GetCommitRequest {
@@ -73,15 +50,20 @@ message GetEventsResponse {
   bytes data = 3;
 }
 
-message GetRegistersRequest {
-  uint64 height = 1;
-  repeated bytes paths = 2;
+message GetFirstRequest {
 }
 
-message GetRegistersResponse {
+message GetFirstResponse {
   uint64 height = 1;
-  repeated bytes paths = 2;
-  repeated bytes values = 3;
+}
+
+message GetHeaderRequest {
+  uint64 height = 1;
+}
+
+message GetHeaderResponse {
+  uint64 height = 1;
+  bytes data = 2;
 }
 
 message GetHeightRequest {
@@ -93,6 +75,24 @@ message GetHeightResponse {
   uint64 height = 2;
 }
 
+message GetLastRequest {
+}
+
+message GetLastResponse {
+  uint64 height = 1;
+}
+
+message GetRegistersRequest {
+  uint64 height = 1;
+  repeated bytes paths = 2;
+}
+
+message GetRegistersResponse {
+  uint64 height = 1;
+  repeated bytes paths = 2;
+  repeated bytes values = 3;
+}
+
 message GetTransactionRequest {
   bytes transactionID = 1;
 }
@@ -100,6 +100,15 @@ message GetTransactionRequest {
 message GetTransactionResponse {
   bytes transactionID = 1;
   bytes data = 2;
+}
+
+message ListCollectionsForBlockRequest  {
+  bytes blockID = 1;
+}
+
+message ListCollectionsForBlockResponse {
+  bytes blockID = 1;
+  repeated bytes collectionIDs = 2;
 }
 
 message ListTransactionsForBlockRequest {
@@ -118,14 +127,5 @@ message ListTransactionsForCollectionRequest {
 message ListTransactionsForCollectionResponse {
   bytes collectionID = 1;
   repeated bytes transactionIDs = 2;
-}
-
-message ListCollectionsForBlockRequest  {
-  bytes blockID = 1;
-}
-
-message ListCollectionsForBlockResponse {
-  bytes blockID = 1;
-  repeated bytes collectionIDs = 2;
 }
 

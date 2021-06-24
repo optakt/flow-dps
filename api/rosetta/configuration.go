@@ -19,6 +19,9 @@ import (
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
+// Configuration represents the configuration parameters of a particular blockchain from
+// the Rosetta API's perspective. It details some blockchain metadata, its supported operations,
+// errors, and more.
 type Configuration interface {
 	Network() identifier.Network
 	Version() meta.Version

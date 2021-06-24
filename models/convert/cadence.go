@@ -26,8 +26,8 @@ import (
 
 func ParseCadenceArgument(param string) (cadence.Value, error) {
 
-	// Cadence values should be provided in the form of Type(Value), so that we
-	// can unambiguously determine the type.
+	// Cadence values should be provided in the form of Type(Value), so that
+	// their type can be determined unambiguously.
 	re := regexp.MustCompile(`(\w+)\((.+)\)`)
 	parts := re.FindStringSubmatch(param)
 	if len(parts) != 3 {
@@ -36,7 +36,7 @@ func ParseCadenceArgument(param string) (cadence.Value, error) {
 	typ := parts[1]
 	val := parts[2]
 
-	// Now, we can switch on the type and parse accordingly.
+	// Switch on the type and parse accordingly.
 	switch typ {
 	case "Bool":
 		b, err := strconv.ParseBool(val)

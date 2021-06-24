@@ -24,7 +24,7 @@ import (
 )
 
 // Block identifier tries to extrapolate the block identifier to a full version
-// of itself. For now, we will always need a height.
+// of itself. For now, a height is always needed.
 // NOTE: We always pass a block identifier that in principle at least could be
 // valid, so we will have at least a height or a hash.
 func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {

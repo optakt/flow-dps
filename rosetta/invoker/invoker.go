@@ -31,10 +31,6 @@ import (
 	"github.com/optakt/flow-dps/models/index"
 )
 
-// TODO: Create read cache outside of the `GetRegisterFunc` closure, so we can
-// manage the used space:
-// => https://github.com/optakt/flow-dps/issues/122
-
 type Invoker struct {
 	index index.Reader
 	vm    *fvm.VirtualMachine
@@ -78,13 +74,9 @@ func New(index index.Reader, options ...func(*Config)) (*Invoker, error) {
 	return &i, nil
 }
 
-// TODO: Find a way to batch up register requests for Cadence execution so we
-// don't have to request them one by one over GRPC.
-// => https://github.com/optakt/flow-dps/issues/119
-
 func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value) (cadence.Value, error) {
 
-	// encode the arguments from cadence values to byte slices
+	// Encode the arguments from Cadence values to byte slices.
 	var args [][]byte
 	for _, argument := range arguments {
 		arg, err := json.Encode(argument)
@@ -94,28 +86,28 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 		args = append(args, arg)
 	}
 
-	// look up the current block and commit for the block
+	// Look up the current block and commit for the block.
 	header, err := i.index.Header(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not get header: %w", err)
 	}
 
-	// we initialize the virtual machine context with the given block header so
-	// that parameters related to the block are available from within the script
+	// Initialize the virtual machine context with the given block header so
+	// that parameters related to the block are available from within the script.
 	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
 
-	// Initialize the read function. We use a shared cache between all heights
+	// Initialize the read function. A shared cache is used between all heights
 	// here. It's a smart cache, which means that items that are accessed often
-	// are more likely to be kept, regardless of height. This allows us to put
+	// are more likely to be kept, regardless of height. This allows putting
 	// an upper bound on total cache size while using it for all heights.
 	read := readRegister(i.index, i.cache, height)
 
-	// we initialize the view of the execution state on top of our ledger by
-	// using the read function at a specific commit
+	// Initialize the view of the execution state on top of the ledger by
+	// using the read function at a specific commit.
 	view := delta.NewView(read)
 
-	// we initialize the procedure using the script bytes and the encoded
-	// cadence parameters
+	// Initialize the procedure using the script bytes and the encoded
+	// Cadence parameters.
 	proc := fvm.Script(script).WithArguments(args...)
 
 	// finally, we initialize an empty programs cache
