@@ -2,10 +2,33 @@
 
 This document describes the content of the index snapshot defined in `testing/snapshots/rosetta.go`.
 
+**Table of Contents**
+
+1. [Blocks](#blocks)
+2. [Events](#events)
+3. [Balances](#balances)
+
+
 ## Blocks
 
+
+### Notable blocks referenced in tests
+
+| Height | ID                                                               | Timestamp                    | State Commitment                                                 |
+| ------ | ---------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------- |
+| 1      | 9eac11ab78ebb9650803eea70a48399f772c64892823a051298d445459cdbc46 | 2021-05-18T11:28:43.2430864Z | d85b7dc2d6be69c5cc10f0d128595352354e57fbd923ac1ad3f734518610ca73 |
+| 13     | af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23 | 2021-05-18T11:46:43.2430864Z | f1c1f5c90fe05e12c8bbc9247364eb723329f25f6c5d7c9509f7df04b6437990 |
+| 43     | dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e6 | 2021-05-18T12:31:43.2430864Z | dfdc6f7758f01a67f5ec92da1bf7ba9c7a41daed3fd61c99e645bc268847d374 |
+| 44     | 810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd | 2021-05-18T12:33:13.2430864Z | 30cad510db6eb4a00279e78273a7288fba33d1cc2a6c4d3410b9ae20e3a0efc3 |
+| 50     | d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df | 2021-05-18T12:42:13.2430864Z | 9828c2748b63703fffc2f212621c471eacfb9206bc9bee2226897e64f6b00240 |
+| 425    | 594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683 | 2021-05-18T22:04:43.2430864Z | 8af6765ca5a6fa9916e076413192c5da435d92a292b7bcfbb4b2764b9dc58e80 |
+
+
+### Full block listing
+
+
 <details>
-<summary> Show full block listing </summary>
+<summary> Show all </summary>
 
 | Height | ID                                                               | Timestamp                    | State Commitment                                                 |
 | ------ | ---------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------- |
@@ -440,14 +463,99 @@ This document describes the content of the index snapshot defined in `testing/sn
 
 ## Events
 
+
 Event listing contains the data about the events in the index.
 For each block, one or more transactions are listed.
 Transactions are listed by their index.
 For each transaction, we list the events recorded during that transaction - the ID, event type, and any relevant data (e.g. in the case of transfer the account and the amount).
 Events are also ordered by their index within the transaction.
 
+
+### Notable events referenced in tests
+
+
+```yaml
+block_id: af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23
+height: 13
+transactions:
+  0:
+    ID: a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1
+    events:
+      0:
+        event: 'AccountCreated: 0x754aed9de6197641'
+        ID: 84db285c44d1422fb75fec6ee522097c1498f86070eb9c977c40b56703344cd1
+      1:
+        event: flow.AccountKeyAdded
+        ID: f29833fc5ff8a11a9d08c3cb81b20d4e8c3f825a5fec28bc85c30ac17d4a6750
+      2:
+        event: 'FlowToken.TokensWithdrawn: account=0x8c5303eaa26202d6, amount=100.00000000'
+        ID: ba24b1dc1d90f0dcd614c75f58cd37c9bc69ef3fe7ed605624067b72b3eb45cd
+      3:
+        event: 'FlowToken.TokensDeposited: account=0x754aed9de6197641, amount=100.00000000'
+        ID: 8e201802501b38118f2d082557fdf321c377ac618b29f51b0721632bacfe2b33
+
+
+block_id: 810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd
+height: 44
+transactions:
+  0:
+    ID: d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c
+    events:
+      0:
+        event: 'FlowToken.TokensWithdrawn: account=0x754aed9de6197641, amount=0.00000001'
+        ID: c228d259e99e977e737679f3d783781f20c214fa5d18fa7726d0422b463d54bd
+      1:
+        event: 'FlowToken.TokensDeposited: account=0x631e88ae7f1d7c20, amount=0.00000001'
+        ID: 57e5527b74c4939b3683af93ebd78ea116baef17222f42ea34520da82bed0ee0
+
+
+block_id: ad5f39a9f8d95ba4bceef55a9ca753bb797dbe847a8e80ea784139ac28d9833c
+height: 165
+transactions:
+  0:
+    ID: 23c486cfd54bca7138b519203322327bf46e43a780a237d1c5bb0a82f0a06c1d
+    events:
+      0:
+        event: 'AccountCreated: 0x72157877737ce077'
+        ID: e5066494dac0521ba1f42cc979f71412f8cd3fbd803b5bcdae3a9b7baf47b1e0
+      1:
+        event: flow.AccountKeyAdded
+        ID: f93be0445a858ddf9846818116350137c9f75166fd70b00b5044bfb1b3760b73
+      2:
+        event: 'FlowToken.TokensWithdrawn: account=0x8c5303eaa26202d6, amount=100.00000000'
+        ID: d3e50a104299316260a89d7340d4e914d88a002e7e0a0ba5a17e9018c8ca9325
+      3:
+        event: 'FlowToken.TokensDeposited: account=0x72157877737ce077, amount=100.00000000'
+        ID: 561193a787fe9b6220af92fdc6755c2d5a03848187608d8b34084a5c151cc291
+  1:
+    ID: 3d6922d6c6fd161a76cec23b11067f22cac6409a49b28b905989db64f5cb05a5
+    events:
+      0:
+        event: 'FlowToken.TokensWithdrawn: account=0x89c61aa64423504c, amount=0.00000001'
+        ID: 335840041550db48d8c39b229db2f79c412df7016b30542f5685ebc8ed902f2b
+      1:
+        event: 'FlowToken.TokensDeposited: account=0x82ec283f88a62e65, amount=0.00000001'
+        ID: 595c713ac270311e0c204f57e26861b9e8fb111f6545a8c1fc8409e483298e03
+
+
+block_id: 0b11ddfc1d324ee830f27648166d1e52c5868096f43f840f7bd39a0be7346a11
+height: 181
+transactions:
+  0:
+    ID: 780bafaf4721ca4270986ea51e659951a8912c2eb99fb1bfedeb753b023cd4d9
+    events:
+      0:
+        event: 'FlowToken.TokensWithdrawn: account=0x668b91e2995c2eba, amount=0.00000001'
+        ID: c8a754050ba241d4f361316ee3b6f95c3ef376b16ad2273dbc4e92e75c3f490d
+      1:
+        event: 'FlowToken.TokensDeposited: account=0x89c61aa64423504c, amount=0.00000001'
+        ID: fa847a3019da089a2d1aa0091c1fd6622c2a5f0d4f756b57d38935ea960270d9
+```
+
+### Full event listing
+
 <details>
-<summary> Show full event listing </summary>
+<summary> Show all </summary>
 
 ```yaml
 block_id: af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23
@@ -1636,3 +1744,17 @@ transactions:
 ```
 
 </details>
+
+
+## Balances
+
+
+### Notable balances referenced in tests
+
+
+| Account ID       | Block Height | Balance     |
+|------------------|--------------|-------------|
+| 754aed9de6197641 | 13           | 10000100000 |
+| 754aed9de6197641 | 50           | 10000099999 |
+| 754aed9de6197641 | 425          | 10000100002 |
+
