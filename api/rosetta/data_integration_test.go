@@ -37,7 +37,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/api/rosetta"
-	"github.com/optakt/flow-dps/encoding/zbor"
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/converter"
@@ -80,10 +80,9 @@ func setupDB(t *testing.T) *badger.DB {
 	require.NoError(t, err)
 
 	reader := hex.NewDecoder(strings.NewReader(snapshots.Rosetta))
-	dict, _ := hex.DecodeString(zbor.Payload)
 
 	decompressor, err := zstd.NewReader(reader,
-		zstd.WithDecoderDicts(dict),
+		zstd.WithDecoderDicts(zbor.Dictionary),
 	)
 	require.NoError(t, err)
 
@@ -98,7 +97,7 @@ func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 
 	codec, err := zbor.NewCodec()
 	require.NoError(t, err)
-	storage := storage.NewLibrary(codec)
+	storage := storage.New(codec)
 	index := index.NewReader(db, storage)
 
 	params := dps.FlowParams[dps.FlowTestnet]

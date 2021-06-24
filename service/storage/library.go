@@ -22,7 +22,7 @@ type Library struct {
 	codec index.Codec
 }
 
-func NewLibrary(codec index.Codec) *Library {
+func New(codec index.Codec) *Library {
 	lib := Library{
 		codec: codec,
 	}

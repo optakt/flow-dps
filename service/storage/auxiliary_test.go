@@ -30,7 +30,7 @@ import (
 	"github.com/optakt/flow-dps/testing/helpers"
 )
 
-func TestLibrary_Fallback(t *testing.T) {
+func Test_Fallback(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 	txn := db.NewTransaction(false)
@@ -190,7 +190,7 @@ func TestLibrary_Retrieve(t *testing.T) {
 	testKey := []byte{42}
 
 	t.Run("nominal case", func(t *testing.T) {
-		wantEncodedValue := []byte{0x28, 0xb5, 0x2f, 0xfd, 0x4, 0x0, 0x11, 0x0, 0x0, 0x18, 0x2a, 0xc5, 0xb, 0xd5, 0x9d}
+		wantEncodedValue := []byte{0x28, 0xb5, 0x2f, 0xfd, 0x7, 0x0, 0x7, 0x81, 0x4a, 0x29, 0x11, 0x0, 0x0, 0x18, 0x2a, 0xc5, 0xb, 0xd5, 0x9d}
 
 		err := insertKeyValue(t, db, testKey, testValue)
 		require.NoError(t, err)

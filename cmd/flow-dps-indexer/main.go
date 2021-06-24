@@ -108,7 +108,7 @@ func run() int {
 		log.Error().Err(err).Msg("could not initialize storage codec")
 		return failure
 	}
-	storage := storage.NewLibrary(codec)
+	storage := storage.New(codec)
 
 	// Initialize mapper.
 	chain := chain.FromDisk(data)
