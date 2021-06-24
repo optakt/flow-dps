@@ -11,7 +11,6 @@ This document describes the contents of the index snapshot defined in `testing/s
 
 ## Blocks
 
-
 ### Notable blocks referenced in tests
 
 | Height | ID                                                               | Timestamp                    | State Commitment                                                 |
@@ -23,9 +22,7 @@ This document describes the contents of the index snapshot defined in `testing/s
 | 50     | d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df | 2021-05-18T12:42:13.2430864Z | 9828c2748b63703fffc2f212621c471eacfb9206bc9bee2226897e64f6b00240 |
 | 425    | 594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683 | 2021-05-18T22:04:43.2430864Z | 8af6765ca5a6fa9916e076413192c5da435d92a292b7bcfbb4b2764b9dc58e80 |
 
-
 ### Full block listing
-
 
 <details>
 <summary> Show all </summary>
@@ -463,16 +460,13 @@ This document describes the contents of the index snapshot defined in `testing/s
 
 ## Events
 
-
 Event listing contains the data about the events in the index.
 For each block, one or more transactions are listed.
 Transactions are listed by their index.
 For each transaction, we list the events recorded during that transaction - the ID, event type, and any relevant data (e.g. in the case of transfer the account and the amount).
 Events are also ordered by their index within the transaction.
 
-
 ### Notable events referenced in tests
-
 
 ```yaml
 block_id: af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23
@@ -1745,12 +1739,9 @@ transactions:
 
 </details>
 
-
 ## Balances
 
-
 ### Notable balances referenced in tests
-
 
 | Account ID       | Block Height | Balance     |
 |------------------|--------------|-------------|
