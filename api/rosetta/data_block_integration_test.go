@@ -17,11 +17,8 @@
 package rosetta_test
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"strconv"
 	"testing"
 
@@ -36,7 +33,6 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/meta"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
@@ -50,11 +46,11 @@ func TestAPI_Block(t *testing.T) {
 
 	// headers of known blocks we want to verify
 	var (
-		firstHeader = knownHeaders(1)
-		midHeader1  = knownHeaders(13)
-		midHeader2  = knownHeaders(43)
-		midHeader3  = knownHeaders(44)
-		lastHeader  = knownHeaders(425) // header of last indexed block
+		firstHeader = knownHeader(1)
+		midHeader1  = knownHeader(13)
+		midHeader2  = knownHeader(43)
+		midHeader3  = knownHeader(44)
+		lastHeader  = knownHeader(425) // header of last indexed block
 	)
 
 	const (
@@ -141,15 +137,8 @@ func TestAPI_Block(t *testing.T) {
 
 			t.Parallel()
 
-			enc, err := json.Marshal(test.request)
+			rec, ctx, err := setupRecorder(blockEndpoint, test.request)
 			require.NoError(t, err)
-
-			req := httptest.NewRequest(http.MethodPost, "/block", bytes.NewReader(enc))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-			rec := httptest.NewRecorder()
-
-			ctx := echo.New().NewContext(req, rec)
 
 			err = api.Block(ctx)
 			assert.NoError(t, err)
@@ -198,13 +187,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 
 		request rosetta.BlockRequest
 
-		// HTTP/handler errors
-		wantStatusCode int
-
-		// rosetta errors - validated separately since it makes reporting mismatches more manageable
-		wantRosettaError            meta.ErrorDefinition
-		wantRosettaErrorDescription string
-		wantRosettaErrorDetails     map[string]interface{}
+		checkErr assert.ErrorAssertionFunc
 	}{
 		{
 			name: "missing blockchain name",
@@ -216,10 +199,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain name",
@@ -231,10 +211,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchain, "network": dps.FlowTestnet.String()},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network name",
@@ -246,10 +223,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: network field is empty",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network name",
@@ -261,10 +235,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				BlockID: validBlockID,
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetwork},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing block height and hash",
@@ -276,10 +247,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of block id",
@@ -291,10 +259,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing block height",
@@ -305,10 +270,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusInternalServerError,
-			wantRosettaError:            configuration.ErrorInternal,
-			wantRosettaErrorDescription: "could not validate block: block access with hash currently not supported",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
 		},
 		{
 			name: "invalid block hash",
@@ -320,10 +282,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidBlock,
-			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			name: "unknown block",
@@ -334,10 +293,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorUnknownBlock,
-			wantRosettaErrorDescription: fmt.Sprintf("block index is above last indexed block (last: %d)", lastHeight),
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(426), "hash": ""},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownBlock),
 		},
 		{
 			name: "mismatched block height and hash",
@@ -349,20 +305,14 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidBlock,
-			wantRosettaErrorDescription: fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeaders(validBlockHeight-1).ID().String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(validBlockHeight - 1), "hash": validBlockHash},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			// effectively the same as the 'missing blockchain name' test case, since it's the first check we'll do
 			name:    "empty block request",
 			request: rosetta.BlockRequest{},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
-			wantRosettaErrorDetails:     nil,
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 	}
 
@@ -373,31 +323,12 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 
 			t.Parallel()
 
-			enc, err := json.Marshal(test.request)
+			_, ctx, err := setupRecorder(blockEndpoint, test.request)
 			require.NoError(t, err)
-
-			req := httptest.NewRequest(http.MethodPost, "/block", bytes.NewReader(enc))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-			rec := httptest.NewRecorder()
-			ctx := echo.New().NewContext(req, rec)
 
 			// execute the request
 			err = api.Block(ctx)
-			assert.Error(t, err)
-
-			echoErr, ok := err.(*echo.HTTPError)
-			require.True(t, ok)
-
-			// verify HTTP status code
-			assert.Equal(t, test.wantStatusCode, echoErr.Code)
-
-			gotErr, ok := echoErr.Message.(rosetta.Error)
-			require.True(t, ok)
-
-			assert.Equal(t, test.wantRosettaError, gotErr.ErrorDefinition)
-			assert.Equal(t, test.wantRosettaErrorDescription, gotErr.Description)
-			assert.Equal(t, test.wantRosettaErrorDetails, gotErr.Details)
+			test.checkErr(t, err)
 		})
 	}
 }
@@ -442,29 +373,37 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 	)
 
 	tests := []struct {
-		name     string
-		payload  []byte
-		mimeType string
+		name    string
+		payload []byte
+		prepare func(*http.Request)
 	}{
 		{
-			name:     "empty request",
-			payload:  []byte(``),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "empty request",
+			payload: []byte(``),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "wrong field type",
-			payload:  []byte(wrongFieldType),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "wrong field type",
+			payload: []byte(wrongFieldType),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "unclosed bracket",
-			payload:  []byte(unclosedBracket),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "unclosed bracket",
+			payload: []byte(unclosedBracket),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "valid payload with no mime type set",
-			payload:  []byte(validJSON),
-			mimeType: "",
+			name:    "valid payload with no MIME type set",
+			payload: []byte(validJSON),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, "")
+			},
 		},
 	}
 
@@ -475,13 +414,10 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodPost, "/block", bytes.NewReader(test.payload))
-			req.Header.Set(echo.HeaderContentType, test.mimeType)
+			_, ctx, err := setupRecorder(blockEndpoint, test.payload, test.prepare)
+			require.NoError(t, err)
 
-			rec := httptest.NewRecorder()
-			ctx := echo.New().NewContext(req, rec)
-
-			err := api.Block(ctx)
+			err = api.Block(ctx)
 			assert.Error(t, err)
 
 			echoErr, ok := err.(*echo.HTTPError)

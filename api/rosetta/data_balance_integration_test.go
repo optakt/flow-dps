@@ -17,24 +17,18 @@
 package rosetta_test
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/flow-go/model/flow"
-
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
 func TestAPI_Balance(t *testing.T) {
@@ -107,17 +101,8 @@ func TestAPI_Balance(t *testing.T) {
 
 			t.Parallel()
 
-			// prepare request payload (JSON)
-			enc, err := json.Marshal(test.request)
+			rec, ctx, err := setupRecorder(balanceEndpoint, test.request)
 			require.NoError(t, err)
-
-			// create request
-			req := httptest.NewRequest(http.MethodPost, "/account/balance", bytes.NewReader(enc))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-			rec := httptest.NewRecorder()
-
-			ctx := echo.New().NewContext(req, rec)
 
 			// execute the request
 			err = api.Balance(ctx)
@@ -158,8 +143,6 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			Index: 13,
 			Hash:  "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23",
 		}
-
-		validAddressSize = 2 * flow.AddressLength
 	)
 
 	const (
@@ -180,19 +163,13 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 
 		request rosetta.BalanceRequest
 
-		wantStatusCode              int
-		wantRosettaError            meta.ErrorDefinition
-		wantRosettaErrorDescription string
-		wantRosettaErrorDetails     map[string]interface{}
+		checkError assert.ErrorAssertionFunc
 	}{
 		{
 			name:    "empty balance request",
 			request: rosetta.BalanceRequest{},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
-			wantRosettaErrorDetails:     nil,
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing blockchain name",
@@ -206,10 +183,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
-			wantRosettaErrorDetails:     nil,
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain name",
@@ -223,10 +197,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchain, "network": dps.FlowTestnet.String()},
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network name",
@@ -239,11 +210,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: defaultCurrency(),
 			},
-
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: network field is empty",
-			wantRosettaErrorDetails:     nil,
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network name",
@@ -257,10 +224,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetwork},
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing block index and height",
@@ -271,9 +235,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of block id",
@@ -284,9 +246,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing account address",
@@ -296,9 +256,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: defaultCurrency(),
 			},
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "account identifier: address field is empty",
+
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of account address",
@@ -308,9 +267,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: defaultCurrency(),
 			},
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("account identifier: address field has wrong length (have: %d, want: %d)", len(trimmedAddress), validAddressSize),
+
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing currency data",
@@ -320,9 +278,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: []identifier.Currency{},
 			},
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "currency identifiers: currency list is empty",
+
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing currency symbol",
@@ -332,9 +289,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: []identifier.Currency{{Symbol: "", Decimals: 8}},
 			},
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "currency identifier: symbol field is missing",
+
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "some currency symbols missing",
@@ -348,9 +304,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 					{Symbol: dps.FlowSymbol, Decimals: 8},
 				},
 			},
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "currency identifier: symbol field is missing",
+
+			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing block height",
@@ -360,9 +315,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    identifier.Block{Hash: "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"},
 				Currencies: defaultCurrency(),
 			},
-			wantStatusCode:              http.StatusInternalServerError,
-			wantRosettaError:            configuration.ErrorInternal,
-			wantRosettaErrorDescription: "could not validate block: block access with hash currently not supported",
+
+			checkError: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
 		},
 		{
 			name: "invalid block hash",
@@ -372,10 +326,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    identifier.Block{Index: 13, Hash: invalidBlockHash},
 				Currencies: defaultCurrency(),
 			},
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidBlock,
-			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": invalidBlockHash},
+
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			name: "unkown block requested",
@@ -385,10 +337,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    identifier.Block{Index: 426},
 				Currencies: defaultCurrency(),
 			},
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorUnknownBlock,
-			wantRosettaErrorDescription: "block index is above last indexed block (last: 425)",
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(426), "hash": ""},
+
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownBlock),
 		},
 		{
 			name: "mismatched block id and height",
@@ -398,10 +348,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    identifier.Block{Index: 13, Hash: "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"},
 				Currencies: defaultCurrency(),
 			},
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidBlock,
-			wantRosettaErrorDescription: "block hash does not match known hash for height (known: af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23)",
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(13), "hash": "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"},
+
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			name: "invalid account ID hex",
@@ -411,10 +359,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: defaultCurrency(),
 			},
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidAccount,
-			wantRosettaErrorDescription: "account address is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"address": invalidAddressHex, "chain": dps.FlowTestnet.String()},
+
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidAccount),
 		},
 		{
 			name: "invalid account ID",
@@ -424,10 +370,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: defaultCurrency(),
 			},
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidAccount,
-			wantRosettaErrorDescription: "account address is not valid for configured chain",
-			wantRosettaErrorDetails:     map[string]interface{}{"address": invalidAddress, "chain": dps.FlowTestnet.String()},
+
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidAccount),
 		},
 		{
 			name: "unknown currency requested",
@@ -437,10 +381,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: []identifier.Currency{{Symbol: invalidToken, Decimals: 8}},
 			},
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorUnknownCurrency,
-			wantRosettaErrorDescription: "currency symbol has not been configured",
-			wantRosettaErrorDetails:     map[string]interface{}{"symbol": invalidToken, "decimals": uint(8)},
+
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownCurrency),
 		},
 		{
 			name: "invalid currency decimal count",
@@ -450,10 +392,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    testBlock,
 				Currencies: []identifier.Currency{{Symbol: dps.FlowSymbol, Decimals: 7}},
 			},
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidCurrency,
-			wantRosettaErrorDescription: fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
-			wantRosettaErrorDetails:     map[string]interface{}{"symbol": dps.FlowSymbol, "decimals": uint(7)},
+
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidCurrency),
 		},
 		{
 			name: "invalid currency decimal count in a list of currencies",
@@ -467,10 +407,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 					{Symbol: dps.FlowSymbol, Decimals: dps.FlowDecimals},
 				},
 			},
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidCurrency,
-			wantRosettaErrorDescription: fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
-			wantRosettaErrorDetails:     map[string]interface{}{"symbol": dps.FlowSymbol, "decimals": uint(7)},
+
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidCurrency),
 		},
 		{
 			// request the account balance before the account is created, so the account/vault does not exist.
@@ -483,9 +421,8 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 				BlockID:    identifier.Block{Index: accFirstOccurrence - 1}, // one block before the account is created
 				Currencies: defaultCurrency(),
 			},
-			wantStatusCode:              http.StatusInternalServerError,
-			wantRosettaError:            configuration.ErrorInternal,
-			wantRosettaErrorDescription: cadenceVaultNotFoundErr,
+
+			checkError: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
 		},
 	}
 
@@ -496,31 +433,12 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 
 			t.Parallel()
 
-			enc, err := json.Marshal(test.request)
+			_, ctx, err := setupRecorder(balanceEndpoint, test.request)
 			require.NoError(t, err)
-
-			// create request
-			req := httptest.NewRequest(http.MethodPost, "/account/balance", bytes.NewReader(enc))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-			rec := httptest.NewRecorder()
-
-			ctx := echo.New().NewContext(req, rec)
 
 			// execute the request
 			err = api.Balance(ctx)
-			assert.Error(t, err)
-
-			echoErr, ok := err.(*echo.HTTPError)
-			require.True(t, ok)
-
-			assert.Equal(t, test.wantStatusCode, echoErr.Code)
-			gotErr, ok := echoErr.Message.(rosetta.Error)
-			require.True(t, ok)
-
-			assert.Equal(t, test.wantRosettaError, gotErr.ErrorDefinition)
-			assert.Equal(t, test.wantRosettaErrorDescription, gotErr.Description)
-			assert.Equal(t, test.wantRosettaErrorDetails, gotErr.Details)
+			test.checkError(t, err)
 		})
 	}
 }
@@ -574,24 +492,30 @@ func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 	)
 
 	tests := []struct {
-		name     string
-		payload  []byte
-		mimeType string
+		name    string
+		payload []byte
+		prepare func(req *http.Request)
 	}{
 		{
-			name:     "wrong field type",
-			payload:  []byte(wrongFieldType),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "wrong field type",
+			payload: []byte(wrongFieldType),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "unclosed bracket",
-			payload:  []byte(unclosedBracket),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "unclosed bracket",
+			payload: []byte(unclosedBracket),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "valid payload with no mime type set",
-			payload:  []byte(validJSON),
-			mimeType: "",
+			name:    "valid payload with no MIME type set",
+			payload: []byte(validJSON),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, "")
+			},
 		},
 	}
 
@@ -602,16 +526,11 @@ func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 
 			t.Parallel()
 
-			// create request
-			req := httptest.NewRequest(http.MethodPost, "/account/balance", bytes.NewReader(test.payload))
-			req.Header.Set(echo.HeaderContentType, test.mimeType)
-
-			rec := httptest.NewRecorder()
-
-			ctx := echo.New().NewContext(req, rec)
+			_, ctx, err := setupRecorder(balanceEndpoint, test.payload, test.prepare)
+			require.NoError(t, err)
 
 			// execute the request
-			err := api.Balance(ctx)
+			err = api.Balance(ctx)
 
 			// verify the errors
 

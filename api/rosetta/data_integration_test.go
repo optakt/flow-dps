@@ -17,7 +17,12 @@
 package rosetta_test
 
 import (
+	"bytes"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"runtime"
 	"strings"
 	"testing"
@@ -25,6 +30,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/klauspost/compress/zstd"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -36,6 +42,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/invoker"
+	"github.com/optakt/flow-dps/rosetta/meta"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
@@ -45,6 +52,13 @@ import (
 )
 
 const (
+	balanceEndpoint     = "/account/balance"
+	blockEndpoint       = "/block"
+	transactionEndpoint = "/block/transaction"
+	listEndpoint        = "/network/list"
+	optionsEndpoint     = "/network/options"
+	statusEndpoint      = "/network/status"
+
 	invalidBlockchain = "invalid-blockchain"
 	invalidNetwork    = "invalid-network"
 	invalidToken      = "invalid-token"
@@ -97,6 +111,56 @@ func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	return controller
 }
 
+func setupRecorder(endpoint string, input interface{}, options ...func(*http.Request)) (*httptest.ResponseRecorder, echo.Context, error) {
+
+	payload, ok := input.([]byte)
+	if !ok {
+		var err error
+		payload, err = json.Marshal(input)
+		if err != nil {
+			return nil, echo.New().AcquireContext(), fmt.Errorf("could not encode input: %w", err)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodPost, endpoint, bytes.NewReader(payload))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+	for _, opt := range options {
+		opt(req)
+	}
+
+	rec := httptest.NewRecorder()
+
+	ctx := echo.New().NewContext(req, rec)
+
+	return rec, ctx, nil
+}
+
+func checkRosettaError(statusCode int, def meta.ErrorDefinition) func(t assert.TestingT, err error, v ...interface{}) bool {
+
+	return func(t assert.TestingT, err error, v ...interface{}) bool {
+		// return false if any of the asserts failed
+		success := true
+		success = success && assert.Error(t, err)
+
+		if !assert.IsType(t, &echo.HTTPError{}, err) {
+			return false
+		}
+		echoErr := err.(*echo.HTTPError)
+
+		success = success && assert.Equal(t, statusCode, echoErr.Code)
+
+		if !assert.IsType(t, rosetta.Error{}, echoErr.Message) {
+			return false
+		}
+
+		gotErr := echoErr.Message.(rosetta.Error)
+
+		success = success && assert.Equal(t, def, gotErr.ErrorDefinition)
+		return success
+	}
+}
+
 // defaultNetwork returns the Network identifier common for all requests.
 func defaultNetwork() identifier.Network {
 	return identifier.Network{
@@ -129,8 +193,7 @@ func validateByHeader(t *testing.T, header flow.Header) validateBlockFunc {
 	return validateBlock(t, header.Height, header.ID().String())
 }
 
-// add header for block 165 and 181
-func knownHeaders(height uint64) flow.Header {
+func knownHeader(height uint64) flow.Header {
 
 	switch height {
 

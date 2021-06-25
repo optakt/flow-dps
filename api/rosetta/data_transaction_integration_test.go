@@ -17,11 +17,8 @@
 package rosetta_test
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -34,7 +31,6 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/meta"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
@@ -44,9 +40,9 @@ func TestAPI_Transaction(t *testing.T) {
 	api := setupAPI(t, db)
 
 	var (
-		firstHeader      = knownHeaders(44)
-		multipleTxHeader = knownHeaders(165)
-		lastHeader       = knownHeaders(181)
+		firstHeader      = knownHeader(44)
+		multipleTxHeader = knownHeader(165)
+		lastHeader       = knownHeader(181)
 
 		// two transactions in a single block
 		midBlockTxs = []string{
@@ -109,17 +105,8 @@ func TestAPI_Transaction(t *testing.T) {
 
 			t.Parallel()
 
-			// prepare request payload
-			enc, err := json.Marshal(test.request)
+			rec, ctx, err := setupRecorder(transactionEndpoint, test.request)
 			require.NoError(t, err)
-
-			// create the request
-			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(enc))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-			rec := httptest.NewRecorder()
-
-			ctx := echo.New().NewContext(req, rec)
 
 			// execute the request
 			err = api.Transaction(ctx)
@@ -168,21 +155,13 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 
 		request rosetta.TransactionRequest
 
-		// HTTP/handler errors
-		wantStatusCode int
-
-		// rosetta errors - validated separately since it makes reporting mismatches more manageable
-		wantRosettaError            meta.ErrorDefinition
-		wantRosettaErrorDescription string
-		wantRosettaErrorDetails     map[string]interface{}
+		checkErr assert.ErrorAssertionFunc
 	}{
 		{
 			name:    "empty transaction request",
 			request: rosetta.TransactionRequest{},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing blockchain name",
@@ -195,9 +174,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: blockchain field is empty",
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain name",
@@ -210,10 +187,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", invalidBlockchain, dps.FlowBlockchain),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": invalidBlockchain, "network": dps.FlowTestnet.String()},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network name",
@@ -226,9 +200,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "blockchain identifier: network field is empty",
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network name",
@@ -241,10 +213,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidNetwork,
-			wantRosettaErrorDescription: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", invalidNetwork, dps.FlowTestnet.String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"blockchain": dps.FlowBlockchain, "network": invalidNetwork},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing block height and hash",
@@ -257,9 +226,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "block identifier: at least one of hash or index is required",
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of block id",
@@ -272,9 +239,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("block identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedBlockHash), validBlockHashLen),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing block height",
@@ -285,9 +250,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				},
 				TransactionID: testTx,
 			},
-			wantStatusCode:              http.StatusInternalServerError,
-			wantRosettaError:            configuration.ErrorInternal,
-			wantRosettaErrorDescription: "could not validate block: block access with hash currently not supported",
+			checkErr: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
 		},
 		{
 			name: "invalid block hash",
@@ -300,10 +263,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidBlock,
-			wantRosettaErrorDescription: "block hash is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(testHeight), "hash": invalidBlockHash},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			name: "unknown block",
@@ -315,10 +275,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorUnknownBlock,
-			wantRosettaErrorDescription: fmt.Sprintf("block index is above last indexed block (last: %d)", lastHeight),
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(lastHeight + 1), "hash": ""},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownBlock),
 		},
 		{
 			name: "mismatched block height and hash",
@@ -331,10 +288,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				TransactionID: testTx,
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidBlock,
-			wantRosettaErrorDescription: fmt.Sprintf("block hash does not match known hash for height (known: %s)", knownHeaders(44).ID().String()),
-			wantRosettaErrorDetails:     map[string]interface{}{"index": uint64(44), "hash": testBlockHash},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
 			name: "missing transaction id",
@@ -346,9 +300,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: "transaction identifier: hash field is empty",
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing transaction id",
@@ -360,9 +312,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusBadRequest,
-			wantRosettaError:            configuration.ErrorInvalidFormat,
-			wantRosettaErrorDescription: fmt.Sprintf("transaction identifier: hash field has wrong length (have: %d, want: %d)", len(trimmedTxHash), validBlockHashLen),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid transaction id",
@@ -374,10 +324,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				},
 			},
 
-			wantStatusCode:              http.StatusUnprocessableEntity,
-			wantRosettaError:            configuration.ErrorInvalidTransaction,
-			wantRosettaErrorDescription: "transaction hash is not a valid hex-encoded string",
-			wantRosettaErrorDetails:     map[string]interface{}{"hash": invalidTxHash},
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidTransaction),
 		},
 		// TODO: add - transaction that has no events/transfers
 		// TODO: add - transaction that does not exist in a block
@@ -391,34 +338,12 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 
 			t.Parallel()
 
-			// prepare request payload
-			enc, err := json.Marshal(test.request)
+			_, ctx, err := setupRecorder(transactionEndpoint, test.request)
 			require.NoError(t, err)
-
-			// create the request
-			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(enc))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-			rec := httptest.NewRecorder()
-
-			ctx := echo.New().NewContext(req, rec)
 
 			// execute the request
 			err = api.Transaction(ctx)
-			assert.Error(t, err)
-
-			echoErr, ok := err.(*echo.HTTPError)
-			require.True(t, ok)
-
-			// verify HTTP status code
-			assert.Equal(t, test.wantStatusCode, echoErr.Code)
-
-			gotErr, ok := echoErr.Message.(rosetta.Error)
-			require.True(t, ok)
-
-			assert.Equal(t, test.wantRosettaError, gotErr.ErrorDefinition)
-			assert.Equal(t, test.wantRosettaErrorDescription, gotErr.Description)
-			assert.Equal(t, test.wantRosettaErrorDetails, gotErr.Details)
+			test.checkErr(t, err)
 		})
 	}
 }
@@ -469,29 +394,37 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 	)
 
 	tests := []struct {
-		name     string
-		payload  []byte
-		mimeType string
+		name    string
+		payload []byte
+		prepare func(*http.Request)
 	}{
 		{
-			name:     "empty request",
-			payload:  []byte(``),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "empty request",
+			payload: []byte(``),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "wrong field type",
-			payload:  []byte(wrongFieldType),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "wrong field type",
+			payload: []byte(wrongFieldType),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "unclosed bracket",
-			payload:  []byte(unclosedBracket),
-			mimeType: echo.MIMEApplicationJSON,
+			name:    "unclosed bracket",
+			payload: []byte(unclosedBracket),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			},
 		},
 		{
-			name:     "valid payload with no mime type set",
-			payload:  []byte(validJSON),
-			mimeType: "",
+			name:    "valid payload with no MIME type set",
+			payload: []byte(validJSON),
+			prepare: func(req *http.Request) {
+				req.Header.Set(echo.HeaderContentType, "")
+			},
 		},
 	}
 
@@ -502,13 +435,10 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodPost, "/block/transaction", bytes.NewReader(test.payload))
-			req.Header.Set(echo.HeaderContentType, test.mimeType)
+			_, ctx, err := setupRecorder(transactionEndpoint, test.payload, test.prepare)
+			require.NoError(t, err)
 
-			rec := httptest.NewRecorder()
-			ctx := echo.New().NewContext(req, rec)
-
-			err := api.Block(ctx)
+			err = api.Block(ctx)
 			assert.Error(t, err)
 
 			echoErr, ok := err.(*echo.HTTPError)
