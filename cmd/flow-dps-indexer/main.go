@@ -60,7 +60,7 @@ func run() int {
 		flagIndexEvents       bool
 		flagIndexHeaders      bool
 		flagIndexPayloads     bool
-		flagIndexRegisters    bool
+		flagIndexCommits      bool
 		flagIndexTransactions bool
 		flagLevel             string
 		flagTrie              string
@@ -72,10 +72,10 @@ func run() int {
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
 	pflag.BoolVarP(&flagIndexBlocks, "index-blocks", "b", false, "index blocks")
+	pflag.BoolVarP(&flagIndexCommits, "index-commits", "m", false, "index commits")
 	pflag.BoolVarP(&flagIndexEvents, "index-events", "e", false, "index events")
 	pflag.BoolVarP(&flagIndexHeaders, "index-headers", "h", false, "index headers")
 	pflag.BoolVarP(&flagIndexPayloads, "index-payloads", "p", false, "index payloads")
-	pflag.BoolVarP(&flagIndexRegisters, "index-registers", "r", false, "index registers")
 	pflag.BoolVarP(&flagIndexTransactions, "index-transactions", "x", false, "index transactions")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
@@ -93,14 +93,18 @@ func run() int {
 	log = log.Level(level)
 
 	// Ensure that at least one index is specified.
-	if !flagIndexAll &&
-		!flagIndexRegisters &&
-		!flagIndexTransactions &&
-		!flagIndexBlocks &&
-		!flagIndexEvents &&
-		!flagIndexPayloads &&
-		!flagIndexHeaders {
+	if !flagIndexAll && !flagIndexCommits && !flagIndexTransactions && !flagIndexBlocks && !flagIndexEvents &&
+		!flagIndexPayloads && !flagIndexHeaders {
 		log.Error().Str("level", flagLevel).Msg("no indexing option specified, use -a/--all to build all indexes")
+		pflag.Usage()
+		return failure
+	}
+
+	// Fail if IndexAll is specified along with other index flags, as this would most likely mean that the user does
+	// not understand what they are doing.
+	if flagIndexAll && (flagIndexCommits || flagIndexTransactions || flagIndexBlocks || flagIndexEvents ||
+		!flagIndexPayloads || flagIndexHeaders) {
+		log.Error().Str("level", flagLevel).Msg("-a/--all is mutually exclusive with specific indexing flags")
 		pflag.Usage()
 		return failure
 	}
@@ -152,13 +156,12 @@ func run() int {
 	index := index.NewWriter(db, storage)
 	mapper, err := mapper.New(log, chain, feeder, index,
 		mapper.WithCheckpointFile(flagCheckpoint),
-		mapper.WithIndexAll(flagIndexAll),
-		mapper.WithIndexBlocks(flagIndexBlocks),
-		mapper.WithIndexEvents(flagIndexEvents),
-		mapper.WithIndexHeaders(flagIndexHeaders),
-		mapper.WithIndexPayloads(flagIndexPayloads),
-		mapper.WithIndexRegisters(flagIndexRegisters),
-		mapper.WithIndexTransactions(flagIndexTransactions),
+		mapper.WithIndexBlocks(flagIndexAll || flagIndexBlocks),
+		mapper.WithIndexCommits(flagIndexAll || flagIndexCommits),
+		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),
+		mapper.WithIndexHeaders(flagIndexAll || flagIndexHeaders),
+		mapper.WithIndexPayloads(flagIndexAll || flagIndexPayloads),
+		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
 	)
 	if err != nil {
 		log.Error().Str("checkpoint", flagCheckpoint).Err(err).Msg("could not initialize mapper")

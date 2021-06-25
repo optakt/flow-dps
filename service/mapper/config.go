@@ -23,13 +23,12 @@ type Config struct {
 	CheckpointFile string
 	PostProcessing func(*trie.MTrie)
 
-	indexAll          bool
-	indexBlocks       bool
-	indexEvents       bool
-	indexHeaders      bool
-	indexPayloads     bool
-	indexRegisters    bool
-	indexTransactions bool
+	IndexBlocks       bool
+	IndexCommit       bool
+	IndexEvents       bool
+	IndexHeaders      bool
+	IndexPayloads     bool
+	IndexTransactions bool
 }
 
 // WithCheckpointFile will initialize the mapper's internal trie with the trie
@@ -48,51 +47,44 @@ func WithPostProcessing(post func(*trie.MTrie)) func(*Config) {
 	}
 }
 
-// WithIndexAll sets up the mapper to build all indexes simultaneously.
-func WithIndexAll(b bool) func(*Config) {
-	return func(cfg *Config) {
-		cfg.indexAll = b
-	}
-}
-
 // WithIndexBlocks sets up the mapper to build the block indexes.
 func WithIndexBlocks(b bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.indexBlocks = b
+		cfg.IndexBlocks = b
+	}
+}
+
+// WithIndexCommits sets up the mapper to build the commits index.
+func WithIndexCommits(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexCommit = b
 	}
 }
 
 // WithIndexEvents sets up the mapper to build the events index.
 func WithIndexEvents(b bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.indexEvents = b
+		cfg.IndexEvents = b
 	}
 }
 
 // WithIndexHeaders sets up the mapper to build the headers index.
 func WithIndexHeaders(b bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.indexHeaders = b
+		cfg.IndexHeaders = b
 	}
 }
 
 // WithIndexPayloads sets up the mapper to build the payloads index.
 func WithIndexPayloads(b bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.indexPayloads = b
-	}
-}
-
-// WithIndexRegisters sets up the mapper to build the registers index.
-func WithIndexRegisters(b bool) func(*Config) {
-	return func(cfg *Config) {
-		cfg.indexRegisters = b
+		cfg.IndexPayloads = b
 	}
 }
 
 // WithIndexTransactions sets up the mapper to build the transactions index.
 func WithIndexTransactions(b bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.indexTransactions = b
+		cfg.IndexTransactions = b
 	}
 }

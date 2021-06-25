@@ -416,31 +416,31 @@ Outer:
 		// and replace naive if statements around indexing.
 
 		// We then index the data for the finalized block at the current height.
-		if m.cfg.indexAll || m.cfg.indexHeaders {
+		if m.cfg.IndexHeaders {
 			err = m.index.Header(height, header)
 			if err != nil {
 				return fmt.Errorf("could not index header: %w", err)
 			}
 		}
-		if m.cfg.indexAll || m.cfg.indexRegisters {
+		if m.cfg.IndexCommit {
 			err = m.index.Commit(height, commitNext)
 			if err != nil {
 				return fmt.Errorf("could not index commit: %w", err)
 			}
 		}
-		if m.cfg.indexAll || m.cfg.indexEvents {
+		if m.cfg.IndexEvents {
 			err = m.index.Events(height, events)
 			if err != nil {
 				return fmt.Errorf("could not index events: %w", err)
 			}
 		}
-		if m.cfg.indexAll || m.cfg.indexBlocks {
+		if m.cfg.IndexBlocks {
 			err = m.index.Height(blockID, height)
 			if err != nil {
 				return fmt.Errorf("could not index block heights: %w", err)
 			}
 		}
-		if m.cfg.indexAll || m.cfg.indexTransactions {
+		if m.cfg.IndexTransactions {
 			err = m.index.Transactions(blockID, collections, transactions)
 			if err != nil {
 				return fmt.Errorf("could not index transactions: %w", err)
@@ -477,7 +477,7 @@ Outer:
 			// We then divide the remaining paths into chunks of 1000. For each
 			// batch, we retrieve the payloads from the state trie as it was at
 			// the end of this block and index them.
-			if m.cfg.indexAll || m.cfg.indexPayloads {
+			if m.cfg.IndexPayloads {
 				count := 0
 				n := 1000
 				total := (len(paths) + n - 1) / n
@@ -528,15 +528,13 @@ Outer:
 
 		// Last but not least, we take care of properly indexing the height of
 		// the first indexed block and the height of the last indexed block.
-		if m.cfg.indexAll || m.cfg.indexBlocks {
-			once.Do(func() { err = m.index.First(height) })
-			if err != nil {
-				return fmt.Errorf("could not index first height: %w", err)
-			}
-			err = m.index.Last(height)
-			if err != nil {
-				return fmt.Errorf("could not index last height: %w", err)
-			}
+		once.Do(func() { err = m.index.First(height) })
+		if err != nil {
+			return fmt.Errorf("could not index first height: %w", err)
+		}
+		err = m.index.Last(height)
+		if err != nil {
+			return fmt.Errorf("could not index last height: %w", err)
 		}
 
 		// We have now successfully indexed all state trie changes and other
