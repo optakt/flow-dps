@@ -31,6 +31,8 @@ import (
 )
 
 type Retriever struct {
+	cfg Config
+
 	params    dps.Params
 	index     index.Reader
 	validate  Validator
@@ -39,9 +41,18 @@ type Retriever struct {
 	convert   Converter
 }
 
-func New(params dps.Params, index index.Reader, validate Validator, generator Generator, invoke Invoker, convert Converter) *Retriever {
+func New(params dps.Params, index index.Reader, validate Validator, generator Generator, invoke Invoker, convert Converter, options ...func(*Config)) *Retriever {
+
+	cfg := Config{
+		TransactionLimit: 200,
+	}
+
+	for _, opt := range options {
+		opt(&cfg)
+	}
 
 	r := Retriever{
+		cfg:       cfg,
 		params:    params,
 		index:     index,
 		validate:  validate,
@@ -175,7 +186,7 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 	}
 
 	// Convert events to operations and group them by transaction ID.
-	operations := make(map[string][]object.Operation)
+	buckets := make(map[string][]object.Operation)
 	for _, event := range events {
 		op, err := r.convert.EventToOperation(event)
 		if errors.Is(err, converter.ErrIrrelevant) {
@@ -186,28 +197,37 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		}
 
 		tID := event.TransactionID.String()
-		operations[tID] = append(operations[tID], *op)
+		buckets[tID] = append(buckets[tID], *op)
 	}
 
 	// Iterate over all transactionIDs to create transactions with all relevant operations.
-	var transactions []*object.Transaction
-	for transactionID, ops := range operations {
+	var blockTransactions []*object.Transaction
+	var extraTransactions []identifier.Transaction
+	var count int
+	for txID, operations := range buckets {
+		if count >= int(r.cfg.TransactionLimit) {
+			extraTransactions = append(extraTransactions, identifier.Transaction{Hash: txID})
+			continue
+		}
+
 		// Set RelatedIDs for all operations for the same transaction.
-		for i := range ops {
-			for j := range ops {
+		for i := range operations {
+			for j := range operations {
 				if i == j {
 					continue
 				}
 
-				ops[i].RelatedIDs = append(ops[i].RelatedIDs, ops[j].ID)
+				operations[i].RelatedIDs = append(operations[i].RelatedIDs, operations[j].ID)
 			}
 		}
 
 		transaction := object.Transaction{
-			ID:         identifier.Transaction{Hash: transactionID},
-			Operations: ops,
+			ID:         identifier.Transaction{Hash: txID},
+			Operations: operations,
 		}
-		transactions = append(transactions, &transaction)
+		blockTransactions = append(blockTransactions, &transaction)
+
+		count++
 	}
 
 	// Now we just need to build the block.
@@ -221,23 +241,13 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 			Hash:  header.ParentID.String(),
 		},
 		Timestamp:    header.Timestamp.UnixNano() / 1_000_000,
-		Transactions: transactions,
+		Transactions: blockTransactions,
 	}
 
-	// TODO: When a block contains too many transactions, we should limit the
-	// size of the returned transaction slice and provide a list of extra
-	// transactions IDs in the second return value instead:
-	// => https://github.com/optakt/flow-dps/issues/149
-
-	return &block, nil, nil
+	return &block, extraTransactions, nil
 }
 
 func (r *Retriever) Transaction(block identifier.Block, id identifier.Transaction) (*object.Transaction, error) {
-
-	// TODO: We should start indexing all of the transactions for each block, so
-	// that we can actually check transaction existence and return transactions,
-	// even if they don't move any funds:
-	// => https://github.com/optakt/flow-dps/issues/156
 
 	// Run validation on the block ID. This also fills in missing information.
 	completed, err := r.validate.Block(block)
@@ -298,6 +308,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		}
 
 	}
+
 	transaction := object.Transaction{
 		ID:         id,
 		Operations: ops,
