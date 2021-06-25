@@ -186,7 +186,7 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 	}
 
 	// Convert events to operations and group them by transaction ID.
-	operations := make(map[string][]object.Operation)
+	buckets := make(map[string][]object.Operation)
 	for _, event := range events {
 		op, err := r.convert.EventToOperation(event)
 		if errors.Is(err, converter.ErrIrrelevant) {
@@ -197,33 +197,33 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		}
 
 		tID := event.TransactionID.String()
-		operations[tID] = append(operations[tID], *op)
+		buckets[tID] = append(buckets[tID], *op)
 	}
 
 	// Iterate over all transactionIDs to create transactions with all relevant operations.
 	var blockTransactions []*object.Transaction
 	var extraTransactions []identifier.Transaction
 	var count int
-	for transactionID, ops := range operations {
+	for txID, operations := range buckets {
 		if count >= int(r.cfg.TransactionLimit) {
-			extraTransactions = append(extraTransactions, identifier.Transaction{Hash: transactionID})
+			extraTransactions = append(extraTransactions, identifier.Transaction{Hash: txID})
 			continue
 		}
 
 		// Set RelatedIDs for all operations for the same transaction.
-		for i := range ops {
-			for j := range ops {
+		for i := range operations {
+			for j := range operations {
 				if i == j {
 					continue
 				}
 
-				ops[i].RelatedIDs = append(ops[i].RelatedIDs, ops[j].ID)
+				operations[i].RelatedIDs = append(operations[i].RelatedIDs, operations[j].ID)
 			}
 		}
 
 		transaction := object.Transaction{
-			ID:         identifier.Transaction{Hash: transactionID},
-			Operations: ops,
+			ID:         identifier.Transaction{Hash: txID},
+			Operations: operations,
 		}
 		blockTransactions = append(blockTransactions, &transaction)
 
