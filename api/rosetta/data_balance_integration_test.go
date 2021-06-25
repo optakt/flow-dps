@@ -110,7 +110,7 @@ func TestAPI_Balance(t *testing.T) {
 
 			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-			// Unpack response..
+			// Unpack response.
 			var balanceResponse rosetta.BalanceResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &balanceResponse))
 

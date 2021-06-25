@@ -45,6 +45,8 @@ func TestIndex_First(t *testing.T) {
 	testHeight := uint64(42)
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetFirstFunc: func(_ context.Context, in *GetFirstRequest, _ ...grpc.CallOption) (*GetFirstResponse, error) {
@@ -65,6 +67,8 @@ func TestIndex_First(t *testing.T) {
 	})
 
 	t.Run("handles index failure", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetFirstFunc: func(_ context.Context, in *GetFirstRequest, _ ...grpc.CallOption) (*GetFirstResponse, error) {
@@ -84,6 +88,8 @@ func TestIndex_Last(t *testing.T) {
 	testHeight := uint64(42)
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetLastFunc: func(_ context.Context, in *GetLastRequest, _ ...grpc.CallOption) (*GetLastResponse, error) {
@@ -104,6 +110,8 @@ func TestIndex_Last(t *testing.T) {
 	})
 
 	t.Run("handles index failure", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetLastFunc: func(_ context.Context, in *GetLastRequest, _ ...grpc.CallOption) (*GetLastResponse, error) {
@@ -130,6 +138,8 @@ func TestIndex_Header(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetHeaderFunc: func(_ context.Context, in *GetHeaderRequest, _ ...grpc.CallOption) (*GetHeaderResponse, error) {
@@ -151,6 +161,8 @@ func TestIndex_Header(t *testing.T) {
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetHeaderFunc: func(_ context.Context, in *GetHeaderRequest, _ ...grpc.CallOption) (*GetHeaderResponse, error) {
@@ -167,6 +179,8 @@ func TestIndex_Header(t *testing.T) {
 	})
 
 	t.Run("handles decoding failures", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetHeaderFunc: func(_ context.Context, in *GetHeaderRequest, _ ...grpc.CallOption) (*GetHeaderResponse, error) {
@@ -192,6 +206,8 @@ func TestIndex_Commit(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetCommitFunc: func(_ context.Context, in *GetCommitRequest, _ ...grpc.CallOption) (*GetCommitResponse, error) {
@@ -213,6 +229,8 @@ func TestIndex_Commit(t *testing.T) {
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetCommitFunc: func(_ context.Context, in *GetCommitRequest, _ ...grpc.CallOption) (*GetCommitResponse, error) {
@@ -229,6 +247,8 @@ func TestIndex_Commit(t *testing.T) {
 	})
 
 	t.Run("handles invalid indexed data", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetCommitFunc: func(_ context.Context, in *GetCommitRequest, _ ...grpc.CallOption) (*GetCommitResponse, error) {
@@ -259,6 +279,8 @@ func TestIndex_Events(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
@@ -282,6 +304,8 @@ func TestIndex_Events(t *testing.T) {
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
@@ -299,6 +323,8 @@ func TestIndex_Events(t *testing.T) {
 	})
 
 	t.Run("handles invalid indexed data", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
@@ -328,6 +354,8 @@ func TestIndex_Registers(t *testing.T) {
 	testValues := []ledger.Value{ledger.Value(`test1`), ledger.Value(`test2`)}
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetRegistersFunc: func(_ context.Context, in *GetRegistersRequest, _ ...grpc.CallOption) (*GetRegistersResponse, error) {
@@ -354,6 +382,8 @@ func TestIndex_Registers(t *testing.T) {
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetRegistersFunc: func(_ context.Context, in *GetRegistersRequest, _ ...grpc.CallOption) (*GetRegistersResponse, error) {
@@ -380,6 +410,8 @@ func TestIndex_Height(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetHeightFunc: func(_ context.Context, in *GetHeightRequest, _ ...grpc.CallOption) (*GetHeightResponse, error) {
@@ -401,6 +433,8 @@ func TestIndex_Height(t *testing.T) {
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetHeightFunc: func(_ context.Context, in *GetHeightRequest, _ ...grpc.CallOption) (*GetHeightResponse, error) {
@@ -429,6 +463,8 @@ func TestIndex_Transaction(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
@@ -450,6 +486,8 @@ func TestIndex_Transaction(t *testing.T) {
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
@@ -472,6 +510,8 @@ func TestIndex_Collection(t *testing.T) {
 	testCollection := flow.LightCollection{Transactions: []flow.Identifier{testTransactionID, testTransactionID, testTransactionID, testTransactionID, testTransactionID}}
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				ListTransactionsForCollectionFunc: func(_ context.Context, in *ListTransactionsForCollectionRequest, _ ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error) {
@@ -498,6 +538,8 @@ func TestIndex_Collection(t *testing.T) {
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
 		index := Index{
 			client: &apiMock{
 				ListTransactionsForCollectionFunc: func(_ context.Context, in *ListTransactionsForCollectionRequest, _ ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error) {

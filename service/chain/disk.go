@@ -57,6 +57,7 @@ func (d *Disk) Header(height uint64) (*flow.Header, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not look up block: %w", err)
 	}
+
 	var header flow.Header
 	err = operation.RetrieveHeader(blockID, &header)(d.db.NewTransaction(false))
 	if err != nil {
@@ -71,6 +72,7 @@ func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 	if errors.Is(err, storage.ErrNotFound) {
 		return flow.StateCommitment{}, dps.ErrFinished
 	}
+
 	var commit flow.StateCommitment
 	err = operation.LookupStateCommitment(blockID, &commit)(d.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
@@ -85,6 +87,7 @@ func (d *Disk) Events(height uint64) ([]flow.Event, error) {
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, dps.ErrFinished
 	}
+
 	var events []flow.Event
 	err = operation.LookupEventsByBlockID(blockID, &events)(d.db.NewTransaction(false))
 	if err != nil {

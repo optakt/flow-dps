@@ -41,6 +41,8 @@ func TestPathsToBytes(t *testing.T) {
 
 func TestBytesToPaths(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		path1b := []byte("aac513eb1a0457700ac3fa8d292513e1")
 		path2b := []byte("1454ae2420513f79f6a5e8396d033369")
 		path3b := []byte("e91a3eb997752b78bab0bc31e30b1e30")
@@ -61,6 +63,8 @@ func TestBytesToPaths(t *testing.T) {
 	})
 
 	t.Run("incorrect-length paths should fail", func(t *testing.T) {
+		t.Parallel()
+
 		invalidPath := []byte("1a0457700")
 
 		bb := [][]byte{invalidPath}
@@ -70,6 +74,8 @@ func TestBytesToPaths(t *testing.T) {
 	})
 
 	t.Run("empty paths should fail", func(t *testing.T) {
+		t.Parallel()
+
 		invalidPath := []byte("")
 
 		bb := [][]byte{invalidPath}
@@ -79,6 +85,8 @@ func TestBytesToPaths(t *testing.T) {
 	})
 
 	t.Run("non-hex path should fail", func(t *testing.T) {
+		t.Parallel()
+
 		invalidPath := []byte("not even hex")
 
 		bb := [][]byte{invalidPath}

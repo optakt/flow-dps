@@ -68,6 +68,8 @@ func TestRetriever_Oldest(t *testing.T) {
 	}
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		mock := &mocks.Reader{
 			FirstFunc: func() (uint64, error) {
 				return testHeight, nil
@@ -88,6 +90,8 @@ func TestRetriever_Oldest(t *testing.T) {
 	})
 
 	t.Run("handles index.First failure", func(t *testing.T) {
+		t.Parallel()
+
 		mock := &mocks.Reader{
 			FirstFunc: func() (uint64, error) {
 				return 0, mocks.DummyError
@@ -101,6 +105,8 @@ func TestRetriever_Oldest(t *testing.T) {
 	})
 
 	t.Run("handles index.Header failure", func(t *testing.T) {
+		t.Parallel()
+
 		mock := &mocks.Reader{
 			FirstFunc: func() (uint64, error) {
 				return testHeight, nil
@@ -131,6 +137,8 @@ func TestRetriever_Current(t *testing.T) {
 	}
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		mock := &mocks.Reader{
 			LastFunc: func() (uint64, error) {
 				return testHeight, nil
@@ -151,6 +159,8 @@ func TestRetriever_Current(t *testing.T) {
 	})
 
 	t.Run("handles index.Last failure", func(t *testing.T) {
+		t.Parallel()
+
 		mock := &mocks.Reader{
 			LastFunc: func() (uint64, error) {
 				return 0, mocks.DummyError
@@ -164,6 +174,8 @@ func TestRetriever_Current(t *testing.T) {
 	})
 
 	t.Run("handles index.Header failure", func(t *testing.T) {
+		t.Parallel()
+
 		mock := &mocks.Reader{
 			LastFunc: func() (uint64, error) {
 				return testHeight, nil
@@ -210,6 +222,8 @@ func TestRetriever_Balances(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			AccountFunc: func(address identifier.Account) error {
 				assert.Equal(t, testAccount, address)
@@ -255,6 +269,8 @@ func TestRetriever_Balances(t *testing.T) {
 	})
 
 	t.Run("handles invalid block", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -270,6 +286,8 @@ func TestRetriever_Balances(t *testing.T) {
 	})
 
 	t.Run("handles invalid account", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -289,6 +307,8 @@ func TestRetriever_Balances(t *testing.T) {
 	})
 
 	t.Run("handles invalid currency", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -312,6 +332,8 @@ func TestRetriever_Balances(t *testing.T) {
 	})
 
 	t.Run("handles generator failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			AccountFunc: func(address identifier.Account) error {
 				assert.Equal(t, testAccount, address)
@@ -342,6 +364,8 @@ func TestRetriever_Balances(t *testing.T) {
 	})
 
 	t.Run("handles invoker failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			AccountFunc: func(address identifier.Account) error {
 				assert.Equal(t, testAccount, address)
@@ -516,6 +540,8 @@ func TestRetriever_Block(t *testing.T) {
 	}
 
 	t.Run("nominal case without limit", func(t *testing.T) {
+		t.Parallel()
+
 		wantBlock := &object.Block{
 			ID: testBlockID,
 			ParentID: identifier.Block{
@@ -599,6 +625,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("nominal case with limit reached exactly", func(t *testing.T) {
+		t.Parallel()
+
 		wantBlock := &object.Block{
 			ID: testBlockID,
 			ParentID: identifier.Block{
@@ -682,6 +710,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("nominal case with more transactions than limit", func(t *testing.T) {
+		t.Parallel()
+
 		wantBlock := &object.Block{
 			ID: testBlockID,
 			ParentID: identifier.Block{
@@ -762,6 +792,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("handles block without transactions", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -807,6 +839,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("handles block without relevant events", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -860,6 +894,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("handles invalid block", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -876,6 +912,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("handles deposit script generator failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -899,6 +937,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("handles withdrawal script generator failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -926,6 +966,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("handles index header retrieval failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -960,6 +1002,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("handles index event retrieval failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -1002,6 +1046,8 @@ func TestRetriever_Block(t *testing.T) {
 	})
 
 	t.Run("handles event converter failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -1153,6 +1199,8 @@ func TestRetriever_Transaction(t *testing.T) {
 	}
 
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -1216,6 +1264,8 @@ func TestRetriever_Transaction(t *testing.T) {
 	})
 
 	t.Run("handles transaction with no relevant operations", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -1269,6 +1319,8 @@ func TestRetriever_Transaction(t *testing.T) {
 	})
 
 	t.Run("handles invalid block", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -1285,6 +1337,8 @@ func TestRetriever_Transaction(t *testing.T) {
 	})
 
 	t.Run("handles invalid transaction", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -1305,6 +1359,8 @@ func TestRetriever_Transaction(t *testing.T) {
 	})
 
 	t.Run("handles deposit script generator failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -1332,6 +1388,8 @@ func TestRetriever_Transaction(t *testing.T) {
 	})
 
 	t.Run("handles withdrawal script generator failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -1363,6 +1421,8 @@ func TestRetriever_Transaction(t *testing.T) {
 	})
 
 	t.Run("handles index event retrieval failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)
@@ -1406,6 +1466,8 @@ func TestRetriever_Transaction(t *testing.T) {
 	})
 
 	t.Run("handles converter failure", func(t *testing.T) {
+		t.Parallel()
+
 		validator := &mocks.Validator{
 			BlockFunc: func(block identifier.Block) (identifier.Block, error) {
 				assert.Equal(t, testBlockID, block)

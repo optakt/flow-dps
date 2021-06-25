@@ -50,7 +50,7 @@ func New(gen Generator) (*Converter, error) {
 		withdrawal: flow.EventType(withdrawal),
 	}
 
-	return &c, err
+	return &c, nil
 }
 
 func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operation, err error) {

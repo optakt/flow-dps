@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -109,12 +110,12 @@ func NodeVersion() (string, error) {
 	// Fetch Node version from the go.mod file.
 	gomod, err := os.ReadFile(pathToGoMod)
 	if err != nil {
-		return "", fmt.Errorf("could not read go mod file: %v", err)
+		return "", fmt.Errorf("could not read go mod file: %w", err)
 	}
 
 	modfile, err := modfile.Parse("go.mod", gomod, nil)
 	if err != nil {
-		return "", fmt.Errorf("could not parse go mod file: %v", err)
+		return "", fmt.Errorf("could not parse go mod file: %w", err)
 	}
 
 	for _, module := range modfile.Require {
@@ -142,7 +143,7 @@ func MiddlewareVersion() (string, error) {
 
 	// Fetch all tags and which commit they reference.
 	tagsMap := make(map[plumbing.Hash]*plumbing.Reference)
-	err = tags.ForEach(func(t *plumbing.Reference) error {
+	_ = tags.ForEach(func(t *plumbing.Reference) error {
 		tagsMap[t.Hash()] = t
 		return nil
 	})
@@ -162,8 +163,10 @@ func MiddlewareVersion() (string, error) {
 	}
 
 	// Search for the latest tag on the current branch.
-	var tag *plumbing.Reference
-	var count int
+	var (
+		tag   *plumbing.Reference
+		count int
+	)
 	err = cIter.ForEach(func(c *object.Commit) error {
 		if t, ok := tagsMap[c.Hash]; ok {
 			tag = t
@@ -174,9 +177,8 @@ func MiddlewareVersion() (string, error) {
 		count++
 		return nil
 	})
-
-	// Repository does not have any tags, return placeholder.
-	if tag == nil {
+	if err != nil && !errors.Is(err, storer.ErrStop) {
+		// Repository does not have any tags, return placeholder.
 		return defaultMiddlewareVersion, nil
 	}
 

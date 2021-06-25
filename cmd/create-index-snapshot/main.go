@@ -54,7 +54,7 @@ func run() int {
 	pflag.Parse()
 
 	// Initialize the logger.
-	zerolog.TimestampFunc = func() time.Time { return time.Now() }
+	zerolog.TimestampFunc = time.Now
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {

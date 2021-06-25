@@ -116,12 +116,16 @@ func TestParseCadenceArgument(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-		gotArg, err := ParseCadenceArgument(test.param)
-		test.checkErr(t, err)
+			gotArg, err := ParseCadenceArgument(test.param)
+			test.checkErr(t, err)
 
-		if err == nil {
-			assert.Equal(t, test.wantArg, gotArg)
-		}
+			if err == nil {
+				assert.Equal(t, test.wantArg, gotArg)
+			}
+		})
 	}
 }
