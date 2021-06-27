@@ -14,32 +14,39 @@
 
 package errors
 
+// Detail function can be used to provide more detailed information about a specific
+// error instance.
 type Detail func(*Error)
 
+// WithInt adds an integer value to the error details.
 func WithInt(key string, value int) Detail {
 	return func(err *Error) {
 		err.Details[key] = value
 	}
 }
 
+// WithUint adds an unsigned integer value to the error details.
 func WithUint(key string, value uint) Detail {
 	return func(err *Error) {
 		err.Details[key] = value
 	}
 }
 
+// WithUint64 adds a 64-bit unsigned integer value to the error details.
 func WithUint64(key string, value uint64) Detail {
 	return func(err *Error) {
 		err.Details[key] = value
 	}
 }
 
+// WithString adds a textual value to the error details.
 func WithString(key string, value string) Detail {
 	return func(err *Error) {
 		err.Details[key] = value
 	}
 }
 
+// WithError adds the information about a specific error to the error details.
 // TODO: check - should we silently occupy 'error' field?
 func WithError(e error) Detail {
 	return func(err *Error) {
