@@ -14,15 +14,19 @@
 
 package errors
 
+// UnknownCurrency error is returned when the requested currency is not known.
+// This happens when the specified currency symbol is not configured.
 type UnknownCurrency struct {
 	Description string
 	Details     []Detail
 }
 
+// Error returns the textual representation of the UnknownCurrency error.
 func (u UnknownCurrency) Error() string {
 	return "unknown currency"
 }
 
+// RosettaError returns the error information in a Rosetta-compatible format.
 func (u UnknownCurrency) RosettaError() Error {
 	return newError(ErrorUnknownCurrency, u.Description, u.Details...)
 }

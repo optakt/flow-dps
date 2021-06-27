@@ -14,15 +14,20 @@
 
 package errors
 
+// InvalidNetwork error is returned when the specified network identifier is invalid.
+// Network identifier is considered invalid when the specified blockchain or network
+// fields are not the same as the configured ones.
 type InvalidNetwork struct {
 	Description string
 	Details     []Detail
 }
 
+// Error returns the textual representation of the InvalidNetwork error.
 func (i InvalidNetwork) Error() string {
 	return "invalid network"
 }
 
+// RosettaError returns the error information in a Rosetta-compatible format.
 func (i InvalidNetwork) RosettaError() Error {
 	return newError(ErrorInvalidNetwork, i.Description, i.Details...)
 }

@@ -29,14 +29,22 @@ type Error struct {
 	Details     map[string]interface{} `json:"details,omitempty"`
 }
 
+// Internal returns a Rosetta Error with the given message and details.
+// This error is typically returned when some internal operation failed,
+// such as retrieving requested data from the index, or request data validation
+// could not be executed.
 func Internal(message string, details ...Detail) Error {
 	return newError(ErrorInternal, message, details...)
 }
 
+// InvalidFormat returns a Rosetta Error with the given message and details.
+// This error is typically returned when the request data is incorrect.
+// Some examples are malformed JSON payload, or missing mandatory fields.
 func InvalidFormat(message string, details ...Detail) Error {
 	return newError(ErrorInvalidFormat, message, details...)
 }
 
+// newError returns a new Rosetta-compatible error according to the specified parameters.
 func newError(def meta.ErrorDefinition, message string, details ...Detail) Error {
 
 	err := Error{
@@ -44,6 +52,8 @@ func newError(def meta.ErrorDefinition, message string, details ...Detail) Error
 		Description:     message,
 	}
 
+	// Callers may provide an arbitrary number of parameters in order to
+	// better describe the error that happened.
 	if len(details) > 0 {
 		err.Details = make(map[string]interface{})
 		for _, d := range details {

@@ -14,15 +14,22 @@
 
 package errors
 
+// InvalidBlock error is returned when the specified block identifier is invalid.
+// Block identifier is considered invalid when:
+//	- block hash is not a valid hex-encoded string
+//	- block index is below the first indexed block
+//	- block hash does not match the known block hash
 type InvalidBlock struct {
 	Description string
 	Details     []Detail
 }
 
+// Error returns the textual representation of the InvalidBlock error.
 func (i InvalidBlock) Error() string {
 	return "invalid block"
 }
 
+// RosettaError returns the error information in a Rosetta-compatible format.
 func (i InvalidBlock) RosettaError() Error {
 	return newError(ErrorInvalidBlock, i.Description, i.Details...)
 }

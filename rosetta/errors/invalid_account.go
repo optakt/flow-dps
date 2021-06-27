@@ -14,15 +14,21 @@
 
 package errors
 
+// InvalidAccount error is returned when the specified account identifier is invalid.
+// Account identifier is considered invalid when:
+//	- account address is not a valid hex-encoded string
+//	- account address fails the Flow chain address generator check
 type InvalidAccount struct {
 	Description string
 	Details     []Detail
 }
 
+// Error returns the textual representation of the InvalidAccount error.
 func (i InvalidAccount) Error() string {
 	return "invalid account"
 }
 
+// RosettaError returns the error information in a Rosetta-compatible format.
 func (i InvalidAccount) RosettaError() Error {
 	return newError(ErrorInvalidAccount, i.Description, i.Details...)
 }

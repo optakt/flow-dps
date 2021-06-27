@@ -14,15 +14,20 @@
 
 package errors
 
+// InvalidCurrency error is returned when the currency identifier is invalid.
+// Currency identifier is considered invalid when the specified number of decimals
+// is different from the configured number of decimals.
 type InvalidCurrency struct {
 	Description string
 	Details     []Detail
 }
 
+// Error returns the textual representation of the InvalidCurrency error.
 func (i InvalidCurrency) Error() string {
 	return "invalid currency"
 }
 
+// RosettaError returns the error information in a Rosetta-compatible format.
 func (i InvalidCurrency) RosettaError() Error {
 	return newError(ErrorInvalidCurrency, i.Description, i.Details...)
 }

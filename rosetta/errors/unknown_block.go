@@ -14,15 +14,19 @@
 
 package errors
 
+// UnknownBlock error is returned when the requested block is not known, because
+// the height of the requested block is larger than the height of the last known block.
 type UnknownBlock struct {
 	Description string
 	Details     []Detail
 }
 
+// Error returns the textual representation of the UnknownBlock error.
 func (u UnknownBlock) Error() string {
 	return "unknown block"
 }
 
+// RosettaError returns the error information in a Rosetta-compatible format.
 func (u UnknownBlock) RosettaError() Error {
 	return newError(ErrorUnknownBlock, u.Description, u.Details...)
 }
