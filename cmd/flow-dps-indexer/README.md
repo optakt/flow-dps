@@ -9,13 +9,20 @@ The index is generated in the form of a Badger database that allows random acces
 ## Usage
 
 ```sh
-Usage of flow-dps-indexer:
-  -c, --checkpoint string   checkpoint file for state trie
-  -d, --data string         database directory for protocol data
+Usage of ./flow-dps-indexer:
+  -c, --checkpoint string    checkpoint file for state trie
+  -d, --data string          database directory for protocol data
   -f, --force bool          overwrite existing index database (default "false")
-  -i, --index string        database directory for state index (default "index")
-  -l, --log string          log output level (default "info")
-  -t, --trie string         data directory for state ledger
+  -i, --index string         database directory for state index (default "index")
+  -a, --index-all            index everything (default "false")
+  -b, --index-blocks         index blocks (default "false")
+  -e, --index-events         index events (default "false")
+  -h, --index-headers        index headers (default "false")
+  -p, --index-payloads       index payloads (default "false")
+  -r, --index-registers      index registers (default "false")
+  -x, --index-transactions   index transactions (default "false")
+  -l, --level string         log output level (default "info")
+  -t, --trie string          data directory for state ledger
 ```
 
 ## Example

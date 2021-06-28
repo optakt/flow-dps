@@ -589,7 +589,11 @@ func TestRetriever_Block(t *testing.T) {
 		block, extra, err := r.Block(testBlockID)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, wantBlock, block)
+			// Since transactions are built from a map, their order can vary, so we need to check them this way.
+			for _, tx := range wantBlock.Transactions {
+				assert.Contains(t, block.Transactions, tx)
+			}
+			assert.Equal(t, wantBlock.ID, block.ID)
 			assert.Empty(t, extra)
 		}
 	})
@@ -668,7 +672,11 @@ func TestRetriever_Block(t *testing.T) {
 		block, extra, err := r.Block(testBlockID)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, wantBlock, block)
+			// Since transactions are built from a map, their order can vary, so we need to check them this way.
+			for _, tx := range wantBlock.Transactions {
+				assert.Contains(t, block.Transactions, tx)
+			}
+			assert.Equal(t, wantBlock.ID, block.ID)
 			assert.Empty(t, extra)
 		}
 	})

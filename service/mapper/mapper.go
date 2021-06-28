@@ -38,14 +38,15 @@ import (
 )
 
 type Mapper struct {
-	log        zerolog.Logger
-	chain      Chain
-	feed       Feeder
-	index      index.Writer
-	checkpoint string
-	post       func(*trie.MTrie)
-	wg         *sync.WaitGroup
-	stop       chan struct{}
+	log zerolog.Logger
+	cfg Config
+
+	chain Chain
+	feed  Feeder
+	index index.Writer
+
+	wg   *sync.WaitGroup
+	stop chan struct{}
 }
 
 // New creates a new mapper that uses chain data to map trie updates to blocks
@@ -75,14 +76,13 @@ func New(log zerolog.Logger, chain Chain, feed Feeder, index index.Writer, optio
 	}
 
 	i := Mapper{
-		log:        log,
-		chain:      chain,
-		feed:       feed,
-		index:      index,
-		checkpoint: cfg.CheckpointFile,
-		post:       cfg.PostProcessing,
-		wg:         &sync.WaitGroup{},
-		stop:       make(chan struct{}),
+		log:   log,
+		chain: chain,
+		feed:  feed,
+		index: index,
+		cfg:   cfg,
+		wg:    &sync.WaitGroup{},
+		stop:  make(chan struct{}),
 	}
 
 	return &i, nil
@@ -123,11 +123,11 @@ func (m *Mapper) Run() error {
 	// will load the checkpoint trie.
 	empty := trie.NewEmptyMTrie()
 	var tree *trie.MTrie
-	if m.checkpoint == "" {
+	if m.cfg.CheckpointFile == "" {
 		tree = empty
 	} else {
 		m.log.Info().Msg("checkpoint rebuild started")
-		file, err := os.Open(m.checkpoint)
+		file, err := os.Open(m.cfg.CheckpointFile)
 		if err != nil {
 			return fmt.Errorf("could not open checkpoint file: %w", err)
 		}
@@ -412,26 +412,39 @@ Outer:
 		}
 		blockID := header.ID()
 
+		// TODO: Refactor the mapper in https://github.com/optakt/flow-dps/issues/128
+		// and replace naive if statements around indexing.
+
 		// We then index the data for the finalized block at the current height.
-		err = m.index.Header(height, header)
-		if err != nil {
-			return fmt.Errorf("could not index header: %w", err)
+		if m.cfg.IndexHeaders {
+			err = m.index.Header(height, header)
+			if err != nil {
+				return fmt.Errorf("could not index header: %w", err)
+			}
 		}
-		err = m.index.Commit(height, commitNext)
-		if err != nil {
-			return fmt.Errorf("could not index commit: %w", err)
+		if m.cfg.IndexCommit {
+			err = m.index.Commit(height, commitNext)
+			if err != nil {
+				return fmt.Errorf("could not index commit: %w", err)
+			}
 		}
-		err = m.index.Events(height, events)
-		if err != nil {
-			return fmt.Errorf("could not index events: %w", err)
+		if m.cfg.IndexEvents {
+			err = m.index.Events(height, events)
+			if err != nil {
+				return fmt.Errorf("could not index events: %w", err)
+			}
 		}
-		err = m.index.Height(blockID, height)
-		if err != nil {
-			return fmt.Errorf("could not index block heights: %w", err)
+		if m.cfg.IndexBlocks {
+			err = m.index.Height(blockID, height)
+			if err != nil {
+				return fmt.Errorf("could not index block heights: %w", err)
+			}
 		}
-		err = m.index.Transactions(blockID, collections, transactions)
-		if err != nil {
-			return fmt.Errorf("could not index transactions: %w", err)
+		if m.cfg.IndexTransactions {
+			err = m.index.Transactions(blockID, collections, transactions)
+			if err != nil {
+				return fmt.Errorf("could not index transactions: %w", err)
+			}
 		}
 
 		// In order to index the payloads, we step back from the state
@@ -459,6 +472,11 @@ Outer:
 				}
 				paths = append(paths, path)
 				updated[path] = struct{}{}
+			}
+
+			if !m.cfg.IndexPayloads {
+				commit = step.Commit
+				continue
 			}
 
 			// We then divide the remaining paths into chunks of 1000. For each
@@ -539,7 +557,7 @@ Outer:
 	m.log.Info().Msg("state indexing finished")
 
 	step := steps[commitPrev]
-	m.post(step.Tree)
+	m.cfg.PostProcessing(step.Tree)
 
 	return nil
 }
