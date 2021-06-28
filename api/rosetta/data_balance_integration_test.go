@@ -25,6 +25,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
@@ -35,28 +37,12 @@ func TestAPI_Balance(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const (
-		testAccount = "754aed9de6197641"
-	)
+	const testAccount = "754aed9de6197641"
 
 	var (
-		// Block where the account first appears.
-		firstBlock = identifier.Block{
-			Index: 13,
-			Hash:  "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23",
-		}
-
-		// A block mid-chain.
-		secondBlock = identifier.Block{
-			Index: 50,
-			Hash:  "d99888d47dc326fed91087796865316ac71863616f38fa0f735bf1dfab1dc1df",
-		}
-
-		// Last indexed block.
-		lastBlock = identifier.Block{
-			Index: 425,
-			Hash:  "594d59b2e61bb18b149ffaac2b27b0efe1854f6795cd3bb96a443c3676d78683",
-		}
+		firstBlock  = knownHeader(13)  // block where the account first appears
+		secondBlock = knownHeader(50)  // a block mid-chain
+		lastBlock   = knownHeader(425) // last indexed block
 	)
 
 	tests := []struct {
@@ -71,26 +57,36 @@ func TestAPI_Balance(t *testing.T) {
 			name:          "first occurrence of the account",
 			request:       requestBalance(testAccount, firstBlock),
 			wantBalance:   "10000100000",
-			validateBlock: validateBlock(t, firstBlock.Index, firstBlock.Hash),
+			validateBlock: validateBlock(t, firstBlock.Height, firstBlock.ID().String()),
 		},
 		{
 			name:          "mid chain",
 			request:       requestBalance(testAccount, secondBlock),
 			wantBalance:   "10000099999",
-			validateBlock: validateBlock(t, secondBlock.Index, secondBlock.Hash),
+			validateBlock: validateBlock(t, secondBlock.Height, secondBlock.ID().String()),
 		},
 		{
 			name:          "last indexed block",
 			request:       requestBalance(testAccount, lastBlock),
 			wantBalance:   "10000100002",
-			validateBlock: validateBlock(t, lastBlock.Index, lastBlock.Hash),
+			validateBlock: validateBlock(t, lastBlock.Height, lastBlock.ID().String()),
 		},
 		{
 			// Use block height only to retrieve data, but verify hash is set in the response.
-			name:          "get block via height only",
-			request:       requestBalance(testAccount, identifier.Block{Index: secondBlock.Index}),
+			name: "get block via height only",
+			request: rosetta.BalanceRequest{
+				NetworkID: defaultNetwork(),
+				AccountID: identifier.Account{
+					Address: testAccount,
+				},
+				BlockID: identifier.Block{
+					Index: &secondBlock.Height,
+				},
+				Currencies: defaultCurrency(),
+			},
+
 			wantBalance:   "10000099999",
-			validateBlock: validateBlock(t, secondBlock.Index, secondBlock.Hash),
+			validateBlock: validateBlock(t, secondBlock.Height, secondBlock.ID().String()),
 		},
 	}
 
@@ -132,10 +128,12 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 
 	// Defined valid balance request fields.
 	var (
-		testAccount = identifier.Account{Address: "754aed9de6197641"}
+		testAccount        = identifier.Account{Address: "754aed9de6197641"}
+		testHeight  uint64 = 13
+		lastHeight  uint64 = 425
 
 		testBlock = identifier.Block{
-			Index: 13,
+			Index: &testHeight,
 			Hash:  "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23",
 		}
 	)
@@ -224,7 +222,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: 0, Hash: ""},
+				BlockID:    identifier.Block{Index: nil, Hash: ""},
 				Currencies: defaultCurrency(),
 			},
 
@@ -235,7 +233,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: 13, Hash: trimmedBlockHash},
+				BlockID:    identifier.Block{Index: &testHeight, Hash: trimmedBlockHash},
 				Currencies: defaultCurrency(),
 			},
 
@@ -316,7 +314,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: 13, Hash: invalidBlockHash},
+				BlockID:    identifier.Block{Index: &testHeight, Hash: invalidBlockHash},
 				Currencies: defaultCurrency(),
 			},
 
@@ -327,7 +325,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: 426},
+				BlockID:    identifier.Block{Index: getUint64P(lastHeight + 1)},
 				Currencies: defaultCurrency(),
 			},
 
@@ -338,7 +336,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: 13, Hash: "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"},
+				BlockID:    identifier.Block{Index: &testHeight, Hash: "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"},
 				Currencies: defaultCurrency(),
 			},
 
@@ -411,7 +409,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: accFirstOccurrence - 1}, // one block before the account is created
+				BlockID:    identifier.Block{Index: getUint64P(accFirstOccurrence - 1)}, // one block before the account is created
 				Currencies: defaultCurrency(),
 			},
 
@@ -539,14 +537,17 @@ func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 }
 
 // requestBalance generates a BalanceRequest with the specified parameters.
-func requestBalance(address string, id identifier.Block) rosetta.BalanceRequest {
+func requestBalance(address string, header flow.Header) rosetta.BalanceRequest {
 
 	return rosetta.BalanceRequest{
 		NetworkID: defaultNetwork(),
 		AccountID: identifier.Account{
 			Address: address,
 		},
-		BlockID:    id,
+		BlockID: identifier.Block{
+			Index: &header.Height,
+			Hash:  header.ID().String(),
+		},
 		Currencies: defaultCurrency(),
 	}
 }

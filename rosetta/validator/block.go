@@ -31,16 +31,20 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 
 	// We currently only support retrieval by height, until we start indexing
 	// the block IDs as part of the DPS index.
-	if block.Index == 0 {
+	if block.Index == nil {
 		return identifier.Block{}, fmt.Errorf("block access with hash currently not supported")
 	}
+
+	// TODO: check - it was mentioned that we cannot retrieve blocks with height 0 (and other early blocks)
+	// since they're too far in the past and on incompatible networks.
+	// We should allow such requests now? (point of this whole exercise I guess)
 
 	// If a block hash is present, it should be a valid block ID for Flow.
 	if block.Hash != "" {
 		_, err := flow.HexStringToIdentifier(block.Hash)
 		if err != nil {
 			return identifier.Block{}, failure.InvalidBlock{
-				Index:   block.Index,
+				Index:   *block.Index,
 				Hash:    block.Hash,
 				Message: "block hash is not a valid hex-encoded string",
 			}
@@ -52,9 +56,9 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	if err != nil {
 		return identifier.Block{}, fmt.Errorf("could not get first: %w", err)
 	}
-	if block.Index < first {
+	if *block.Index < first {
 		return identifier.Block{}, failure.InvalidBlock{
-			Index:   block.Index,
+			Index:   *block.Index,
 			Hash:    block.Hash,
 			Message: fmt.Sprintf("block index is below first indexed block (first: %d)", first),
 		}
@@ -65,22 +69,22 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	if err != nil {
 		return identifier.Block{}, fmt.Errorf("could not get last: %w", err)
 	}
-	if block.Index > last {
+	if *block.Index > last {
 		return identifier.Block{}, failure.UnknownBlock{
-			Index:   block.Index,
+			Index:   *block.Index,
 			Hash:    block.Hash,
 			Message: fmt.Sprintf("block index is above last indexed block (last: %d)", last),
 		}
 	}
 
 	// The given block ID should match the block ID at the given height.
-	header, err := v.index.Header(block.Index)
+	header, err := v.index.Header(*block.Index)
 	if err != nil {
 		return identifier.Block{}, fmt.Errorf("could not get header: %w", err)
 	}
 	if block.Hash != "" && block.Hash != header.ID().String() {
 		return identifier.Block{}, failure.InvalidBlock{
-			Index:   block.Index,
+			Index:   *block.Index,
 			Hash:    block.Hash,
 			Message: fmt.Sprintf("block hash does not match known hash for height (known: %s)", header.ID().String()),
 		}
