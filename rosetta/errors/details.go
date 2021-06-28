@@ -14,8 +14,8 @@
 
 package errors
 
-// Detail function can be used to provide more detailed information about a specific
-// error instance.
+// Detail represents a function that can be used to provide more detailed information
+// about a specific error instance.
 type Detail func(*Error)
 
 // WithInt adds an integer value to the error details.
@@ -47,7 +47,6 @@ func WithString(key string, value string) Detail {
 }
 
 // WithError adds the information about a specific error to the error details.
-// TODO: check - should we silently occupy 'error' field?
 func WithError(e error) Detail {
 	return func(err *Error) {
 		err.Details["error"] = e.Error()

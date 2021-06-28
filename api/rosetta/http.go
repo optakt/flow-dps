@@ -16,6 +16,7 @@ package rosetta
 
 import (
 	"github.com/labstack/echo/v4"
+
 	"github.com/optakt/flow-dps/rosetta/errors"
 )
 
