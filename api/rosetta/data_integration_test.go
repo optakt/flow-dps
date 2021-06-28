@@ -64,9 +64,7 @@ const (
 	invalidNetwork    = "invalid-network"
 	invalidToken      = "invalid-token"
 
-	invalidBlockHash = "notHexValuenotHexValuenotHexValuenotHexValuenotHexValuenotHexVal"
-
-	validBlockHashLen = 64
+	invalidBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2z" // invalid hex value
 )
 
 func setupDB(t *testing.T) *badger.DB {

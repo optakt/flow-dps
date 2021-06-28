@@ -599,7 +599,7 @@ func TestRetriever_Block(t *testing.T) {
 					op = withdrawalOp
 				}
 
-				op.RelatedIDs = nil // Unset RelatedIDs to prevent having duplicate related IDs.
+				op.RelatedIDs = nil // unset RelatedIDs to prevent having duplicate related IDs.
 				return &op, nil
 			},
 		}
@@ -684,7 +684,7 @@ func TestRetriever_Block(t *testing.T) {
 					op = withdrawalOp
 				}
 
-				op.RelatedIDs = nil // Unset RelatedIDs to prevent having duplicate related IDs.
+				op.RelatedIDs = nil // unset RelatedIDs to prevent having duplicate related IDs.
 				return &op, nil
 			},
 		}
@@ -768,7 +768,7 @@ func TestRetriever_Block(t *testing.T) {
 					op = withdrawalOp
 				}
 
-				op.RelatedIDs = nil // Unset RelatedIDs to prevent having duplicate related IDs.
+				op.RelatedIDs = nil // unset RelatedIDs to prevent having duplicate related IDs.
 				return &op, nil
 			},
 		}
@@ -1244,7 +1244,7 @@ func TestRetriever_Transaction(t *testing.T) {
 					op = withdrawalOp
 				}
 
-				op.RelatedIDs = nil // Unset RelatedIDs to prevent having duplicate related IDs.
+				op.RelatedIDs = nil // unset RelatedIDs to prevent having duplicate related IDs.
 				return &op, nil
 			},
 		}

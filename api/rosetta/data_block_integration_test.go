@@ -50,7 +50,7 @@ func TestAPI_Block(t *testing.T) {
 		midHeader1  = knownHeader(13)
 		midHeader2  = knownHeader(43)
 		midHeader3  = knownHeader(44)
-		lastHeader  = knownHeader(425) // Header of last indexed block
+		lastHeader  = knownHeader(425) // header of last indexed block
 	)
 
 	const (
@@ -118,7 +118,7 @@ func TestAPI_Block(t *testing.T) {
 			wantTimestamp:        convert.RosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
 			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
-			validateBlock:        validateBlock(t, midHeader3.Height, midHeader3.ID().String()), // Verify that the returned block ID has both height and hash
+			validateBlock:        validateBlock(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
 		},
 		{
 			name:    "last indexed block",
@@ -143,15 +143,12 @@ func TestAPI_Block(t *testing.T) {
 			err = api.Block(ctx)
 			assert.NoError(t, err)
 
-			// Unpack response.
 			var blockResponse rosetta.BlockResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &blockResponse))
 			require.NotNil(t, blockResponse.Block)
 
-			// Validate index/hash of returned block.
 			test.validateBlock(blockResponse.Block.ID)
 
-			// Verify the index/hash of the parent block.
 			assert.Equal(t, test.request.BlockID.Index-1, blockResponse.Block.ParentID.Index)
 			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 
@@ -173,7 +170,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		validBlockHash   = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
 		validBlockHeight = 44
 
-		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // BlockID a character too short
+		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character too short
 		lastHeight       = 425
 	)
 
@@ -326,7 +323,6 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			_, ctx, err := setupRecorder(blockEndpoint, test.request)
 			require.NoError(t, err)
 
-			// Execute the request.
 			err = api.Block(ctx)
 			test.checkErr(t, err)
 		})
@@ -466,21 +462,17 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 		op1 := tx.Operations[0]
 		op2 := tx.Operations[1]
 
-		// Validate operation and status.
 		assert.Equal(t, op1.Type, dps.OperationTransfer)
 		assert.Equal(t, op1.Status, dps.StatusCompleted)
 
-		// Validate currency.
 		assert.Equal(t, op1.Amount.Currency.Symbol, dps.FlowSymbol)
 		assert.Equal(t, op1.Amount.Currency.Decimals, uint(dps.FlowDecimals))
 
-		// Validate address.
 		address := op1.AccountID.Address
 		if address != from && address != to {
 			t.Errorf("unexpected account address (%v)", address)
 		}
 
-		// Validate transferred amount.
 		wantValue := strconv.FormatInt(amount, 10)
 		if address == from {
 			wantValue = "-" + wantValue
@@ -488,26 +480,21 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 
 		assert.Equal(t, op1.Amount.Value, wantValue)
 
-		// Validate related operations.
 		if assert.Len(t, op1.RelatedIDs, 1) {
 			assert.Equal(t, op1.RelatedIDs[0], op2.ID)
 		}
 
-		// Validate operation and status.
 		assert.Equal(t, op2.Type, dps.OperationTransfer)
 		assert.Equal(t, op2.Status, dps.StatusCompleted)
 
-		// Validate currency.
 		assert.Equal(t, op2.Amount.Currency.Symbol, dps.FlowSymbol)
 		assert.Equal(t, op2.Amount.Currency.Decimals, uint(dps.FlowDecimals))
 
-		// Validate address.
 		address = op2.AccountID.Address
 		if address != from && address != to {
 			t.Errorf("unexpected account address (%v)", address)
 		}
 
-		// Validate transferred amount.
 		wantValue = strconv.FormatInt(amount, 10)
 		if address == from {
 			wantValue = "-" + wantValue
@@ -515,7 +502,6 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 
 		assert.Equal(t, op2.Amount.Value, wantValue)
 
-		// Validate related operations.
 		if assert.Len(t, op2.RelatedIDs, 1) {
 			assert.Equal(t, op2.RelatedIDs[0], op1.ID)
 		}

@@ -24,22 +24,22 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-// StatusRequest implements the request schema for /network/status, as described
-// in https://www.rosetta-api.org/docs/NetworkApi.html#request-2.
+// StatusRequest implements the request schema for /network/status.
+// See https://www.rosetta-api.org/docs/NetworkApi.html#request-2
 type StatusRequest struct {
 	NetworkID identifier.Network `json:"network_identifier"`
 }
 
-// StatusResponse implements the successful response schema for /network/status, as described
-// in https://www.rosetta-api.org/docs/NetworkApi.html#200---ok-2.
+// StatusResponse implements the successful response schema for /network/status.
+// See https://www.rosetta-api.org/docs/NetworkApi.html#200---ok-2
 type StatusResponse struct {
 	CurrentBlockID        identifier.Block `json:"current_block_identifier"`
 	CurrentBlockTimestamp int64            `json:"current_block_timestamp"`
 	OldestBlockID         identifier.Block `json:"oldest_block_identifier"`
 }
 
-// Status implements the /network/status endpoint of the Rosetta Data API, as
-// described in https://www.rosetta-api.org/docs/NetworkApi.html#networkstatus.
+// Status implements the /network/status endpoint of the Rosetta Data API.
+// See https://www.rosetta-api.org/docs/NetworkApi.html#networkstatus
 func (d *Data) Status(ctx echo.Context) error {
 
 	var req StatusRequest
@@ -78,6 +78,9 @@ func (d *Data) Status(ctx echo.Context) error {
 		CurrentBlockTimestamp: timestamp.UnixNano() / 1_000_000,
 		OldestBlockID:         oldest,
 	}
+
+	// TODO: Implement genesis block return
+	//       https://github.com/optakt/flow-dps/issues/229
 
 	return ctx.JSON(http.StatusOK, res)
 }

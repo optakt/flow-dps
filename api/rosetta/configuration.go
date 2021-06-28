@@ -22,6 +22,7 @@ import (
 // Configuration represents the configuration parameters of a particular blockchain from
 // the Rosetta API's perspective. It details some blockchain metadata, its supported operations,
 // errors, and more.
+// See https://www.rosetta-api.org/docs/NetworkApi.html#networkoptions
 type Configuration interface {
 	Network() identifier.Network
 	Version() meta.Version

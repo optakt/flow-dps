@@ -45,7 +45,7 @@ func IndexFromAPI(client APIClient) *Index {
 	return &i
 }
 
-// First returns the height of the first indexed finalized block.
+// First returns the height of the first finalized block that was indexed.
 func (i *Index) First() (uint64, error) {
 
 	req := GetFirstRequest{}
@@ -57,7 +57,7 @@ func (i *Index) First() (uint64, error) {
 	return res.Height, nil
 }
 
-// Last returns the height of the last indexed finalized block.
+// Last returns the height of the last finalized block that was indexed.
 func (i *Index) Last() (uint64, error) {
 
 	req := GetLastRequest{}
@@ -203,7 +203,7 @@ func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error)
 		var transactionID flow.Identifier
 		err = cbor.Unmarshal(id, &transactionID)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode transaction ID %q: %w", id, err)
+			return nil, fmt.Errorf("could not decode transaction ID (%x): %w", id, err)
 		}
 
 		transactions = append(transactions, transactionID)

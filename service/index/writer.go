@@ -116,7 +116,7 @@ func (w *Writer) Transactions(blockID flow.Identifier, collections []flow.LightC
 	for _, collection := range collections {
 		err := w.db.Update(w.storage.SaveCollection(collection))
 		if err != nil {
-			return fmt.Errorf("unable to save collection: %w", err)
+			return fmt.Errorf("could not save collection: %w", err)
 		}
 
 		cIDs = append(cIDs, collection.ID())
@@ -127,7 +127,7 @@ func (w *Writer) Transactions(blockID flow.Identifier, collections []flow.LightC
 	for _, transaction := range transactions {
 		err := w.db.Update(w.storage.SaveTransaction(transaction))
 		if err != nil {
-			return fmt.Errorf("unable to save transaction: %w", err)
+			return fmt.Errorf("could not save transaction: %w", err)
 		}
 
 		tIDs = append(tIDs, transaction.ID())
@@ -136,13 +136,13 @@ func (w *Writer) Transactions(blockID flow.Identifier, collections []flow.LightC
 	// Index all collection IDs within a block.
 	err := w.db.Update(w.storage.SaveCollections(blockID, cIDs))
 	if err != nil {
-		return fmt.Errorf("unable to save block collection list: %w", err)
+		return fmt.Errorf("could not save block collection list: %w", err)
 	}
 
 	// Index all transaction IDs within a block.
 	err = w.db.Update(w.storage.SaveTransactions(blockID, tIDs))
 	if err != nil {
-		return fmt.Errorf("unable to save block transaction list: %w", err)
+		return fmt.Errorf("could not save block transaction list: %w", err)
 	}
 
 	return nil

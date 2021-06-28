@@ -104,22 +104,17 @@ func TestAPI_Balance(t *testing.T) {
 			rec, ctx, err := setupRecorder(balanceEndpoint, test.request)
 			require.NoError(t, err)
 
-			// Execute the request.
 			err = api.Balance(ctx)
 			assert.NoError(t, err)
 
 			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-			// Unpack response.
 			var balanceResponse rosetta.BalanceResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &balanceResponse))
 
 			test.validateBlock(balanceResponse.BlockID)
 
-			// Verify that there is one balance in the response.
 			if assert.Len(t, balanceResponse.Balances, 1) {
-
-				// Verify returned balance - both the value and that the output matches the input spec.
 				balance := balanceResponse.Balances[0]
 
 				assert.Equal(t, test.request.Currencies[0].Symbol, balance.Currency.Symbol)
@@ -146,16 +141,14 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 	)
 
 	const (
-		invalidAddress = "0000000000000000" // Valid 16-digit hex value but not a valid account ID
+		invalidAddress = "0000000000000000" // valid 16-digit hex value but not a valid account ID
 
-		trimmedBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2" // Block hash a character short
+		trimmedBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2" // block hash a character short
 
-		trimmedAddress    = "754aed9de619764" // Account ID a character short
-		invalidAddressHex = "Not Hexadecimal "
+		trimmedAddress    = "754aed9de619764"  // account ID a character short
+		invalidAddressHex = "754aed9de619764z" // invalid hex string
 
 		accFirstOccurrence = 13
-
-		cadenceVaultNotFoundErr = "could not invoke script: script execution encountered error: [Error Code: 1101] cadence runtime error Execution failed:\nerror: panic: Could not borrow Balance reference to the Vault\n  --> d6b84b6f36db7d880d4ecc2a6a952094301873657e204e86d4cc9282c0df4b3d:11:11\n   |\n11 |         ?? panic(\"Could not borrow Balance reference to the Vault\")\n   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
 	)
 
 	tests := []struct {
@@ -418,7 +411,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: accFirstOccurrence - 1}, // One block before the account is created
+				BlockID:    identifier.Block{Index: accFirstOccurrence - 1}, // one block before the account is created
 				Currencies: defaultCurrency(),
 			},
 
@@ -529,7 +522,6 @@ func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 			_, ctx, err := setupRecorder(balanceEndpoint, test.payload, test.prepare)
 			require.NoError(t, err)
 
-			// Execute the request.
 			err = api.Balance(ctx)
 
 			assert.Error(t, err)

@@ -29,7 +29,7 @@ import (
 // Server is a simple implementation of the generated APIServer interface. It
 // uses an index reader interface as the backend to retrieve the desired data.
 // This is generally an on-disk interface, but could be a GRPC-based index as
-// well, in which case there is be a double redirection.
+// well, in which case there is a double redirection.
 type Server struct {
 	index index.Reader
 	codec index.Codec

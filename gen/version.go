@@ -181,6 +181,10 @@ func MiddlewareVersion() (string, error) {
 		// Repository does not have any tags, return placeholder.
 		return defaultMiddlewareVersion, nil
 	}
+	if tag == nil {
+		// Repository does not have any relevant tags, return placeholder.
+		return defaultMiddlewareVersion, nil
+	}
 
 	// Strip leading `v` from the tag if it exists.
 	tagName := strings.TrimPrefix(tag.Name().Short(), "v")

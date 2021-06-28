@@ -96,9 +96,9 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	// that parameters related to the block are available from within the script.
 	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
 
-	// Initialize the read function. A shared cache is used between all heights
+	// Initialize the read function. We use a shared cache between all heights
 	// here. It's a smart cache, which means that items that are accessed often
-	// are more likely to be kept, regardless of height. This allows putting
+	// are more likely to be kept, regardless of height. This allows us to put
 	// an upper bound on total cache size while using it for all heights.
 	read := readRegister(i.index, i.cache, height)
 
