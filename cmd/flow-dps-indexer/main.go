@@ -135,7 +135,7 @@ func run() int {
 
 	// Check if index already exists.
 	_, err = index.NewReader(db, storage).First()
-	indexExists := err != nil
+	indexExists := err == nil
 	if indexExists && !flagForce {
 		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
 		return failure
