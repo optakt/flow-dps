@@ -20,75 +20,74 @@ import (
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
-	"github.com/fxamacker/cbor/v2"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-func SaveFirst(height uint64) func(*badger.Txn) error {
-	return save(encodeKey(prefixFirst), height)
+func (l *Library) SaveFirst(height uint64) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixFirst), height)
 }
 
-func SaveLast(height uint64) func(*badger.Txn) error {
-	return save(encodeKey(prefixLast), height)
+func (l *Library) SaveLast(height uint64) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixLast), height)
 }
 
-func SaveCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error {
-	return save(encodeKey(prefixCommit, height), commit)
+func (l *Library) SaveCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixCommit, height), commit)
 }
 
-func SaveHeader(height uint64, header *flow.Header) func(*badger.Txn) error {
-	return save(encodeKey(prefixHeader, height), header)
+func (l *Library) SaveHeader(height uint64, header *flow.Header) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixHeader, height), header)
 }
 
-func SaveEvents(height uint64, typ flow.EventType, events []flow.Event) func(*badger.Txn) error {
+func (l *Library) SaveEvents(height uint64, typ flow.EventType, events []flow.Event) func(*badger.Txn) error {
 	hash := xxhash.ChecksumString64(string(typ))
-	return save(encodeKey(prefixEvents, height, hash), events)
+	return l.save(encodeKey(prefixEvents, height, hash), events)
 }
 
-func SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
-	return save(encodeKey(prefixPayload, path, height), payload)
+func (l *Library) SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixPayload, path, height), payload)
 }
 
-func SaveHeight(blockID flow.Identifier, height uint64) func(*badger.Txn) error {
-	return save(encodeKey(prefixHeight, blockID), height)
+func (l *Library) SaveHeight(blockID flow.Identifier, height uint64) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixHeight, blockID), height)
 }
 
-func SaveTransaction(transaction flow.Transaction) func(*badger.Txn) error {
-	return save(encodeKey(prefixTransaction, transaction.ID()), transaction)
+func (l *Library) SaveTransaction(transaction flow.Transaction) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixTransaction, transaction.ID()), transaction)
 }
 
-func SaveTransactions(blockID flow.Identifier, transactions []flow.Identifier) func(*badger.Txn) error {
-	return save(encodeKey(prefixTransactions, blockID), transactions)
+func (l *Library) SaveTransactions(blockID flow.Identifier, transactions []flow.Identifier) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixTransactions, blockID), transactions)
 }
 
-func SaveCollection(collection flow.LightCollection) func(*badger.Txn) error {
-	return save(encodeKey(prefixCollection, collection.ID()), collection)
+func (l *Library) SaveCollection(collection flow.LightCollection) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixCollection, collection.ID()), collection)
 }
 
-func SaveCollections(blockID flow.Identifier, collections []flow.Identifier) func(*badger.Txn) error {
-	return save(encodeKey(prefixCollections, blockID), collections)
+func (l *Library) SaveCollections(blockID flow.Identifier, collections []flow.Identifier) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixCollections, blockID), collections)
 }
 
-func RetrieveFirst(height *uint64) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixFirst), height)
+func (l *Library) RetrieveFirst(height *uint64) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixFirst), height)
 }
 
-func RetrieveLast(height *uint64) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixLast), height)
+func (l *Library) RetrieveLast(height *uint64) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixLast), height)
 }
 
-func RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixHeader, height), header)
+func (l *Library) RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixHeader, height), header)
 }
 
-func RetrieveCommit(height uint64, commit *flow.StateCommitment) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixCommit, height), commit)
+func (l *Library) RetrieveCommit(height uint64, commit *flow.StateCommitment) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixCommit, height), commit)
 }
 
-func RetrieveEvents(height uint64, types []flow.EventType, events *[]flow.Event) func(*badger.Txn) error {
+func (l *Library) RetrieveEvents(height uint64, types []flow.EventType, events *[]flow.Event) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
 		lookup := make(map[uint64]struct{})
 		for _, typ := range types {
@@ -117,15 +116,7 @@ func RetrieveEvents(height uint64, types []flow.EventType, events *[]flow.Event)
 			// Unmarshal event batch and append them to result slice.
 			var evts []flow.Event
 			err := it.Item().Value(func(val []byte) error {
-				val, err := decompressor.DecodeAll(val, nil)
-				if err != nil {
-					return fmt.Errorf("could not decompress events: %w", err)
-				}
-				err = cbor.Unmarshal(val, &evts)
-				if err != nil {
-					return fmt.Errorf("could not decode events: %w", err)
-				}
-				return nil
+				return l.codec.Unmarshal(val, &evts)
 			})
 			if err != nil {
 				return fmt.Errorf("could not unmarshal events: %w", err)
@@ -138,7 +129,7 @@ func RetrieveEvents(height uint64, types []flow.EventType, events *[]flow.Event)
 	}
 }
 
-func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
+func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
 		key := encodeKey(prefixPayload, path, height)
 		it := tx.NewIterator(badger.IteratorOptions{
@@ -157,36 +148,28 @@ func RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) f
 		}
 
 		err := it.Item().Value(func(val []byte) error {
-			val, err := decompressor.DecodeAll(val, nil)
-			if err != nil {
-				return fmt.Errorf("could not decompress payload: %w", err)
-			}
-			err = cbor.Unmarshal(val, &payload)
-			if err != nil {
-				return fmt.Errorf("could not decode payload: %w", err)
-			}
-			return nil
+			return l.codec.Unmarshal(val, payload)
 		})
 		return err
 	}
 }
 
-func RetrieveHeight(blockID flow.Identifier, height *uint64) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixHeight, blockID), height)
+func (l *Library) RetrieveHeight(blockID flow.Identifier, height *uint64) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixHeight, blockID), height)
 }
 
-func RetrieveTransaction(transactionID flow.Identifier, transaction *flow.Transaction) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixTransaction, transactionID), transaction)
+func (l *Library) RetrieveTransaction(transactionID flow.Identifier, transaction *flow.Transaction) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixTransaction, transactionID), transaction)
 }
 
-func RetrieveTransactions(blockID flow.Identifier, transactions *[]flow.Identifier) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixTransactions, blockID), transactions)
+func (l *Library) RetrieveTransactions(blockID flow.Identifier, transactions *[]flow.Identifier) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixTransactions, blockID), transactions)
 }
 
-func RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixCollection, collectionID), collection)
+func (l *Library) RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixCollection, collectionID), collection)
 }
 
-func RetrieveCollections(blockID flow.Identifier, collections *[]flow.Identifier) func(*badger.Txn) error {
-	return retrieve(encodeKey(prefixCollections, blockID), collections)
+func (l *Library) RetrieveCollections(blockID flow.Identifier, collections *[]flow.Identifier) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixCollections, blockID), collections)
 }

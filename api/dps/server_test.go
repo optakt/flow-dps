@@ -23,27 +23,25 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-
 	"github.com/optakt/flow-dps/models/convert"
-	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestNewServer(t *testing.T) {
 
 	index := &mocks.Reader{}
-	s := NewServer(index)
+	codec := &mocks.Codec{}
+	s := NewServer(index, codec)
 
 	assert.NotNil(t, s)
 	assert.NotNil(t, s.codec)
 	assert.Equal(t, index, s.index)
+	assert.Equal(t, codec, s.codec)
 }
 
 func TestServer_GetFirst(t *testing.T) {
 
-	var (
-		testHeight = uint64(128)
-	)
+	testHeight := uint64(128)
 
 	tests := []struct {
 		description string
@@ -166,12 +164,10 @@ func TestServer_GetLast(t *testing.T) {
 }
 
 func TestServer_GetHeader(t *testing.T) {
-
 	var (
-		testCodec, _ = dps.Encoding.EncMode()
-		testHeight   = uint64(128)
-		testHeader   = flow.Header{Height: testHeight}
-		testData, _  = testCodec.Marshal(testHeader)
+		testHeight = uint64(128)
+		testHeader = flow.Header{Height: testHeight}
+		testData   = []byte(`testValue`)
 	)
 
 	tests := []struct {
@@ -223,9 +219,15 @@ func TestServer_GetHeader(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
+			codec := &mocks.Codec{
+				MarshalFunc: func(v interface{}) ([]byte, error) {
+					assert.IsType(t, &flow.Header{}, v)
+					return testData, nil
+				},
+			}
 			index := &mocks.Reader{}
 			s := Server{
-				codec: testCodec,
+				codec: codec,
 				index: index,
 			}
 
@@ -329,16 +331,14 @@ func TestServer_GetCommit(t *testing.T) {
 }
 
 func TestServer_GetEvents(t *testing.T) {
-
 	var (
-		testCodec, _ = dps.Encoding.EncMode()
-		testHeight   = uint64(128)
-		testEvents   = []flow.Event{
+		testHeight = uint64(128)
+		testEvents = []flow.Event{
 			{TransactionID: flow.Identifier{0x1, 0x2}},
 			{TransactionID: flow.Identifier{0x3, 0x4}},
 		}
-		testData, _ = testCodec.Marshal(testEvents)
-		testTypes   = []flow.EventType{
+		testData  = []byte(`testValue`)
+		testTypes = []flow.EventType{
 			"type1",
 			"type2",
 		}
@@ -400,9 +400,15 @@ func TestServer_GetEvents(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 			t.Parallel()
 
+			codec := &mocks.Codec{
+				MarshalFunc: func(v interface{}) ([]byte, error) {
+					assert.IsType(t, []flow.Event{}, v)
+					return testData, nil
+				},
+			}
 			index := &mocks.Reader{}
 			s := Server{
-				codec: testCodec,
+				codec: codec,
 				index: index,
 			}
 

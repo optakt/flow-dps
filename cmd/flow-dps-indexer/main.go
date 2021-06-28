@@ -25,11 +25,13 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/mapper"
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 const (
@@ -92,7 +94,16 @@ func run() int {
 	}
 	defer data.Close()
 
-	_, err = index.NewReader(db).First()
+	// Initialize storage library.
+	codec, err := zbor.NewCodec()
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize storage codec")
+		return failure
+	}
+	storage := storage.New(codec)
+
+	// Check if index already exists.
+	_, err = index.NewReader(db, storage).First()
 	indexExists := err != nil
 	if indexExists && !flagForce {
 		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
@@ -111,7 +122,7 @@ func run() int {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 		return failure
 	}
-	index := index.NewWriter(db)
+	index := index.NewWriter(db, storage)
 	mapper, err := mapper.New(log, chain, feeder, index, mapper.WithCheckpointFile(flagCheckpoint))
 	if err != nil {
 		log.Error().Str("checkpoint", flagCheckpoint).Err(err).Msg("could not initialize mapper")

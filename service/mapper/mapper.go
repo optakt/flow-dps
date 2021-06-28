@@ -466,7 +466,7 @@ Outer:
 			// the end of this block and index them.
 			count := 0
 			n := 1000
-			total := ((len(paths) + n - 1) / n)
+			total := (len(paths) + n - 1) / n
 			log.Debug().Int("num_paths", len(paths)).Int("num_batches", total).Msg("path batching executed")
 			for start := 0; start < len(paths); start += n {
 				// This loop may take a while, especially for the root checkpoint

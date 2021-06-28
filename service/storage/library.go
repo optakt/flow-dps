@@ -12,14 +12,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package dps
+package storage
 
 import (
-	"github.com/fxamacker/cbor/v2"
+	"github.com/optakt/flow-dps/models/index"
 )
 
-var Encoding = cbor.CanonicalEncOptions()
+type Library struct {
+	codec index.Codec
+}
 
-func init() {
-	Encoding.Time = cbor.TimeRFC3339Nano
+func New(codec index.Codec) *Library {
+	lib := Library{
+		codec: codec,
+	}
+
+	return &lib
 }

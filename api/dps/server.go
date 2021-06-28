@@ -23,7 +23,6 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
-	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/index"
 )
 
@@ -33,14 +32,12 @@ import (
 // index as well, in which case there would be a double redirection.
 type Server struct {
 	index index.Reader
-	codec cbor.EncMode
+	codec index.Codec
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index index.Reader) *Server {
-
-	codec, _ := dps.Encoding.EncMode()
+func NewServer(index index.Reader, codec index.Codec) *Server {
 
 	s := Server{
 		index: index,

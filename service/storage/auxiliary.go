@@ -18,11 +18,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/hashicorp/go-multierror"
-
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
 )
 
 // Fallback goes through the provided operations until one of them succeeds.
@@ -58,23 +54,15 @@ func Combine(ops ...func(*badger.Txn) error) func(*badger.Txn) error {
 	}
 }
 
-func retrieve(key []byte, value interface{}) func(tx *badger.Txn) error {
+func (l *Library) retrieve(key []byte, value interface{}) func(tx *badger.Txn) error {
 	return func(tx *badger.Txn) error {
 		item, err := tx.Get(key)
 		if err != nil {
 			return fmt.Errorf("unable to retrieve value: %w", err)
 		}
 
-		err = item.Value(func(val []byte) error {
-			val, err := decompressor.DecodeAll(val, nil)
-			if err != nil {
-				return fmt.Errorf("unable to decompress value: %w", err)
-			}
-			err = cbor.Unmarshal(val, value)
-			if err != nil {
-				return fmt.Errorf("unable to decode value: %w", err)
-			}
-			return nil
+		err = item.Value(func(b []byte) error {
+			return l.codec.Unmarshal(b, value)
 		})
 		if err != nil {
 			return fmt.Errorf("unable to retrieve value: %w", err)
@@ -84,25 +72,13 @@ func retrieve(key []byte, value interface{}) func(tx *badger.Txn) error {
 	}
 }
 
-func save(key []byte, value interface{}) func(*badger.Txn) error {
+func (l *Library) save(key []byte, value interface{}) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
-		val, err := codec.Marshal(value)
+		b, err := l.codec.Marshal(value)
 		if err != nil {
 			return fmt.Errorf("unable to encode value: %w", err)
 		}
 
-		compressor := defaultCompressor
-		switch value.(type) {
-		case *flow.Header:
-			compressor = headerCompressor
-		case *ledger.Payload:
-			compressor = payloadCompressor
-		case []flow.Event:
-			compressor = eventsCompressor
-		}
-
-		val = compressor.EncodeAll(val, nil)
-
-		return tx.Set(key, val)
+		return tx.Set(key, b)
 	}
 }

@@ -35,19 +35,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/rosetta/converter"
 
 	"github.com/optakt/flow-dps/api/rosetta"
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
+	"github.com/optakt/flow-dps/rosetta/converter"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/meta"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/validator"
-	"github.com/optakt/flow-dps/service/dictionaries"
 	"github.com/optakt/flow-dps/service/index"
+	"github.com/optakt/flow-dps/service/storage"
 	"github.com/optakt/flow-dps/testing/snapshots"
 )
 
@@ -79,10 +80,9 @@ func setupDB(t *testing.T) *badger.DB {
 	require.NoError(t, err)
 
 	reader := hex.NewDecoder(strings.NewReader(snapshots.Rosetta))
-	dict, _ := hex.DecodeString(dictionaries.Payload)
 
 	decompressor, err := zstd.NewReader(reader,
-		zstd.WithDecoderDicts(dict),
+		zstd.WithDecoderDicts(zbor.Dictionary),
 	)
 	require.NoError(t, err)
 
@@ -95,7 +95,10 @@ func setupDB(t *testing.T) *badger.DB {
 func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	t.Helper()
 
-	index := index.NewReader(db)
+	codec, err := zbor.NewCodec()
+	require.NoError(t, err)
+	storage := storage.New(codec)
+	index := index.NewReader(db, storage)
 
 	params := dps.FlowParams[dps.FlowTestnet]
 	config := configuration.New(params.ChainID)

@@ -22,23 +22,23 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-
-	"github.com/optakt/flow-dps/service/storage"
 )
 
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
 type Reader struct {
-	db *badger.DB
+	db      *badger.DB
+	storage Storage
 }
 
 // NewReader creates a new index reader, using the given database as the
 // underlying state repository. It is recommended to provide a read-only Badger
 // database.
-func NewReader(db *badger.DB) *Reader {
+func NewReader(db *badger.DB, storage Storage) *Reader {
 
 	r := Reader{
-		db: db,
+		db:      db,
+		storage: storage,
 	}
 
 	return &r
@@ -47,21 +47,21 @@ func NewReader(db *badger.DB) *Reader {
 // First returns the height of the first finalized block that was indexed.
 func (r *Reader) First() (uint64, error) {
 	var height uint64
-	err := r.db.View(storage.RetrieveFirst(&height))
+	err := r.db.View(r.storage.RetrieveFirst(&height))
 	return height, err
 }
 
 // Last returns the height of the last finalized block that was indexed.
 func (r *Reader) Last() (uint64, error) {
 	var height uint64
-	err := r.db.View(storage.RetrieveLast(&height))
+	err := r.db.View(r.storage.RetrieveLast(&height))
 	return height, err
 }
 
 // Header returns the header for the finalized block at the given height.
 func (r *Reader) Header(height uint64) (*flow.Header, error) {
 	var header flow.Header
-	err := r.db.View(storage.RetrieveHeader(height, &header))
+	err := r.db.View(r.storage.RetrieveHeader(height, &header))
 	return &header, err
 }
 
@@ -69,7 +69,7 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 // execution of the finalized block at the given height.
 func (r *Reader) Commit(height uint64) (flow.StateCommitment, error) {
 	var commit flow.StateCommitment
-	err := r.db.View(storage.RetrieveCommit(height, &commit))
+	err := r.db.View(r.storage.RetrieveCommit(height, &commit))
 	return commit, err
 }
 
@@ -89,7 +89,7 @@ func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, e
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
 	var events []flow.Event
-	err = r.db.View(storage.RetrieveEvents(height, types, &events))
+	err = r.db.View(r.storage.RetrieveEvents(height, types, &events))
 	return events, err
 }
 
@@ -113,7 +113,7 @@ func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, 
 	err = r.db.View(func(tx *badger.Txn) error {
 		for _, path := range paths {
 			var payload ledger.Payload
-			err := storage.RetrievePayload(height, path, &payload)(tx)
+			err := r.storage.RetrievePayload(height, path, &payload)(tx)
 			if errors.Is(err, badger.ErrKeyNotFound) {
 				values = append(values, nil)
 				continue
@@ -131,34 +131,34 @@ func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, 
 // Height returns the height of the given block ID.
 func (r *Reader) Height(blockID flow.Identifier) (uint64, error) {
 	var height uint64
-	err := r.db.View(storage.RetrieveHeight(blockID, &height))
+	err := r.db.View(r.storage.RetrieveHeight(blockID, &height))
 	return height, err
 }
 
 // Transaction returns the transaction with the given ID.
 func (r *Reader) Transaction(transactionID flow.Identifier) (*flow.Transaction, error) {
 	var transaction flow.Transaction
-	err := r.db.View(storage.RetrieveTransaction(transactionID, &transaction))
+	err := r.db.View(r.storage.RetrieveTransaction(transactionID, &transaction))
 	return &transaction, err
 }
 
 // Transactions returns the transaction IDs within the block with the given ID.
 func (r *Reader) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
 	var transactions []flow.Identifier
-	err := r.db.View(storage.RetrieveTransactions(blockID, &transactions))
+	err := r.db.View(r.storage.RetrieveTransactions(blockID, &transactions))
 	return transactions, err
 }
 
 // Collection returns the transaction IDs with the given ID.
 func (r *Reader) Collection(collectionID flow.Identifier) (*flow.LightCollection, error) {
 	var collection flow.LightCollection
-	err := r.db.View(storage.RetrieveCollection(collectionID, &collection))
+	err := r.db.View(r.storage.RetrieveCollection(collectionID, &collection))
 	return &collection, err
 }
 
 // Collections returns the collection IDs within the block with the given ID.
 func (r *Reader) Collections(blockID flow.Identifier) ([]flow.Identifier, error) {
 	var collections []flow.Identifier
-	err := r.db.View(storage.RetrieveCollections(blockID, &collections))
+	err := r.db.View(r.storage.RetrieveCollections(blockID, &collections))
 	return collections, err
 }
