@@ -474,39 +474,42 @@ Outer:
 				updated[path] = struct{}{}
 			}
 
+			if !m.cfg.IndexPayloads {
+				commit = step.Commit
+				continue
+			}
+
 			// We then divide the remaining paths into chunks of 1000. For each
 			// batch, we retrieve the payloads from the state trie as it was at
 			// the end of this block and index them.
-			if m.cfg.IndexPayloads {
-				count := 0
-				n := 1000
-				total := (len(paths) + n - 1) / n
-				log.Debug().Int("num_paths", len(paths)).Int("num_batches", total).Msg("path batching executed")
-				for start := 0; start < len(paths); start += n {
-					// This loop may take a while, especially for the root checkpoint
-					// updates, so check if we should quit.
-					select {
-					case <-m.stop:
-						break Outer
-					default:
-						// keep going
-					}
-
-					end := start + n
-					if end > len(paths) {
-						end = len(paths)
-					}
-					batch := paths[start:end]
-					payloads := step.Tree.UnsafeRead(batch)
-					err = m.index.Payloads(height, batch, payloads)
-					if err != nil {
-						return fmt.Errorf("could not index payloads: %w", err)
-					}
-
-					count++
-
-					log.Debug().Int("batch", count).Int("start", start).Int("end", end).Msg("path batch indexed")
+			count := 0
+			n := 1000
+			total := (len(paths) + n - 1) / n
+			log.Debug().Int("num_paths", len(paths)).Int("num_batches", total).Msg("path batching executed")
+			for start := 0; start < len(paths); start += n {
+				// This loop may take a while, especially for the root checkpoint
+				// updates, so check if we should quit.
+				select {
+				case <-m.stop:
+					break Outer
+				default:
+					// keep going
 				}
+
+				end := start + n
+				if end > len(paths) {
+					end = len(paths)
+				}
+				batch := paths[start:end]
+				payloads := step.Tree.UnsafeRead(batch)
+				err = m.index.Payloads(height, batch, payloads)
+				if err != nil {
+					return fmt.Errorf("could not index payloads: %w", err)
+				}
+
+				count++
+
+				log.Debug().Int("batch", count).Int("start", start).Int("end", end).Msg("path batch indexed")
 			}
 
 			// Finally, we forward the commit to the previous trie update and
