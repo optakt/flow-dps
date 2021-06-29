@@ -174,13 +174,11 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 	var (
 		validBlockHeight uint64 = 44
 		lastHeight       uint64 = 425
+
+		validBlockHash = knownHeader(validBlockHeight).ID().String()
 	)
 
-	const (
-		validBlockHash = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
-
-		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character too short
-	)
+	const trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character too short
 
 	var validBlockID = identifier.Block{
 		Index: &validBlockHeight,

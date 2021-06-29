@@ -303,7 +303,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			request: rosetta.BalanceRequest{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
-				BlockID:    identifier.Block{Hash: "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"},
+				BlockID:    identifier.Block{Index: nil, Hash: "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"},
 				Currencies: defaultCurrency(),
 			},
 

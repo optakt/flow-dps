@@ -38,8 +38,7 @@ func TestAPI_Status(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const oldestBlockID = "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"
-
+	oldestBlockID := knownHeader(0).ID().String()
 	lastBlock := knownHeader(425)
 
 	request := rosetta.StatusRequest{
