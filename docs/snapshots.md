@@ -37,7 +37,7 @@ When restoring the index, the snapshot needs to be decompressed using the same d
 Create a new index using the same inputs as for the original index.
 
 ```console
-$ flow-dps-indexer -t <trie_dir> -d <data_dir> -i <index_name> -a
+$ flow-dps-indexer -t <trie_dir> -d <data_dir> -i <index_dir> -a
 ```
 
 ### Create an index snapshot
@@ -45,7 +45,7 @@ $ flow-dps-indexer -t <trie_dir> -d <data_dir> -i <index_name> -a
 Creating an index snapshot is the same as described in the [Create a snapshot](#create-a-snapshot) section, while referencing the new index.
 
 ```console
-$ create-index-snapshot -i <path_to_new_index> > output.hex
+$ create-index-snapshot -i <new_index_dir> > output.hex
 ```
 
 By default the snapshot is hex-encoded.
