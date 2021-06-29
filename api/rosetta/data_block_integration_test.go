@@ -46,11 +46,12 @@ func TestAPI_Block(t *testing.T) {
 
 	// Headers of known blocks to verify.
 	var (
-		firstHeader = knownHeader(1)
-		midHeader1  = knownHeader(13)
-		midHeader2  = knownHeader(43)
-		midHeader3  = knownHeader(44)
-		lastHeader  = knownHeader(425) // header of last indexed block
+		firstHeader  = knownHeader(0)
+		secondHeader = knownHeader(1)
+		midHeader1   = knownHeader(13)
+		midHeader2   = knownHeader(43)
+		midHeader3   = knownHeader(44)
+		lastHeader   = knownHeader(425) // header of last indexed block
 	)
 
 	const (
@@ -61,8 +62,6 @@ func TestAPI_Block(t *testing.T) {
 		initialLoadTx = "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1"
 		transferTx    = "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c"
 	)
-
-	// TODO: add test case for block with height zero
 
 	tests := []struct {
 		name string
@@ -75,12 +74,21 @@ func TestAPI_Block(t *testing.T) {
 		validateBlock        validateBlockFunc
 	}{
 		{
-			name:    "child of first block",
+			// First block.
+			name:    "first block",
 			request: blockRequest(firstHeader),
 
 			wantTimestamp:  convert.RosettaTime(firstHeader.Timestamp),
 			wantParentHash: firstHeader.ParentID.String(),
 			validateBlock:  validateByHeader(t, firstHeader),
+		},
+		{
+			name:    "child of first block",
+			request: blockRequest(secondHeader),
+
+			wantTimestamp:  convert.RosettaTime(secondHeader.Timestamp),
+			wantParentHash: secondHeader.ParentID.String(),
+			validateBlock:  validateByHeader(t, secondHeader),
 		},
 		{
 			// Initial transfer of currency from the root account to the user - 100 tokens.
