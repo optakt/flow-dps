@@ -197,8 +197,7 @@ func validateByHeader(t *testing.T, header flow.Header) validateBlockFunc {
 }
 
 func getUint64P(n uint64) *uint64 {
-	x := n
-	return &x
+	return &n
 }
 
 func knownHeader(height uint64) flow.Header {

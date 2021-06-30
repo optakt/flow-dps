@@ -1824,6 +1824,5 @@ func baselineRetriever(t *testing.T) (*Retriever, error) {
 }
 
 func getUint64P(n uint64) *uint64 {
-	x := n
-	return &x
+	return &n
 }
