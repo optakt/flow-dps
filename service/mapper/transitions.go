@@ -246,13 +246,19 @@ func (t *Transitions) IndexRegisters(s *State) error {
 	}
 
 	// We will now collect and index 1000 registers at a time. This gives the
-	// FSM the chance to exit the loop between every 1000 payloads we index.
-	paths := make([]ledger.Path, 0, 1000)
-	payloads := make([]*ledger.Payload, 0, 1000)
+	// FSM the chance to exit the loop between every 1000 payloads we index. It
+	// doesn't really matter for badger if they are in random order, so this
+	// way of iterating should be fine.
+	n := 1000
+	paths := make([]ledger.Path, 0, n)
+	payloads := make([]*ledger.Payload, 0, n)
 	for path, payload := range s.registers {
 		paths = append(paths, path)
 		payloads = append(payloads, payload)
 		delete(s.registers, path)
+		if len(paths) >= n {
+			break
+		}
 	}
 
 	// Then we store the (maximum) 1000 paths and payloads.
