@@ -35,10 +35,6 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 		return identifier.Block{}, fmt.Errorf("block access with hash currently not supported")
 	}
 
-	// TODO: check - it was mentioned that we cannot retrieve blocks with height 0 (and other early blocks)
-	// since they're too far in the past and on incompatible networks.
-	// We should allow such requests now? (point of this whole exercise I guess)
-
 	// If a block hash is present, it should be a valid block ID for Flow.
 	if block.Hash != "" {
 		_, err := flow.HexStringToIdentifier(block.Hash)
