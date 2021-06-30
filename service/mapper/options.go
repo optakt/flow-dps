@@ -14,32 +14,8 @@
 
 package mapper
 
-import (
-	"math"
-
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
-)
-
-type State struct {
-	forest    Forest
-	status    Status
-	height    uint64
-	last      flow.StateCommitment
-	next      flow.StateCommitment
-	registers map[ledger.Path]*ledger.Payload
-	done      chan struct{}
-}
-
-func EmptyState(forest Forest) *State {
-	s := &State{
-		forest:    forest,
-		status:    StatusEmpty,
-		height:    math.MaxUint64,
-		last:      flow.StateCommitment{},
-		next:      flow.StateCommitment{},
-		registers: make(map[ledger.Path]*ledger.Payload),
-		done:      make(chan struct{}),
+func WithTransition(status Status, transition TransitionFunc) func(*FSM) {
+	return func(f *FSM) {
+		f.transitions[status] = transition
 	}
-	return s
 }

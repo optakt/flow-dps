@@ -171,12 +171,14 @@ func run() int {
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
-	fsm := mapper.NewFSM(state)
-	fsm.Add(mapper.Empty, transitions.BootstrapState)
-	fsm.Add(mapper.Ready, transitions.UpdateTree)
-	fsm.Add(mapper.Matched, transitions.IndexTree)
-	fsm.Add(mapper.Indexed, transitions.ForwardBlock)
-	fsm.Add(mapper.Forwarded, transitions.IndexChain)
+	fsm := mapper.NewFSM(state,
+		mapper.WithTransition(mapper.StatusEmpty, transitions.BootstrapState),
+		mapper.WithTransition(mapper.StatusUpdating, transitions.UpdateTree),
+		mapper.WithTransition(mapper.StatusMatched, transitions.CollectRegisters),
+		mapper.WithTransition(mapper.StatusCollected, transitions.IndexRegisters),
+		mapper.WithTransition(mapper.StatusIndexed, transitions.ForwardHeight),
+		mapper.WithTransition(mapper.StatusForwarded, transitions.IndexChain),
+	)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

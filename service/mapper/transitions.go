@@ -60,8 +60,8 @@ func NewTransitions(load Loader, chain Chain, feed Feeder, index index.Writer, o
 func (t *Transitions) BootstrapState(s *State) error {
 
 	// Bootstrapping should only happen when the state is empty.
-	if !Empty(s) {
-		return fmt.Errorf("invalid state for bootstrap")
+	if s.status != StatusEmpty {
+		return fmt.Errorf("invalid status for bootstrapping state (%s)", s.status)
 	}
 
 	// We always need at least one step in our forest, which is used as the
@@ -108,7 +108,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// We have now successfully bootstrapped. However, no blockchain data
 	// has been indexed, so we pretend like we just forwarded from the last
 	// indexed block.
-	s.state = stateForwarded
+	s.status = StatusForwarded
 
 	return nil
 }
@@ -118,8 +118,16 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// We should only update the tree if we are ready. We are ready as long as
 	// we are in the active state, but the forest does not contain the tree for
 	// the state commitment of the next finalized block.
-	if !Ready(s) {
-		return fmt.Errorf("invalid state for update")
+	if s.status != StatusUpdating {
+		return fmt.Errorf("invalid status for updating tree (%s)", s.status)
+	}
+
+	// If we have matched the tree with the next commit, we can go to the next
+	// state immediately.
+	ok := s.forest.Has(s.next)
+	if ok {
+		s.status = StatusMatched
+		return nil
 	}
 
 	// First, we get the next tree update from the feeder. We can skip it if
@@ -152,16 +160,15 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return fmt.Errorf("duplicate tree save")
 	}
 
-	// s.state = stateActive
 	return nil
 }
 
-func (t *Transitions) IndexTree(s *State) error {
+func (t *Transitions) CollectRegisters(s *State) error {
 
 	// We should only index data if we have found the tree that corresponds
 	// to the state commitment of the next finalized block.
-	if !Matched(s) {
-		return fmt.Errorf("invalid state for index")
+	if s.status != StatusMatched {
+		return fmt.Errorf("invalid status for collecting registers (%s)", s.status)
 	}
 
 	// If we index payloads, we are basically stepping back from (and including)
@@ -172,58 +179,32 @@ func (t *Transitions) IndexTree(s *State) error {
 	// changed payloads at each step.
 	if t.cfg.IndexPayloads {
 		commit := s.next
-		updated := make(map[ledger.Path]struct{})
 		for commit != s.last {
 
-			// In the first part, we get the step we are currently at and filter
-			// out any paths that have already been updated.
+			// We do this check only once, so that we don't need to do it for
+			// each item we retrieve. The tree should always be there, but we
+			// should check just to not fail silently.
 			ok := s.forest.Has(commit)
 			if !ok {
 				return fmt.Errorf("could not load tree (commit: %x)", commit)
 			}
 
+			// For each path, we retrieve the payload and add it to the
+			// registers we want to save later. If we already have a payload,
+			// we only keep that one, because we start with the newest one and
+			// previous ones within the same block are thus irrelevant.
 			paths, _ := s.forest.Paths(commit)
-			deduplicated := make([]ledger.Path, 0, len(paths))
+			tree, _ := s.forest.Tree(commit)
 			for _, path := range paths {
-				_, ok := updated[path]
+				_, ok := s.registers[path]
 				if ok {
 					continue
 				}
-				deduplicated = append(deduplicated, path)
-				updated[path] = struct{}{}
+				payloads := tree.UnsafeRead([]ledger.Path{path})
+				s.registers[path] = payloads[0]
 			}
 
-			// We then divide the remaining paths into chunks of 1000. For each
-			// batch, we retrieve the payloads from the state trie as it was at
-			// the end of this block and index them.
-			n := 1000
-			tree, _ := s.forest.Tree(commit)
-			for start := 0; start < len(deduplicated); start += n {
-
-				// Indexing the payloads could take a long time, so we should
-				// check on quitting between every batch.
-				select {
-				case <-s.done:
-					return nil
-				default:
-					// continue
-				}
-
-				end := start + n
-				if end > len(deduplicated) {
-					end = len(deduplicated)
-				}
-				batch := deduplicated[start:end]
-				payloads := tree.UnsafeRead(batch)
-				err := t.index.Payloads(s.height, batch, payloads)
-				if err != nil {
-					return fmt.Errorf("could not index payloads: %w", err)
-				}
-			}
-
-			// Finally, we forward the commit to the previous trie update and
-			// repeat until we have stepped all the way back to the last indexed
-			// commit.
+			// We now step back to the parent of the current state trie.
 			parent, _ := s.forest.Parent(commit)
 			commit = parent
 		}
@@ -231,17 +212,51 @@ func (t *Transitions) IndexTree(s *State) error {
 
 	// Then we set the state to indexed so we get the next commit and index
 	// the static data right away.
-	s.state = stateIndexed
+	s.status = StatusCollected
 
 	return nil
 }
 
-func (t *Transitions) ForwardBlock(s *State) error {
+func (t *Transitions) IndexRegisters(s *State) error {
+
+	// We should only index the payloads if we have just collected the payloads
+	// of a finalized block.
+	if s.status != StatusCollected {
+		return fmt.Errorf("invalid status for indexing registers (%s)", s.status)
+	}
+
+	// If there are no registers to be indexed, we can go to the next state
+	// immediately.
+	if len(s.registers) == 0 {
+		s.status = StatusIndexed
+		return nil
+	}
+
+	// We will now collect and index 1000 registers at a time. This gives the
+	// FSM the chance to exit the loop between every 1000 payloads we index.
+	paths := make([]ledger.Path, 0, 1000)
+	payloads := make([]*ledger.Payload, 0, 1000)
+	for path, payload := range s.registers {
+		paths = append(paths, path)
+		payloads = append(payloads, payload)
+		delete(s.registers, path)
+	}
+
+	// Then we store the (maximum) 1000 paths and payloads.
+	err := t.index.Payloads(s.height, paths, payloads)
+	if err != nil {
+		return fmt.Errorf("could not index registers: %w", err)
+	}
+
+	return nil
+}
+
+func (t *Transitions) ForwardHeight(s *State) error {
 
 	// We should only forward the height after we have just indexed the payloads
 	// of a finalized block.
-	if !Indexed(s) {
-		return fmt.Errorf("invalid state for forwarding height")
+	if s.status != StatusIndexed {
+		return fmt.Errorf("invalid status for forwarding height (%s)", s.status)
 	}
 
 	// After finishing the indexing of the payloads for a finalized block, or
@@ -264,7 +279,7 @@ func (t *Transitions) ForwardBlock(s *State) error {
 
 	// After forwarding the height, we are in the forwarded state, which will
 	// always lead into the indexing of chain data next.
-	s.state = stateForwarded
+	s.status = StatusForwarded
 
 	return nil
 }
@@ -273,8 +288,8 @@ func (t *Transitions) IndexChain(s *State) error {
 
 	// Indexing of chain data should only happen after we have just forwarded
 	// to the next height. This is also the case after bootstrapping.
-	if !Forwarded(s) {
-		return fmt.Errorf("invalid state for indexing chain")
+	if s.status != StatusForwarded {
+		return fmt.Errorf("invalid status for indexing chain (%s)", s.status)
 	}
 
 	// As we have only just forwarded to this height, we need to set the commit
@@ -328,7 +343,7 @@ func (t *Transitions) IndexChain(s *State) error {
 	// At this point, all stable data for this block height is indexed and we
 	// can go into the active state to start collecting payloads for the height
 	// from tree updates.
-	s.state = stateActive
+	s.status = StatusUpdating
 
 	return nil
 }

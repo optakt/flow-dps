@@ -14,31 +14,32 @@
 
 package mapper
 
+type Status uint8
+
 const (
-	stateEmpty = iota + 1
-	stateActive
-	stateIndexed
-	stateForwarded
+	StatusEmpty Status = iota + 1
+	StatusUpdating
+	StatusMatched
+	StatusCollected
+	StatusIndexed
+	StatusForwarded
 )
 
-type CheckFunc func(*State) bool
-
-func Empty(s *State) bool {
-	return s.state == stateEmpty
-}
-
-func Ready(s *State) bool {
-	return s.state == stateActive && !s.forest.Has(s.next)
-}
-
-func Matched(s *State) bool {
-	return s.state == stateActive && s.forest.Has(s.next)
-}
-
-func Indexed(s *State) bool {
-	return s.state == stateIndexed
-}
-
-func Forwarded(s *State) bool {
-	return s.state == stateForwarded
+func (s Status) String() string {
+	switch s {
+	case StatusEmpty:
+		return "empty"
+	case StatusUpdating:
+		return "updating"
+	case StatusMatched:
+		return "matched"
+	case StatusCollected:
+		return "collected"
+	case StatusIndexed:
+		return "indexed"
+	case StatusForwarded:
+		return "forwarded"
+	default:
+		return "invalid"
+	}
 }

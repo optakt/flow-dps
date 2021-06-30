@@ -48,10 +48,6 @@ func allPaths(tree *trie.MTrie) []ledger.Path {
 		}
 	}
 
-	sort.Slice(paths, func(i int, j int) bool {
-		return bytes.Compare(paths[i][:], paths[j][:]) < 0
-	})
-
 	return paths
 }
 

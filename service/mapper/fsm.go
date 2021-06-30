@@ -20,61 +20,46 @@ import (
 	"sync"
 )
 
-type edge struct {
-	check      CheckFunc
-	transition TransitionFunc
-}
-
 type FSM struct {
-	state *State
-	edges []edge
-	wg    *sync.WaitGroup
+	state       *State
+	transitions map[Status]TransitionFunc
+	wg          *sync.WaitGroup
 }
 
-func NewFSM(state *State) *FSM {
+func NewFSM(state *State, options ...func(*FSM)) *FSM {
 
-	f := &FSM{
-		state: state,
-		edges: []edge{},
-		wg:    &sync.WaitGroup{},
+	f := FSM{
+		state:       state,
+		transitions: make(map[Status]TransitionFunc),
+		wg:          &sync.WaitGroup{},
 	}
 
-	return f
-}
-
-func (f *FSM) Add(check CheckFunc, transition TransitionFunc) {
-	edge := edge{
-		check:      check,
-		transition: transition,
+	for _, option := range options {
+		option(&f)
 	}
-	f.edges = append(f.edges, edge)
+
+	return &f
 }
 
 func (f *FSM) Run() error {
 	f.wg.Add(1)
 	defer f.wg.Done()
-TransitionLoop:
 	for {
-		for _, e := range f.edges {
-			ok := e.check(f.state)
-			if !ok {
-				continue
-			}
-			select {
-			case <-f.state.done:
-				break TransitionLoop
-			default:
-				// continue
-			}
-			err := e.transition(f.state)
-			if err != nil {
-				return fmt.Errorf("could not apply transition to state: %w", err)
-			}
-			continue TransitionLoop
+		select {
+		case <-f.state.done:
+			return nil
+		default:
+			// continue
 		}
-		return fmt.Errorf("could not find transition for state")
+		transition, ok := f.transitions[f.state.status]
+		if !ok {
+			return fmt.Errorf("could not find transition for status (%d)", f.state.status)
+		}
+		err := transition(f.state)
+		if err != nil {
+			return fmt.Errorf("could not apply transition to state: %w", err)
+		}
 	}
-	return nil
 }
 
 func (f *FSM) Stop(ctx context.Context) error {
