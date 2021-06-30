@@ -33,11 +33,13 @@ import (
 
 func TestIndexFromAPI(t *testing.T) {
 	mock := &apiMock{}
+	codec := &mocks.Codec{}
 
-	index := IndexFromAPI(mock)
+	index := IndexFromAPI(mock, codec)
 
 	if assert.NotNil(t, index) {
 		assert.Equal(t, mock, index.client)
+		assert.NotNil(t, mock, index.codec)
 	}
 }
 
@@ -151,6 +153,9 @@ func TestIndex_Header(t *testing.T) {
 					}, nil
 				},
 			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
+			},
 		}
 
 		got, err := index.Header(testHeader.Height)
@@ -191,6 +196,9 @@ func TestIndex_Header(t *testing.T) {
 						Data:   []byte(`invalid data`),
 					}, nil
 				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
 			},
 		}
 
@@ -239,6 +247,9 @@ func TestIndex_Commit(t *testing.T) {
 					return nil, mocks.DummyError
 				},
 			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
+			},
 		}
 
 		_, err := index.Commit(testHeight)
@@ -259,6 +270,9 @@ func TestIndex_Commit(t *testing.T) {
 						Commit: []byte(`not a commit`),
 					}, nil
 				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
 			},
 		}
 
@@ -294,6 +308,9 @@ func TestIndex_Events(t *testing.T) {
 					}, nil
 				},
 			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
+			},
 		}
 
 		got, err := index.Events(testHeight, testTypes...)
@@ -314,6 +331,9 @@ func TestIndex_Events(t *testing.T) {
 
 					return nil, mocks.DummyError
 				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
 			},
 		}
 
@@ -337,6 +357,9 @@ func TestIndex_Events(t *testing.T) {
 						Data:   []byte(`invalid data`),
 					}, nil
 				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
 			},
 		}
 
@@ -372,6 +395,9 @@ func TestIndex_Values(t *testing.T) {
 					}, nil
 				},
 			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
+			},
 		}
 
 		got, err := index.Values(testHeight, testPaths)
@@ -395,6 +421,9 @@ func TestIndex_Values(t *testing.T) {
 
 					return nil, mocks.DummyError
 				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
 			},
 		}
 
@@ -423,6 +452,9 @@ func TestIndex_Height(t *testing.T) {
 					}, nil
 				},
 			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
+			},
 		}
 
 		got, err := index.HeightForBlock(testBlockID)
@@ -442,6 +474,9 @@ func TestIndex_Height(t *testing.T) {
 
 					return nil, mocks.DummyError
 				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
 			},
 		}
 
@@ -474,6 +509,9 @@ func TestIndex_Transaction(t *testing.T) {
 					}, nil
 				},
 			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
+			},
 		}
 
 		got, err := index.Transaction(testTransactionID)
@@ -493,6 +531,9 @@ func TestIndex_Transaction(t *testing.T) {
 
 					return nil, mocks.DummyError
 				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
 			},
 		}
 
