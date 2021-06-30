@@ -18,8 +18,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-// We have to multiply by two here, because the strings that we receive are
-// hex-encoded and use two characters for every byte.
+// Sizes are multiplied by two because hex-encoded strings use two characters for every byte.
 const (
 	hexIDSize      = 2 * len(flow.ZeroID)
 	hexAddressSize = 2 * flow.AddressLength

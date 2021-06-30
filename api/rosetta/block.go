@@ -25,16 +25,22 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
+// BlockRequest implements the request schema for /block.
+// See https://www.rosetta-api.org/docs/BlockApi.html#request
 type BlockRequest struct {
 	NetworkID identifier.Network `json:"network_identifier"`
 	BlockID   identifier.Block   `json:"block_identifier"`
 }
 
+// BlockResponse implements the response schema for /block.
+// See https://www.rosetta-api.org/docs/BlockApi.html#200---ok
 type BlockResponse struct {
 	Block             *object.Block            `json:"block"`
 	OtherTransactions []identifier.Transaction `json:"other_transactions,omitempty"`
 }
 
+// Block implements the /block endpoint of the Rosetta Data API.
+// See https://www.rosetta-api.org/docs/BlockApi.html#block
 func (d *Data) Block(ctx echo.Context) error {
 
 	var req BlockRequest

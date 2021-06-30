@@ -73,7 +73,7 @@ func TestAPI_Transaction(t *testing.T) {
 			validateTx: validateTransfer(t, midBlockTxs[0], "8c5303eaa26202d6", "72157877737ce077", 100_00000000),
 		},
 		{
-			// we had no blocks with more than two transactions, so this will do as 'get the last transaction from a block
+			// The test does not have blocks with more than two transactions, so this is the same as 'get the last transaction from a block'.
 			name:       "second in a block with multiple",
 			request:    requestTransaction(multipleTxHeader, midBlockTxs[1]),
 			validateTx: validateTransfer(t, midBlockTxs[1], "89c61aa64423504c", "82ec283f88a62e65", 1),
@@ -108,13 +108,11 @@ func TestAPI_Transaction(t *testing.T) {
 			rec, ctx, err := setupRecorder(transactionEndpoint, test.request)
 			require.NoError(t, err)
 
-			// execute the request
 			err = api.Transaction(ctx)
 			assert.NoError(t, err)
 
 			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-			// unpack the response
 			var res rosetta.TransactionResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
 
@@ -332,16 +330,13 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 	}
 
 	for _, test := range tests {
-
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-
 			t.Parallel()
 
 			_, ctx, err := setupRecorder(transactionEndpoint, test.request)
 			require.NoError(t, err)
 
-			// execute the request
 			err = api.Transaction(ctx)
 			test.checkErr(t, err)
 		})
@@ -430,9 +425,7 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-
 		t.Run(test.name, func(t *testing.T) {
-
 			t.Parallel()
 
 			_, ctx, err := setupRecorder(transactionEndpoint, test.payload, test.prepare)

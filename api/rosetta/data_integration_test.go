@@ -65,8 +65,6 @@ const (
 	invalidToken      = "invalid-token"
 
 	invalidBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2z" // invalid hex value
-
-	validBlockHashLen = 64
 )
 
 func setupDB(t *testing.T) *badger.DB {
@@ -173,7 +171,7 @@ func defaultNetwork() identifier.Network {
 }
 
 // defaultCurrency returns the Currency spec common for all requests.
-// At the moment only get the FLOW tokens, perhaps in the future it will support multiple.
+// For now this only gets the FLOW tokens.
 func defaultCurrency() []identifier.Currency {
 	return []identifier.Currency{
 		{

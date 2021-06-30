@@ -38,10 +38,7 @@ func TestAPI_Status(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const (
-		lastHeight    = 425
-		oldestBlockID = "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"
-	)
+	const oldestBlockID = "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"
 
 	lastBlock := knownHeader(425)
 
@@ -57,19 +54,16 @@ func TestAPI_Status(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-	// unpack response
 	var status rosetta.StatusResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &status))
 
-	// verify current block
 	assert.Equal(t, status.CurrentBlockID.Index, lastBlock.Height)
 	assert.Equal(t, status.CurrentBlockID.Hash, lastBlock.ID().String())
 	assert.Equal(t, status.CurrentBlockTimestamp, convert.RosettaTime(lastBlock.Timestamp))
 
-	// verify oldest block
 	assert.Equal(t, status.OldestBlockID.Hash, oldestBlockID)
 
-	// this is actually omitted from JSON, due to height being zero, and JSON having the 'omitempty' tag
+	// This is actually omitted from JSON, due to height being zero, and JSON having the 'omitempty' tag.
 	assert.Equal(t, status.OldestBlockID.Index, uint64(0))
 }
 
@@ -161,7 +155,6 @@ func TestAPI_Networks(t *testing.T) {
 	rec, ctx, err := setupRecorder(listEndpoint, netReq)
 	require.NoError(t, err)
 
-	// execute the request
 	err = api.Networks(ctx)
 	assert.NoError(t, err)
 
@@ -193,7 +186,6 @@ func TestAPI_Options(t *testing.T) {
 	err = api.Options(ctx)
 	require.NoError(t, err)
 
-	// verify nominal case
 	assert.NoError(t, err)
 
 	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
@@ -506,7 +498,6 @@ func TestAPI_OptionsHandlesMalformedRequest(t *testing.T) {
 			_, ctx, err := setupRecorder(optionsEndpoint, test.payload, test.prepare)
 			require.NoError(t, err)
 
-			// execute the request
 			err = api.Options(ctx)
 			assert.Error(t, err)
 

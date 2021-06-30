@@ -20,15 +20,15 @@ const _ = grpc.SupportPackageIsVersion7
 type APIClient interface {
 	GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
 	GetLast(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
-	GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
-	GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
-	GetEvents(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
-	GetRegisters(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
 	GetHeight(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error)
+	GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
+	GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
+	GetEvents(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
 	GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
+	ListCollectionsForBlock(ctx context.Context, in *ListCollectionsForBlockRequest, opts ...grpc.CallOption) (*ListCollectionsForBlockResponse, error)
 	ListTransactionsForBlock(ctx context.Context, in *ListTransactionsForBlockRequest, opts ...grpc.CallOption) (*ListTransactionsForBlockResponse, error)
 	ListTransactionsForCollection(ctx context.Context, in *ListTransactionsForCollectionRequest, opts ...grpc.CallOption) (*ListTransactionsForCollectionResponse, error)
-	ListCollectionsForBlock(ctx context.Context, in *ListCollectionsForBlockRequest, opts ...grpc.CallOption) (*ListCollectionsForBlockResponse, error)
+	GetRegisters(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error)
 }
 
 type aPIClient struct {
@@ -57,9 +57,9 @@ func (c *aPIClient) GetLast(ctx context.Context, in *GetLastRequest, opts ...grp
 	return out, nil
 }
 
-func (c *aPIClient) GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error) {
-	out := new(GetHeaderResponse)
-	err := c.cc.Invoke(ctx, "/API/GetHeader", in, out, opts...)
+func (c *aPIClient) GetHeight(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error) {
+	out := new(GetHeightResponse)
+	err := c.cc.Invoke(ctx, "/API/GetHeight", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +75,15 @@ func (c *aPIClient) GetCommit(ctx context.Context, in *GetCommitRequest, opts ..
 	return out, nil
 }
 
+func (c *aPIClient) GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error) {
+	out := new(GetHeaderResponse)
+	err := c.cc.Invoke(ctx, "/API/GetHeader", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *aPIClient) GetEvents(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error) {
 	out := new(GetEventsResponse)
 	err := c.cc.Invoke(ctx, "/API/GetEvents", in, out, opts...)
@@ -84,27 +93,18 @@ func (c *aPIClient) GetEvents(ctx context.Context, in *GetEventsRequest, opts ..
 	return out, nil
 }
 
-func (c *aPIClient) GetRegisters(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error) {
-	out := new(GetRegistersResponse)
-	err := c.cc.Invoke(ctx, "/API/GetRegisters", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aPIClient) GetHeight(ctx context.Context, in *GetHeightRequest, opts ...grpc.CallOption) (*GetHeightResponse, error) {
-	out := new(GetHeightResponse)
-	err := c.cc.Invoke(ctx, "/API/GetHeight", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *aPIClient) GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error) {
 	out := new(GetTransactionResponse)
 	err := c.cc.Invoke(ctx, "/API/GetTransaction", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aPIClient) ListCollectionsForBlock(ctx context.Context, in *ListCollectionsForBlockRequest, opts ...grpc.CallOption) (*ListCollectionsForBlockResponse, error) {
+	out := new(ListCollectionsForBlockResponse)
+	err := c.cc.Invoke(ctx, "/API/ListCollectionsForBlock", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -129,9 +129,9 @@ func (c *aPIClient) ListTransactionsForCollection(ctx context.Context, in *ListT
 	return out, nil
 }
 
-func (c *aPIClient) ListCollectionsForBlock(ctx context.Context, in *ListCollectionsForBlockRequest, opts ...grpc.CallOption) (*ListCollectionsForBlockResponse, error) {
-	out := new(ListCollectionsForBlockResponse)
-	err := c.cc.Invoke(ctx, "/API/ListCollectionsForBlock", in, out, opts...)
+func (c *aPIClient) GetRegisters(ctx context.Context, in *GetRegistersRequest, opts ...grpc.CallOption) (*GetRegistersResponse, error) {
+	out := new(GetRegistersResponse)
+	err := c.cc.Invoke(ctx, "/API/GetRegisters", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -144,15 +144,15 @@ func (c *aPIClient) ListCollectionsForBlock(ctx context.Context, in *ListCollect
 type APIServer interface {
 	GetFirst(context.Context, *GetFirstRequest) (*GetFirstResponse, error)
 	GetLast(context.Context, *GetLastRequest) (*GetLastResponse, error)
-	GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error)
-	GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error)
-	GetEvents(context.Context, *GetEventsRequest) (*GetEventsResponse, error)
-	GetRegisters(context.Context, *GetRegistersRequest) (*GetRegistersResponse, error)
 	GetHeight(context.Context, *GetHeightRequest) (*GetHeightResponse, error)
+	GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error)
+	GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error)
+	GetEvents(context.Context, *GetEventsRequest) (*GetEventsResponse, error)
 	GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error)
+	ListCollectionsForBlock(context.Context, *ListCollectionsForBlockRequest) (*ListCollectionsForBlockResponse, error)
 	ListTransactionsForBlock(context.Context, *ListTransactionsForBlockRequest) (*ListTransactionsForBlockResponse, error)
 	ListTransactionsForCollection(context.Context, *ListTransactionsForCollectionRequest) (*ListTransactionsForCollectionResponse, error)
-	ListCollectionsForBlock(context.Context, *ListCollectionsForBlockRequest) (*ListCollectionsForBlockResponse, error)
+	GetRegisters(context.Context, *GetRegistersRequest) (*GetRegistersResponse, error)
 }
 
 // UnimplementedAPIServer should be embedded to have forward compatible implementations.
@@ -165,23 +165,23 @@ func (UnimplementedAPIServer) GetFirst(context.Context, *GetFirstRequest) (*GetF
 func (UnimplementedAPIServer) GetLast(context.Context, *GetLastRequest) (*GetLastResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLast not implemented")
 }
-func (UnimplementedAPIServer) GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetHeader not implemented")
+func (UnimplementedAPIServer) GetHeight(context.Context, *GetHeightRequest) (*GetHeightResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHeight not implemented")
 }
 func (UnimplementedAPIServer) GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCommit not implemented")
 }
+func (UnimplementedAPIServer) GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHeader not implemented")
+}
 func (UnimplementedAPIServer) GetEvents(context.Context, *GetEventsRequest) (*GetEventsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEvents not implemented")
 }
-func (UnimplementedAPIServer) GetRegisters(context.Context, *GetRegistersRequest) (*GetRegistersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetRegisters not implemented")
-}
-func (UnimplementedAPIServer) GetHeight(context.Context, *GetHeightRequest) (*GetHeightResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetHeight not implemented")
-}
 func (UnimplementedAPIServer) GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransaction not implemented")
+}
+func (UnimplementedAPIServer) ListCollectionsForBlock(context.Context, *ListCollectionsForBlockRequest) (*ListCollectionsForBlockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCollectionsForBlock not implemented")
 }
 func (UnimplementedAPIServer) ListTransactionsForBlock(context.Context, *ListTransactionsForBlockRequest) (*ListTransactionsForBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTransactionsForBlock not implemented")
@@ -189,8 +189,8 @@ func (UnimplementedAPIServer) ListTransactionsForBlock(context.Context, *ListTra
 func (UnimplementedAPIServer) ListTransactionsForCollection(context.Context, *ListTransactionsForCollectionRequest) (*ListTransactionsForCollectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTransactionsForCollection not implemented")
 }
-func (UnimplementedAPIServer) ListCollectionsForBlock(context.Context, *ListCollectionsForBlockRequest) (*ListCollectionsForBlockResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListCollectionsForBlock not implemented")
+func (UnimplementedAPIServer) GetRegisters(context.Context, *GetRegistersRequest) (*GetRegistersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRegisters not implemented")
 }
 
 // UnsafeAPIServer may be embedded to opt out of forward compatibility for this service.
@@ -240,20 +240,20 @@ func _API_GetLast_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_GetHeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetHeaderRequest)
+func _API_GetHeight_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHeightRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).GetHeader(ctx, in)
+		return srv.(APIServer).GetHeight(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/API/GetHeader",
+		FullMethod: "/API/GetHeight",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetHeader(ctx, req.(*GetHeaderRequest))
+		return srv.(APIServer).GetHeight(ctx, req.(*GetHeightRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -276,6 +276,24 @@ func _API_GetCommit_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_GetHeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHeaderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetHeader(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/GetHeader",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetHeader(ctx, req.(*GetHeaderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _API_GetEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetEventsRequest)
 	if err := dec(in); err != nil {
@@ -294,42 +312,6 @@ func _API_GetEvents_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_GetRegisters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRegistersRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(APIServer).GetRegisters(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/API/GetRegisters",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetRegisters(ctx, req.(*GetRegistersRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _API_GetHeight_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetHeightRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(APIServer).GetHeight(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/API/GetHeight",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetHeight(ctx, req.(*GetHeightRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _API_GetTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetTransactionRequest)
 	if err := dec(in); err != nil {
@@ -344,6 +326,24 @@ func _API_GetTransaction_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(APIServer).GetTransaction(ctx, req.(*GetTransactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _API_ListCollectionsForBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCollectionsForBlockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).ListCollectionsForBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/ListCollectionsForBlock",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).ListCollectionsForBlock(ctx, req.(*ListCollectionsForBlockRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -384,20 +384,20 @@ func _API_ListTransactionsForCollection_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_ListCollectionsForBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListCollectionsForBlockRequest)
+func _API_GetRegisters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRegistersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).ListCollectionsForBlock(ctx, in)
+		return srv.(APIServer).GetRegisters(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/API/ListCollectionsForBlock",
+		FullMethod: "/API/GetRegisters",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).ListCollectionsForBlock(ctx, req.(*ListCollectionsForBlockRequest))
+		return srv.(APIServer).GetRegisters(ctx, req.(*GetRegistersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -418,28 +418,28 @@ var API_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _API_GetLast_Handler,
 		},
 		{
-			MethodName: "GetHeader",
-			Handler:    _API_GetHeader_Handler,
+			MethodName: "GetHeight",
+			Handler:    _API_GetHeight_Handler,
 		},
 		{
 			MethodName: "GetCommit",
 			Handler:    _API_GetCommit_Handler,
 		},
 		{
+			MethodName: "GetHeader",
+			Handler:    _API_GetHeader_Handler,
+		},
+		{
 			MethodName: "GetEvents",
 			Handler:    _API_GetEvents_Handler,
 		},
 		{
-			MethodName: "GetRegisters",
-			Handler:    _API_GetRegisters_Handler,
-		},
-		{
-			MethodName: "GetHeight",
-			Handler:    _API_GetHeight_Handler,
-		},
-		{
 			MethodName: "GetTransaction",
 			Handler:    _API_GetTransaction_Handler,
+		},
+		{
+			MethodName: "ListCollectionsForBlock",
+			Handler:    _API_ListCollectionsForBlock_Handler,
 		},
 		{
 			MethodName: "ListTransactionsForBlock",
@@ -450,8 +450,8 @@ var API_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _API_ListTransactionsForCollection_Handler,
 		},
 		{
-			MethodName: "ListCollectionsForBlock",
-			Handler:    _API_ListCollectionsForBlock_Handler,
+			MethodName: "GetRegisters",
+			Handler:    _API_GetRegisters_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

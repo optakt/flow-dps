@@ -35,11 +35,11 @@ type Converter struct {
 func New(gen Generator) (*Converter, error) {
 	deposit, err := gen.TokensDeposited(dps.FlowSymbol)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate deposit event type: %w", err)
+		return nil, fmt.Errorf("could not generate deposit event type: %w", err)
 	}
 	withdrawal, err := gen.TokensWithdrawn(dps.FlowSymbol)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate withdrawal event type: %w", err)
+		return nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
 	}
 
 	// TODO: Generate more event types (stake/unstake, delegate/lock, etc.)
@@ -50,7 +50,7 @@ func New(gen Generator) (*Converter, error) {
 		withdrawal: flow.EventType(withdrawal),
 	}
 
-	return &c, err
+	return &c, nil
 }
 
 func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operation, err error) {

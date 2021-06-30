@@ -40,10 +40,6 @@ func New(chain flow.ChainID) *Configuration {
 		Network:    chain.String(),
 	}
 
-	// TODO: Find a way to inject the Flow Go dependency version from the
-	// `go.mod` file and the middleware version from the repository tag:
-	// => https://github.com/optakt/flow-dps/issues/151
-
 	version := meta.Version{
 		RosettaVersion:    RosettaVersion,
 		NodeVersion:       NodeVersion,

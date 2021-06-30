@@ -25,6 +25,8 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
+// BalanceRequest implements the request schema for /account/balance.
+// See https://www.rosetta-api.org/docs/AccountApi.html#request
 type BalanceRequest struct {
 	NetworkID  identifier.Network    `json:"network_identifier"`
 	BlockID    identifier.Block      `json:"block_identifier"`
@@ -32,11 +34,15 @@ type BalanceRequest struct {
 	Currencies []identifier.Currency `json:"currencies"`
 }
 
+// BalanceResponse implements the successful response schema for /account/balance.
+// See https://www.rosetta-api.org/docs/AccountApi.html#200---ok
 type BalanceResponse struct {
 	BlockID  identifier.Block `json:"block_identifier"`
 	Balances []object.Amount  `json:"balances"`
 }
 
+// Balance implements the /account/balance endpoint of the Rosetta Data API.
+// See https://www.rosetta-api.org/docs/AccountApi.html#accountbalance
 func (d *Data) Balance(ctx echo.Context) error {
 
 	var req BalanceRequest

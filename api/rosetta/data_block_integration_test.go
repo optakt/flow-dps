@@ -44,7 +44,7 @@ func TestAPI_Block(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	// headers of known blocks we want to verify
+	// Headers of known blocks to verify.
 	var (
 		firstHeader = knownHeader(1)
 		midHeader1  = knownHeader(13)
@@ -81,7 +81,7 @@ func TestAPI_Block(t *testing.T) {
 			validateBlock:  validateByHeader(t, firstHeader),
 		},
 		{
-			// initial transfer of currency from the root account to the user - 100 tokens
+			// Initial transfer of currency from the root account to the user - 100 tokens.
 			name:    "block mid-chain with transactions",
 			request: blockRequest(midHeader1),
 
@@ -99,7 +99,7 @@ func TestAPI_Block(t *testing.T) {
 			wantParentHash: midHeader2.ParentID.String(),
 		},
 		{
-			// transaction between two users
+			// Transaction between two users.
 			name:    "second block mid-chain with transactions",
 			request: blockRequest(midHeader3),
 
@@ -143,15 +143,12 @@ func TestAPI_Block(t *testing.T) {
 			err = api.Block(ctx)
 			assert.NoError(t, err)
 
-			// unpack response
 			var blockResponse rosetta.BlockResponse
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &blockResponse))
 			require.NotNil(t, blockResponse.Block)
 
-			// validate index/hash of returned block
 			test.validateBlock(blockResponse.Block.ID)
 
-			// verify the index/hash of the parent block
 			assert.Equal(t, test.request.BlockID.Index-1, blockResponse.Block.ParentID.Index)
 			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 
@@ -173,7 +170,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		validBlockHash   = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
 		validBlockHeight = 44
 
-		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character short
+		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character too short
 		lastHeight       = 425
 	)
 
@@ -308,7 +305,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
 		{
-			// effectively the same as the 'missing blockchain name' test case, since it's the first check we'll do
+			// Effectively the same as the 'missing blockchain name' test case, since it's the first validation step.
 			name:    "empty block request",
 			request: rosetta.BlockRequest{},
 
@@ -326,7 +323,6 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			_, ctx, err := setupRecorder(blockEndpoint, test.request)
 			require.NoError(t, err)
 
-			// execute the request
 			err = api.Block(ctx)
 			test.checkErr(t, err)
 		})
@@ -339,7 +335,7 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 	api := setupAPI(t, db)
 
 	const (
-		// network field is an integer instead of a string
+		// Network field is an integer instead of a string.
 		wrongFieldType = `
 		{ 
 			"network_identifier": { 
@@ -460,31 +456,23 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 		assert.Equal(t, tx.ID.Hash, hash)
 		assert.Equal(t, len(tx.Operations), 2)
 
-		// operations come in pairs
-		// - one is a negative transfer of funds (for the sender) and another one is a positive one (for the receiver)
-
+		// Operations come in pairs. A negative transfer of funds for the sender and a positive one for the receiver.
 		require.Equal(t, len(tx.Operations), 2)
 
 		op1 := tx.Operations[0]
 		op2 := tx.Operations[1]
 
-		// verify the first operation data
-
-		// validate operation and status
 		assert.Equal(t, op1.Type, dps.OperationTransfer)
 		assert.Equal(t, op1.Status, dps.StatusCompleted)
 
-		// validate currency
 		assert.Equal(t, op1.Amount.Currency.Symbol, dps.FlowSymbol)
 		assert.Equal(t, op1.Amount.Currency.Decimals, uint(dps.FlowDecimals))
 
-		// validate address
 		address := op1.AccountID.Address
 		if address != from && address != to {
 			t.Errorf("unexpected account address (%v)", address)
 		}
 
-		// validate transferred amount
 		wantValue := strconv.FormatInt(amount, 10)
 		if address == from {
 			wantValue = "-" + wantValue
@@ -492,28 +480,21 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 
 		assert.Equal(t, op1.Amount.Value, wantValue)
 
-		// validate related operation is op2
 		if assert.Len(t, op1.RelatedIDs, 1) {
 			assert.Equal(t, op1.RelatedIDs[0], op2.ID)
 		}
 
-		// verify the second operation
-
-		// validate operation and status
 		assert.Equal(t, op2.Type, dps.OperationTransfer)
 		assert.Equal(t, op2.Status, dps.StatusCompleted)
 
-		// validate currency
 		assert.Equal(t, op2.Amount.Currency.Symbol, dps.FlowSymbol)
 		assert.Equal(t, op2.Amount.Currency.Decimals, uint(dps.FlowDecimals))
 
-		// validate address
 		address = op2.AccountID.Address
 		if address != from && address != to {
 			t.Errorf("unexpected account address (%v)", address)
 		}
 
-		// validate transferred amount
 		wantValue = strconv.FormatInt(amount, 10)
 		if address == from {
 			wantValue = "-" + wantValue
@@ -521,7 +502,6 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 
 		assert.Equal(t, op2.Amount.Value, wantValue)
 
-		// validate related operation is op1
 		if assert.Len(t, op2.RelatedIDs, 1) {
 			assert.Equal(t, op2.RelatedIDs[0], op1.ID)
 		}

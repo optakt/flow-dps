@@ -14,11 +14,15 @@
 
 package rosetta
 
+// Data implements the Rosetta Data API specification.
+// See https://www.rosetta-api.org/docs/data_api_introduction.html
 type Data struct {
 	config   Configuration
 	retrieve Retriever
 }
 
+// NewData creates a new instance of the Data API using the given configuration to answer configuration queries
+// and the given retriever to answer blockchain data queries.
 func NewData(config Configuration, retrieve Retriever) *Data {
 	d := Data{
 		config:   config,

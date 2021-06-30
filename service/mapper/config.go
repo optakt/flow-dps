@@ -18,7 +18,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 )
 
-// Config contains optional parameters we can set for the mapper.
+// Config contains optional parameters for the mapper.
 type Config struct {
 	CheckpointFile string
 	PostProcessing func(*trie.MTrie)
@@ -31,7 +31,7 @@ type Config struct {
 	IndexTransactions bool
 }
 
-// WithCheckpointFile will initialize the mapper's internal trie with the trie
+// WithCheckpointFile initializes the mapper's internal trie with the trie
 // from the provided checkpoint file.
 func WithCheckpointFile(file string) func(*Config) {
 	return func(cfg *Config) {
@@ -39,7 +39,7 @@ func WithCheckpointFile(file string) func(*Config) {
 	}
 }
 
-// WithPostProcessing will provide a callback that allows post-processing of the
+// WithPostProcessing provides a callback that allows post-processing of the
 // final state trie.
 func WithPostProcessing(post func(*trie.MTrie)) func(*Config) {
 	return func(cfg *Config) {

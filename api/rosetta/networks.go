@@ -22,13 +22,19 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// NetworksRequest implements the empty request schema for the /network/list endpoint.
+// See https://www.rosetta-api.org/docs/NetworkApi.html#request
 type NetworksRequest struct {
 }
 
+// NetworksResponse implements the successful response schema for the /network/list endpoint.
+// See https://www.rosetta-api.org/docs/NetworkApi.html#200---ok
 type NetworksResponse struct {
 	NetworkIDs []identifier.Network `json:"network_identifiers"`
 }
 
+// Networks implements the /network/list endpoint of the Rosetta Data API.
+// See https://www.rosetta-api.org/docs/NetworkApi.html#networklist
 func (d *Data) Networks(ctx echo.Context) error {
 
 	// Decode the network list request from the HTTP request JSON body.

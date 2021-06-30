@@ -29,7 +29,7 @@ func TestEncodeKey(t *testing.T) {
 	commit, _ := flow.ToStateCommitment([]byte("07018030187ecf04945f35f1e33a89dc"))
 
 	tests := []struct {
-		description string
+		name string
 
 		segments []interface{}
 
@@ -37,7 +37,7 @@ func TestEncodeKey(t *testing.T) {
 		wantPanic bool
 	}{
 		{
-			description: "a key with all types combined should work",
+			name: "a key with all types combined should work",
 
 			segments: []interface{}{
 				uint64(42),
@@ -48,7 +48,7 @@ func TestEncodeKey(t *testing.T) {
 
 			wantPanic: false,
 			wantKey: []byte{
-				0x1,                                     // Prefix
+				0x1,                                     // prefix
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a, // uint(42)
 				0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x4, 0x57, 0x70, 0xa, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x8a, 0xd7, 0xfd, 0x70, 0x6, 0x51, 0x46, 0xb3, 0x5a, 0xb4, 0x8f, 0xa5, 0xa6, 0xca, 0xb0, 0x7, // id
 				0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x4, 0x57, 0x70, 0xa, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x30, 0x37, 0x30, 0x31, // path
@@ -56,13 +56,13 @@ func TestEncodeKey(t *testing.T) {
 			},
 		},
 		{
-			description: "empty segments should work",
+			name: "empty segments should work",
 
 			wantPanic: false,
 			wantKey:   []byte{1},
 		},
 		{
-			description: "unsupported types should panic",
+			name: "unsupported types should panic",
 
 			segments: []interface{}{
 				struct{}{},
@@ -74,7 +74,7 @@ func TestEncodeKey(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.description, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			if test.wantPanic {

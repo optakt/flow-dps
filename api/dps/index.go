@@ -109,7 +109,7 @@ func (i *Index) Commit(height uint64) (flow.StateCommitment, error) {
 	return commit, nil
 }
 
-// Events returns the events of all transactions that were part of the
+// Events returns the events of all transactions that are part of the
 // finalized block at the given height. It can optionally filter them by event
 // type; if no event types are given, all events are returned.
 func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
@@ -195,7 +195,7 @@ func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error)
 	}
 	res, err := i.client.ListTransactionsForBlock(context.Background(), &req)
 	if err != nil {
-		return nil, fmt.Errorf("could not get transaction: %w", err)
+		return nil, fmt.Errorf("could not get transactions: %w", err)
 	}
 
 	var transactions []flow.Identifier
@@ -203,7 +203,7 @@ func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error)
 		var transactionID flow.Identifier
 		err = cbor.Unmarshal(id, &transactionID)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode transaction ID: %w", err)
+			return nil, fmt.Errorf("could not decode transaction ID (%x): %w", id, err)
 		}
 
 		transactions = append(transactions, transactionID)
