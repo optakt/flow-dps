@@ -37,19 +37,14 @@ func New() *Forest {
 	return &f
 }
 
-func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) bool {
+func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
 	commit := flow.StateCommitment(tree.RootHash())
-	_, ok := f.steps[commit]
-	if ok {
-		return false
-	}
 	s := step{
 		tree:   tree,
 		paths:  paths,
 		parent: parent,
 	}
 	f.steps[commit] = s
-	return true
 }
 
 func (f *Forest) Has(commit flow.StateCommitment) bool {
@@ -87,4 +82,8 @@ func (f *Forest) Reset(finalized flow.StateCommitment) {
 			delete(f.steps, commit)
 		}
 	}
+}
+
+func (f *Forest) Size() uint {
+	return uint(len(f.steps))
 }

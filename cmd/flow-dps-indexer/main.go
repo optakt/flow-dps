@@ -162,7 +162,7 @@ func run() int {
 	index := index.NewWriter(db, storage)
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	transitions := mapper.NewTransitions(load, chain, feed, index,
+	transitions := mapper.NewTransitions(log, load, chain, feed, index,
 		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
