@@ -196,12 +196,15 @@ func (t *Transitions) CollectRegisters(s *State) error {
 			return fmt.Errorf("could not load tree (commit: %x)", commit)
 		}
 
-		// For each path, we retrieve the payload and add it to the
-		// registers we want to save later. If we already have a payload,
-		// we only keep that one, because we start with the newest one and
-		// previous ones within the same block are thus irrelevant.
-		paths, _ := s.forest.Paths(commit)
+		// For each path, we retrieve the payload and add it to the registers we
+		// will index later. If we already have a payload for the path, it is
+		// more recent as we iterate backwards in time, so we can skip the
+		// outdated payload.
+		// NOTE: We read from the tree one by one here, as the performance
+		// overhead is minimal compared to the disk i/o for badger, and it
+		// allows us to ignore sorting of paths.
 		tree, _ := s.forest.Tree(commit)
+		paths, _ := s.forest.Paths(commit)
 		for _, path := range paths {
 			_, ok := s.registers[path]
 			if ok {
