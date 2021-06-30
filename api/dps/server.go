@@ -77,6 +77,41 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
+// GetHeight implements the `GetHeight` function of the generated GRPC
+// server.
+func (s *Server) GetHeight(_ context.Context, req *GetHeightRequest) (*GetHeightResponse, error) {
+	var blockID flow.Identifier
+	copy(blockID[:], req.BlockID)
+
+	height, err := s.index.Height(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve height: %w", err)
+	}
+
+	res := GetHeightResponse{
+		BlockID: req.BlockID,
+		Height:  height,
+	}
+
+	return &res, nil
+}
+
+// GetCommit implements the `GetCommit` method of the generated GRPC server.
+func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
+
+	commit, err := s.index.Commit(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get commit: %w", err)
+	}
+
+	res := GetCommitResponse{
+		Height: req.Height,
+		Commit: commit[:],
+	}
+
+	return &res, nil
+}
+
 // GetHeader implements the `GetHeader` method of the generated GRPC server.
 func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
 
@@ -94,22 +129,6 @@ func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeader
 	res := GetHeaderResponse{
 		Height: req.Height,
 		Data:   data,
-	}
-
-	return &res, nil
-}
-
-// GetCommit implements the `GetCommit` method of the generated GRPC server.
-func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
-
-	commit, err := s.index.Commit(req.Height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get commit: %w", err)
-	}
-
-	res := GetCommitResponse{
-		Height: req.Height,
-		Commit: commit[:],
 	}
 
 	return &res, nil
@@ -138,48 +157,6 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 		Height: req.Height,
 		Types:  req.Types,
 		Data:   data,
-	}
-
-	return &res, nil
-}
-
-// GetRegisters implements the `GetRegisters` function of the generated GRPC
-// server.
-func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*GetRegistersResponse, error) {
-
-	paths, err := convert.BytesToPaths(req.Paths)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert paths: %w", err)
-	}
-
-	values, err := s.index.Registers(req.Height, paths)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve registers: %w", err)
-	}
-
-	res := GetRegistersResponse{
-		Height: req.Height,
-		Paths:  req.Paths,
-		Values: convert.ValuesToBytes(values),
-	}
-
-	return &res, nil
-}
-
-// GetHeight implements the `GetHeight` function of the generated GRPC
-// server.
-func (s *Server) GetHeight(_ context.Context, req *GetHeightRequest) (*GetHeightResponse, error) {
-	var blockID flow.Identifier
-	copy(blockID[:], req.BlockID)
-
-	height, err := s.index.Height(blockID)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve height: %w", err)
-	}
-
-	res := GetHeightResponse{
-		BlockID: req.BlockID,
-		Height:  height,
 	}
 
 	return &res, nil
@@ -274,6 +251,29 @@ func (s *Server) ListCollectionsForBlock(_ context.Context, req *ListCollections
 	res := ListCollectionsForBlockResponse{
 		BlockID:       req.BlockID,
 		CollectionIDs: collections,
+	}
+
+	return &res, nil
+}
+
+// GetRegisters implements the `GetRegisters` function of the generated GRPC
+// server.
+func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*GetRegistersResponse, error) {
+
+	paths, err := convert.BytesToPaths(req.Paths)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert paths: %w", err)
+	}
+
+	values, err := s.index.Registers(req.Height, paths)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve registers: %w", err)
+	}
+
+	res := GetRegistersResponse{
+		Height: req.Height,
+		Paths:  req.Paths,
+		Values: convert.ValuesToBytes(values),
 	}
 
 	return &res, nil

@@ -5,20 +5,18 @@
 1. [Table of Contents](#table-of-contents)
 2. [Endpoints](#endpoints)
 3. [Types](#types)
-    - [GetCommitRequest](#getcommitrequest)
-    - [GetCommitResponse](#getcommitresponse)
-    - [GetEventsRequest](#geteventsrequest)
-    - [GetEventsResponse](#geteventsresponse)
     - [GetFirstRequest](#getfirstrequest)
     - [GetFirstResponse](#getfirstresponse)
-    - [GetHeaderRequest](#getheaderrequest)
-    - [GetHeaderResponse](#getheaderresponse)
-    - [GetHeightRequest](#GetHeightRequest)
-    - [GetHeightResponse](#GetHeightResponse)
     - [GetLastRequest](#getlastrequest)
     - [GetLastResponse](#getlastresponse)
-    - [GetRegistersRequest](#getregistersrequest)
-    - [GetRegistersResponse](#getregistersresponse)
+    - [GetHeightRequest](#GetHeightRequest)
+    - [GetHeightResponse](#GetHeightResponse)
+    - [GetCommitRequest](#getcommitrequest)
+    - [GetCommitResponse](#getcommitresponse)
+    - [GetHeaderRequest](#getheaderrequest)
+    - [GetHeaderResponse](#getheaderresponse)
+    - [GetEventsRequest](#geteventsrequest)
+    - [GetEventsResponse](#geteventsresponse)
     - [GetTransactionRequest](#GetTransactionRequest)
     - [GetTransactionResponse](#GetTransactionResponse)
     - [ListCollectionsForBlockRequest](#ListCollectionsForBlockRequest)
@@ -27,24 +25,59 @@
     - [ListTransactionsForBlockResponse](#ListTransactionsForBlockResponse)
     - [ListTransactionsForCollectionRequest](#ListTransactionsForCollectionRequest)
     - [ListTransactionsForCollectionResponse](#ListTransactionsForCollectionResponse)
+    - [GetRegistersRequest](#getregistersrequest)
+    - [GetRegistersResponse](#getregistersresponse)
 
 ## Endpoints
 
 | Method Name                   | Request Type                                                                  | Response Type                                                                   |
 |-------------------------------|-------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
-| GetCommit                     | [GetCommitRequest](#GetCommitRequest)                                         | [GetCommitResponse](#GetCommitResponse)                                         |
-| GetEvents                     | [GetEventsRequest](#GetEventsRequest)                                         | [GetEventsResponse](#GetEventsResponse)                                         |
 | GetFirst                      | [GetFirstRequest](#GetFirstRequest)                                           | [GetFirstResponse](#GetFirstResponse)                                           |
-| GetHeader                     | [GetHeaderRequest](#GetHeaderRequest)                                         | [GetHeaderResponse](#GetHeaderResponse)                                         |
-| GetHeight                     | [GetHeightRequest](#GetHeightRequest)                                         | [GetHeightResponse](#GetHeightResponse)                                         |
 | GetLast                       | [GetLastRequest](#GetLastRequest)                                             | [GetLastResponse](#GetLastResponse)                                             |
-| GetRegisters                  | [GetRegistersRequest](#GetRegistersRequest)                                   | [GetRegistersResponse](#GetRegistersResponse)                                   |
+| GetHeight                     | [GetHeightRequest](#GetHeightRequest)                                         | [GetHeightResponse](#GetHeightResponse)                                         |
+| GetCommit                     | [GetCommitRequest](#GetCommitRequest)                                         | [GetCommitResponse](#GetCommitResponse)                                         |
+| GetHeader                     | [GetHeaderRequest](#GetHeaderRequest)                                         | [GetHeaderResponse](#GetHeaderResponse)                                         |
+| GetEvents                     | [GetEventsRequest](#GetEventsRequest)                                         | [GetEventsResponse](#GetEventsResponse)                                         |
 | GetTransaction                | [GetTransactionRequest](#GetTransactionRequest)                               | [GetTransactionResponse](#GetTransactionResponse)                               |
 | ListCollectionsForBlock       | [ListCollectionsForBlockRequest](#ListCollectionsForBlockRequest)             | [ListCollectionsForBlockResponse](#ListCollectionsForBlockResponse)             |
 | ListTransactionsForBlock      | [ListTransactionsForBlockRequest](#ListTransactionsForBlockRequest)           | [ListTransactionsForBlockResponse](#ListTransactionsForBlockResponse)           |
 | ListTransactionsForCollection | [ListTransactionsForCollectionRequest](#ListTransactionsForCollectionRequest) | [ListTransactionsForCollectionResponse](#ListTransactionsForCollectionResponse) |
+| GetRegisters                  | [GetRegistersRequest](#GetRegistersRequest)                                   | [GetRegistersResponse](#GetRegistersResponse)                                   |
 
 ## Types
+
+### GetFirstRequest
+
+For now, `GetFirstRequest` is empty.
+
+### GetFirstResponse
+
+| Field  | Type     | Label |
+|--------|----------|-------|
+| height | `uint64` |       |
+
+### GetLastRequest
+
+For now, `GetLastRequest` is empty.
+
+### GetLastResponse
+
+| Field  | Type     | Label |
+|--------|----------|-------|
+| height | `uint64` |       |
+
+### GetHeightRequest
+
+| Field   | Type    | Label |
+|---------|---------|-------|
+| blockID | `bytes` |       |
+
+### GetHeightResponse
+
+| Field   | Type     | Label |
+|---------|----------|-------|
+| blockID | `bytes`  |       |
+| height  | `uint64` |       |
 
 ### GetCommitRequest
 
@@ -58,6 +91,31 @@
 |--------|----------|-------|
 | height | `uint64` |       |
 | commit | `bytes`  |       |
+
+### GetHeaderRequest
+
+| Field  | Type     | Label |
+|--------|----------|-------|
+| height | `uint64` |       |
+
+### GetHeaderResponse
+
+| Field  | Type     | Label |
+|--------|----------|-------|
+| height | `uint64` |       |
+| data   | `bytes`  |       |
+
+The `data` field contains a [CBOR-encoded](https://cbor.io/) Flow header (`flow.Header`) as payload.
+
+Here is an example of how to decode this field in a small Go program:
+
+```go
+   var header flow.Header
+err := cbor.Unmarshal(response.Data, &header)
+if err != nil {
+return err
+}
+```
 
 ### GetEventsRequest
 
@@ -85,79 +143,6 @@ if err != nil {
 return err
 }
 ```
-
-### GetFirstRequest
-
-For now, `GetFirstRequest` is empty.
-
-### GetFirstResponse
-
-| Field  | Type     | Label |
-|--------|----------|-------|
-| height | `uint64` |       |
-
-### GetHeaderRequest
-
-| Field  | Type     | Label |
-|--------|----------|-------|
-| height | `uint64` |       |
-
-### GetHeaderResponse
-
-| Field  | Type     | Label |
-|--------|----------|-------|
-| height | `uint64` |       |
-| data   | `bytes`  |       |
-
-The `data` field contains a [CBOR-encoded](https://cbor.io/) Flow header (`flow.Header`) as payload.
-
-Here is an example of how to decode this field in a small Go program:
-
-```go
-   var header flow.Header
-err := cbor.Unmarshal(response.Data, &header)
-if err != nil {
-return err
-}
-```
-
-### GetHeightRequest
-
-| Field   | Type    | Label |
-|---------|---------|-------|
-| blockID | `bytes` |       |
-
-### GetHeightResponse
-
-| Field   | Type     | Label |
-|---------|----------|-------|
-| blockID | `bytes`  |       |
-| height  | `uint64` |       |
-
-### GetLastRequest
-
-For now, `GetLastRequest` is empty.
-
-### GetLastResponse
-
-| Field  | Type     | Label |
-|--------|----------|-------|
-| height | `uint64` |       |
-
-### GetRegistersRequest
-
-| Field  | Type     | Label    |
-|--------|----------|----------|
-| height | `uint64` |          |
-| paths  | `bytes`  | repeated |
-
-### GetRegistersResponse
-
-| Field  | Type     | Label    |
-|--------|----------|----------|
-| height | `uint64` |          |
-| paths  | `bytes`  | repeated |
-| values | `bytes`  | repeated |
 
 ### GetTransactionRequest
 
@@ -210,3 +195,18 @@ For now, `GetLastRequest` is empty.
 |----------------|---------|----------|
 | collectionID   | `bytes` |          |
 | transactionIDs | `bytes` | repeated |
+
+### GetRegistersRequest
+
+| Field  | Type     | Label    |
+|--------|----------|----------|
+| height | `uint64` |          |
+| paths  | `bytes`  | repeated |
+
+### GetRegistersResponse
+
+| Field  | Type     | Label    |
+|--------|----------|----------|
+| height | `uint64` |          |
+| paths  | `bytes`  | repeated |
+| values | `bytes`  | repeated |

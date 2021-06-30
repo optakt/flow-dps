@@ -17,37 +17,17 @@ syntax = "proto3";
 option go_package = "github.com/optakt/flow-dps/api/dps";
 
 service API {
-  rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
-  rpc GetEvents (GetEventsRequest) returns (GetEventsResponse) {}
   rpc GetFirst (GetFirstRequest) returns (GetFirstResponse) {}
-  rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
-  rpc GetHeight (GetHeightRequest) returns (GetHeightResponse) {}
   rpc GetLast (GetLastRequest) returns (GetLastResponse) {}
-  rpc GetRegisters (GetRegistersRequest) returns (GetRegistersResponse) {}
+  rpc GetHeight (GetHeightRequest) returns (GetHeightResponse) {}
+  rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
+  rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
+  rpc GetEvents (GetEventsRequest) returns (GetEventsResponse) {}
   rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse) {}
   rpc ListCollectionsForBlock (ListCollectionsForBlockRequest) returns (ListCollectionsForBlockResponse) {}
   rpc ListTransactionsForBlock (ListTransactionsForBlockRequest) returns (ListTransactionsForBlockResponse) {}
   rpc ListTransactionsForCollection (ListTransactionsForCollectionRequest) returns (ListTransactionsForCollectionResponse) {}
-}
-
-message GetCommitRequest {
-  uint64 height = 1;
-}
-
-message GetCommitResponse {
-  uint64 height = 1;
-  bytes commit = 2;
-}
-
-message GetEventsRequest {
-  uint64 height = 1;
-  repeated string types = 2;
-}
-
-message GetEventsResponse {
-  uint64 height = 1;
-  repeated string types = 2;
-  bytes data = 3;
+  rpc GetRegisters (GetRegistersRequest) returns (GetRegistersResponse) {}
 }
 
 message GetFirstRequest {
@@ -57,13 +37,11 @@ message GetFirstResponse {
   uint64 height = 1;
 }
 
-message GetHeaderRequest {
-  uint64 height = 1;
+message GetLastRequest {
 }
 
-message GetHeaderResponse {
+message GetLastResponse {
   uint64 height = 1;
-  bytes data = 2;
 }
 
 message GetHeightRequest {
@@ -75,22 +53,33 @@ message GetHeightResponse {
   uint64 height = 2;
 }
 
-message GetLastRequest {
-}
-
-message GetLastResponse {
+message GetCommitRequest {
   uint64 height = 1;
 }
 
-message GetRegistersRequest {
+message GetCommitResponse {
   uint64 height = 1;
-  repeated bytes paths = 2;
+  bytes commit = 2;
 }
 
-message GetRegistersResponse {
+message GetHeaderRequest {
   uint64 height = 1;
-  repeated bytes paths = 2;
-  repeated bytes values = 3;
+}
+
+message GetHeaderResponse {
+  uint64 height = 1;
+  bytes data = 2;
+}
+
+message GetEventsRequest {
+  uint64 height = 1;
+  repeated string types = 2;
+}
+
+message GetEventsResponse {
+  uint64 height = 1;
+  repeated string types = 2;
+  bytes data = 3;
 }
 
 message GetTransactionRequest {
@@ -127,5 +116,16 @@ message ListTransactionsForCollectionRequest {
 message ListTransactionsForCollectionResponse {
   bytes collectionID = 1;
   repeated bytes transactionIDs = 2;
+}
+
+message GetRegistersRequest {
+  uint64 height = 1;
+  repeated bytes paths = 2;
+}
+
+message GetRegistersResponse {
+  uint64 height = 1;
+  repeated bytes paths = 2;
+  repeated bytes values = 3;
 }
 
