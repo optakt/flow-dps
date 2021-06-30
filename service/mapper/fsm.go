@@ -17,41 +17,56 @@ package mapper
 import (
 	"context"
 	"fmt"
+	"sync"
 )
 
-type Edge struct {
+type edge struct {
 	check      CheckFunc
 	transition TransitionFunc
 }
 
 type FSM struct {
-	edges []Edge
+	state *State
+	edges []edge
+	wg    *sync.WaitGroup
 }
 
-func NewFSM() *FSM {
+func NewFSM(state *State) *FSM {
 
-	f := &FSM{}
+	f := &FSM{
+		state: state,
+		edges: []edge{},
+		wg:    &sync.WaitGroup{},
+	}
 
 	return f
 }
 
 func (f *FSM) Add(check CheckFunc, transition TransitionFunc) {
-	edge := Edge{
+	edge := edge{
 		check:      check,
 		transition: transition,
 	}
 	f.edges = append(f.edges, edge)
 }
 
-func (f *FSM) Run(s *State) error {
+func (f *FSM) Run() error {
+	f.wg.Add(1)
+	defer f.wg.Done()
 TransitionLoop:
 	for {
-		for _, edge := range f.edges {
-			ok := edge.check(s)
+		for _, e := range f.edges {
+			ok := e.check(f.state)
 			if !ok {
 				continue
 			}
-			err := edge.transition(s)
+			select {
+			case <-f.state.done:
+				break TransitionLoop
+			default:
+				// continue
+			}
+			err := e.transition(f.state)
 			if err != nil {
 				return fmt.Errorf("could not apply transition to state: %w", err)
 			}
@@ -59,8 +74,11 @@ TransitionLoop:
 		}
 		return fmt.Errorf("could not find transition for state")
 	}
+	return nil
 }
 
 func (f *FSM) Stop(ctx context.Context) error {
+	close(f.state.done)
+	f.wg.Wait()
 	return nil
 }

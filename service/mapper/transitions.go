@@ -91,10 +91,10 @@ func (t *Transitions) BootstrapState(s *State) error {
 	if err != nil {
 		return fmt.Errorf("could not read checkpoint: %w", err)
 	}
-	paths := allPaths(first)
 
 	// We need to sort this, otherwise the retrieval from the tree later
 	// when we index (with unsafe read) might fail to work properly.
+	paths := allPaths(first)
 	sort.Slice(paths, func(i int, j int) bool {
 		return bytes.Compare(paths[i][:], paths[j][:]) < 0
 	})
@@ -199,6 +199,16 @@ func (t *Transitions) IndexTree(s *State) error {
 			n := 1000
 			tree, _ := s.forest.Tree(commit)
 			for start := 0; start < len(deduplicated); start += n {
+
+				// Indexing the payloads could take a long time, so we should
+				// check on quitting between every batch.
+				select {
+				case <-s.done:
+					return nil
+				default:
+					// continue
+				}
+
 				end := start + n
 				if end > len(deduplicated) {
 					end = len(deduplicated)

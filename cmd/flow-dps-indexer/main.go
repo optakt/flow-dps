@@ -162,19 +162,21 @@ func run() int {
 	index := index.NewWriter(db, storage)
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	t := mapper.NewTransitions(load, chain, feed, index,
+	transitions := mapper.NewTransitions(load, chain, feed, index,
 		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
 		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),
 		mapper.WithIndexPayloads(flagIndexAll || flagIndexPayloads),
 	)
-	fsm := mapper.NewFSM()
-	fsm.Add(mapper.Empty, t.BootstrapState)
-	fsm.Add(mapper.Ready, t.UpdateTree)
-	fsm.Add(mapper.Matched, t.IndexTree)
-	fsm.Add(mapper.Indexed, t.ForwardBlock)
-	fsm.Add(mapper.Forwarded, t.IndexChain)
+	forest := forest.New()
+	state := mapper.EmptyState(forest)
+	fsm := mapper.NewFSM(state)
+	fsm.Add(mapper.Empty, transitions.BootstrapState)
+	fsm.Add(mapper.Ready, transitions.UpdateTree)
+	fsm.Add(mapper.Matched, transitions.IndexTree)
+	fsm.Add(mapper.Indexed, transitions.ForwardBlock)
+	fsm.Add(mapper.Forwarded, transitions.IndexChain)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
@@ -184,9 +186,7 @@ func run() int {
 	go func() {
 		start := time.Now()
 		log.Info().Time("start", start).Msg("Flow DPS Indexer starting")
-		forest := forest.New()
-		state := mapper.EmptyState(forest)
-		err := fsm.Run(state)
+		err := fsm.Run()
 		if err != nil {
 			log.Warn().Err(err).Msg("Flow DPS Indexer failed")
 			close(failed)
