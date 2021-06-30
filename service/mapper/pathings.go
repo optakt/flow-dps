@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"github.com/gammazero/deque"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"

@@ -103,7 +103,7 @@ func run() int {
 	// Fail if IndexAll is specified along with other index flags, as this would most likely mean that the user does
 	// not understand what they are doing.
 	if flagIndexAll && (flagIndexCommit || flagIndexEvents || flagIndexHeader ||
-		!flagIndexPayloads || flagIndexTransactions) {
+		flagIndexPayloads || flagIndexTransactions) {
 		log.Error().Str("level", flagLevel).Msg("-a/--all is mutually exclusive with specific indexing flags")
 		pflag.Usage()
 		return failure

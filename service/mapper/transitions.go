@@ -103,9 +103,10 @@ func (t *Transitions) BootstrapState(s *State) error {
 	second := checkpoint.RootHash()
 	t.log.Info().Uint64("height", s.height).Hex("second", second[:]).Int("paths", len(paths)).Msg("added checkpoint tree to forest")
 
-	// We have now successfully bootstrapped. However, no blockchain data
-	// has been indexed, so we pretend like we just forwarded from the last
-	// indexed block.
+	// We have successfully bootstrapped. However, no chain data for the root
+	// block has been indexed yet. This is why we "pretend" that we just
+	// forwarded the state to this height, so we go straight to the chain data
+	// indexing.
 	s.status = StatusForwarded
 
 	return nil
@@ -121,8 +122,9 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return fmt.Errorf("invalid status for updating tree (%s)", s.status)
 	}
 
-	// If we have matched the tree with the next commit, we can go to the next
-	// state immediately.
+	// If the forest contains a tree for the commit of the next finalized block,
+	// we have reached our goal and we can go to the next step in order to
+	// collect the register payloads we want to index for that block.
 	ok := s.forest.Has(s.next)
 	if ok {
 		log.Info().Hex("commit", s.next[:]).Uint("forest", s.forest.Size()).Msg("commit of next finalized block matched")
@@ -169,49 +171,55 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		return fmt.Errorf("invalid status for collecting registers (%s)", s.status)
 	}
 
+	// If indexing payloads is disabled, we can bypass collection and indexing
+	// of payloads and just go straight to forwarding the height to the next
+	// finalized block.
+	if !t.cfg.IndexPayloads {
+		s.status = StatusIndexed
+		return nil
+	}
+
 	// If we index payloads, we are basically stepping back from (and including)
 	// the tree that corresponds to the next finalized block all the way up to
 	// (and excluding) the tree for the last finalized block we indexed. To do
 	// so, we will use the parent state commit to retrieve the parent trees from
 	// the forest, and we use the paths we recorded changes on to retrieve the
 	// changed payloads at each step.
-	if t.cfg.IndexPayloads {
-		commit := s.next
-		for commit != s.last {
+	commit := s.next
+	for commit != s.last {
 
-			// We do this check only once, so that we don't need to do it for
-			// each item we retrieve. The tree should always be there, but we
-			// should check just to not fail silently.
-			ok := s.forest.Has(commit)
-			if !ok {
-				return fmt.Errorf("could not load tree (commit: %x)", commit)
-			}
-
-			// For each path, we retrieve the payload and add it to the
-			// registers we want to save later. If we already have a payload,
-			// we only keep that one, because we start with the newest one and
-			// previous ones within the same block are thus irrelevant.
-			paths, _ := s.forest.Paths(commit)
-			tree, _ := s.forest.Tree(commit)
-			for _, path := range paths {
-				_, ok := s.registers[path]
-				if ok {
-					continue
-				}
-				payloads := tree.UnsafeRead([]ledger.Path{path})
-				s.registers[path] = payloads[0]
-			}
-
-			// We now step back to the parent of the current state trie.
-			parent, _ := s.forest.Parent(commit)
-			commit = parent
+		// We do this check only once, so that we don't need to do it for
+		// each item we retrieve. The tree should always be there, but we
+		// should check just to not fail silently.
+		ok := s.forest.Has(commit)
+		if !ok {
+			return fmt.Errorf("could not load tree (commit: %x)", commit)
 		}
 
-		log.Info().Int("registers", len(s.registers)).Msg("collected registers for finalized block")
+		// For each path, we retrieve the payload and add it to the
+		// registers we want to save later. If we already have a payload,
+		// we only keep that one, because we start with the newest one and
+		// previous ones within the same block are thus irrelevant.
+		paths, _ := s.forest.Paths(commit)
+		tree, _ := s.forest.Tree(commit)
+		for _, path := range paths {
+			_, ok := s.registers[path]
+			if ok {
+				continue
+			}
+			payloads := tree.UnsafeRead([]ledger.Path{path})
+			s.registers[path] = payloads[0]
+		}
+
+		// We now step back to the parent of the current state trie.
+		parent, _ := s.forest.Parent(commit)
+		commit = parent
 	}
 
-	// Then we set the state to indexed so we get the next commit and index
-	// the static data right away.
+	log.Info().Int("registers", len(s.registers)).Msg("collected registers for finalized block")
+
+	// At this point, we have collected all the payloads, so we go to the next
+	// step, where we will index them.
 	s.status = StatusCollected
 
 	return nil
@@ -226,9 +234,10 @@ func (t *Transitions) IndexRegisters(s *State) error {
 		return fmt.Errorf("invalid status for indexing registers (%s)", s.status)
 	}
 
-	// If there are no registers to be indexed, we can go to the next state
-	// immediately.
+	// If there are no registers left to be indexed, we can go to the next step,
+	// which is about forwarding the height to the next finalized block.
 	if len(s.registers) == 0 {
+		log.Info().Msg("indexed registers for finalized block")
 		s.status = StatusIndexed
 		return nil
 	}
@@ -249,7 +258,7 @@ func (t *Transitions) IndexRegisters(s *State) error {
 		return fmt.Errorf("could not index registers: %w", err)
 	}
 
-	log.Info().Int("indexed", len(paths)).Int("remaining", len(s.registers)).Msg("indexed register batch for finalized block")
+	log.Debug().Int("indexed", len(paths)).Int("remaining", len(s.registers)).Msg("indexed register batch for finalized block")
 
 	return nil
 }
@@ -282,8 +291,8 @@ func (t *Transitions) ForwardHeight(s *State) error {
 
 	t.log.Info().Uint64("height", s.height).Msg("height forwarded to next finalized block")
 
-	// After forwarding the height, we are in the forwarded state, which will
-	// always lead into the indexing of chain data next.
+	// Once the height is forwarded, we can set the status so that we index
+	// the blockchain data next.
 	s.status = StatusForwarded
 
 	return nil
@@ -353,9 +362,9 @@ func (t *Transitions) IndexChain(s *State) error {
 
 	log.Msg("chain data for next finalized block indexed")
 
-	// At this point, all stable data for this block height is indexed and we
-	// can go into the active state to start collecting payloads for the height
-	// from tree updates.
+	// After indexing the blockchain data, we can go back to updating the state
+	// tree until we find the commit of the finalized block. This will allow us
+	// to index the payloads then.
 	s.status = StatusUpdating
 
 	return nil
