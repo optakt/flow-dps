@@ -108,5 +108,3 @@ message ListTransactionsForHeightResponse {
   uint64 height = 1;
   repeated bytes transactionIDs = 2;
 }
-
-

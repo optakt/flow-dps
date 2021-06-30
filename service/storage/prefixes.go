@@ -25,10 +25,10 @@ const (
 	prefixEvents  = 5
 	prefixPayload = 6
 
-	prefixCollectionsForHeight      = 11
-	prefixTransactionsForCollection = 12
-	prefixTransactionsForHeight     = 9
-
 	prefixTransaction = 8
 	prefixCollection  = 10
+
+	prefixTransactionsForHeight     = 9
+	prefixTransactionsForCollection = 12
+	prefixCollectionsForHeight      = 11
 )

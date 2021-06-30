@@ -77,7 +77,7 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
-// GetHeight implements the `GetHeight` function of the generated GRPC
+// GetHeight implements the `GetHeight` method of the generated GRPC
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
 
@@ -86,7 +86,7 @@ func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequ
 
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
-		return nil, fmt.Errorf("could not encode events: %w", err)
+		return nil, fmt.Errorf("could not get height for block: %w", err)
 	}
 
 	res := GetHeightForBlockResponse{
@@ -97,7 +97,7 @@ func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequ
 	return &res, nil
 }
 
-// GetCommit implements the `GetCommit` function of the generated GRPC server.
+// GetCommit implements the `GetCommit` method of the generated GRPC server.
 func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
 
 	commit, err := s.index.Commit(req.Height)
@@ -113,7 +113,7 @@ func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommit
 	return &res, nil
 }
 
-// GetHeader implements the `GetHeader` function of the generated GRPC server.
+// GetHeader implements the `GetHeader` method of the generated GRPC server.
 func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
 
 	header, err := s.index.Header(req.Height)
@@ -134,18 +134,18 @@ func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeader
 	return &res, nil
 }
 
-// GetEvents implements the `GetEvents` function of the generated GRPC server.
+// GetEvents implements the `GetEvents` method of the generated GRPC server.
 func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
 
 	types := convert.StringsToTypes(req.Types)
 	events, err := s.index.Events(req.Height, types...)
 	if err != nil {
-		return nil, fmt.Errorf("could not get header: %w", err)
+		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
 	data, err := s.codec.Marshal(events)
 	if err != nil {
-		return nil, fmt.Errorf("could not encode header: %w", err)
+		return nil, fmt.Errorf("could not encode events: %w", err)
 	}
 
 	res := GetEventsResponse{
@@ -157,7 +157,7 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 	return &res, nil
 }
 
-// GetRegisterValues implements the `GetRegisterValues` function of the
+// GetRegisterValues implements the `GetRegisterValues` method of the
 // generated GRPC server.
 func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequest) (*GetRegisterValuesResponse, error) {
 
@@ -168,7 +168,7 @@ func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequ
 
 	values, err := s.index.Values(req.Height, paths)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve registers: %w", err)
+		return nil, fmt.Errorf("could not retrieve values: %w", err)
 	}
 
 	res := GetRegisterValuesResponse{
@@ -180,7 +180,7 @@ func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequ
 	return &res, nil
 }
 
-// GetTransaction implements the `GetTransaction` function of the generated GRPC
+// GetTransaction implements the `GetTransaction` method of the generated GRPC
 // server.
 func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
 	txID := flow.HashToID(req.TransactionID)
@@ -203,13 +203,13 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 	return &res, nil
 }
 
-// ListTransactionsForHeight implements the `ListTransactionsForHeight` function of the generated GRPC
+// ListTransactionsForHeight implements the `ListTransactionsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error) {
 
 	txIDs, err := s.index.TransactionsByHeight(req.Height)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve transactions: %w", err)
+		return nil, fmt.Errorf("could not list transactions by height: %w", err)
 	}
 
 	transactionIDs := make([][]byte, 0, len(txIDs))
