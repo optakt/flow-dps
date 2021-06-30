@@ -34,6 +34,7 @@ import (
 
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/api/rosetta"
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/converter"
@@ -103,9 +104,16 @@ func run() int {
 	}
 	defer conn.Close()
 
+	// Initialize storage library.
+	codec, err := zbor.NewCodec()
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize storage codec")
+		return failure
+	}
+
 	// Rosetta API initialization.
 	client := api.NewAPIClient(conn)
-	index := api.IndexFromAPI(client)
+	index := api.IndexFromAPI(client, codec)
 	config := configuration.New(params.ChainID)
 	validate := validator.New(params, index)
 	generate := scripts.NewGenerator(params)
