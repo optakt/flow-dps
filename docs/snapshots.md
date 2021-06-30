@@ -1,15 +1,15 @@
-# Index snapshots
+# Index Snapshots
 
 This document describes index snapshots, what they are and how they can be created or updated.
 
 **Table of Contents**
-- [What are index snapshots](#what-are-snapshots)
-- [Create a snapshot](#create-a-snapshot)
-- [Updating a snapshot](#update-a-snapshot)
-    1. [Create a new index](#create-a-new-index)
-    2. [Create an index snapshot](#create-an-index-snapshot)
+- [What Are Index Snapshots](#what-are-snapshots)
+- [Creating a Snapshot](#creating-a-snapshot)
+- [Updating a Snapshot](#updating-a-snapshot)
+    1. [New Index](#new-index)
+    2. [New Snapshot](#new-snapshot)
 
-## What are index snapshots
+## What Are Index Snapshots
 
 Index snapshots are images of the DPS index at a certain point in time.
 These images can be used to create or restore the content of an index in order to operate on a certain indexed data.
@@ -18,34 +18,36 @@ Index snapshots can be used to create a starting point for tests, so that tests 
 At a low level, snapshots are created using the [badger](https://github.com/dgraph-io/badger) backup functionality.
 Technical documentation can be found [here](https://pkg.go.dev/github.com/dgraph-io/badger/v3#DB.Backup).
 
-## Create a snapshot
+## Creating a Snapshot
 
 Index snapshots are created using the CLI tool found at `cmd/create-index-snapshot`.
 Usage for the tool is described in more detail [here](https://github.com/optakt/flow-dps/blob/master/cmd/create-index-snapshot/README.md).
+By default the snapshot is hex-encoded.
 
-## Update a snapshot
+```console
+$ create-index-snapshot -i <index_dir> > output.hex
+```
 
-It is sometimes necessary to regenerate the snapshot.
-Perhaps in order to add additional blocks, events or some other data to the snapshot to be referenced in tests.
-
-Other reasons may be because the internal format of the index changed, like when a compression dictionary is updated.
 When an index snapshot is created, it is compressed using a specific compression dictionary.
 When restoring the index, the snapshot needs to be decompressed using the same dictionary or decompression will fail.
 
-### Create a new index
+## Updating a Snapshot
 
-Create a new index using the same inputs as for the original index.
+It is sometimes necessary to regenerate the snapshot, for example when an index was added or changed, or because the internal format of the index changed (like when a compression dictionary is changed).
+
+### New Index
+
+The following command creates a new index.
+Be careful to always use the same inputs as for the original index, if the goal is to continue building on the existing state.
 
 ```console
 $ flow-dps-indexer -t <trie_dir> -d <data_dir> -i <index_dir> -a
 ```
 
-### Create an index snapshot
+### New Snapshot
 
-Creating an index snapshot is the same as described in the [Create a snapshot](#create-a-snapshot) section, while referencing the new index.
+Creating the new snapshot is the same as described in the [Creating a snapshot](#creating-a-snapshot) section, while referencing the new index.
 
 ```console
 $ create-index-snapshot -i <new_index_dir> > output.hex
 ```
-
-By default the snapshot is hex-encoded.
