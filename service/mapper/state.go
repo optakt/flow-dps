@@ -15,13 +15,26 @@
 package mapper
 
 import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	"math"
+
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type Step struct {
-	Commit flow.StateCommitment
-	Paths  []ledger.Path
-	Tree   *trie.MTrie
+type State struct {
+	forest Forest
+	state  uint
+	height uint64
+	last   flow.StateCommitment
+	next   flow.StateCommitment
+}
+
+func EmptyState(forest Forest) *State {
+	s := &State{
+		forest: forest,
+		state:  stateEmpty,
+		height: math.MaxUint64,
+		last:   flow.StateCommitment{},
+		next:   flow.StateCommitment{},
+	}
+	return s
 }

@@ -14,8 +14,31 @@
 
 package mapper
 
-import (
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+const (
+	stateEmpty = iota + 1
+	stateActive
+	stateIndexed
+	stateForwarded
 )
 
-func PostNoop(_ *trie.MTrie) {}
+type CheckFunc func(*State) bool
+
+func Empty(s *State) bool {
+	return s.state == stateEmpty
+}
+
+func Ready(s *State) bool {
+	return s.state == stateActive && !s.forest.Has(s.next)
+}
+
+func Matched(s *State) bool {
+	return s.state == stateActive && s.forest.Has(s.next)
+}
+
+func Indexed(s *State) bool {
+	return s.state == stateIndexed
+}
+
+func Forwarded(s *State) bool {
+	return s.state == stateForwarded
+}

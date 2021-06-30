@@ -37,17 +37,17 @@ import (
 
 func TestNew(t *testing.T) {
 	params := dps.Params{ChainID: dps.FlowTestnet}
-	idx := &mocks.Reader{}
+	index := &mocks.Reader{}
 	validate := &mocks.Validator{}
 	generator := &mocks.Generator{}
 	invoke := &mocks.Invoker{}
 	convert := &mocks.Converter{}
 
-	r := New(params, idx, validate, generator, invoke, convert)
+	r := New(params, index, validate, generator, invoke, convert)
 
 	if assert.NotNil(t, r) {
 		assert.Equal(t, params, r.params)
-		assert.Equal(t, idx, r.index)
+		assert.Equal(t, index, r.index)
 		assert.Equal(t, validate, r.validate)
 		assert.Equal(t, generator, r.generator)
 		assert.Equal(t, invoke, r.invoke)
