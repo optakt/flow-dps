@@ -231,8 +231,12 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		count++
 	}
 
-	// We need the *uint64 for the block identifier.
-	prevHeight := header.Height - 1
+	// We need the *uint64 for the parent block identifier.
+	var parentHeight *uint64
+	if header.Height > 0 {
+		h := header.Height - 1
+		parentHeight = &h
+	}
 
 	// Now we just need to build the block.
 	block := object.Block{
@@ -241,7 +245,7 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 			Hash:  header.ID().String(),
 		},
 		ParentID: identifier.Block{
-			Index: &prevHeight,
+			Index: parentHeight,
 			Hash:  header.ParentID.String(),
 		},
 		Timestamp:    header.Timestamp.UnixNano() / 1_000_000,

@@ -160,11 +160,19 @@ func TestAPI_Block(t *testing.T) {
 			test.validateBlock(blockResponse.Block.ID)
 
 			// Verify that the information about the parent block (index and hash) is correct.
-			if assert.NotNil(t, blockResponse.Block.ParentID.Index) && assert.NotNil(t, test.request.BlockID.Index) {
-				assert.Equal(t, *(test.request.BlockID.Index)-1, *blockResponse.Block.ParentID.Index)
-			}
-			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 
+			// For the first block, verify the parent block index is empty.
+			// For subsequent blocks, verify the index of the parent block.
+			if *test.request.BlockID.Index == 0 {
+				assert.Nil(t, blockResponse.Block.ParentID.Index)
+
+			} else {
+				if assert.NotNil(t, blockResponse.Block.ParentID.Index) && assert.NotNil(t, test.request.BlockID.Index) {
+					assert.Equal(t, *(test.request.BlockID.Index)-1, *blockResponse.Block.ParentID.Index)
+				}
+			}
+
+			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 			assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
 
 			if test.validateTransactions != nil {
