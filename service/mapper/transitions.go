@@ -18,10 +18,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/rs/zerolog"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/rs/zerolog"
 
 	"github.com/optakt/flow-dps/models/index"
 )
