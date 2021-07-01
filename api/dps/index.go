@@ -18,12 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fxamacker/cbor/v2"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
+	"github.com/optakt/flow-dps/models/index"
 )
 
 // Index implements the `index.Reader` interface on top of the DPS server's
@@ -32,14 +31,16 @@ import (
 // machines across a network.
 type Index struct {
 	client APIClient
+	codec  index.Codec
 }
 
 // IndexFromAPI creates a new instance of an index reader that uses the provided
 // GRPC API client to retrieve state from the index.
-func IndexFromAPI(client APIClient) *Index {
+func IndexFromAPI(client APIClient, codec index.Codec) *Index {
 
 	i := Index{
 		client: client,
+		codec:  codec,
 	}
 
 	return &i
@@ -115,7 +116,7 @@ func (i *Index) Header(height uint64) (*flow.Header, error) {
 	}
 
 	var header flow.Header
-	err = cbor.Unmarshal(res.Data, &header)
+	err = i.codec.Unmarshal(res.Data, &header)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode header: %w", err)
 	}
@@ -139,7 +140,7 @@ func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, er
 	}
 
 	var events []flow.Event
-	err = cbor.Unmarshal(res.Data, &events)
+	err = i.codec.Unmarshal(res.Data, &events)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode events: %w", err)
 	}
@@ -179,7 +180,7 @@ func (i *Index) Transaction(transactionID flow.Identifier) (*flow.TransactionBod
 	}
 
 	var transaction flow.TransactionBody
-	err = cbor.Unmarshal(res.Data, &transaction)
+	err = i.codec.Unmarshal(res.Data, &transaction)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode transaction: %w", err)
 	}

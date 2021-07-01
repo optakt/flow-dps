@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 
 	"github.com/optakt/flow-dps/api/dps"
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/rosetta/invoker"
 )
@@ -120,9 +121,16 @@ func run() int {
 		args = append(args, arg)
 	}
 
+	// Initialize storage library.
+	codec, err := zbor.NewCodec()
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize storage codec")
+		return failure
+	}
+
 	// Execute the script using remote lookup and read.
 	client := dps.NewAPIClient(conn)
-	invoke, err := invoker.New(dps.IndexFromAPI(client), invoker.WithCacheSize(flagCache))
+	invoke, err := invoker.New(dps.IndexFromAPI(client, codec), invoker.WithCacheSize(flagCache))
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize invoker")
 		return failure
