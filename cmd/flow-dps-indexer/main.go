@@ -29,7 +29,9 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
+	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
+	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
 )
@@ -56,11 +58,10 @@ func run() int {
 		flagForce             bool
 		flagIndex             string
 		flagIndexAll          bool
-		flagIndexBlocks       bool
+		flagIndexCommit       bool
 		flagIndexEvents       bool
-		flagIndexHeaders      bool
+		flagIndexHeader       bool
 		flagIndexPayloads     bool
-		flagIndexCommits      bool
 		flagIndexTransactions bool
 		flagLevel             string
 		flagTrie              string
@@ -71,10 +72,9 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
-	pflag.BoolVarP(&flagIndexBlocks, "index-blocks", "b", false, "index blocks")
-	pflag.BoolVarP(&flagIndexCommits, "index-commits", "m", false, "index commits")
+	pflag.BoolVarP(&flagIndexCommit, "index-commits", "m", false, "index commits")
 	pflag.BoolVarP(&flagIndexEvents, "index-events", "e", false, "index events")
-	pflag.BoolVarP(&flagIndexHeaders, "index-headers", "h", false, "index headers")
+	pflag.BoolVarP(&flagIndexHeader, "index-headers", "h", false, "index headers")
 	pflag.BoolVarP(&flagIndexPayloads, "index-payloads", "p", false, "index payloads")
 	pflag.BoolVarP(&flagIndexTransactions, "index-transactions", "x", false, "index transactions")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
@@ -93,8 +93,8 @@ func run() int {
 	log = log.Level(level)
 
 	// Ensure that at least one index is specified.
-	if !flagIndexAll && !flagIndexCommits && !flagIndexTransactions && !flagIndexBlocks && !flagIndexEvents &&
-		!flagIndexPayloads && !flagIndexHeaders {
+	if !flagIndexAll && !flagIndexCommit && !flagIndexEvents && !flagIndexHeader &&
+		!flagIndexPayloads && !flagIndexTransactions {
 		log.Error().Str("level", flagLevel).Msg("no indexing option specified, use -a/--all to build all indexes")
 		pflag.Usage()
 		return failure
@@ -102,8 +102,8 @@ func run() int {
 
 	// Fail if IndexAll is specified along with other index flags, as this would most likely mean that the user does
 	// not understand what they are doing.
-	if flagIndexAll && (flagIndexCommits || flagIndexTransactions || flagIndexBlocks || flagIndexEvents ||
-		!flagIndexPayloads || flagIndexHeaders) {
+	if flagIndexAll && (flagIndexCommit || flagIndexEvents || flagIndexHeader ||
+		flagIndexPayloads || flagIndexTransactions) {
 		log.Error().Str("level", flagLevel).Msg("-a/--all is mutually exclusive with specific indexing flags")
 		pflag.Usage()
 		return failure
@@ -141,32 +141,44 @@ func run() int {
 		return failure
 	}
 
-	// Initialize mapper.
+	// Initialize the dependencies needed for the FSM and the state transitions.
+	file, err := os.Open(flagCheckpoint)
+	if err != nil {
+		log.Error().Err(err).Msg("could not open checkpoint file")
+		return failure
+	}
+	load := loader.New(file)
 	chain := chain.FromDisk(data)
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
 		return failure
 	}
-	feeder, err := feeder.FromDisk(wal.NewReader(segments))
+	feed, err := feeder.FromDisk(wal.NewReader(segments))
 	if err != nil {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 		return failure
 	}
 	index := index.NewWriter(db, storage)
-	mapper, err := mapper.New(log, chain, feeder, index,
-		mapper.WithCheckpointFile(flagCheckpoint),
-		mapper.WithIndexBlocks(flagIndexAll || flagIndexBlocks),
-		mapper.WithIndexCommits(flagIndexAll || flagIndexCommits),
-		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),
-		mapper.WithIndexHeaders(flagIndexAll || flagIndexHeaders),
-		mapper.WithIndexPayloads(flagIndexAll || flagIndexPayloads),
+
+	// Initialize the transitions with the dependencies and add them to the FSM.
+	transitions := mapper.NewTransitions(log, load, chain, feed, index,
+		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
+		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
+		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),
+		mapper.WithIndexPayloads(flagIndexAll || flagIndexPayloads),
 	)
-	if err != nil {
-		log.Error().Str("checkpoint", flagCheckpoint).Err(err).Msg("could not initialize mapper")
-		return failure
-	}
+	forest := forest.New()
+	state := mapper.EmptyState(forest)
+	fsm := mapper.NewFSM(state,
+		mapper.WithTransition(mapper.StatusEmpty, transitions.BootstrapState),
+		mapper.WithTransition(mapper.StatusUpdating, transitions.UpdateTree),
+		mapper.WithTransition(mapper.StatusMatched, transitions.CollectRegisters),
+		mapper.WithTransition(mapper.StatusCollected, transitions.IndexRegisters),
+		mapper.WithTransition(mapper.StatusIndexed, transitions.ForwardHeight),
+		mapper.WithTransition(mapper.StatusForwarded, transitions.IndexChain),
+	)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
@@ -176,7 +188,7 @@ func run() int {
 	go func() {
 		start := time.Now()
 		log.Info().Time("start", start).Msg("Flow DPS Indexer starting")
-		err := mapper.Run()
+		err := fsm.Run()
 		if err != nil {
 			log.Warn().Err(err).Msg("Flow DPS Indexer failed")
 			close(failed)
@@ -209,7 +221,7 @@ func run() int {
 	// an error. We then wait for shutdown on each component to complete.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	err = mapper.Stop(ctx)
+	err = fsm.Stop(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
 		return failure

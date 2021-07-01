@@ -97,62 +97,29 @@ func (d *Disk) Events(height uint64) ([]flow.Event, error) {
 	return events, nil
 }
 
-func (d *Disk) Transactions(height uint64) ([]flow.Transaction, error) {
+func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	var blockID flow.Identifier
 	err := operation.LookupBlockHeight(height, &blockID)(d.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, dps.ErrFinished
 	}
 
-	var tt []flow.TransactionResult
-	err = operation.LookupTransactionResultsByBlockID(blockID, &tt)(d.db.NewTransaction(false))
+	var results []flow.TransactionResult
+	err = operation.LookupTransactionResultsByBlockID(blockID, &results)(d.db.NewTransaction(false))
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, dps.ErrFinished
 	}
 
-	var transactions []flow.Transaction
-	for _, t := range tt {
-		var tb flow.TransactionBody
-		err := operation.RetrieveTransaction(t.TransactionID, &tb)(d.db.NewTransaction(false))
+	transactions := make([]*flow.TransactionBody, 0, len(results))
+	for _, result := range results {
+		var transaction flow.TransactionBody
+		err := operation.RetrieveTransaction(result.TransactionID, &transaction)(d.db.NewTransaction(false))
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, dps.ErrFinished
 		}
 
-		transactions = append(transactions, flow.Transaction{TransactionBody: tb})
+		transactions = append(transactions, &transaction)
 	}
 
 	return transactions, nil
-}
-
-func (d *Disk) Collections(height uint64) ([]flow.LightCollection, error) {
-	var blockID flow.Identifier
-	err := operation.LookupBlockHeight(height, &blockID)(d.db.NewTransaction(false))
-	if errors.Is(err, storage.ErrNotFound) {
-		return nil, dps.ErrFinished
-	}
-
-	var tt []flow.TransactionResult
-	err = operation.LookupTransactionResultsByBlockID(blockID, &tt)(d.db.NewTransaction(false))
-	if errors.Is(err, storage.ErrNotFound) {
-		return nil, dps.ErrFinished
-	}
-
-	var collections []flow.LightCollection
-	for _, t := range tt {
-		var id flow.Identifier
-		err = operation.RetrieveCollectionID(t.ID(), &id)(d.db.NewTransaction(false))
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, dps.ErrFinished
-		}
-
-		var collection flow.LightCollection
-		err = operation.RetrieveCollection(id, &collection)(d.db.NewTransaction(false))
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, dps.ErrFinished
-		}
-
-		collections = append(collections, collection)
-	}
-
-	return collections, nil
 }

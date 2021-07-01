@@ -12,23 +12,34 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package mapper
 
 import (
+	"math"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type Writer interface {
-	First(height uint64) error
-	Last(height uint64) error
+type State struct {
+	forest    Forest
+	status    Status
+	height    uint64
+	last      flow.StateCommitment
+	next      flow.StateCommitment
+	registers map[ledger.Path]*ledger.Payload
+	done      chan struct{}
+}
 
-	Height(blockID flow.Identifier, height uint64) error
-
-	Commit(height uint64, commit flow.StateCommitment) error
-	Header(height uint64, header *flow.Header) error
-	Events(height uint64, events []flow.Event) error
-	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
-
-	Transactions(height uint64, transactions []*flow.TransactionBody) error
+func EmptyState(forest Forest) *State {
+	s := &State{
+		forest:    forest,
+		status:    StatusEmpty,
+		height:    math.MaxUint64,
+		last:      flow.StateCommitment{},
+		next:      flow.StateCommitment{},
+		registers: make(map[ledger.Path]*ledger.Payload),
+		done:      make(chan struct{}),
+	}
+	return s
 }

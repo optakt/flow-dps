@@ -77,18 +77,19 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
-// GetHeight implements the `GetHeight` function of the generated GRPC
+// GetHeight implements the `GetHeight` method of the generated GRPC
 // server.
-func (s *Server) GetHeight(_ context.Context, req *GetHeightRequest) (*GetHeightResponse, error) {
+func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
+
 	var blockID flow.Identifier
 	copy(blockID[:], req.BlockID)
 
-	height, err := s.index.Height(blockID)
+	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve height: %w", err)
+		return nil, fmt.Errorf("could not get height for block: %w", err)
 	}
 
-	res := GetHeightResponse{
+	res := GetHeightForBlockResponse{
 		BlockID: req.BlockID,
 		Height:  height,
 	}
@@ -120,7 +121,6 @@ func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeader
 		return nil, fmt.Errorf("could not get header: %w", err)
 	}
 
-	// The header is encoded using CBOR with canonical encoding options.
 	data, err := s.codec.Marshal(header)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode header: %w", err)
@@ -137,17 +137,12 @@ func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeader
 // GetEvents implements the `GetEvents` method of the generated GRPC server.
 func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
 
-	types := make([]flow.EventType, 0, len(req.Types))
-	for _, typ := range req.Types {
-		types = append(types, flow.EventType(typ))
-	}
-
+	types := convert.StringsToTypes(req.Types)
 	events, err := s.index.Events(req.Height, types...)
 	if err != nil {
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	// The events are CBOR-encoded with canonical encoding options.
 	data, err := s.codec.Marshal(events)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode events: %w", err)
@@ -162,118 +157,69 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 	return &res, nil
 }
 
-// GetTransaction implements the `GetTransaction` function of the generated GRPC
-// server.
-func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
-	transactionID := flow.HashToID(req.TransactionID)
-
-	transaction, err := s.index.Transaction(transactionID)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
-	}
-
-	transactionData, err := cbor.Marshal(transaction)
-	if err != nil {
-		return nil, fmt.Errorf("could not encode transaction: %w", err)
-	}
-
-	res := GetTransactionResponse{
-		TransactionID: req.TransactionID,
-		Data:          transactionData,
-	}
-
-	return &res, nil
-}
-
-// ListTransactionsForBlock implements the `ListTransactionsForBlock` function of the generated GRPC
-// server.
-func (s *Server) ListTransactionsForBlock(_ context.Context, req *ListTransactionsForBlockRequest) (*ListTransactionsForBlockResponse, error) {
-	var blockID flow.Identifier
-	copy(blockID[:], req.BlockID)
-
-	tt, err := s.index.Transactions(blockID)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve transactions: %w", err)
-	}
-
-	var transactions [][]byte
-	for _, t := range tt {
-		transactions = append(transactions, t[:])
-	}
-
-	res := ListTransactionsForBlockResponse{
-		BlockID:        req.BlockID,
-		TransactionIDs: transactions,
-	}
-
-	return &res, nil
-}
-
-// ListTransactionsForCollection implements the `ListTransactionsForCollection` function of the generated GRPC
-// server.
-func (s *Server) ListTransactionsForCollection(_ context.Context, req *ListTransactionsForCollectionRequest) (*ListTransactionsForCollectionResponse, error) {
-	collectionID := flow.HashToID(req.CollectionID)
-
-	collection, err := s.index.Collection(collectionID)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve collection: %w", err)
-	}
-
-	var transactionIDs [][]byte
-	for _, tr := range collection.Transactions {
-		transactionIDs = append(transactionIDs, tr[:])
-	}
-
-	res := ListTransactionsForCollectionResponse{
-		CollectionID:   req.CollectionID,
-		TransactionIDs: transactionIDs,
-	}
-
-	return &res, nil
-}
-
-// ListCollectionsForBlock implements the `ListCollectionsForBlock` function of the generated GRPC
-// server.
-func (s *Server) ListCollectionsForBlock(_ context.Context, req *ListCollectionsForBlockRequest) (*ListCollectionsForBlockResponse, error) {
-	var blockID flow.Identifier
-	copy(blockID[:], req.BlockID)
-
-	cc, err := s.index.Collections(blockID)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve collections: %w", err)
-	}
-
-	var collections [][]byte
-	for _, c := range cc {
-		collections = append(collections, c[:])
-	}
-
-	res := ListCollectionsForBlockResponse{
-		BlockID:       req.BlockID,
-		CollectionIDs: collections,
-	}
-
-	return &res, nil
-}
-
-// GetRegisters implements the `GetRegisters` function of the generated GRPC
-// server.
-func (s *Server) GetRegisters(_ context.Context, req *GetRegistersRequest) (*GetRegistersResponse, error) {
+// GetRegisterValues implements the `GetRegisterValues` method of the
+// generated GRPC server.
+func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequest) (*GetRegisterValuesResponse, error) {
 
 	paths, err := convert.BytesToPaths(req.Paths)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert paths: %w", err)
 	}
 
-	values, err := s.index.Registers(req.Height, paths)
+	values, err := s.index.Values(req.Height, paths)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve registers: %w", err)
+		return nil, fmt.Errorf("could not retrieve values: %w", err)
 	}
 
-	res := GetRegistersResponse{
+	res := GetRegisterValuesResponse{
 		Height: req.Height,
 		Paths:  req.Paths,
 		Values: convert.ValuesToBytes(values),
+	}
+
+	return &res, nil
+}
+
+// GetTransaction implements the `GetTransaction` method of the generated GRPC
+// server.
+func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
+	txID := flow.HashToID(req.TransactionID)
+
+	transaction, err := s.index.Transaction(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
+	}
+
+	data, err := cbor.Marshal(transaction)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode transaction: %w", err)
+	}
+
+	res := GetTransactionResponse{
+		TransactionID: req.TransactionID,
+		Data:          data,
+	}
+
+	return &res, nil
+}
+
+// ListTransactionsForHeight implements the `ListTransactionsForHeight` method of the generated GRPC
+// server.
+func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error) {
+
+	txIDs, err := s.index.TransactionsByHeight(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not list transactions by height: %w", err)
+	}
+
+	transactionIDs := make([][]byte, 0, len(txIDs))
+	for _, txID := range txIDs {
+		transactionIDs = append(transactionIDs, txID[:])
+	}
+
+	res := ListTransactionsForHeightResponse{
+		Height:         req.Height,
+		TransactionIDs: transactionIDs,
 	}
 
 	return &res, nil

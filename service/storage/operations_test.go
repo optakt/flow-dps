@@ -600,13 +600,13 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 	})
 }
 
-func TestLibrary_SaveAndRetrieveHeight(t *testing.T) {
+func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
 	testHeight := uint64(42)
 	blockID, _ := flow.HexStringToIdentifier("aac513eb1a0457700ac3fa8d292513e18ad7fd70065146b35ab48fa5a6cab007")
-	testKey := encodeKey(prefixHeight, blockID)
+	testKey := encodeKey(prefixHeightForBlock, blockID)
 	testValue := []byte(`testValue`)
 
 	t.Run("save height of block", func(t *testing.T) {
@@ -620,7 +620,7 @@ func TestLibrary_SaveAndRetrieveHeight(t *testing.T) {
 			},
 		}
 
-		err := db.Update(l.SaveHeight(blockID, testHeight))
+		err := db.Update(l.IndexHeightForBlock(blockID, testHeight))
 
 		assert.NoError(t, err)
 	})
@@ -645,7 +645,7 @@ func TestLibrary_SaveAndRetrieveHeight(t *testing.T) {
 		}
 
 		var got uint64
-		err = db.View(l.RetrieveHeight(blockID, &got))
+		err = db.View(l.LookupHeightForBlock(blockID, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -657,10 +657,8 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 	defer db.Close()
 
 	testID := flow.Identifier{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x8a, 0xd7, 0xfd, 0x70, 0x06, 0x51, 0x46, 0xb3, 0x5a, 0xb4, 0x8f, 0xa5, 0xa6, 0xca, 0xb0, 0x07}
-	testTransaction := flow.Transaction{
-		TransactionBody: flow.TransactionBody{
-			ReferenceBlockID: testID,
-		},
+	testTransaction := &flow.TransactionBody{
+		ReferenceBlockID: testID,
 	}
 	testKey := encodeKey(prefixTransaction, testID)
 	testValue := []byte(`testValue`)
@@ -670,7 +668,7 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 		l := &Library{
 			codec: &mocks.Codec{
 				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, flow.Transaction{}, v)
+					assert.IsType(t, &flow.TransactionBody{}, v)
 					return testValue, nil
 				},
 			},
@@ -693,7 +691,7 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 			codec: &mocks.Codec{
 				UnmarshalFunc: func(b []byte, v interface{}) error {
 					assert.Equal(t, testValue, b)
-					assert.IsType(t, &flow.Transaction{}, v)
+					assert.IsType(t, &flow.TransactionBody{}, v)
 					decodeCallCount++
 
 					return nil
@@ -701,7 +699,7 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 			},
 		}
 
-		var got flow.Transaction
+		var got flow.TransactionBody
 		err = db.View(l.RetrieveTransaction(testTransaction.ID(), &got))
 
 		assert.NoError(t, err)
@@ -709,14 +707,14 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 	})
 }
 
-func TestSaveAndRetrieve_Transactions(t *testing.T) {
+func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	testBlockID := flow.Identifier{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x8a, 0xd7, 0xfd, 0x70, 0x06, 0x51, 0x46, 0xb3, 0x5a, 0xb4, 0x8f, 0xa5, 0xa6, 0xca, 0xb0, 0x07}
+	testHeight := uint64(1337)
 	testTransactionID := flow.Identifier{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	testTransactions := []flow.Identifier{testTransactionID, testTransactionID, testTransactionID, testTransactionID, testTransactionID}
-	testKey := encodeKey(prefixTransactions, testBlockID)
+	testTxIDs := []flow.Identifier{testTransactionID, testTransactionID, testTransactionID, testTransactionID, testTransactionID}
+	testKey := encodeKey(prefixTransactionsForHeight, testHeight)
 	testValue := []byte(`testValue`)
 
 	t.Run("save transactions", func(t *testing.T) {
@@ -730,7 +728,7 @@ func TestSaveAndRetrieve_Transactions(t *testing.T) {
 			},
 		}
 
-		err := db.Update(l.SaveTransactions(testBlockID, testTransactions))
+		err := db.Update(l.IndexTransactionsForHeight(testHeight, testTxIDs))
 
 		assert.NoError(t, err)
 	})
@@ -756,7 +754,7 @@ func TestSaveAndRetrieve_Transactions(t *testing.T) {
 		}
 
 		var got []flow.Identifier
-		err = db.View(l.RetrieveTransactions(testBlockID, &got))
+		err = db.View(l.LookupTransactionsForHeight(testHeight, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -768,7 +766,7 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 	defer db.Close()
 
 	testID := flow.Identifier{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x8a, 0xd7, 0xfd, 0x70, 0x06, 0x51, 0x46, 0xb3, 0x5a, 0xb4, 0x8f, 0xa5, 0xa6, 0xca, 0xb0, 0x07}
-	testCollection := flow.LightCollection{
+	testCollection := &flow.LightCollection{
 		Transactions: []flow.Identifier{testID},
 	}
 	testKey := encodeKey(prefixCollection, testID)
@@ -779,7 +777,7 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 		l := &Library{
 			codec: &mocks.Codec{
 				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, flow.LightCollection{}, v)
+					assert.IsType(t, &flow.LightCollection{}, v)
 					return testValue, nil
 				},
 			},
@@ -817,14 +815,14 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 	})
 }
 
-func TestSaveAndRetrieve_Collections(t *testing.T) {
+func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	testBlockID := flow.Identifier{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x8a, 0xd7, 0xfd, 0x70, 0x06, 0x51, 0x46, 0xb3, 0x5a, 0xb4, 0x8f, 0xa5, 0xa6, 0xca, 0xb0, 0x07}
+	testHeight := uint64(1337)
 	testCollectionID := flow.Identifier{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	testCollections := []flow.Identifier{testCollectionID, testCollectionID, testCollectionID, testCollectionID, testCollectionID}
-	testKey := encodeKey(prefixCollections, testBlockID)
+	testCollIDs := []flow.Identifier{testCollectionID, testCollectionID, testCollectionID, testCollectionID, testCollectionID}
+	testKey := encodeKey(prefixCollectionsForHeight, testHeight)
 	testValue := []byte(`testValue`)
 
 	t.Run("save collections", func(t *testing.T) {
@@ -838,7 +836,7 @@ func TestSaveAndRetrieve_Collections(t *testing.T) {
 			},
 		}
 
-		err := db.Update(l.SaveCollections(testBlockID, testCollections))
+		err := db.Update(l.IndexCollectionsForHeight(testHeight, testCollIDs))
 
 		assert.NoError(t, err)
 	})
@@ -863,7 +861,7 @@ func TestSaveAndRetrieve_Collections(t *testing.T) {
 		}
 
 		var got []flow.Identifier
-		err = db.View(l.RetrieveCollections(testBlockID, &got))
+		err = db.View(l.LookupCollectionsForHeight(testHeight, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)

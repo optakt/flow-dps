@@ -12,23 +12,12 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package mapper
 
 import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 )
 
-type Writer interface {
-	First(height uint64) error
-	Last(height uint64) error
-
-	Height(blockID flow.Identifier, height uint64) error
-
-	Commit(height uint64, commit flow.StateCommitment) error
-	Header(height uint64, header *flow.Header) error
-	Events(height uint64, events []flow.Event) error
-	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
-
-	Transactions(height uint64, transactions []*flow.TransactionBody) error
+type Loader interface {
+	Checkpoint() (*trie.MTrie, error)
 }

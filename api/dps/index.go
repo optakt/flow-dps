@@ -69,24 +69,18 @@ func (i *Index) Last() (uint64, error) {
 	return res.Height, nil
 }
 
-// Header returns the header for the finalized block at the given height.
-func (i *Index) Header(height uint64) (*flow.Header, error) {
+// HeightForBlock returns the height of the given blockID.
+func (i *Index) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 
-	req := GetHeaderRequest{
-		Height: height,
+	req := GetHeightForBlockRequest{
+		BlockID: blockID[:],
 	}
-	res, err := i.client.GetHeader(context.Background(), &req)
+	res, err := i.client.GetHeightForBlock(context.Background(), &req)
 	if err != nil {
-		return nil, fmt.Errorf("could not get header: %w", err)
+		return 0, fmt.Errorf("could not get height: %w", err)
 	}
 
-	var header flow.Header
-	err = cbor.Unmarshal(res.Data, &header)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode header: %w", err)
-	}
-
-	return &header, nil
+	return res.Height, nil
 }
 
 // Commit returns the commitment of the execution state as it was after the
@@ -109,7 +103,27 @@ func (i *Index) Commit(height uint64) (flow.StateCommitment, error) {
 	return commit, nil
 }
 
-// Events returns the events of all transactions that are part of the
+// Header returns the header for the finalized block at the given height.
+func (i *Index) Header(height uint64) (*flow.Header, error) {
+
+	req := GetHeaderRequest{
+		Height: height,
+	}
+	res, err := i.client.GetHeader(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get header: %w", err)
+	}
+
+	var header flow.Header
+	err = cbor.Unmarshal(res.Data, &header)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode header: %w", err)
+	}
+
+	return &header, nil
+}
+
+// Events returns the events of all transactions that were part of the
 // finalized block at the given height. It can optionally filter them by event
 // type; if no event types are given, all events are returned.
 func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
@@ -133,17 +147,17 @@ func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, er
 	return events, nil
 }
 
-// Registers returns the Ledger values of the execution state at the given paths
+// Values returns the Ledger values of the execution state at the given paths
 // as they were after the execution of the finalized block at the given height.
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
-func (i *Index) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+func (i *Index) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 
-	req := GetRegistersRequest{
+	req := GetRegisterValuesRequest{
 		Height: height,
 		Paths:  convert.PathsToBytes(paths),
 	}
-	res, err := i.client.GetRegisters(context.Background(), &req)
+	res, err := i.client.GetRegisterValues(context.Background(), &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not get registers: %w", err)
 	}
@@ -153,22 +167,8 @@ func (i *Index) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, e
 	return values, nil
 }
 
-// Height returns the height of the given blockID.
-func (i *Index) Height(blockID flow.Identifier) (uint64, error) {
-
-	req := GetHeightRequest{
-		BlockID: blockID[:],
-	}
-	res, err := i.client.GetHeight(context.Background(), &req)
-	if err != nil {
-		return 0, fmt.Errorf("could not get height: %w", err)
-	}
-
-	return res.Height, nil
-}
-
 // Transaction returns the transaction with the given ID.
-func (i *Index) Transaction(transactionID flow.Identifier) (*flow.Transaction, error) {
+func (i *Index) Transaction(transactionID flow.Identifier) (*flow.TransactionBody, error) {
 
 	req := GetTransactionRequest{
 		TransactionID: transactionID[:],
@@ -178,7 +178,7 @@ func (i *Index) Transaction(transactionID flow.Identifier) (*flow.Transaction, e
 		return nil, fmt.Errorf("could not get transaction: %w", err)
 	}
 
-	var transaction flow.Transaction
+	var transaction flow.TransactionBody
 	err = cbor.Unmarshal(res.Data, &transaction)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode transaction: %w", err)
@@ -187,75 +187,23 @@ func (i *Index) Transaction(transactionID flow.Identifier) (*flow.Transaction, e
 	return &transaction, nil
 }
 
-// Transactions returns the transaction IDs within the given block.
-func (i *Index) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
+// TransactionsByHeight returns the transaction IDs within the given block.
+func (i *Index) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 
-	req := ListTransactionsForBlockRequest{
-		BlockID: blockID[:],
+	req := ListTransactionsForHeightRequest{
+		Height: height,
 	}
-	res, err := i.client.ListTransactionsForBlock(context.Background(), &req)
+	res, err := i.client.ListTransactionsForHeight(context.Background(), &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not get transactions: %w", err)
 	}
 
-	var transactions []flow.Identifier
-	for _, id := range res.TransactionIDs {
-		var transactionID flow.Identifier
-		err = cbor.Unmarshal(id, &transactionID)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode transaction ID (%x): %w", id, err)
-		}
-
-		transactions = append(transactions, transactionID)
+	txIDs := make([]flow.Identifier, 0, len(res.TransactionIDs))
+	for _, transactionID := range res.TransactionIDs {
+		var txID flow.Identifier
+		copy(txID[:], transactionID)
+		txIDs = append(txIDs, txID)
 	}
 
-	return transactions, nil
-}
-
-// Collection returns the collection with the given ID.
-func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection, error) {
-
-	req := ListTransactionsForCollectionRequest{
-		CollectionID: collectionID[:],
-	}
-	res, err := i.client.ListTransactionsForCollection(context.Background(), &req)
-	if err != nil {
-		return nil, fmt.Errorf("could not get collection: %w", err)
-	}
-
-	// Convert [][]byte into []flow.Identifier which is in the flow.LightCollection.
-	var collection flow.LightCollection
-	for _, t := range res.TransactionIDs {
-		var transactionID flow.Identifier
-		copy(transactionID[:], t)
-
-		collection.Transactions = append(collection.Transactions, transactionID)
-	}
-
-	return &collection, nil
-}
-
-// Collections returns the collection IDs within the given block.
-func (i *Index) Collections(blockID flow.Identifier) ([]flow.Identifier, error) {
-
-	req := ListCollectionsForBlockRequest{
-		BlockID: blockID[:],
-	}
-	res, err := i.client.ListCollectionsForBlock(context.Background(), &req)
-	if err != nil {
-		return nil, fmt.Errorf("could not get collection: %w", err)
-	}
-
-	var collections []flow.Identifier
-	for _, id := range res.CollectionIDs {
-		var collectionID flow.Identifier
-		err = cbor.Unmarshal(id, &collectionID)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode collection ID: %w", err)
-		}
-
-		collections = append(collections, collectionID)
-	}
-
-	return collections, nil
+	return txIDs, nil
 }

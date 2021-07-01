@@ -14,8 +14,32 @@
 
 package mapper
 
-import (
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+type Status uint8
+
+const (
+	StatusEmpty Status = iota + 1
+	StatusUpdating
+	StatusMatched
+	StatusCollected
+	StatusIndexed
+	StatusForwarded
 )
 
-func PostNoop(_ *trie.MTrie) {}
+func (s Status) String() string {
+	switch s {
+	case StatusEmpty:
+		return "empty"
+	case StatusUpdating:
+		return "updating"
+	case StatusMatched:
+		return "matched"
+	case StatusCollected:
+		return "collected"
+	case StatusIndexed:
+		return "indexed"
+	case StatusForwarded:
+		return "forwarded"
+	default:
+		return "invalid"
+	}
+}

@@ -34,6 +34,10 @@ func (l *Library) SaveLast(height uint64) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixLast), height)
 }
 
+func (l *Library) IndexHeightForBlock(blockID flow.Identifier, height uint64) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixHeightForBlock, blockID), height)
+}
+
 func (l *Library) SaveCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixCommit, height), commit)
 }
@@ -51,24 +55,24 @@ func (l *Library) SavePayload(height uint64, path ledger.Path, payload *ledger.P
 	return l.save(encodeKey(prefixPayload, path, height), payload)
 }
 
-func (l *Library) SaveHeight(blockID flow.Identifier, height uint64) func(*badger.Txn) error {
-	return l.save(encodeKey(prefixHeight, blockID), height)
-}
-
-func (l *Library) SaveTransaction(transaction flow.Transaction) func(*badger.Txn) error {
+func (l *Library) SaveTransaction(transaction *flow.TransactionBody) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixTransaction, transaction.ID()), transaction)
 }
 
-func (l *Library) SaveTransactions(blockID flow.Identifier, transactions []flow.Identifier) func(*badger.Txn) error {
-	return l.save(encodeKey(prefixTransactions, blockID), transactions)
-}
-
-func (l *Library) SaveCollection(collection flow.LightCollection) func(*badger.Txn) error {
+func (l *Library) SaveCollection(collection *flow.LightCollection) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixCollection, collection.ID()), collection)
 }
 
-func (l *Library) SaveCollections(blockID flow.Identifier, collections []flow.Identifier) func(*badger.Txn) error {
-	return l.save(encodeKey(prefixCollections, blockID), collections)
+func (l *Library) IndexTransactionsForHeight(height uint64, txIDs []flow.Identifier) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixTransactionsForHeight, height), txIDs)
+}
+
+func (l *Library) IndexTransactionsForCollection(collID flow.Identifier, txIDs []flow.Identifier) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixTransactionsForCollection, collID), txIDs)
+}
+
+func (l *Library) IndexCollectionsForHeight(height uint64, collIDs []flow.Identifier) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixCollectionsForHeight, height), collIDs)
 }
 
 func (l *Library) RetrieveFirst(height *uint64) func(*badger.Txn) error {
@@ -77,6 +81,10 @@ func (l *Library) RetrieveFirst(height *uint64) func(*badger.Txn) error {
 
 func (l *Library) RetrieveLast(height *uint64) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixLast), height)
+}
+
+func (l *Library) LookupHeightForBlock(blockID flow.Identifier, height *uint64) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixHeightForBlock, blockID), height)
 }
 
 func (l *Library) RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error {
@@ -154,22 +162,22 @@ func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledg
 	}
 }
 
-func (l *Library) RetrieveHeight(blockID flow.Identifier, height *uint64) func(*badger.Txn) error {
-	return l.retrieve(encodeKey(prefixHeight, blockID), height)
-}
-
-func (l *Library) RetrieveTransaction(transactionID flow.Identifier, transaction *flow.Transaction) func(*badger.Txn) error {
+func (l *Library) RetrieveTransaction(transactionID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixTransaction, transactionID), transaction)
-}
-
-func (l *Library) RetrieveTransactions(blockID flow.Identifier, transactions *[]flow.Identifier) func(*badger.Txn) error {
-	return l.retrieve(encodeKey(prefixTransactions, blockID), transactions)
 }
 
 func (l *Library) RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixCollection, collectionID), collection)
 }
 
-func (l *Library) RetrieveCollections(blockID flow.Identifier, collections *[]flow.Identifier) func(*badger.Txn) error {
-	return l.retrieve(encodeKey(prefixCollections, blockID), collections)
+func (l *Library) LookupTransactionsForHeight(height uint64, txIDs *[]flow.Identifier) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixTransactionsForHeight, height), txIDs)
+}
+
+func (l *Library) LookupTransactionsForCollection(collID flow.Identifier, txIDs *[]flow.Identifier) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixTransactionsForCollection, collID), txIDs)
+}
+
+func (l *Library) LookupCollectionsForHeight(height uint64, collIDs *[]flow.Identifier) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixCollectionsForHeight, height), collIDs)
 }

@@ -28,6 +28,14 @@ func TypesToStrings(types []flow.EventType) []string {
 	return ss
 }
 
+func StringsToTypes(ss []string) []flow.EventType {
+	types := make([]flow.EventType, 0, len(ss))
+	for _, s := range ss {
+		types = append(types, flow.EventType(s))
+	}
+	return types
+}
+
 func RosettaTime(t time.Time) int64 {
 	return t.UnixNano() / 1_000_000
 }

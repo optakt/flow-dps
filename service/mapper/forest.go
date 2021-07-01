@@ -20,8 +20,12 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type Step struct {
-	Commit flow.StateCommitment
-	Paths  []ledger.Path
-	Tree   *trie.MTrie
+type Forest interface {
+	Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment)
+	Has(commit flow.StateCommitment) bool
+	Tree(commit flow.StateCommitment) (*trie.MTrie, bool)
+	Paths(commit flow.StateCommitment) ([]ledger.Path, bool)
+	Parent(commit flow.StateCommitment) (flow.StateCommitment, bool)
+	Reset(finalized flow.StateCommitment)
+	Size() uint
 }

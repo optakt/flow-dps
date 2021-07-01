@@ -44,7 +44,7 @@ func readRegister(index index.Reader, cache *ristretto.Cache, height uint64) del
 			return nil, fmt.Errorf("could not convert key to path: %w", err)
 		}
 
-		values, err := index.Registers(height, []ledger.Path{path})
+		values, err := index.Values(height, []ledger.Path{path})
 		if err != nil {
 			return nil, fmt.Errorf("could not read register: %w", err)
 		}

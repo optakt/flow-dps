@@ -12,23 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package mapper
 
-import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
-)
-
-type Writer interface {
-	First(height uint64) error
-	Last(height uint64) error
-
-	Height(blockID flow.Identifier, height uint64) error
-
-	Commit(height uint64, commit flow.StateCommitment) error
-	Header(height uint64, header *flow.Header) error
-	Events(height uint64, events []flow.Event) error
-	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
-
-	Transactions(height uint64, transactions []*flow.TransactionBody) error
+func WithTransition(status Status, transition TransitionFunc) func(*FSM) {
+	return func(f *FSM) {
+		f.transitions[status] = transition
+	}
 }

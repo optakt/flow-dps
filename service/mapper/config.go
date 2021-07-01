@@ -14,50 +14,42 @@
 
 package mapper
 
-import (
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-)
+// DefaultConfig has the default values of the config set.
+var DefaultConfig = Config{
+	IndexCommit:       false,
+	IndexHeader:       false,
+	IndexTransactions: false,
+	IndexEvents:       false,
+	IndexPayloads:     false,
+}
 
 // Config contains optional parameters for the mapper.
 type Config struct {
-	CheckpointFile string
-	PostProcessing func(*trie.MTrie)
-
-	IndexBlocks       bool
 	IndexCommit       bool
-	IndexEvents       bool
-	IndexHeaders      bool
-	IndexPayloads     bool
+	IndexHeader       bool
 	IndexTransactions bool
+	IndexEvents       bool
+	IndexPayloads     bool
 }
 
-// WithCheckpointFile initializes the mapper's internal trie with the trie
-// from the provided checkpoint file.
-func WithCheckpointFile(file string) func(*Config) {
-	return func(cfg *Config) {
-		cfg.CheckpointFile = file
-	}
-}
-
-// WithPostProcessing provides a callback that allows post-processing of the
-// final state trie.
-func WithPostProcessing(post func(*trie.MTrie)) func(*Config) {
-	return func(cfg *Config) {
-		cfg.PostProcessing = post
-	}
-}
-
-// WithIndexBlocks sets up the mapper to build the block indexes.
-func WithIndexBlocks(b bool) func(*Config) {
-	return func(cfg *Config) {
-		cfg.IndexBlocks = b
-	}
-}
-
-// WithIndexCommits sets up the mapper to build the commits index.
-func WithIndexCommits(b bool) func(*Config) {
+// WithIndexCommit sets up the mapper to build the commits index.
+func WithIndexCommit(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexCommit = b
+	}
+}
+
+// WithIndexHeader sets up the mapper to build the headers index.
+func WithIndexHeader(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexHeader = b
+	}
+}
+
+// WithIndexTransactions sets up the mapper to build the transactions index.
+func WithIndexTransactions(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexTransactions = b
 	}
 }
 
@@ -68,23 +60,9 @@ func WithIndexEvents(b bool) func(*Config) {
 	}
 }
 
-// WithIndexHeaders sets up the mapper to build the headers index.
-func WithIndexHeaders(b bool) func(*Config) {
-	return func(cfg *Config) {
-		cfg.IndexHeaders = b
-	}
-}
-
 // WithIndexPayloads sets up the mapper to build the payloads index.
 func WithIndexPayloads(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexPayloads = b
-	}
-}
-
-// WithIndexTransactions sets up the mapper to build the transactions index.
-func WithIndexTransactions(b bool) func(*Config) {
-	return func(cfg *Config) {
-		cfg.IndexTransactions = b
 	}
 }

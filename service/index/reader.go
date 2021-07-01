@@ -58,11 +58,10 @@ func (r *Reader) Last() (uint64, error) {
 	return height, err
 }
 
-// Header returns the header for the finalized block at the given height.
-func (r *Reader) Header(height uint64) (*flow.Header, error) {
-	var header flow.Header
-	err := r.db.View(r.storage.RetrieveHeader(height, &header))
-	return &header, err
+func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {
+	var height uint64
+	err := r.db.View(r.storage.LookupHeightForBlock(blockID, &height))
+	return height, err
 }
 
 // Commit returns the commitment of the execution state as it was after the
@@ -71,6 +70,13 @@ func (r *Reader) Commit(height uint64) (flow.StateCommitment, error) {
 	var commit flow.StateCommitment
 	err := r.db.View(r.storage.RetrieveCommit(height, &commit))
 	return commit, err
+}
+
+// Header returns the header for the finalized block at the given height.
+func (r *Reader) Header(height uint64) (*flow.Header, error) {
+	var header flow.Header
+	err := r.db.View(r.storage.RetrieveHeader(height, &header))
+	return &header, err
 }
 
 // Events returns the events of all transactions that were part of the
@@ -93,11 +99,11 @@ func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, e
 	return events, err
 }
 
-// Registers returns the Ledger values of the execution state at the given paths
+// Values returns the Ledger values of the execution state at the given paths
 // as they were after the execution of the finalized block at the given height.
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
-func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 	first, err := r.First()
 	if err != nil {
 		return nil, fmt.Errorf("could not check first height: %w", err)
@@ -128,37 +134,23 @@ func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, 
 	return values, err
 }
 
-// Height returns the height of the given block ID.
-func (r *Reader) Height(blockID flow.Identifier) (uint64, error) {
-	var height uint64
-	err := r.db.View(r.storage.RetrieveHeight(blockID, &height))
-	return height, err
-}
-
 // Transaction returns the transaction with the given ID.
-func (r *Reader) Transaction(transactionID flow.Identifier) (*flow.Transaction, error) {
-	var transaction flow.Transaction
-	err := r.db.View(r.storage.RetrieveTransaction(transactionID, &transaction))
+func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
+	var transaction flow.TransactionBody
+	err := r.db.View(r.storage.RetrieveTransaction(txID, &transaction))
 	return &transaction, err
 }
 
-// Transactions returns the transaction IDs within the block with the given ID.
-func (r *Reader) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
-	var transactions []flow.Identifier
-	err := r.db.View(r.storage.RetrieveTransactions(blockID, &transactions))
-	return transactions, err
-}
-
-// Collection returns the transaction IDs with the given ID.
-func (r *Reader) Collection(collectionID flow.Identifier) (*flow.LightCollection, error) {
-	var collection flow.LightCollection
-	err := r.db.View(r.storage.RetrieveCollection(collectionID, &collection))
-	return &collection, err
-}
-
-// Collections returns the collection IDs within the block with the given ID.
-func (r *Reader) Collections(blockID flow.Identifier) ([]flow.Identifier, error) {
-	var collections []flow.Identifier
-	err := r.db.View(r.storage.RetrieveCollections(blockID, &collections))
-	return collections, err
+// TransactionsByHeight returns the transaction IDs within the block with the given ID.
+func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
+	var txIDs []flow.Identifier
+	err := r.db.View(func(tx *badger.Txn) error {
+		var txIDs []flow.Identifier
+		err := r.storage.LookupTransactionsForHeight(height, &txIDs)(tx)
+		if err != nil {
+			return fmt.Errorf("could not look up transactions: %w", err)
+		}
+		return nil
+	})
+	return txIDs, err
 }

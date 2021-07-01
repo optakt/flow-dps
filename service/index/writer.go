@@ -52,15 +52,20 @@ func (w *Writer) Last(height uint64) error {
 	return w.db.Update(w.storage.SaveLast(height))
 }
 
-// Header indexes the given header of a finalized block at the given height.
-func (w *Writer) Header(height uint64, header *flow.Header) error {
-	return w.db.Update(w.storage.SaveHeader(height, header))
+// Height indexes the height for the given block ID.
+func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
+	return w.db.Update(w.storage.IndexHeightForBlock(blockID, height))
 }
 
 // Commit indexes the given commitment of the execution state as it was after
 // the execution of the finalized block at the given height.
 func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
 	return w.db.Update(w.storage.SaveCommit(height, commit))
+}
+
+// Header indexes the given header of a finalized block at the given height.
+func (w *Writer) Header(height uint64, header *flow.Header) error {
+	return w.db.Update(w.storage.SaveHeader(height, header))
 }
 
 // Events indexes the events, which should represent all events of the finalized
@@ -104,46 +109,47 @@ func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger
 	})
 }
 
-// Height indexes the height of the block.
-func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
-	return w.db.Update(w.storage.SaveHeight(blockID, height))
+func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
+	var txIDs []flow.Identifier
+	return w.db.Update(func(tx *badger.Txn) error {
+		for _, transaction := range transactions {
+			err := w.db.Update(w.storage.SaveTransaction(transaction))
+			if err != nil {
+				return fmt.Errorf("could not save transaction (id: %x): %w", transaction.ID(), err)
+			}
+			txIDs = append(txIDs, transaction.ID())
+		}
+		err := w.db.Update(w.storage.IndexTransactionsForHeight(height, txIDs))
+		if err != nil {
+			return fmt.Errorf("could not index transactions for height: %w", err)
+		}
+		return nil
+	})
 }
 
-// Transactions indexes collection IDs for the given blockID, collections themselves and the transactions that they contain.
-func (w *Writer) Transactions(blockID flow.Identifier, collections []flow.LightCollection, transactions []flow.Transaction) error {
-	// Index each collection by ID, and build the slice of collection IDs for the block index.
-	var cIDs []flow.Identifier
-	for _, collection := range collections {
-		err := w.db.Update(w.storage.SaveCollection(collection))
-		if err != nil {
-			return fmt.Errorf("could not save collection: %w", err)
-		}
-
-		cIDs = append(cIDs, collection.ID())
-	}
-
-	// Index each transaction by ID, and build the slice of transaction IDs for the block index.
-	var tIDs []flow.Identifier
-	for _, transaction := range transactions {
-		err := w.db.Update(w.storage.SaveTransaction(transaction))
-		if err != nil {
-			return fmt.Errorf("could not save transaction: %w", err)
-		}
-
-		tIDs = append(tIDs, transaction.ID())
-	}
-
-	// Index all collection IDs within a block.
-	err := w.db.Update(w.storage.SaveCollections(blockID, cIDs))
-	if err != nil {
-		return fmt.Errorf("could not save block collection list: %w", err)
-	}
-
-	// Index all transaction IDs within a block.
-	err = w.db.Update(w.storage.SaveTransactions(blockID, tIDs))
-	if err != nil {
-		return fmt.Errorf("could not save block transaction list: %w", err)
-	}
-
-	return nil
-}
+// TODO: Find a way to retrieve collection contents from the execution node's
+// protocol state and index them, or implement such a way.
+// => https://github.com/optakt/flow-dps/issues/233
+//
+// func (w *Writer) Collections(height uint64, collections []*flow.LightCollection) error {
+// 	var collIDs []flow.Identifier
+// 	return w.db.Update(func(tx *badger.Txn) error {
+// 		for _, collection := range collections {
+// 			err := w.storage.SaveCollection(collection)(tx)
+// 			if err != nil {
+// 				return fmt.Errorf("could not store collection (id: %x): %w", collection.ID(), err)
+// 			}
+// 			collID := collection.ID()
+// 			err = w.storage.IndexTransactionsForCollection(collID, collection.Transactions)(tx)
+// 			if err != nil {
+// 				return fmt.Errorf("could not index transactions for collection (id: %x): %w", collID, err)
+// 			}
+// 			collIDs = append(collIDs, collID)
+// 		}
+// 		err := w.storage.IndexCollectionsForHeight(height, collIDs)(tx)
+// 		if err != nil {
+// 			return fmt.Errorf("could not index collections for height: %w", err)
+// 		}
+// 		return nil
+// 	})
+// }

@@ -29,27 +29,37 @@ type Storage interface {
 type ReadLibrary interface {
 	RetrieveFirst(height *uint64) func(*badger.Txn) error
 	RetrieveLast(height *uint64) func(*badger.Txn) error
-	RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error
+
+	LookupHeightForBlock(blockID flow.Identifier, height *uint64) func(*badger.Txn) error
+
 	RetrieveCommit(height uint64, commit *flow.StateCommitment) func(*badger.Txn) error
+	RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error
 	RetrieveEvents(height uint64, types []flow.EventType, events *[]flow.Event) func(*badger.Txn) error
 	RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error
-	RetrieveHeight(blockID flow.Identifier, height *uint64) func(*badger.Txn) error
-	RetrieveTransaction(transactionID flow.Identifier, transaction *flow.Transaction) func(*badger.Txn) error
-	RetrieveTransactions(blockID flow.Identifier, transactions *[]flow.Identifier) func(*badger.Txn) error
-	RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error
-	RetrieveCollections(blockID flow.Identifier, collections *[]flow.Identifier) func(*badger.Txn) error
+
+	LookupTransactionsForHeight(height uint64, txIDs *[]flow.Identifier) func(*badger.Txn) error
+	LookupTransactionsForCollection(collID flow.Identifier, txIDs *[]flow.Identifier) func(*badger.Txn) error
+	LookupCollectionsForHeight(height uint64, collIDs *[]flow.Identifier) func(*badger.Txn) error
+
+	RetrieveCollection(collID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error
+	RetrieveTransaction(txID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error
 }
 
 type WriteLibrary interface {
 	SaveFirst(height uint64) func(*badger.Txn) error
 	SaveLast(height uint64) func(*badger.Txn) error
+
+	IndexHeightForBlock(blockID flow.Identifier, height uint64) func(*badger.Txn) error
+
 	SaveCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error
 	SaveHeader(height uint64, header *flow.Header) func(*badger.Txn) error
 	SaveEvents(height uint64, typ flow.EventType, events []flow.Event) func(*badger.Txn) error
 	SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error
-	SaveHeight(blockID flow.Identifier, height uint64) func(*badger.Txn) error
-	SaveTransaction(transaction flow.Transaction) func(*badger.Txn) error
-	SaveTransactions(blockID flow.Identifier, transactions []flow.Identifier) func(*badger.Txn) error
-	SaveCollection(collection flow.LightCollection) func(*badger.Txn) error
-	SaveCollections(blockID flow.Identifier, collections []flow.Identifier) func(*badger.Txn) error
+
+	IndexTransactionsForHeight(height uint64, txIDs []flow.Identifier) func(*badger.Txn) error
+	IndexTransactionsForCollection(collID flow.Identifier, txIDs []flow.Identifier) func(*badger.Txn) error
+	IndexCollectionsForHeight(height uint64, collIDs []flow.Identifier) func(*badger.Txn) error
+
+	SaveCollection(collection *flow.LightCollection) func(*badger.Txn) error
+	SaveTransaction(transaction *flow.TransactionBody) func(*badger.Txn) error
 }

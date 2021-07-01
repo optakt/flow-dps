@@ -22,13 +22,15 @@ import (
 type Reader interface {
 	First() (uint64, error)
 	Last() (uint64, error)
-	Header(height uint64) (*flow.Header, error)
+
+	HeightForBlock(blockID flow.Identifier) (uint64, error)
+
 	Commit(height uint64) (flow.StateCommitment, error)
+	Header(height uint64) (*flow.Header, error)
 	Events(height uint64, types ...flow.EventType) ([]flow.Event, error)
-	Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error)
-	Height(blockID flow.Identifier) (uint64, error)
-	Transaction(transactionID flow.Identifier) (*flow.Transaction, error)
-	Transactions(blockID flow.Identifier) ([]flow.Identifier, error)
-	Collection(collectionID flow.Identifier) (*flow.LightCollection, error)
-	Collections(blockID flow.Identifier) ([]flow.Identifier, error)
+	Values(height uint64, paths []ledger.Path) ([]ledger.Value, error)
+
+	Transaction(txID flow.Identifier) (*flow.TransactionBody, error)
+
+	TransactionsByHeight(height uint64) ([]flow.Identifier, error)
 }

@@ -20,17 +20,15 @@ import (
 )
 
 type Reader struct {
-	FirstFunc        func() (uint64, error)
-	LastFunc         func() (uint64, error)
-	HeaderFunc       func(height uint64) (*flow.Header, error)
-	CommitFunc       func(height uint64) (flow.StateCommitment, error)
-	EventsFunc       func(height uint64, types ...flow.EventType) ([]flow.Event, error)
-	RegistersFunc    func(height uint64, paths []ledger.Path) ([]ledger.Value, error)
-	HeightFunc       func(blockID flow.Identifier) (uint64, error)
-	TransactionFunc  func(transactionID flow.Identifier) (*flow.Transaction, error)
-	TransactionsFunc func(blockID flow.Identifier) ([]flow.Identifier, error)
-	CollectionFunc   func(collectionID flow.Identifier) (*flow.LightCollection, error)
-	CollectionsFunc  func(blockID flow.Identifier) ([]flow.Identifier, error)
+	FirstFunc                func() (uint64, error)
+	LastFunc                 func() (uint64, error)
+	HeightForBlockFunc       func(blockID flow.Identifier) (uint64, error)
+	CommitFunc               func(height uint64) (flow.StateCommitment, error)
+	HeaderFunc               func(height uint64) (*flow.Header, error)
+	EventsFunc               func(height uint64, types ...flow.EventType) ([]flow.Event, error)
+	ValuesFunc               func(height uint64, paths []ledger.Path) ([]ledger.Value, error)
+	TransactionFunc          func(txID flow.Identifier) (*flow.TransactionBody, error)
+	TransactionsByHeightFunc func(height uint64) ([]flow.Identifier, error)
 }
 
 func (r *Reader) First() (uint64, error) {
@@ -41,38 +39,30 @@ func (r *Reader) Last() (uint64, error) {
 	return r.LastFunc()
 }
 
-func (r *Reader) Header(height uint64) (*flow.Header, error) {
-	return r.HeaderFunc(height)
+func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {
+	return r.HeightForBlockFunc(blockID)
 }
 
 func (r *Reader) Commit(height uint64) (flow.StateCommitment, error) {
 	return r.CommitFunc(height)
 }
 
+func (r *Reader) Header(height uint64) (*flow.Header, error) {
+	return r.HeaderFunc(height)
+}
+
 func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 	return r.EventsFunc(height, types...)
 }
 
-func (r *Reader) Registers(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
-	return r.RegistersFunc(height, paths)
+func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+	return r.ValuesFunc(height, paths)
 }
 
-func (r *Reader) Height(blockID flow.Identifier) (uint64, error) {
-	return r.HeightFunc(blockID)
+func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
+	return r.TransactionFunc(txID)
 }
 
-func (r *Reader) Transaction(transactionID flow.Identifier) (*flow.Transaction, error) {
-	return r.TransactionFunc(transactionID)
-}
-
-func (r *Reader) Transactions(blockID flow.Identifier) ([]flow.Identifier, error) {
-	return r.TransactionsFunc(blockID)
-}
-
-func (r *Reader) Collection(transactionID flow.Identifier) (*flow.LightCollection, error) {
-	return r.CollectionFunc(transactionID)
-}
-
-func (r *Reader) Collections(blockID flow.Identifier) ([]flow.Identifier, error) {
-	return r.CollectionsFunc(blockID)
+func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
+	return r.TransactionsByHeightFunc(height)
 }

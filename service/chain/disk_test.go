@@ -103,19 +103,6 @@ func TestDisk_Transactions(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestDisk_Collections(t *testing.T) {
-	db := populatedDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
-
-	tt, err := c.Collections(testHeight)
-	assert.NoError(t, err)
-	assert.Len(t, tt, 2)
-
-	_, err = c.Collections(math.MaxUint64)
-	assert.Error(t, err)
-}
-
 func populatedDB(t *testing.T) *badger.DB {
 	t.Helper()
 
