@@ -16,8 +16,11 @@ package mapper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type FSM struct {
@@ -56,6 +59,9 @@ func (f *FSM) Run() error {
 			return fmt.Errorf("could not find transition for status (%d)", f.state.status)
 		}
 		err := transition(f.state)
+		if errors.Is(err, dps.ErrFinished) {
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("could not apply transition to state: %w", err)
 		}
