@@ -56,7 +56,7 @@ func (d *Disk) Update() (*ledger.TrieUpdate, error) {
 			return nil, fmt.Errorf("could not read next record: %w", err)
 		}
 		if !next {
-			return nil, dps.ErrFinished
+			return nil, dps.ErrUnavailable
 		}
 		record := d.reader.Record()
 		operation, _, update, err := wal.Decode(record)

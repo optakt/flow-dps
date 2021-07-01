@@ -19,6 +19,7 @@ import (
 )
 
 var (
-	ErrFinished = errors.New("finished")
-	ErrTimeout  = errors.New("timeout")
+	ErrFinished    = errors.New("finished")
+	ErrTimeout     = errors.New("timeout")
+	ErrUnavailable = errors.New("unavailable")
 )
