@@ -94,6 +94,10 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	if errors.As(err, &itErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidTransaction(itErr))
 	}
+	var utErr failure.UnknownTransaction
+	if errors.As(err, &utErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownTransaction(utErr))
+	}
 
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))

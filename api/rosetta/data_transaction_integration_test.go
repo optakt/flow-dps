@@ -136,6 +136,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		trimmedBlockHash = "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d27"  // block hash a character short
 		trimmedTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c68"  // tx hash a character short
 		invalidTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c68z" // testTxHash with a hex-invalid last character
+		unknownTxHash    = "602dd6b7fad80b0e6869eaafd55625faa16341f09027dc925a8e8cef267e5683" // tx from another block
 	)
 
 	var (
@@ -325,8 +326,18 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidTransaction),
 		},
 		// TODO: add - transaction that has no events/transfers
-		// TODO: add - transaction that does not exist in a block
-		// 	=> https://github.com/optakt/flow-dps/issues/195
+		{
+			name: "transaction missing from block",
+			request: rosetta.TransactionRequest{
+				NetworkID: defaultNetwork(),
+				TransactionID: identifier.Transaction{
+					Hash: unknownTxHash,
+				},
+				BlockID: testBlock,
+			},
+
+			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownTransaction),
+		},
 	}
 
 	for _, test := range tests {

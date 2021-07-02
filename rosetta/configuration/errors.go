@@ -28,4 +28,5 @@ var (
 	ErrorInvalidTransaction = meta.ErrorDefinition{Code: 7, Message: "invalid transaction identifier", Retriable: false}
 	ErrorUnknownBlock       = meta.ErrorDefinition{Code: 8, Message: "unknown block identifier", Retriable: true}
 	ErrorUnknownCurrency    = meta.ErrorDefinition{Code: 9, Message: "unknown currency identifier", Retriable: false}
+	ErrorUnknownTransaction = meta.ErrorDefinition{Code: 10, Message: "unknown block transaction", Retriable: false}
 )
