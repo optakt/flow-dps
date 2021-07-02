@@ -23,6 +23,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/optakt/flow-dps/rosetta/converter"
+	"github.com/optakt/flow-dps/rosetta/failure"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/models/index"
@@ -260,6 +261,25 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	err = r.validate.Transaction(id)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate transaction: %w", err)
+	}
+
+	txIDs, err := r.index.TransactionsByHeight(completed.Index)
+	if err != nil {
+		return nil, fmt.Errorf("could not list block transactions: %w", err)
+	}
+	var found bool
+	for _, txID := range txIDs {
+		if txID.String() == id.Hash {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, failure.UnknownTransaction{
+			Index:   block.Index,
+			Hash:    id.Hash,
+			Message: "transaction not found in block",
+		}
 	}
 
 	// Retrieve the Flow token default withdrawal and deposit events.

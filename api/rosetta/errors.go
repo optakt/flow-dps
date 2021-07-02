@@ -124,3 +124,14 @@ func UnknownBlock(fail failure.UnknownBlock) Error {
 		},
 	}
 }
+
+func UnknownTransaction(fail failure.UnknownTransaction) Error {
+	return Error{
+		ErrorDefinition: configuration.ErrorUnknownTransaction,
+		Description:     fail.Message,
+		Details: map[string]interface{}{
+			"index": fail.Index,
+			"hash":  fail.Hash,
+		},
+	}
+}
