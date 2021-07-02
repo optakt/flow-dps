@@ -40,7 +40,7 @@ var (
 )
 
 func TestDisk_Root(t *testing.T) {
-	db := populatedDB(t)
+	db := populateDB(t)
 	defer db.Close()
 	c := chain.FromDisk(db)
 
@@ -50,7 +50,7 @@ func TestDisk_Root(t *testing.T) {
 }
 
 func TestDisk_Header(t *testing.T) {
-	db := populatedDB(t)
+	db := populateDB(t)
 	defer db.Close()
 	c := chain.FromDisk(db)
 
@@ -65,7 +65,7 @@ func TestDisk_Header(t *testing.T) {
 }
 
 func TestDisk_Commit(t *testing.T) {
-	db := populatedDB(t)
+	db := populateDB(t)
 	defer db.Close()
 	c := chain.FromDisk(db)
 
@@ -78,7 +78,7 @@ func TestDisk_Commit(t *testing.T) {
 }
 
 func TestDisk_Events(t *testing.T) {
-	db := populatedDB(t)
+	db := populateDB(t)
 	defer db.Close()
 	c := chain.FromDisk(db)
 
@@ -91,19 +91,19 @@ func TestDisk_Events(t *testing.T) {
 }
 
 func TestDisk_Transactions(t *testing.T) {
-	db := populatedDB(t)
+	db := populateDB(t)
 	defer db.Close()
 	c := chain.FromDisk(db)
 
 	tt, err := c.Transactions(testHeight)
 	assert.NoError(t, err)
-	assert.Len(t, tt, 2)
+	assert.Len(t, tt, 4)
 
 	_, err = c.Transactions(math.MaxUint64)
 	assert.Error(t, err)
 }
 
-func populatedDB(t *testing.T) *badger.DB {
+func populateDB(t *testing.T) *badger.DB {
 	t.Helper()
 
 	db := helpers.InMemoryDB(t)
@@ -160,26 +160,6 @@ func populatedDB(t *testing.T) *badger.DB {
 			GasLimit:         84,
 			Payer:            flow.Address{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
 		}
-
-		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: tb1.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransactionResult(testBlockID, &flow.TransactionResult{TransactionID: tb2.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransaction(tb1.ID(), &tb1)(tx)
-		if err != nil {
-			return err
-		}
-		err = operation.InsertTransaction(tb2.ID(), &tb2)(tx)
-		if err != nil {
-			return err
-		}
-
 		tb3 := flow.TransactionBody{
 			ReferenceBlockID: testBlockID,
 			GasLimit:         21,
@@ -191,28 +171,28 @@ func populatedDB(t *testing.T) *badger.DB {
 			Payer:            flow.Address{0x94, 0x2f, 0x2f, 0xf3, 0x50, 0x6b, 0xa8, 0xde},
 		}
 
+		err = operation.InsertTransaction(tb1.ID(), &tb1)(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransaction(tb2.ID(), &tb2)(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransaction(tb3.ID(), &tb3)(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransaction(tb4.ID(), &tb4)(tx)
+		if err != nil {
+			return err
+		}
+
 		collection1 := flow.LightCollection{Transactions: []flow.Identifier{tb1.ID(), tb2.ID()}}
 		collection2 := flow.LightCollection{Transactions: []flow.Identifier{tb3.ID(), tb4.ID()}}
-
-		err = operation.IndexCollectionByTransaction(tb1.ID(), collection1.ID())(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.IndexCollectionByTransaction(tb2.ID(), collection1.ID())(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.IndexCollectionByTransaction(tb3.ID(), collection2.ID())(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.IndexCollectionByTransaction(tb4.ID(), collection2.ID())(tx)
-		if err != nil {
-			return err
-		}
 
 		err = operation.InsertCollection(&collection1)(tx)
 		if err != nil {
@@ -220,6 +200,11 @@ func populatedDB(t *testing.T) *badger.DB {
 		}
 
 		err = operation.InsertCollection(&collection2)(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.IndexPayloadGuarantees(testBlockID, []flow.Identifier{collection1.ID(), collection2.ID()})(tx)
 		if err != nil {
 			return err
 		}
