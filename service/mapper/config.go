@@ -18,6 +18,7 @@ package mapper
 var DefaultConfig = Config{
 	IndexCommit:       false,
 	IndexHeader:       false,
+	IndexCollections:  false,
 	IndexTransactions: false,
 	IndexEvents:       false,
 	IndexPayloads:     false,
@@ -27,6 +28,7 @@ var DefaultConfig = Config{
 type Config struct {
 	IndexCommit       bool
 	IndexHeader       bool
+	IndexCollections  bool
 	IndexTransactions bool
 	IndexEvents       bool
 	IndexPayloads     bool
@@ -43,6 +45,13 @@ func WithIndexCommit(b bool) func(*Config) {
 func WithIndexHeader(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexHeader = b
+	}
+}
+
+// WithIndexCollections sets up the mapper to build the collections index.
+func WithIndexCollections(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexCollections = b
 	}
 }
 

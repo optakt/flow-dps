@@ -15,12 +15,9 @@
 package loader
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
 type Loader struct {
@@ -33,19 +30,21 @@ func New(file *os.File) *Loader {
 
 func (l *Loader) Checkpoint() (*trie.MTrie, error) {
 
-	checkpoint, err := wal.ReadCheckpoint(l.file)
-	if err != nil {
-		return nil, fmt.Errorf("could not read checkpoint: %w", err)
-	}
+	return trie.NewEmptyMTrie(), nil
 
-	trees, err := flattener.RebuildTries(checkpoint)
-	if err != nil {
-		return nil, fmt.Errorf("could not rebuild tries: %w", err)
-	}
+	// checkpoint, err := wal.ReadCheckpoint(l.file)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not read checkpoint: %w", err)
+	// }
 
-	if len(trees) != 1 {
-		return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
-	}
+	// trees, err := flattener.RebuildTries(checkpoint)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not rebuild tries: %w", err)
+	// }
 
-	return trees[0], nil
+	// if len(trees) != 1 {
+	// 	return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
+	// }
+
+	// return trees[0], nil
 }

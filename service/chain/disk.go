@@ -46,7 +46,7 @@ func FromDisk(db *badger.DB) *Disk {
 
 func (d *Disk) Root() (uint64, error) {
 	var height uint64
-	err := operation.RetrieveRootHeight(&height)(d.db.NewTransaction(false))
+	err := d.db.View(operation.RetrieveRootHeight(&height))
 	if err != nil {
 		return 0, fmt.Errorf("could not look up root height: %w", err)
 	}
@@ -64,7 +64,7 @@ func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 	}
 
 	var commit flow.StateCommitment
-	err = operation.LookupStateCommitment(blockID, &commit)(d.db.NewTransaction(false))
+	err = d.db.View(operation.LookupStateCommitment(blockID, &commit))
 	if err != nil {
 		return flow.StateCommitment{}, fmt.Errorf("could not look up commit: %w", err)
 	}
@@ -80,7 +80,7 @@ func (d *Disk) Header(height uint64) (*flow.Header, error) {
 	}
 
 	var header flow.Header
-	err = operation.RetrieveHeader(blockID, &header)(d.db.NewTransaction(false))
+	err = d.db.View(operation.RetrieveHeader(blockID, &header))
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve header: %w", err)
 	}
@@ -95,12 +95,38 @@ func (d *Disk) Events(height uint64) ([]flow.Event, error) {
 	}
 
 	var events []flow.Event
-	err = operation.LookupEventsByBlockID(blockID, &events)(d.db.NewTransaction(false))
+	err = d.db.View(operation.LookupEventsByBlockID(blockID, &events))
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve events: %w", err)
 	}
 
 	return events, nil
+}
+
+func (d *Disk) Collections(height uint64) ([]*flow.LightCollection, error) {
+
+	blockID, err := d.block(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get block for height: %w", err)
+	}
+
+	var collIDs []flow.Identifier
+	err = d.db.View(operation.LookupPayloadGuarantees(blockID, &collIDs))
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup collections: %w", err)
+	}
+
+	collections := make([]*flow.LightCollection, 0, len(collIDs))
+	for _, collID := range collIDs {
+		var collection flow.LightCollection
+		err := d.db.View(operation.RetrieveCollection(collID, &collection))
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve collection (%x): %w", collID, err)
+		}
+		collections = append(collections, &collection)
+	}
+
+	return collections, nil
 }
 
 func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
@@ -110,21 +136,29 @@ func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 		return nil, fmt.Errorf("could not get block for height: %w", err)
 	}
 
-	var results []flow.TransactionResult
-	err = operation.LookupTransactionResultsByBlockID(blockID, &results)(d.db.NewTransaction(false))
+	var collIDs []flow.Identifier
+	err = d.db.View(operation.LookupPayloadGuarantees(blockID, &collIDs))
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve results: %w", err)
+		return nil, fmt.Errorf("could not lookup collections: %w", err)
 	}
 
-	transactions := make([]*flow.TransactionBody, 0, len(results))
-	for _, result := range results {
-		var transaction flow.TransactionBody
-		err := operation.RetrieveTransaction(result.TransactionID, &transaction)(d.db.NewTransaction(false))
+	var transactions []*flow.TransactionBody
+	for _, collID := range collIDs {
+		var collection flow.LightCollection
+		err := d.db.View(operation.RetrieveCollection(collID, &collection))
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve transactions: %w", err)
+			return nil, fmt.Errorf("could not retrieve collection (%x): %w", collID, err)
 		}
-
-		transactions = append(transactions, &transaction)
+		batch := make([]*flow.TransactionBody, 0, len(collection.Transactions))
+		for _, txID := range collection.Transactions {
+			var transaction flow.TransactionBody
+			err := d.db.View(operation.RetrieveTransaction(txID, &transaction))
+			if err != nil {
+				return nil, fmt.Errorf("could not retrieve transaction (%x): %w", txID, err)
+			}
+			batch = append(batch, &transaction)
+		}
+		transactions = append(transactions, batch...)
 	}
 
 	return transactions, nil
@@ -140,7 +174,7 @@ func (d *Disk) block(height uint64) (flow.Identifier, error) {
 	// are unambiguously available by height, so we can look up which block ID
 	// corresponds to the desired height.
 	var blockID flow.Identifier
-	err := operation.LookupBlockHeight(height, &blockID)(d.db.NewTransaction(false))
+	err := d.db.View(operation.LookupBlockHeight(height, &blockID))
 	if err != nil {
 		return flow.ZeroID, fmt.Errorf("could not look up block: %w", err)
 	}

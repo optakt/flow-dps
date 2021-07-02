@@ -347,6 +347,17 @@ func (t *Transitions) IndexChain(s *State) error {
 		blockID := header.ID()
 		log = log.Hex("block", blockID[:])
 	}
+	if t.cfg.IndexCollections {
+		collections, err := t.chain.Collections(s.height)
+		if err != nil {
+			return fmt.Errorf("could not get collections: %w", err)
+		}
+		err = t.index.Collections(s.height, collections)
+		if err != nil {
+			return fmt.Errorf("could not index collections: %w", err)
+		}
+		log = log.Int("collections", len(collections))
+	}
 	if t.cfg.IndexTransactions {
 		transactions, err := t.chain.Transactions(s.height)
 		if err != nil {

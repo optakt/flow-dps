@@ -162,12 +162,16 @@ func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledg
 	}
 }
 
+func (l *Library) RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixCollection, collectionID), collection)
+}
+
 func (l *Library) RetrieveTransaction(transactionID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixTransaction, transactionID), transaction)
 }
 
-func (l *Library) RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error {
-	return l.retrieve(encodeKey(prefixCollection, collectionID), collection)
+func (l *Library) LookupCollectionsForHeight(height uint64, collIDs *[]flow.Identifier) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixCollectionsForHeight, height), collIDs)
 }
 
 func (l *Library) LookupTransactionsForHeight(height uint64, txIDs *[]flow.Identifier) func(*badger.Txn) error {
@@ -176,8 +180,4 @@ func (l *Library) LookupTransactionsForHeight(height uint64, txIDs *[]flow.Ident
 
 func (l *Library) LookupTransactionsForCollection(collID flow.Identifier, txIDs *[]flow.Identifier) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixTransactionsForCollection, collID), txIDs)
-}
-
-func (l *Library) LookupCollectionsForHeight(height uint64, collIDs *[]flow.Identifier) func(*badger.Txn) error {
-	return l.retrieve(encodeKey(prefixCollectionsForHeight, height), collIDs)
 }

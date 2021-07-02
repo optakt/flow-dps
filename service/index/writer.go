@@ -109,6 +109,29 @@ func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger
 	})
 }
 
+func (w *Writer) Collections(height uint64, collections []*flow.LightCollection) error {
+	var collIDs []flow.Identifier
+	return w.db.Update(func(tx *badger.Txn) error {
+		for _, collection := range collections {
+			err := w.storage.SaveCollection(collection)(tx)
+			if err != nil {
+				return fmt.Errorf("could not store collection (id: %x): %w", collection.ID(), err)
+			}
+			collID := collection.ID()
+			err = w.storage.IndexTransactionsForCollection(collID, collection.Transactions)(tx)
+			if err != nil {
+				return fmt.Errorf("could not index transactions for collection (id: %x): %w", collID, err)
+			}
+			collIDs = append(collIDs, collID)
+		}
+		err := w.storage.IndexCollectionsForHeight(height, collIDs)(tx)
+		if err != nil {
+			return fmt.Errorf("could not index collections for height: %w", err)
+		}
+		return nil
+	})
+}
+
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
 	var txIDs []flow.Identifier
 	return w.db.Update(func(tx *badger.Txn) error {
@@ -126,30 +149,3 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 		return nil
 	})
 }
-
-// TODO: Find a way to retrieve collection contents from the execution node's
-// protocol state and index them, or implement such a way.
-// => https://github.com/optakt/flow-dps/issues/233
-//
-// func (w *Writer) Collections(height uint64, collections []*flow.LightCollection) error {
-// 	var collIDs []flow.Identifier
-// 	return w.db.Update(func(tx *badger.Txn) error {
-// 		for _, collection := range collections {
-// 			err := w.storage.SaveCollection(collection)(tx)
-// 			if err != nil {
-// 				return fmt.Errorf("could not store collection (id: %x): %w", collection.ID(), err)
-// 			}
-// 			collID := collection.ID()
-// 			err = w.storage.IndexTransactionsForCollection(collID, collection.Transactions)(tx)
-// 			if err != nil {
-// 				return fmt.Errorf("could not index transactions for collection (id: %x): %w", collID, err)
-// 			}
-// 			collIDs = append(collIDs, collID)
-// 		}
-// 		err := w.storage.IndexCollectionsForHeight(height, collIDs)(tx)
-// 		if err != nil {
-// 			return fmt.Errorf("could not index collections for height: %w", err)
-// 		}
-// 		return nil
-// 	})
-// }

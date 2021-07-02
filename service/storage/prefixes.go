@@ -15,20 +15,24 @@
 package storage
 
 const (
+
+	// used as reference for index
 	prefixFirst = 1
 	prefixLast  = 2
 
-	prefixHeightForBlock = 7
+	// used for indexing core data of the DPS
+	prefixCommit  = 10
+	prefixHeader  = 11
+	prefixEvents  = 12
+	prefixPayload = 13
 
-	prefixCommit  = 4
-	prefixHeader  = 3
-	prefixEvents  = 5
-	prefixPayload = 6
+	// used for indexing auxiliary data of the DPS
+	prefixTransaction = 20
+	prefixCollection  = 21
 
-	prefixTransaction = 8
-	prefixCollection  = 10
-
-	prefixTransactionsForHeight     = 9
-	prefixTransactionsForCollection = 12
-	prefixCollectionsForHeight      = 11
+	// used for indexing indexes
+	prefixHeightForBlock            = 30
+	prefixTransactionsForHeight     = 31
+	prefixTransactionsForCollection = 32
+	prefixCollectionsForHeight      = 33
 )
