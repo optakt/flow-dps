@@ -144,12 +144,9 @@ func run() int {
 	}
 
 	// Initialize the dependencies needed for the FSM and the state transitions.
-	file, err := os.Open(flagCheckpoint)
-	if err != nil {
-		log.Error().Err(err).Msg("could not open checkpoint file")
-		return failure
-	}
-	load := loader.New(file)
+	load := loader.New(
+		loader.WithCheckpointPath(flagCheckpoint),
+	)
 	chain := chain.FromDisk(data)
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
