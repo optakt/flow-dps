@@ -58,6 +58,7 @@ func run() int {
 		flagForce             bool
 		flagIndex             string
 		flagIndexAll          bool
+		flagIndexCollections  bool
 		flagIndexCommit       bool
 		flagIndexEvents       bool
 		flagIndexHeader       bool
@@ -72,6 +73,7 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
+	pflag.BoolVarP(&flagIndexCollections, "index-collections", "o", false, "index collections")
 	pflag.BoolVarP(&flagIndexCommit, "index-commits", "m", false, "index commits")
 	pflag.BoolVarP(&flagIndexEvents, "index-events", "e", false, "index events")
 	pflag.BoolVarP(&flagIndexHeader, "index-headers", "h", false, "index headers")
@@ -142,12 +144,9 @@ func run() int {
 	}
 
 	// Initialize the dependencies needed for the FSM and the state transitions.
-	file, err := os.Open(flagCheckpoint)
-	if err != nil {
-		log.Error().Err(err).Msg("could not open checkpoint file")
-		return failure
-	}
-	load := loader.New(file)
+	load := loader.New(
+		loader.WithCheckpointPath(flagCheckpoint),
+	)
 	chain := chain.FromDisk(data)
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
@@ -165,6 +164,7 @@ func run() int {
 	transitions := mapper.NewTransitions(log, load, chain, feed, index,
 		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
+		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),
 		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
 		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),
 		mapper.WithIndexPayloads(flagIndexAll || flagIndexPayloads),

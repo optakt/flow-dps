@@ -12,17 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package loader
 
-import (
-	"github.com/onflow/flow-go/model/flow"
-)
-
-type Chain interface {
-	Root() (uint64, error)
-	Header(height uint64) (*flow.Header, error)
-	Commit(height uint64) (flow.StateCommitment, error)
-	Events(height uint64) ([]flow.Event, error)
-	Collections(height uint64) ([]*flow.LightCollection, error)
-	Transactions(height uint64) ([]*flow.TransactionBody, error)
+func WithCheckpointPath(path string) func(*Loader) {
+	return func(l *Loader) {
+		l.path = path
+	}
 }

@@ -145,7 +145,6 @@ func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error
 func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	var txIDs []flow.Identifier
 	err := r.db.View(func(tx *badger.Txn) error {
-		var txIDs []flow.Identifier
 		err := r.storage.LookupTransactionsForHeight(height, &txIDs)(tx)
 		if err != nil {
 			return fmt.Errorf("could not look up transactions: %w", err)

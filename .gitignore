@@ -12,3 +12,4 @@
 /trie/
 *.cdc
 *.log
+*.checkpoint

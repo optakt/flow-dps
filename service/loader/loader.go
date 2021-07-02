@@ -24,16 +24,30 @@ import (
 )
 
 type Loader struct {
-	file *os.File
+	path string
 }
 
-func New(file *os.File) *Loader {
-	return &Loader{file: file}
+func New(options ...func(*Loader)) *Loader {
+	l := Loader{
+		path: "",
+	}
+	for _, option := range options {
+		option(&l)
+	}
+	return &l
 }
 
 func (l *Loader) Checkpoint() (*trie.MTrie, error) {
 
-	checkpoint, err := wal.ReadCheckpoint(l.file)
+	if l.path == "" {
+		return trie.NewEmptyMTrie(), nil
+	}
+
+	file, err := os.Open(l.path)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file: %w", err)
+	}
+	checkpoint, err := wal.ReadCheckpoint(file)
 	if err != nil {
 		return nil, fmt.Errorf("could not read checkpoint: %w", err)
 	}
