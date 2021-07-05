@@ -83,7 +83,3 @@ func (f *Forest) Reset(finalized flow.StateCommitment) {
 		}
 	}
 }
-
-func (f *Forest) Size() uint {
-	return uint(len(f.steps))
-}

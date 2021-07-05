@@ -79,7 +79,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	s.last = flow.StateCommitment{}
 	s.next = first
 
-	t.log.Info().Hex("first", first[:]).Msg("added empty tree to forest")
+	t.log.Info().Hex("commit", first[:]).Msg("added empty tree to forest")
 
 	// Then, we can load the root height and apply it to the state. That
 	// will allow us to load the root blockchain data in the next step.
@@ -102,7 +102,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	s.forest.Save(checkpoint, paths, first)
 
 	second := checkpoint.RootHash()
-	t.log.Info().Uint64("height", s.height).Hex("second", second[:]).Int("paths", len(paths)).Msg("added checkpoint tree to forest")
+	t.log.Info().Uint64("height", s.height).Hex("commit", second[:]).Int("registers", len(paths)).Msg("added checkpoint tree to forest")
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
@@ -128,7 +128,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// collect the register payloads we want to index for that block.
 	ok := s.forest.Has(s.next)
 	if ok {
-		log.Info().Hex("commit", s.next[:]).Uint("forest", s.forest.Size()).Msg("commit of next finalized block matched")
+		log.Info().Hex("commit", s.next[:]).Msg("matched commit of finalized block")
 		s.status = StatusMatched
 		return nil
 	}
@@ -158,7 +158,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	s.forest.Save(tree, paths, parent)
 
 	hash := tree.RootHash()
-	log.Info().Hex("parent", parent[:]).Hex("commit", hash[:]).Int("registers", len(paths)).Msg("updated tree with feeder registers")
+	log.Info().Hex("commit", hash[:]).Int("registers", len(paths)).Msg("updated tree with register payloads")
 
 	return nil
 }
@@ -215,12 +215,14 @@ func (t *Transitions) CollectRegisters(s *State) error {
 			s.registers[path] = payloads[0]
 		}
 
+		log.Debug().Int("batch", len(paths)).Msg("collected register batch for finalized block")
+
 		// We now step back to the parent of the current state trie.
 		parent, _ := s.forest.Parent(commit)
 		commit = parent
 	}
 
-	log.Info().Int("registers", len(s.registers)).Msg("collected registers for finalized block")
+	log.Info().Int("registers", len(s.registers)).Msg("collected all registers for finalized block")
 
 	// At this point, we have collected all the payloads, so we go to the next
 	// step, where we will index them.
@@ -241,7 +243,7 @@ func (t *Transitions) IndexRegisters(s *State) error {
 	// If there are no registers left to be indexed, we can go to the next step,
 	// which is about forwarding the height to the next finalized block.
 	if len(s.registers) == 0 {
-		log.Info().Msg("indexed registers for finalized block")
+		log.Info().Msg("indexed all registers for finalized block")
 		s.status = StatusIndexed
 		return nil
 	}
@@ -268,7 +270,7 @@ func (t *Transitions) IndexRegisters(s *State) error {
 		return fmt.Errorf("could not index registers: %w", err)
 	}
 
-	log.Debug().Int("indexed", len(paths)).Int("remaining", len(s.registers)).Msg("indexed register batch for finalized block")
+	log.Debug().Int("batch", len(paths)).Int("remaining", len(s.registers)).Msg("indexed register batch for finalized block")
 
 	return nil
 }
@@ -299,7 +301,7 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	s.height++
 	s.forest.Reset(s.next)
 
-	t.log.Info().Uint64("height", s.height).Msg("height forwarded to next finalized block")
+	t.log.Info().Uint64("height", s.height).Msg("forwarded finalized block to next height")
 
 	// Once the height is forwarded, we can set the status so that we index
 	// the blockchain data next.
@@ -381,7 +383,7 @@ func (t *Transitions) IndexChain(s *State) error {
 		log = log.Int("events", len(events))
 	}
 
-	log.Msg("chain data for next finalized block indexed")
+	log.Msg("indexed blockchain data for finalized block")
 
 	// After indexing the blockchain data, we can go back to updating the state
 	// tree until we find the commit of the finalized block. This will allow us
