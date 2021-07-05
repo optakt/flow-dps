@@ -270,7 +270,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		return nil, fmt.Errorf("could not validate transaction: %w", err)
 	}
 
-	txIDs, err := r.index.TransactionsByHeight(completed.Index)
+	txIDs, err := r.index.TransactionsByHeight(*completed.Index)
 	if err != nil {
 		return nil, fmt.Errorf("could not list block transactions: %w", err)
 	}
@@ -283,7 +283,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 	if !found {
 		return nil, failure.UnknownTransaction{
-			Index:   block.Index,
+			Index:   *completed.Index,
 			Hash:    id.Hash,
 			Message: "transaction not found in block",
 		}
