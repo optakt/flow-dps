@@ -7,6 +7,7 @@
 /cmd/flow-dps-indexer/flow-dps-indexer
 /cmd/flow-rosetta-server/flow-rosetta-server
 /cmd/flow-dps-server/flow-dps-server
+/cmd/flow-dps-executor/flow-dps-executor
 /data/
 /index/
 /trie/
