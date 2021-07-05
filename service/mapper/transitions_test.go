@@ -308,30 +308,24 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 				return testLastCommit, true
 			},
 		}
-		feed := &mocks.Feeder{
-			UpdateFunc: func() (*ledger.TrieUpdate, error) {
-				return testUpdate, nil
-			},
-		}
 
 		tr, st := baselineFSM(t, StatusMatched)
-		st.registers = make(map[ledger.Path]*ledger.Payload)
 
-		tr.feed = feed
 		st.forest = forest
 
 		err = tr.CollectRegisters(st)
 
 		assert.NoError(t, err)
-		assert.NotEmpty(t, st.registers)
 		assert.Equal(t, StatusCollected, st.status)
+		for _, wantPath := range testPaths {
+			assert.Contains(t, st.registers, wantPath)
+		}
 	})
 
 	t.Run("indexing payloads disabled", func(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusMatched)
-		st.registers = make(map[ledger.Path]*ledger.Payload)
 		tr.cfg.IndexPayloads = false
 
 		err := tr.CollectRegisters(st)
@@ -345,7 +339,6 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusEmpty)
-		st.registers = make(map[ledger.Path]*ledger.Payload)
 
 		err := tr.CollectRegisters(st)
 
@@ -363,7 +356,6 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		}
 
 		tr, st := baselineFSM(t, StatusMatched)
-		st.registers = make(map[ledger.Path]*ledger.Payload)
 		st.forest = forest
 
 		err := tr.CollectRegisters(st)
@@ -388,6 +380,14 @@ func TestTransitions_IndexRegisters(t *testing.T) {
 
 		tr, st := baselineFSM(t, StatusCollected)
 		tr.index = index
+		st.registers = map[ledger.Path]*ledger.Payload{
+			testPath1: testPayload1,
+			testPath2: testPayload2,
+			testPath3: testPayload3,
+			testPath4: testPayload4,
+			testPath5: testPayload5,
+			testPath6: testPayload6,
+		}
 
 		err := tr.IndexRegisters(st)
 
@@ -402,7 +402,6 @@ func TestTransitions_IndexRegisters(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusCollected)
-		st.registers = map[ledger.Path]*ledger.Payload{}
 
 		err := tr.IndexRegisters(st)
 
@@ -429,6 +428,14 @@ func TestTransitions_IndexRegisters(t *testing.T) {
 
 		tr, st := baselineFSM(t, StatusCollected)
 		tr.index = index
+		st.registers = map[ledger.Path]*ledger.Payload{
+			testPath1: testPayload1,
+			testPath2: testPayload2,
+			testPath3: testPayload3,
+			testPath4: testPayload4,
+			testPath5: testPayload5,
+			testPath6: testPayload6,
+		}
 
 		err := tr.IndexRegisters(st)
 
@@ -579,6 +586,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		EnvelopeSignatures: nil,
 	}
 	testTransactions := []*flow.TransactionBody{testTransaction}
+	testCollections := []*flow.LightCollection{{Transactions: []flow.Identifier{testTransaction.ID()}}}
 
 	t.Run("nominal case index all", func(t *testing.T) {
 		t.Parallel()
@@ -603,6 +611,11 @@ func TestTransitions_IndexChain(t *testing.T) {
 				assert.Equal(t, testHeight, height)
 
 				return testTransactions, nil
+			},
+			CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
+				assert.Equal(t, testHeight, height)
+
+				return testCollections, nil
 			},
 		}
 
@@ -637,6 +650,12 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 				return nil
 			},
+			CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error {
+				assert.Equal(t, testHeight, height)
+				assert.Equal(t, testCollections, collections)
+
+				return nil
+			},
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -665,6 +684,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		tr.cfg.IndexCommit = false
 		tr.cfg.IndexHeader = false
 		tr.cfg.IndexTransactions = false
+		tr.cfg.IndexCollections = false
 		tr.cfg.IndexEvents = false
 
 		err := tr.IndexChain(st)
@@ -693,6 +713,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			},
 			EventsFunc:       func(height uint64) ([]flow.Event, error) { return testEvents, nil },
 			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
+			CollectionsFunc:  func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -714,6 +735,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			EventsFunc:       func(height uint64, events []flow.Event) error { return nil },
 			HeightFunc:       func(blockID flow.Identifier, height uint64) error { return nil },
 			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
+			CollectionsFunc:  func(height uint64, collections []*flow.LightCollection) error { return nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -734,6 +756,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			CommitFunc:       func(height uint64) (flow.StateCommitment, error) { return testCommit, nil },
 			EventsFunc:       func(height uint64) ([]flow.Event, error) { return testEvents, nil },
 			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
+			CollectionsFunc:  func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -755,6 +778,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			EventsFunc:       func(height uint64, events []flow.Event) error { return nil },
 			HeightFunc:       func(blockID flow.Identifier, height uint64) error { return nil },
 			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
+			CollectionsFunc:  func(height uint64, collections []*flow.LightCollection) error { return nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -775,6 +799,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
 				return nil, mocks.DummyError
 			},
+			CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -794,6 +819,50 @@ func TestTransitions_IndexChain(t *testing.T) {
 			EventsFunc: func(height uint64, events []flow.Event) error { return nil },
 			HeightFunc: func(blockID flow.Identifier, height uint64) error { return nil },
 			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error {
+				return mocks.DummyError
+			},
+			CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error { return nil },
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.index = index
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles chain failure to retrieve collections", func(t *testing.T) {
+		t.Parallel()
+
+		chain := &mocks.Chain{
+			HeaderFunc:       func(height uint64) (*flow.Header, error) { return testHeader, nil },
+			CommitFunc:       func(height uint64) (flow.StateCommitment, error) { return testCommit, nil },
+			EventsFunc:       func(height uint64) ([]flow.Event, error) { return testEvents, nil },
+			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
+			CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
+				return nil, mocks.DummyError
+			},
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.chain = chain
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure to write transactions", func(t *testing.T) {
+		t.Parallel()
+
+		index := &mocks.Writer{
+			HeaderFunc:       func(height uint64, header *flow.Header) error { return nil },
+			CommitFunc:       func(height uint64, commit flow.StateCommitment) error { return nil },
+			EventsFunc:       func(height uint64, events []flow.Event) error { return nil },
+			HeightFunc:       func(blockID flow.Identifier, height uint64) error { return nil },
+			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
+			CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error {
 				return mocks.DummyError
 			},
 		}
@@ -816,6 +885,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 				return nil, mocks.DummyError
 			},
 			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
+			CollectionsFunc:  func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -838,6 +908,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			PayloadsFunc:     func(height uint64, paths []ledger.Path, value []*ledger.Payload) error { return nil },
 			HeightFunc:       func(blockID flow.Identifier, height uint64) error { return nil },
 			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
+			CollectionsFunc:  func(height uint64, collections []*flow.LightCollection) error { return nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -884,6 +955,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 		EnvelopeSignatures: nil,
 	}
 	testTransactions := []*flow.TransactionBody{testTransaction}
+	testCollections := []*flow.LightCollection{{Transactions: []flow.Identifier{testTransaction.ID()}}}
 
 	testTrie, err := trie.NewMTrie(testRoot)
 	require.NoError(t, err)
@@ -910,6 +982,9 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 		TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
 			return testTransactions, nil
 		},
+		CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
+			return testCollections, nil
+		},
 	}
 
 	index := &mocks.Writer{
@@ -935,6 +1010,9 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			return nil
 		},
 		TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error {
+			return nil
+		},
+		CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error {
 			return nil
 		},
 	}
@@ -967,15 +1045,6 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 		},
 	}
 
-	registers := map[ledger.Path]*ledger.Payload{
-		testPath1: testPayload1,
-		testPath2: testPayload2,
-		testPath3: testPayload3,
-		testPath4: testPayload4,
-		testPath5: testPayload5,
-		testPath6: testPayload6,
-	}
-
 	doneCh := make(chan struct{})
 
 	tr := &Transitions{
@@ -985,6 +1054,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			IndexTransactions: true,
 			IndexEvents:       true,
 			IndexPayloads:     true,
+			IndexCollections:  true,
 		},
 		log:   testLog,
 		load:  load,
@@ -1000,7 +1070,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 		height:    testHeight,
 		last:      testLastCommit,
 		next:      testNextCommit,
-		registers: registers,
+		registers: make(map[ledger.Path]*ledger.Payload),
 		done:      doneCh,
 	}
 

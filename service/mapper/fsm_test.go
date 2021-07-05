@@ -40,7 +40,7 @@ func TestNewFSM(t *testing.T) {
 	t.Run("nominal case with transition option", func(t *testing.T) {
 		t.Parallel()
 
-		f := NewFSM(st, WithTransition(StatusEmpty, func(_ *State) error { return nil }))
+		f := NewFSM(st, WithTransition(StatusEmpty, func(*State) error { return nil }))
 
 		assert.NotNil(t, f)
 		assert.Equal(t, st, f.state)
@@ -101,7 +101,7 @@ func TestFSM_Run(t *testing.T) {
 				status: StatusEmpty,
 			},
 			transitions: map[Status]TransitionFunc{
-				StatusIndexed: func(_ *State) error { return nil },
+				StatusIndexed: func(*State) error { return nil },
 			},
 			wg: &sync.WaitGroup{},
 		}
@@ -114,7 +114,7 @@ func TestFSM_Run(t *testing.T) {
 	t.Run("transition fails", func(t *testing.T) {
 		t.Parallel()
 
-		failingTransition := func(_ *State) error { return mocks.DummyError }
+		failingTransition := func(*State) error { return mocks.DummyError }
 
 		f := &FSM{
 			state: &State{

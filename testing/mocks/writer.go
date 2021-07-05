@@ -28,7 +28,7 @@ type Writer struct {
 	PayloadsFunc     func(height uint64, paths []ledger.Path, value []*ledger.Payload) error
 	HeightFunc       func(blockID flow.Identifier, height uint64) error
 	TransactionsFunc func(height uint64, transactions []*flow.TransactionBody) error
-	CollectionsFunc  func(blockID flow.Identifier, collections []flow.LightCollection) error
+	CollectionsFunc  func(height uint64, collections []*flow.LightCollection) error
 }
 
 func (w *Writer) First(height uint64) error {
@@ -63,6 +63,6 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 	return w.TransactionsFunc(height, transactions)
 }
 
-func (w *Writer) Collections(blockID flow.Identifier, collections []flow.LightCollection) error {
-	return w.CollectionsFunc(blockID, collections)
+func (w *Writer) Collections(height uint64, collections []*flow.LightCollection) error {
+	return w.CollectionsFunc(height, collections)
 }
