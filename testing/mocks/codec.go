@@ -29,10 +29,22 @@ func BaselineCodec(t *testing.T) *Codec {
 	t.Helper()
 
 	c := Codec{
-		UnmarshalFunc: func(b []byte, v interface{}) error {
+		EncodeFunc: func(interface{}) ([]byte, error) {
+			return GenericBytes, nil
+		},
+		DecodeFunc: func([]byte, interface{}) error {
 			return nil
 		},
-		MarshalFunc: func(v interface{}) ([]byte, error) {
+		CompressFunc: func([]byte) ([]byte, error) {
+			return GenericBytes, nil
+		},
+		DecompressFunc: func([]byte) ([]byte, error) {
+			return GenericBytes, nil
+		},
+		UnmarshalFunc: func([]byte, interface{}) error {
+			return nil
+		},
+		MarshalFunc: func(interface{}) ([]byte, error) {
 			return GenericBytes, nil
 		},
 	}

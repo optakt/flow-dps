@@ -12,29 +12,14 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package storage
+package access
 
-const (
-	prefixFirst = 1
-	prefixLast  = 2
-
-	prefixHeightForBlock       = 7
-	prefixHeightForTransaction = 16
-
-	prefixCommit  = 4
-	prefixHeader  = 3
-	prefixEvents  = 5
-	prefixPayload = 6
-
-	prefixTransaction = 8
-	prefixCollection  = 10
-	prefixGuarantee   = 17
-
-	prefixTransactionsForHeight     = 9
-	prefixTransactionsForCollection = 12
-	prefixCollectionsForHeight      = 11
-	prefixResults                   = 13
-
-	prefixSeal           = 14
-	prefixSealsForHeight = 15
+import (
+	"github.com/onflow/cadence"
+	"github.com/onflow/flow-go/model/flow"
 )
+
+type Invoker interface {
+	GetAccount(address flow.Address, header *flow.Header) (*flow.Account, error)
+	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
+}

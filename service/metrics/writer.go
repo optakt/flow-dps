@@ -69,12 +69,27 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 	return w.write.Collections(height, collections)
 }
 
+func (w *Writer) Guarantees(height uint64, guarantees []*flow.CollectionGuarantee) error {
+	defer w.time.Duration("guarantees")()
+	return w.write.Guarantees(height, guarantees)
+}
+
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
 	defer w.time.Duration("transactions")()
 	return w.write.Transactions(height, transactions)
 }
 
+func (w *Writer) Results(results []*flow.TransactionResult) error {
+	defer w.time.Duration("results")()
+	return w.write.Results(results)
+}
+
 func (w *Writer) Events(height uint64, events []flow.Event) error {
 	defer w.time.Duration("events")()
 	return w.write.Events(height, events)
+}
+
+func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
+	defer w.time.Duration("seals")()
+	return w.write.Seals(height, seals)
 }

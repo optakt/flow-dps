@@ -20,10 +20,10 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 
-	"github.com/optakt/flow-dps/models/dps"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Reader implements the `index.Reader` interface on top of the DPS server's
@@ -116,6 +116,27 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 	return values, err
 }
 
+// Collection returns the collection with the given ID.
+func (r *Reader) Collection(collID flow.Identifier) (*flow.LightCollection, error) {
+	var collection flow.LightCollection
+	err := r.db.View(r.lib.RetrieveCollection(collID, &collection))
+	return &collection, err
+}
+
+// CollectionsByHeight returns the collection IDs at the given height.
+func (r *Reader) CollectionsByHeight(height uint64) ([]flow.Identifier, error) {
+	var collIDs []flow.Identifier
+	err := r.db.View(r.lib.LookupCollectionsForHeight(height, &collIDs))
+	return collIDs, err
+}
+
+// Guarantee returns the guarantee with the given collection ID.
+func (r *Reader) Guarantee(collID flow.Identifier) (*flow.CollectionGuarantee, error) {
+	var collection flow.CollectionGuarantee
+	err := r.db.View(r.lib.RetrieveGuarantee(collID, &collection))
+	return &collection, err
+}
+
 // Transaction returns the transaction with the given ID.
 func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
 	var transaction flow.TransactionBody
@@ -123,17 +144,24 @@ func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error
 	return &transaction, err
 }
 
+func (r *Reader) HeightForTransaction(txID flow.Identifier) (uint64, error) {
+	var height uint64
+	err := r.db.View(r.lib.LookupHeightForTransaction(txID, &height))
+	return height, err
+}
+
 // TransactionsByHeight returns the transaction IDs within the block with the given ID.
 func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	var txIDs []flow.Identifier
-	err := r.db.View(func(tx *badger.Txn) error {
-		err := r.lib.LookupTransactionsForHeight(height, &txIDs)(tx)
-		if err != nil {
-			return fmt.Errorf("could not look up transactions: %w", err)
-		}
-		return nil
-	})
+	err := r.db.View(r.lib.LookupTransactionsForHeight(height, &txIDs))
 	return txIDs, err
+}
+
+// Result returns the transaction result for the given transaction ID.
+func (r *Reader) Result(txID flow.Identifier) (*flow.TransactionResult, error) {
+	var results *flow.TransactionResult
+	err := r.db.View(r.lib.RetrieveResult(txID, results))
+	return results, err
 }
 
 // Events returns the events of all transactions that were part of the
@@ -154,4 +182,18 @@ func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, e
 	var events []flow.Event
 	err = r.db.View(r.lib.RetrieveEvents(height, types, &events))
 	return events, err
+}
+
+// Seal returns the seal with the given ID.
+func (r *Reader) Seal(sealID flow.Identifier) (*flow.Seal, error) {
+	var seal flow.Seal
+	err := r.db.View(r.lib.RetrieveSeal(sealID, &seal))
+	return &seal, err
+}
+
+// SealsByHeight returns all of the seals that were part of the finalized block at the given height.
+func (r *Reader) SealsByHeight(height uint64) ([]flow.Identifier, error) {
+	var sealIDs []flow.Identifier
+	err := r.db.View(r.lib.LookupSealsForHeight(height, &sealIDs))
+	return sealIDs, err
 }

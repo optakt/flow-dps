@@ -53,12 +53,27 @@ func (c *Chain) Collections(height uint64) ([]*flow.LightCollection, error) {
 	return c.chain.Collections(height)
 }
 
+func (c *Chain) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
+	defer c.time.Duration("guarantees")()
+	return c.chain.Guarantees(height)
+}
+
 func (c *Chain) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	defer c.time.Duration("transactions")()
 	return c.chain.Transactions(height)
 }
 
+func (c *Chain) Results(height uint64) ([]*flow.TransactionResult, error) {
+	defer c.time.Duration("results")()
+	return c.chain.Results(height)
+}
+
 func (c *Chain) Events(height uint64) ([]flow.Event, error) {
 	defer c.time.Duration("events")()
 	return c.chain.Events(height)
+}
+
+func (c *Chain) Seals(height uint64) ([]*flow.Seal, error) {
+	defer c.time.Duration("seals")()
+	return c.chain.Seals(height)
 }

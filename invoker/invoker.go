@@ -26,14 +26,15 @@ import (
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/programs"
+	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Invoker struct {
 	index dps.Reader
-	vm    *fvm.VirtualMachine
-	cache *ristretto.Cache
+	vm    VirtualMachine
+	cache Cache
 }
 
 func New(index dps.Reader, options ...func(*Config)) (*Invoker, error) {
@@ -123,4 +124,25 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	return proc.Value, nil
+}
+
+func (i *Invoker) GetAccount(address flow.Address, header *flow.Header) (*flow.Account, error) {
+	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
+
+	// Initialize the read function. We use a shared cache between all heights
+	// here. It's a smart cache, which means that items that are accessed often
+	// are more likely to be kept, regardless of height. This allows us to put
+	// an upper bound on total cache size while using it for all heights.
+	read := readRegister(i.index, i.cache, header.Height)
+
+	// Initialize the view of the execution state on top of the ledger by
+	// using the read function at a specific commit.
+	view := delta.NewView(read)
+
+	account, err := i.vm.GetAccount(ctx, address, view, programs.NewEmptyPrograms())
+	if err != nil {
+		return nil, fmt.Errorf("could not get account at height %d: %w", header.Height, err)
+	}
+
+	return account, nil
 }

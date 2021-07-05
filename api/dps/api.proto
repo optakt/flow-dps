@@ -24,8 +24,15 @@ service API {
   rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
   rpc GetEvents (GetEventsRequest) returns (GetEventsResponse) {}
   rpc GetRegisterValues (GetRegisterValuesRequest) returns (GetRegisterValuesResponse) {}
+  rpc GetCollection (GetCollectionRequest) returns (GetCollectionResponse) {}
+  rpc ListCollectionsForHeight (ListCollectionsForHeightRequest) returns (ListCollectionsForHeightResponse) {}
+  rpc GetGuarantee (GetGuaranteeRequest) returns (GetGuaranteeResponse) {}
   rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse) {}
+  rpc GetHeightForTransaction (GetHeightForTransactionRequest) returns (GetHeightForTransactionResponse) {}
   rpc ListTransactionsForHeight (ListTransactionsForHeightRequest) returns (ListTransactionsForHeightResponse) {}
+  rpc GetResult (GetResultRequest) returns (GetResultResponse) {}
+  rpc GetSeal(GetSealRequest) returns (GetSealResponse) {}
+  rpc ListSealsForHeight(ListSealsForHeightRequest) returns (ListSealsForHeightResponse) {}
 }
 
 message GetFirstRequest {
@@ -91,6 +98,33 @@ message GetRegisterValuesResponse {
   repeated bytes values = 3;
 }
 
+message GetCollectionRequest {
+  bytes collectionID = 1;
+}
+
+message GetCollectionResponse {
+  bytes collectionID = 1;
+  bytes data = 2;
+}
+
+message ListCollectionsForHeightRequest {
+  uint64 height = 1;
+}
+
+message ListCollectionsForHeightResponse {
+  uint64 height = 1;
+  repeated bytes collectionIDs = 2;
+}
+
+message GetGuaranteeRequest {
+  bytes collectionID = 1;
+}
+
+message GetGuaranteeResponse {
+  bytes collectionID = 1;
+  bytes data = 2;
+}
+
 message GetTransactionRequest {
   bytes transactionID = 1;
 }
@@ -100,6 +134,15 @@ message GetTransactionResponse {
   bytes data = 2;
 }
 
+message GetHeightForTransactionRequest {
+  bytes transactionID = 1;
+}
+
+message GetHeightForTransactionResponse {
+  bytes transactionID = 1;
+  uint64 height = 2;
+}
+
 message ListTransactionsForHeightRequest {
   uint64 height = 1;
 }
@@ -107,4 +150,31 @@ message ListTransactionsForHeightRequest {
 message ListTransactionsForHeightResponse {
   uint64 height = 1;
   repeated bytes transactionIDs = 2;
+}
+
+message GetResultRequest {
+  bytes transactionID = 1;
+}
+
+message GetResultResponse {
+  bytes transactionID = 1;
+  bytes data = 2;
+}
+
+message GetSealRequest {
+  bytes sealID = 1;
+}
+
+message GetSealResponse {
+  bytes sealID = 1;
+  bytes data = 2;
+}
+
+message ListSealsForHeightRequest {
+  uint64 height = 1;
+}
+
+message ListSealsForHeightResponse {
+  uint64 height = 1;
+  repeated bytes sealIDs = 2;
 }
