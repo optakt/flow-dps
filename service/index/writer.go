@@ -68,28 +68,6 @@ func (w *Writer) Header(height uint64, header *flow.Header) error {
 	return w.db.Update(w.storage.SaveHeader(height, header))
 }
 
-// Events indexes the events, which should represent all events of the finalized
-// block at the given height.
-func (w *Writer) Events(height uint64, events []flow.Event) error {
-	buckets := make(map[flow.EventType][]flow.Event)
-	for _, event := range events {
-		buckets[event.Type] = append(buckets[event.Type], event)
-	}
-	err := w.db.Update(func(tx *badger.Txn) error {
-		for typ, evts := range buckets {
-			err := w.storage.SaveEvents(height, typ, evts)(tx)
-			if err != nil {
-				return fmt.Errorf("could not persist events: %w", err)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not index events: %w", err)
-	}
-	return nil
-}
-
 // Payloads indexes the given payloads, which should represent a trie update
 // of the execution state contained within the finalized block at the given
 // height.
@@ -148,4 +126,26 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 		}
 		return nil
 	})
+}
+
+// Events indexes the events, which should represent all events of the finalized
+// block at the given height.
+func (w *Writer) Events(height uint64, events []flow.Event) error {
+	buckets := make(map[flow.EventType][]flow.Event)
+	for _, event := range events {
+		buckets[event.Type] = append(buckets[event.Type], event)
+	}
+	err := w.db.Update(func(tx *badger.Txn) error {
+		for typ, evts := range buckets {
+			err := w.storage.SaveEvents(height, typ, evts)(tx)
+			if err != nil {
+				return fmt.Errorf("could not persist events: %w", err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("could not index events: %w", err)
+	}
+	return nil
 }

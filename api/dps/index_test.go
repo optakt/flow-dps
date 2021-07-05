@@ -282,93 +282,6 @@ func TestIndex_Commit(t *testing.T) {
 	})
 }
 
-func TestIndex_Events(t *testing.T) {
-	testHeight := uint64(42)
-	testTypes := []flow.EventType{"deposit", "withdrawal"}
-	testEvents := []flow.Event{
-		{Type: "deposit"},
-		{Type: "withdrawal"},
-	}
-	testEventsB, err := cbor.Marshal(testEvents)
-	require.NoError(t, err)
-
-	t.Run("nominal case", func(t *testing.T) {
-		t.Parallel()
-
-		index := Index{
-			client: &apiMock{
-				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
-					assert.Equal(t, testHeight, in.Height)
-					assert.Equal(t, convert.TypesToStrings(testTypes), in.Types)
-
-					return &GetEventsResponse{
-						Height: testHeight,
-						Types:  convert.TypesToStrings(testTypes),
-						Data:   testEventsB,
-					}, nil
-				},
-			},
-			codec: &mocks.Codec{
-				UnmarshalFunc: cbor.Unmarshal,
-			},
-		}
-
-		got, err := index.Events(testHeight, testTypes...)
-
-		if assert.NoError(t, err) {
-			assert.Equal(t, testEvents, got)
-		}
-	})
-
-	t.Run("handles index failures", func(t *testing.T) {
-		t.Parallel()
-
-		index := Index{
-			client: &apiMock{
-				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
-					assert.Equal(t, testHeight, in.Height)
-					assert.Equal(t, convert.TypesToStrings(testTypes), in.Types)
-
-					return nil, mocks.DummyError
-				},
-			},
-			codec: &mocks.Codec{
-				UnmarshalFunc: cbor.Unmarshal,
-			},
-		}
-
-		_, err := index.Events(testHeight, testTypes...)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("handles invalid indexed data", func(t *testing.T) {
-		t.Parallel()
-
-		index := Index{
-			client: &apiMock{
-				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
-					assert.Equal(t, testHeight, in.Height)
-					assert.Equal(t, convert.TypesToStrings(testTypes), in.Types)
-
-					return &GetEventsResponse{
-						Height: testHeight,
-						Types:  convert.TypesToStrings(testTypes),
-						Data:   []byte(`invalid data`),
-					}, nil
-				},
-			},
-			codec: &mocks.Codec{
-				UnmarshalFunc: cbor.Unmarshal,
-			},
-		}
-
-		_, err := index.Events(testHeight, testTypes...)
-
-		assert.Error(t, err)
-	})
-}
-
 func TestIndex_Values(t *testing.T) {
 	testHeight := uint64(42)
 	path1 := ledger.Path{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1}
@@ -538,6 +451,93 @@ func TestIndex_Transaction(t *testing.T) {
 		}
 
 		_, err := index.Transaction(testTransactionID)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestIndex_Events(t *testing.T) {
+	testHeight := uint64(42)
+	testTypes := []flow.EventType{"deposit", "withdrawal"}
+	testEvents := []flow.Event{
+		{Type: "deposit"},
+		{Type: "withdrawal"},
+	}
+	testEventsB, err := cbor.Marshal(testEvents)
+	require.NoError(t, err)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		index := Index{
+			client: &apiMock{
+				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
+					assert.Equal(t, testHeight, in.Height)
+					assert.Equal(t, convert.TypesToStrings(testTypes), in.Types)
+
+					return &GetEventsResponse{
+						Height: testHeight,
+						Types:  convert.TypesToStrings(testTypes),
+						Data:   testEventsB,
+					}, nil
+				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
+			},
+		}
+
+		got, err := index.Events(testHeight, testTypes...)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, testEvents, got)
+		}
+	})
+
+	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
+		index := Index{
+			client: &apiMock{
+				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
+					assert.Equal(t, testHeight, in.Height)
+					assert.Equal(t, convert.TypesToStrings(testTypes), in.Types)
+
+					return nil, mocks.DummyError
+				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
+			},
+		}
+
+		_, err := index.Events(testHeight, testTypes...)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles invalid indexed data", func(t *testing.T) {
+		t.Parallel()
+
+		index := Index{
+			client: &apiMock{
+				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
+					assert.Equal(t, testHeight, in.Height)
+					assert.Equal(t, convert.TypesToStrings(testTypes), in.Types)
+
+					return &GetEventsResponse{
+						Height: testHeight,
+						Types:  convert.TypesToStrings(testTypes),
+						Data:   []byte(`invalid data`),
+					}, nil
+				},
+			},
+			codec: &mocks.Codec{
+				UnmarshalFunc: cbor.Unmarshal,
+			},
+		}
+
+		_, err := index.Events(testHeight, testTypes...)
 
 		assert.Error(t, err)
 	})
