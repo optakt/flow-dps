@@ -91,8 +91,8 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 			Description: "block hash does not match known hash for height",
 			Details: []fail.Detail{
 				fail.WithUint64("index", block.Index),
-				fail.WithString("hash", block.Hash),
-				fail.WithString("known_hash", header.ID().String()),
+				fail.WithString("have_hash", block.Hash),
+				fail.WithString("want_hash", header.ID().String()),
 			},
 		}
 	}

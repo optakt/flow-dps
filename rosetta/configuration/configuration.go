@@ -104,9 +104,9 @@ func (c *Configuration) Check(network identifier.Network) error {
 		return fail.InvalidNetwork{
 			Description: "invalid network identifier blockchain",
 			Details: []fail.Detail{
-				fail.WithString("blockchain", network.Blockchain),
 				fail.WithString("network", network.Network),
-				fail.WithString("blockchain_want", c.network.Blockchain),
+				fail.WithString("have_blockchain", network.Blockchain),
+				fail.WithString("want_blockchain", c.network.Blockchain),
 			},
 		}
 	}
@@ -116,8 +116,8 @@ func (c *Configuration) Check(network identifier.Network) error {
 			Description: "invalid network identifier network",
 			Details: []fail.Detail{
 				fail.WithString("blockchain", network.Blockchain),
-				fail.WithString("network", network.Network),
-				fail.WithString("network_want", c.network.Network),
+				fail.WithString("have_network", network.Network),
+				fail.WithString("want_network", c.network.Network),
 			},
 		}
 	}
