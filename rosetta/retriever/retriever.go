@@ -231,28 +231,42 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		count++
 	}
 
-	// We need the *uint64 for the parent block identifier.
-	var parentHeight *uint64
-	if header.Height > 0 {
-		h := header.Height - 1
-		parentHeight = &h
-	}
-
 	// Now we just need to build the block.
 	block := object.Block{
 		ID: identifier.Block{
 			Index: &header.Height,
 			Hash:  header.ID().String(),
 		},
-		ParentID: identifier.Block{
-			Index: parentHeight,
-			Hash:  header.ParentID.String(),
-		},
+		ParentID:     parentBlock(header),
 		Timestamp:    header.Timestamp.UnixNano() / 1_000_000,
 		Transactions: blockTransactions,
 	}
 
 	return &block, extraTransactions, nil
+}
+
+func parentBlock(header *flow.Header) identifier.Block {
+
+	if header == nil {
+		return identifier.Block{}
+	}
+
+	if header.Height > 0 {
+		height := header.Height - 1
+
+		return identifier.Block{
+			Index: &height,
+			Hash:  header.ParentID.String(),
+		}
+	}
+
+	// Rosetta spec notes that for genesis block, it is recommended to use the
+	// genesis block identifier also for the parent block identifier.
+	// See https://www.rosetta-api.org/docs/common_mistakes.html#malformed-genesis-block
+	return identifier.Block{
+		Index: &header.Height,
+		Hash:  header.ID().String(),
+	}
 }
 
 func (r *Retriever) Transaction(block identifier.Block, id identifier.Transaction) (*object.Transaction, error) {
