@@ -14,6 +14,8 @@
 
 package mocks
 
+import "testing"
+
 type Codec struct {
 	EncodeFunc     func(value interface{}) ([]byte, error)
 	DecodeFunc     func(data []byte, value interface{}) error
@@ -37,6 +39,21 @@ func (c *Codec) Compress(data []byte) ([]byte, error) {
 
 func (c *Codec) Decompress(data []byte) ([]byte, error) {
 	return c.DecompressFunc(data)
+}
+
+func BaselineCodec(t *testing.T) *Codec {
+	t.Helper()
+
+	c := Codec{
+		UnmarshalFunc: func(b []byte, v interface{}) error {
+			return nil
+		},
+		MarshalFunc: func(v interface{}) ([]byte, error) {
+			return []byte(`test`), nil
+		},
+	}
+
+	return &c
 }
 
 func (c *Codec) Unmarshal(b []byte, v interface{}) error {
