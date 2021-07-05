@@ -15,12 +15,12 @@
 package rosetta
 
 import (
-	errortype "errors"
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/errors"
+	"github.com/optakt/flow-dps/rosetta/fail"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -40,50 +40,50 @@ func (d *Data) Block(ctx echo.Context) error {
 	var req BlockRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return httpError(http.StatusBadRequest, errors.InvalidFormat("could not unmarshal request", errors.WithError(err)))
+		return httpError(http.StatusBadRequest, fail.InvalidFormat("could not unmarshal request", fail.WithError(err)))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: blockchain field is empty"))
+		return httpError(http.StatusBadRequest, fail.InvalidFormat("blockchain identifier: blockchain field is empty"))
 	}
 	if req.NetworkID.Network == "" {
-		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: network field is empty"))
+		return httpError(http.StatusBadRequest, fail.InvalidFormat("blockchain identifier: network field is empty"))
 	}
 
 	if req.BlockID.Index == 0 && req.BlockID.Hash == "" {
-		return httpError(http.StatusBadRequest, errors.InvalidFormat("block identifier: at least one of hash or index is required"))
+		return httpError(http.StatusBadRequest, fail.InvalidFormat("block identifier: at least one of hash or index is required"))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
 		return httpError(
 			http.StatusBadRequest,
-			errors.InvalidFormat("block identifier: hash field has wrong length",
-				errors.WithInt("have_length", len(req.BlockID.Hash)),
-				errors.WithInt("want_length", hexIDSize),
+			fail.InvalidFormat("block identifier: hash field has wrong length",
+				fail.WithInt("have_length", len(req.BlockID.Hash)),
+				fail.WithInt("want_length", hexIDSize),
 			))
 	}
 
 	err = d.config.Check(req.NetworkID)
-	var netErr errors.InvalidNetwork
-	if errortype.As(err, &netErr) {
+	var netErr fail.InvalidNetwork
+	if errors.As(err, &netErr) {
 		return httpError(http.StatusUnprocessableEntity, netErr.RosettaError())
 	}
 	if err != nil {
-		return httpError(http.StatusInternalServerError, errors.Internal("could not validate network", errors.WithError(err)))
+		return httpError(http.StatusInternalServerError, fail.Internal("could not validate network", fail.WithError(err)))
 	}
 
 	block, other, err := d.retrieve.Block(req.BlockID)
 
-	var ibErr errors.InvalidBlock
-	if errortype.As(err, &ibErr) {
+	var ibErr fail.InvalidBlock
+	if errors.As(err, &ibErr) {
 		return httpError(http.StatusUnprocessableEntity, ibErr.RosettaError())
 	}
-	var ubErr errors.UnknownBlock
-	if errortype.As(err, &ubErr) {
+	var ubErr fail.UnknownBlock
+	if errors.As(err, &ubErr) {
 		return httpError(http.StatusUnprocessableEntity, ubErr.RosettaError())
 	}
 
 	if err != nil {
-		return httpError(http.StatusInternalServerError, errors.Internal("could not retrieve block", errors.WithError(err)))
+		return httpError(http.StatusInternalServerError, fail.Internal("could not retrieve block", fail.WithError(err)))
 	}
 
 	res := BlockResponse{

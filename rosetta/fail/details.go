@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package errors
+package fail
 
 // Detail represents a function that can be used to provide more detailed information
 // about a specific error instance.

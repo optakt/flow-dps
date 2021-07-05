@@ -18,7 +18,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/rosetta/errors"
+	"github.com/optakt/flow-dps/rosetta/fail"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
@@ -57,15 +57,15 @@ func New(chain flow.ChainID) *Configuration {
 	}
 
 	errors := []meta.ErrorDefinition{
-		errors.ErrorInternal,
-		errors.ErrorInvalidFormat,
-		errors.ErrorInvalidNetwork,
-		errors.ErrorInvalidAccount,
-		errors.ErrorInvalidCurrency,
-		errors.ErrorInvalidBlock,
-		errors.ErrorInvalidTransaction,
-		errors.ErrorUnknownBlock,
-		errors.ErrorUnknownCurrency,
+		fail.ErrorInternal,
+		fail.ErrorInvalidFormat,
+		fail.ErrorInvalidNetwork,
+		fail.ErrorInvalidAccount,
+		fail.ErrorInvalidCurrency,
+		fail.ErrorInvalidBlock,
+		fail.ErrorInvalidTransaction,
+		fail.ErrorUnknownBlock,
+		fail.ErrorUnknownCurrency,
 	}
 
 	c := Configuration{
@@ -101,23 +101,23 @@ func (c *Configuration) Errors() []meta.ErrorDefinition {
 
 func (c *Configuration) Check(network identifier.Network) error {
 	if network.Blockchain != c.network.Blockchain {
-		return errors.InvalidNetwork{
+		return fail.InvalidNetwork{
 			Description: "invalid network identifier blockchain",
-			Details: []errors.Detail{
-				errors.WithString("blockchain", network.Blockchain),
-				errors.WithString("network", network.Network),
-				errors.WithString("blockchain_want", c.network.Blockchain),
+			Details: []fail.Detail{
+				fail.WithString("blockchain", network.Blockchain),
+				fail.WithString("network", network.Network),
+				fail.WithString("blockchain_want", c.network.Blockchain),
 			},
 		}
 	}
 
 	if network.Network != c.network.Network {
-		return errors.InvalidNetwork{
+		return fail.InvalidNetwork{
 			Description: "invalid network identifier network",
-			Details: []errors.Detail{
-				errors.WithString("blockchain", network.Blockchain),
-				errors.WithString("network", network.Network),
-				errors.WithString("network_want", c.network.Network),
+			Details: []fail.Detail{
+				fail.WithString("blockchain", network.Blockchain),
+				fail.WithString("network", network.Network),
+				fail.WithString("network_want", c.network.Network),
 			},
 		}
 	}

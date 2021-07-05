@@ -29,7 +29,7 @@ import (
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/rosetta/errors"
+	"github.com/optakt/flow-dps/rosetta/fail"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -94,7 +94,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(http.StatusBadRequest, errors.ErrorInvalidFormat),
+			checkError: checkRosettaError(http.StatusBadRequest, fail.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain",
@@ -105,7 +105,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(http.StatusUnprocessableEntity, errors.ErrorInvalidNetwork),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, fail.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network",
@@ -116,7 +116,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(http.StatusBadRequest, errors.ErrorInvalidFormat),
+			checkError: checkRosettaError(http.StatusBadRequest, fail.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network",
@@ -127,7 +127,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(http.StatusUnprocessableEntity, errors.ErrorInvalidNetwork),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, fail.ErrorInvalidNetwork),
 		},
 	}
 
@@ -233,41 +233,41 @@ func TestAPI_Options(t *testing.T) {
 
 			switch expectedCode {
 
-			case errors.ErrorInternal.Code:
-				assert.Equal(t, errors.ErrorInternal.Message, rosettaErr.Message)
-				assert.Equal(t, errors.ErrorInternal.Retriable, rosettaErr.Retriable)
+			case fail.ErrorInternal.Code:
+				assert.Equal(t, fail.ErrorInternal.Message, rosettaErr.Message)
+				assert.Equal(t, fail.ErrorInternal.Retriable, rosettaErr.Retriable)
 
-			case errors.ErrorInvalidFormat.Code:
-				assert.Equal(t, errors.ErrorInvalidFormat.Message, rosettaErr.Message)
-				assert.Equal(t, errors.ErrorInvalidFormat.Retriable, rosettaErr.Retriable)
+			case fail.ErrorInvalidFormat.Code:
+				assert.Equal(t, fail.ErrorInvalidFormat.Message, rosettaErr.Message)
+				assert.Equal(t, fail.ErrorInvalidFormat.Retriable, rosettaErr.Retriable)
 
-			case errors.ErrorInvalidNetwork.Code:
-				assert.Equal(t, errors.ErrorInvalidNetwork.Message, rosettaErr.Message)
-				assert.Equal(t, errors.ErrorInvalidNetwork.Retriable, rosettaErr.Retriable)
+			case fail.ErrorInvalidNetwork.Code:
+				assert.Equal(t, fail.ErrorInvalidNetwork.Message, rosettaErr.Message)
+				assert.Equal(t, fail.ErrorInvalidNetwork.Retriable, rosettaErr.Retriable)
 
-			case errors.ErrorInvalidAccount.Code:
-				assert.Equal(t, errors.ErrorInvalidAccount.Message, rosettaErr.Message)
-				assert.Equal(t, errors.ErrorInvalidAccount.Retriable, rosettaErr.Retriable)
+			case fail.ErrorInvalidAccount.Code:
+				assert.Equal(t, fail.ErrorInvalidAccount.Message, rosettaErr.Message)
+				assert.Equal(t, fail.ErrorInvalidAccount.Retriable, rosettaErr.Retriable)
 
-			case errors.ErrorInvalidCurrency.Code:
-				assert.Equal(t, errors.ErrorInvalidCurrency.Message, rosettaErr.Message)
-				assert.Equal(t, errors.ErrorInvalidCurrency.Retriable, rosettaErr.Retriable)
+			case fail.ErrorInvalidCurrency.Code:
+				assert.Equal(t, fail.ErrorInvalidCurrency.Message, rosettaErr.Message)
+				assert.Equal(t, fail.ErrorInvalidCurrency.Retriable, rosettaErr.Retriable)
 
-			case errors.ErrorInvalidBlock.Code:
-				assert.Equal(t, errors.ErrorInvalidBlock.Message, rosettaErr.Message)
-				assert.Equal(t, errors.ErrorInvalidBlock.Retriable, rosettaErr.Retriable)
+			case fail.ErrorInvalidBlock.Code:
+				assert.Equal(t, fail.ErrorInvalidBlock.Message, rosettaErr.Message)
+				assert.Equal(t, fail.ErrorInvalidBlock.Retriable, rosettaErr.Retriable)
 
-			case errors.ErrorInvalidTransaction.Code:
-				assert.Equal(t, errors.ErrorInvalidTransaction.Message, rosettaErr.Message)
-				assert.Equal(t, errors.ErrorInvalidTransaction.Retriable, rosettaErr.Retriable)
+			case fail.ErrorInvalidTransaction.Code:
+				assert.Equal(t, fail.ErrorInvalidTransaction.Message, rosettaErr.Message)
+				assert.Equal(t, fail.ErrorInvalidTransaction.Retriable, rosettaErr.Retriable)
 
-			case errors.ErrorUnknownBlock.Code:
-				assert.Equal(t, errors.ErrorUnknownBlock.Message, rosettaErr.Message)
-				assert.Equal(t, errors.ErrorUnknownBlock.Retriable, rosettaErr.Retriable)
+			case fail.ErrorUnknownBlock.Code:
+				assert.Equal(t, fail.ErrorUnknownBlock.Message, rosettaErr.Message)
+				assert.Equal(t, fail.ErrorUnknownBlock.Retriable, rosettaErr.Retriable)
 
-			case errors.ErrorUnknownCurrency.Code:
-				assert.Equal(t, errors.ErrorUnknownCurrency.Message, rosettaErr.Message)
-				assert.Equal(t, errors.ErrorUnknownCurrency.Retriable, rosettaErr.Retriable)
+			case fail.ErrorUnknownCurrency.Code:
+				assert.Equal(t, fail.ErrorUnknownCurrency.Message, rosettaErr.Message)
+				assert.Equal(t, fail.ErrorUnknownCurrency.Retriable, rosettaErr.Retriable)
 
 			default:
 				t.Errorf("unknown rosetta error received: (code: %v, message: '%v', retriable: %v", rosettaErr.Code, rosettaErr.Message, rosettaErr.Retriable)
@@ -298,7 +298,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(http.StatusBadRequest, errors.ErrorInvalidFormat),
+			checkError: checkRosettaError(http.StatusBadRequest, fail.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid blockchain",
@@ -309,7 +309,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(http.StatusUnprocessableEntity, errors.ErrorInvalidNetwork),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, fail.ErrorInvalidNetwork),
 		},
 		{
 			name: "missing network",
@@ -320,7 +320,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(http.StatusBadRequest, errors.ErrorInvalidFormat),
+			checkError: checkRosettaError(http.StatusBadRequest, fail.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid network",
@@ -331,7 +331,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 				},
 			},
 
-			checkError: checkRosettaError(http.StatusUnprocessableEntity, errors.ErrorInvalidNetwork),
+			checkError: checkRosettaError(http.StatusUnprocessableEntity, fail.ErrorInvalidNetwork),
 		},
 	}
 
@@ -429,10 +429,10 @@ func TestAPI_StatusHandlerMalformedRequest(t *testing.T) {
 			require.True(t, ok)
 
 			assert.Equal(t, http.StatusBadRequest, echoErr.Code)
-			gotErr, ok := echoErr.Message.(errors.Error)
+			gotErr, ok := echoErr.Message.(fail.Error)
 			require.True(t, ok)
 
-			assert.Equal(t, errors.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.Equal(t, fail.ErrorInvalidFormat, gotErr.ErrorDefinition)
 		})
 	}
 }
@@ -514,10 +514,10 @@ func TestAPI_OptionsHandlesMalformedRequest(t *testing.T) {
 			require.True(t, ok)
 
 			assert.Equal(t, http.StatusBadRequest, echoErr.Code)
-			gotErr, ok := echoErr.Message.(errors.Error)
+			gotErr, ok := echoErr.Message.(fail.Error)
 			require.True(t, ok)
 
-			assert.Equal(t, errors.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.Equal(t, fail.ErrorInvalidFormat, gotErr.ErrorDefinition)
 		})
 	}
 }

@@ -12,22 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package errors
+package fail
 
-// InvalidNetwork error is returned when the specified network identifier is invalid.
-// Network identifier is considered invalid when the specified blockchain or network
-// fields are not the same as the configured ones.
-type InvalidNetwork struct {
+// InvalidTransaction is returned when the specified transaction identifier is invalid.
+// Transaction identifier is considered invalid when the transaction hash is not a
+// valid hex-encoded string.
+type InvalidTransaction struct {
 	Description string
 	Details     []Detail
 }
 
-// Error returns the textual representation of the InvalidNetwork error.
-func (i InvalidNetwork) Error() string {
-	return "invalid network"
+// Error returns the textual representation of the InvalidTransaction error.
+func (i InvalidTransaction) Error() string {
+	return "invalid transaction"
 }
 
 // RosettaError returns the error information in a Rosetta-compatible format.
-func (i InvalidNetwork) RosettaError() Error {
-	return newError(ErrorInvalidNetwork, i.Description, i.Details...)
+func (i InvalidTransaction) RosettaError() Error {
+	return newError(ErrorInvalidTransaction, i.Description, i.Details...)
 }

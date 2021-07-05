@@ -19,7 +19,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/errors"
+	"github.com/optakt/flow-dps/rosetta/fail"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -36,7 +36,7 @@ func (d *Data) Networks(ctx echo.Context) error {
 	var req NetworksRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return httpError(http.StatusBadRequest, errors.InvalidFormat("could not unmarshal request", errors.WithError(err)))
+		return httpError(http.StatusBadRequest, fail.InvalidFormat("could not unmarshal request", fail.WithError(err)))
 	}
 
 	// Get the network we are running on from the configuration.

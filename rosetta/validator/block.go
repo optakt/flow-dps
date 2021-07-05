@@ -19,7 +19,7 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/rosetta/errors"
+	"github.com/optakt/flow-dps/rosetta/fail"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -39,11 +39,11 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	if block.Hash != "" {
 		_, err := flow.HexStringToIdentifier(block.Hash)
 		if err != nil {
-			return identifier.Block{}, errors.InvalidBlock{
+			return identifier.Block{}, fail.InvalidBlock{
 				Description: "block hash is not a valid hex-encoded string",
-				Details: []errors.Detail{
-					errors.WithUint64("index", block.Index),
-					errors.WithString("hash", block.Hash),
+				Details: []fail.Detail{
+					fail.WithUint64("index", block.Index),
+					fail.WithString("hash", block.Hash),
 				},
 			}
 		}
@@ -55,12 +55,12 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 		return identifier.Block{}, fmt.Errorf("could not get first: %w", err)
 	}
 	if block.Index < first {
-		return identifier.Block{}, errors.InvalidBlock{
+		return identifier.Block{}, fail.InvalidBlock{
 			Description: "block index is below first indexed block",
-			Details: []errors.Detail{
-				errors.WithUint64("index", block.Index),
-				errors.WithString("hash", block.Hash),
-				errors.WithUint64("first", first),
+			Details: []fail.Detail{
+				fail.WithUint64("index", block.Index),
+				fail.WithString("hash", block.Hash),
+				fail.WithUint64("first", first),
 			},
 		}
 	}
@@ -71,12 +71,12 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 		return identifier.Block{}, fmt.Errorf("could not get last: %w", err)
 	}
 	if block.Index > last {
-		return identifier.Block{}, errors.UnknownBlock{
+		return identifier.Block{}, fail.UnknownBlock{
 			Description: "block index is above last indexed block",
-			Details: []errors.Detail{
-				errors.WithUint64("index", block.Index),
-				errors.WithString("hash", block.Hash),
-				errors.WithUint64("last", last),
+			Details: []fail.Detail{
+				fail.WithUint64("index", block.Index),
+				fail.WithString("hash", block.Hash),
+				fail.WithUint64("last", last),
 			},
 		}
 	}
@@ -87,12 +87,12 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 		return identifier.Block{}, fmt.Errorf("could not get header: %w", err)
 	}
 	if block.Hash != "" && block.Hash != header.ID().String() {
-		return identifier.Block{}, errors.InvalidBlock{
+		return identifier.Block{}, fail.InvalidBlock{
 			Description: "block hash does not match known hash for height",
-			Details: []errors.Detail{
-				errors.WithUint64("index", block.Index),
-				errors.WithString("hash", block.Hash),
-				errors.WithString("known_hash", header.ID().String()),
+			Details: []fail.Detail{
+				fail.WithUint64("index", block.Index),
+				fail.WithString("hash", block.Hash),
+				fail.WithString("known_hash", header.ID().String()),
 			},
 		}
 	}

@@ -15,12 +15,12 @@
 package rosetta
 
 import (
-	errortype "errors"
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/errors"
+	"github.com/optakt/flow-dps/rosetta/fail"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
@@ -47,23 +47,23 @@ func (d *Data) Options(ctx echo.Context) error {
 	var req OptionsRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return httpError(http.StatusBadRequest, errors.InvalidFormat("could not unmarshal request", errors.WithError(err)))
+		return httpError(http.StatusBadRequest, fail.InvalidFormat("could not unmarshal request", fail.WithError(err)))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: blockchain field is missing"))
+		return httpError(http.StatusBadRequest, fail.InvalidFormat("blockchain identifier: blockchain field is missing"))
 	}
 	if req.NetworkID.Network == "" {
-		return httpError(http.StatusBadRequest, errors.InvalidFormat("blockchain identifier: network field is missing"))
+		return httpError(http.StatusBadRequest, fail.InvalidFormat("blockchain identifier: network field is missing"))
 	}
 
 	err = d.config.Check(req.NetworkID)
-	var netErr errors.InvalidNetwork
-	if errortype.As(err, &netErr) {
+	var netErr fail.InvalidNetwork
+	if errors.As(err, &netErr) {
 		return httpError(http.StatusUnprocessableEntity, netErr.RosettaError())
 	}
 	if err != nil {
-		return httpError(http.StatusInternalServerError, errors.Internal("could not validate network", errors.WithError(err)))
+		return httpError(http.StatusInternalServerError, fail.Internal("could not validate network", fail.WithError(err)))
 	}
 
 	// Create the allow object, which is native to the response.

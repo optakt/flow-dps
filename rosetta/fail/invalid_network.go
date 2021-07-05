@@ -12,21 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package errors
+package fail
 
-// UnknownBlock error is returned when the requested block is not known, because
-// the height of the requested block is larger than the height of the last known block.
-type UnknownBlock struct {
+// InvalidNetwork error is returned when the specified network identifier is invalid.
+// Network identifier is considered invalid when the specified blockchain or network
+// fields are not the same as the configured ones.
+type InvalidNetwork struct {
 	Description string
 	Details     []Detail
 }
 
-// Error returns the textual representation of the UnknownBlock error.
-func (u UnknownBlock) Error() string {
-	return "unknown block"
+// Error returns the textual representation of the InvalidNetwork error.
+func (i InvalidNetwork) Error() string {
+	return "invalid network"
 }
 
 // RosettaError returns the error information in a Rosetta-compatible format.
-func (u UnknownBlock) RosettaError() Error {
-	return newError(ErrorUnknownBlock, u.Description, u.Details...)
+func (i InvalidNetwork) RosettaError() Error {
+	return newError(ErrorInvalidNetwork, i.Description, i.Details...)
 }

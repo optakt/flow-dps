@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package errors
+package fail
 
 // InvalidBlock error is returned when the specified block identifier is invalid.
 // Block identifier is considered invalid when:

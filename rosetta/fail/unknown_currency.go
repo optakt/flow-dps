@@ -12,23 +12,21 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package errors
+package fail
 
-// InvalidAccount error is returned when the specified account identifier is invalid.
-// Account identifier is considered invalid when:
-//	- account address is not a valid hex-encoded string
-//	- account address fails the Flow chain address generator check
-type InvalidAccount struct {
+// UnknownCurrency error is returned when the requested currency is not known.
+// This happens when the specified currency symbol is not configured.
+type UnknownCurrency struct {
 	Description string
 	Details     []Detail
 }
 
-// Error returns the textual representation of the InvalidAccount error.
-func (i InvalidAccount) Error() string {
-	return "invalid account"
+// Error returns the textual representation of the UnknownCurrency error.
+func (u UnknownCurrency) Error() string {
+	return "unknown currency"
 }
 
 // RosettaError returns the error information in a Rosetta-compatible format.
-func (i InvalidAccount) RosettaError() Error {
-	return newError(ErrorInvalidAccount, i.Description, i.Details...)
+func (u UnknownCurrency) RosettaError() Error {
+	return newError(ErrorUnknownCurrency, u.Description, u.Details...)
 }

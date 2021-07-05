@@ -12,22 +12,23 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package errors
+package fail
 
-// InvalidCurrency error is returned when the currency identifier is invalid.
-// Currency identifier is considered invalid when the specified number of decimals
-// is different from the configured number of decimals.
-type InvalidCurrency struct {
+// InvalidAccount error is returned when the specified account identifier is invalid.
+// Account identifier is considered invalid when:
+//	- account address is not a valid hex-encoded string
+//	- account address fails the Flow chain address generator check
+type InvalidAccount struct {
 	Description string
 	Details     []Detail
 }
 
-// Error returns the textual representation of the InvalidCurrency error.
-func (i InvalidCurrency) Error() string {
-	return "invalid currency"
+// Error returns the textual representation of the InvalidAccount error.
+func (i InvalidAccount) Error() string {
+	return "invalid account"
 }
 
 // RosettaError returns the error information in a Rosetta-compatible format.
-func (i InvalidCurrency) RosettaError() Error {
-	return newError(ErrorInvalidCurrency, i.Description, i.Details...)
+func (i InvalidAccount) RosettaError() Error {
+	return newError(ErrorInvalidAccount, i.Description, i.Details...)
 }

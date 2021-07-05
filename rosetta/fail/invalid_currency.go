@@ -12,21 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package errors
+package fail
 
-// UnknownCurrency error is returned when the requested currency is not known.
-// This happens when the specified currency symbol is not configured.
-type UnknownCurrency struct {
+// InvalidCurrency error is returned when the currency identifier is invalid.
+// Currency identifier is considered invalid when the specified number of decimals
+// is different from the configured number of decimals.
+type InvalidCurrency struct {
 	Description string
 	Details     []Detail
 }
 
-// Error returns the textual representation of the UnknownCurrency error.
-func (u UnknownCurrency) Error() string {
-	return "unknown currency"
+// Error returns the textual representation of the InvalidCurrency error.
+func (i InvalidCurrency) Error() string {
+	return "invalid currency"
 }
 
 // RosettaError returns the error information in a Rosetta-compatible format.
-func (u UnknownCurrency) RosettaError() Error {
-	return newError(ErrorUnknownCurrency, u.Description, u.Details...)
+func (i InvalidCurrency) RosettaError() Error {
+	return newError(ErrorInvalidCurrency, i.Description, i.Details...)
 }

@@ -19,7 +19,7 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/rosetta/errors"
+	"github.com/optakt/flow-dps/rosetta/fail"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -29,11 +29,11 @@ func (v *Validator) Account(account identifier.Account) error {
 	// possible that the characters are not valid hex encoding.
 	bytes, err := hex.DecodeString(account.Address)
 	if err != nil {
-		return errors.InvalidAccount{
+		return fail.InvalidAccount{
 			Description: "account address is not a valid hex-encoded string",
-			Details: []errors.Detail{
-				errors.WithString("address", account.Address),
-				errors.WithString("chain", v.params.ChainID.String()),
+			Details: []fail.Detail{
+				fail.WithString("address", account.Address),
+				fail.WithString("chain", v.params.ChainID.String()),
 			},
 		}
 	}
@@ -44,11 +44,11 @@ func (v *Validator) Account(account identifier.Account) error {
 	copy(address[:], bytes)
 	ok := v.params.ChainID.Chain().IsValid(address)
 	if !ok {
-		return errors.InvalidAccount{
+		return fail.InvalidAccount{
 			Description: "account address is not valid for configured chain",
-			Details: []errors.Detail{
-				errors.WithString("address", account.Address),
-				errors.WithString("chain", v.params.ChainID.String()),
+			Details: []fail.Detail{
+				fail.WithString("address", account.Address),
+				fail.WithString("chain", v.params.ChainID.String()),
 			},
 		}
 	}

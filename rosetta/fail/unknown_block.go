@@ -12,22 +12,21 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package errors
+package fail
 
-// InvalidTransaction is returned when the specified transaction identifier is invalid.
-// Transaction identifier is considered invalid when the transaction hash is not a
-// valid hex-encoded string.
-type InvalidTransaction struct {
+// UnknownBlock error is returned when the requested block is not known, because
+// the height of the requested block is larger than the height of the last known block.
+type UnknownBlock struct {
 	Description string
 	Details     []Detail
 }
 
-// Error returns the textual representation of the InvalidTransaction error.
-func (i InvalidTransaction) Error() string {
-	return "invalid transaction"
+// Error returns the textual representation of the UnknownBlock error.
+func (u UnknownBlock) Error() string {
+	return "unknown block"
 }
 
 // RosettaError returns the error information in a Rosetta-compatible format.
-func (i InvalidTransaction) RosettaError() Error {
-	return newError(ErrorInvalidTransaction, i.Description, i.Details...)
+func (u UnknownBlock) RosettaError() Error {
+	return newError(ErrorUnknownBlock, u.Description, u.Details...)
 }

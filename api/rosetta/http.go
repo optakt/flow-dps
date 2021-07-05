@@ -17,11 +17,11 @@ package rosetta
 import (
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/errors"
+	"github.com/optakt/flow-dps/rosetta/fail"
 )
 
 // This helper function returns an echo.HTTPError that corresponds to the specified
 // rosetta Error. It ensures we don't accidentally return a wrong error type.
-func httpError(code int, err errors.Error) *echo.HTTPError {
+func httpError(code int, err fail.Error) *echo.HTTPError {
 	return echo.NewHTTPError(code, err)
 }
