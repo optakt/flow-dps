@@ -14,9 +14,26 @@
 
 package mocks
 
+import "testing"
+
 type Codec struct {
 	UnmarshalFunc func(b []byte, v interface{}) error
 	MarshalFunc   func(v interface{}) ([]byte, error)
+}
+
+func BaselineCodec(t *testing.T) *Codec {
+	t.Helper()
+
+	c := Codec{
+		UnmarshalFunc: func(b []byte, v interface{}) error {
+			return nil
+		},
+		MarshalFunc: func(v interface{}) ([]byte, error) {
+			return []byte(`test`), nil
+		},
+	}
+
+	return &c
 }
 
 func (c *Codec) Unmarshal(b []byte, v interface{}) error {
