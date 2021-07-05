@@ -27,7 +27,7 @@ func clone(update *ledger.TrieUpdate) *ledger.TrieUpdate {
 	for _, path := range update.Paths {
 		var dup ledger.Path
 		copy(dup[:], path[:])
-		paths = append(paths, path)
+		paths = append(paths, dup)
 	}
 
 	payloads := make([]*ledger.Payload, 0, len(update.Payloads))
