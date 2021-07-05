@@ -46,11 +46,12 @@ func TestAPI_Block(t *testing.T) {
 
 	// Headers of known blocks to verify.
 	var (
-		firstHeader = knownHeader(1)
-		midHeader1  = knownHeader(13)
-		midHeader2  = knownHeader(43)
-		midHeader3  = knownHeader(44)
-		lastHeader  = knownHeader(425) // header of last indexed block
+		firstHeader  = knownHeader(0)
+		secondHeader = knownHeader(1)
+		midHeader1   = knownHeader(13)
+		midHeader2   = knownHeader(43)
+		midHeader3   = knownHeader(44)
+		lastHeader   = knownHeader(425) // header of last indexed block
 	)
 
 	const (
@@ -73,12 +74,21 @@ func TestAPI_Block(t *testing.T) {
 		validateBlock        validateBlockFunc
 	}{
 		{
-			name:    "child of first block",
+			// First block.
+			name:    "first block",
 			request: blockRequest(firstHeader),
 
 			wantTimestamp:  convert.RosettaTime(firstHeader.Timestamp),
 			wantParentHash: firstHeader.ParentID.String(),
 			validateBlock:  validateByHeader(t, firstHeader),
+		},
+		{
+			name:    "child of first block",
+			request: blockRequest(secondHeader),
+
+			wantTimestamp:  convert.RosettaTime(secondHeader.Timestamp),
+			wantParentHash: secondHeader.ParentID.String(),
+			validateBlock:  validateByHeader(t, secondHeader),
 		},
 		{
 			// Initial transfer of currency from the root account to the user - 100 tokens.
@@ -112,7 +122,7 @@ func TestAPI_Block(t *testing.T) {
 			name: "lookup of a block mid-chain by index only",
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetwork(),
-				BlockID:   identifier.Block{Index: midHeader3.Height},
+				BlockID:   identifier.Block{Index: &midHeader3.Height},
 			},
 
 			wantTimestamp:        convert.RosettaTime(midHeader3.Timestamp),
@@ -149,9 +159,20 @@ func TestAPI_Block(t *testing.T) {
 
 			test.validateBlock(blockResponse.Block.ID)
 
-			assert.Equal(t, test.request.BlockID.Index-1, blockResponse.Block.ParentID.Index)
-			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
+			// Verify that the information about the parent block (index and hash) is correct.
 
+			// For the first block, verify the parent block index is empty.
+			// For subsequent blocks, verify the index of the parent block.
+			if *test.request.BlockID.Index == 0 {
+				assert.Nil(t, blockResponse.Block.ParentID.Index)
+
+			} else {
+				if assert.NotNil(t, blockResponse.Block.ParentID.Index) && assert.NotNil(t, test.request.BlockID.Index) {
+					assert.Equal(t, *(test.request.BlockID.Index)-1, *blockResponse.Block.ParentID.Index)
+				}
+			}
+
+			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 			assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
 
 			if test.validateTransactions != nil {
@@ -166,16 +187,17 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const (
-		validBlockHash   = "810c9d25535107ba8729b1f26af2552e63d7b38b1e4cb8c848498faea1354cbd"
-		validBlockHeight = 44
+	var (
+		validBlockHeight uint64 = 44
+		lastHeight       uint64 = 425
 
-		trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character too short
-		lastHeight       = 425
+		validBlockHash = knownHeader(validBlockHeight).ID().String()
 	)
 
+	const trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character too short
+
 	var validBlockID = identifier.Block{
-		Index: validBlockHeight,
+		Index: &validBlockHeight,
 		Hash:  validBlockHash,
 	}
 
@@ -239,7 +261,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: 0,
+					Index: nil,
 					Hash:  "",
 				},
 			},
@@ -251,7 +273,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: 43,
+					Index: getUint64P(43),
 					Hash:  trimmedBlockHash,
 				},
 			},
@@ -274,7 +296,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: 13,
+					Index: getUint64P(13),
 					Hash:  invalidBlockHash,
 				},
 			},
@@ -286,7 +308,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: lastHeight + 1,
+					Index: getUint64P(lastHeight + 1),
 				},
 			},
 
@@ -297,7 +319,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			request: rosetta.BlockRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: validBlockHeight - 1,
+					Index: getUint64P(validBlockHeight - 1),
 					Hash:  validBlockHash,
 				},
 			},
@@ -437,7 +459,7 @@ func blockRequest(header flow.Header) rosetta.BlockRequest {
 	return rosetta.BlockRequest{
 		NetworkID: defaultNetwork(),
 		BlockID: identifier.Block{
-			Index: header.Height,
+			Index: &header.Height,
 			Hash:  header.ID().String(),
 		},
 	}

@@ -79,7 +79,7 @@ func (r *Retriever) Oldest() (identifier.Block, time.Time, error) {
 
 	block := identifier.Block{
 		Hash:  header.ID().String(),
-		Index: header.Height,
+		Index: &header.Height,
 	}
 
 	return block, header.Timestamp, nil
@@ -99,7 +99,7 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 
 	block := identifier.Block{
 		Hash:  header.ID().String(),
-		Index: header.Height,
+		Index: &header.Height,
 	}
 
 	return block, header.Timestamp, nil
@@ -138,7 +138,7 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not generate script: %w", err)
 		}
-		value, err := r.invoke.Script(block.Index, getBalance, []cadence.Value{address})
+		value, err := r.invoke.Script(*completed.Index, getBalance, []cadence.Value{address})
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not invoke script: %w", err)
 		}
@@ -175,13 +175,13 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 	}
 
 	// Then, get the header; it contains the block ID, parent ID and timestamp.
-	header, err := r.index.Header(completed.Index)
+	header, err := r.index.Header(*completed.Index)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get header: %w", err)
 	}
 
 	// Next, we get all the events for the block to extract deposit and withdrawal events.
-	events, err := r.index.Events(completed.Index, flow.EventType(deposit), flow.EventType(withdrawal))
+	events, err := r.index.Events(*completed.Index, flow.EventType(deposit), flow.EventType(withdrawal))
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get events: %w", err)
 	}
@@ -231,14 +231,21 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		count++
 	}
 
+	// We need the *uint64 for the parent block identifier.
+	var parentHeight *uint64
+	if header.Height > 0 {
+		h := header.Height - 1
+		parentHeight = &h
+	}
+
 	// Now we just need to build the block.
 	block := object.Block{
 		ID: identifier.Block{
-			Index: header.Height,
+			Index: &header.Height,
 			Hash:  header.ID().String(),
 		},
 		ParentID: identifier.Block{
-			Index: header.Height - 1,
+			Index: parentHeight,
 			Hash:  header.ParentID.String(),
 		},
 		Timestamp:    header.Timestamp.UnixNano() / 1_000_000,
@@ -263,7 +270,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 		return nil, fmt.Errorf("could not validate transaction: %w", err)
 	}
 
-	txIDs, err := r.index.TransactionsByHeight(completed.Index)
+	txIDs, err := r.index.TransactionsByHeight(*completed.Index)
 	if err != nil {
 		return nil, fmt.Errorf("could not list block transactions: %w", err)
 	}
@@ -276,7 +283,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 	if !found {
 		return nil, failure.UnknownTransaction{
-			Index:   block.Index,
+			Index:   *completed.Index,
 			Hash:    id.Hash,
 			Message: "transaction not found in block",
 		}
@@ -293,7 +300,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 
 	// Retrieve the deposit and withdrawal events for the block (yes, all of them).
-	events, err := r.index.Events(completed.Index, flow.EventType(deposit), flow.EventType(withdrawal))
+	events, err := r.index.Events(*completed.Index, flow.EventType(deposit), flow.EventType(withdrawal))
 	if err != nil {
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}

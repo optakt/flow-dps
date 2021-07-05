@@ -38,8 +38,7 @@ func TestAPI_Status(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const oldestBlockID = "d47b1bf7f37e192cf83d2bee3f6332b0d9b15c0aa7660d1e5322ea964667b333"
-
+	oldestBlockID := knownHeader(0).ID().String()
 	lastBlock := knownHeader(425)
 
 	request := rosetta.StatusRequest{
@@ -57,14 +56,19 @@ func TestAPI_Status(t *testing.T) {
 	var status rosetta.StatusResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &status))
 
-	assert.Equal(t, status.CurrentBlockID.Index, lastBlock.Height)
+	currentHeight := status.CurrentBlockID.Index
+	if assert.NotNil(t, currentHeight) {
+		assert.Equal(t, *currentHeight, lastBlock.Height)
+	}
 	assert.Equal(t, status.CurrentBlockID.Hash, lastBlock.ID().String())
 	assert.Equal(t, status.CurrentBlockTimestamp, convert.RosettaTime(lastBlock.Timestamp))
 
 	assert.Equal(t, status.OldestBlockID.Hash, oldestBlockID)
 
-	// This is actually omitted from JSON, due to height being zero, and JSON having the 'omitempty' tag.
-	assert.Equal(t, status.OldestBlockID.Index, uint64(0))
+	oldestHeight := status.OldestBlockID.Index
+	if assert.NotNil(t, oldestHeight) {
+		assert.Equal(t, *oldestHeight, uint64(0))
+	}
 }
 
 func TestAPI_StatusHandlesErrors(t *testing.T) {

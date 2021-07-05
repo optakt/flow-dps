@@ -59,7 +59,7 @@ func TestRetriever_Oldest(t *testing.T) {
 	testHeight := uint64(42)
 	testTime := time.Time{} // 1/1/1970
 	testBlockID := identifier.Block{
-		Index: 42,
+		Index: getUint64P(42),
 		Hash:  "499b933f5ecd062d5ff7914218a40f8abf0efee9267d46ae827c938f8a5c18ae",
 	}
 	testHeader := &flow.Header{
@@ -140,7 +140,7 @@ func TestRetriever_Current(t *testing.T) {
 	testHeight := uint64(42)
 	testTime := time.Time{} // 1/1/1970
 	testBlockID := identifier.Block{
-		Index: 42,
+		Index: getUint64P(42),
 		Hash:  "499b933f5ecd062d5ff7914218a40f8abf0efee9267d46ae827c938f8a5c18ae",
 	}
 	testHeader := &flow.Header{
@@ -219,7 +219,7 @@ func TestRetriever_Current(t *testing.T) {
 
 func TestRetriever_Balances(t *testing.T) {
 	testBlockID := identifier.Block{
-		Index: 42,
+		Index: getUint64P(42),
 		Hash:  "2c5efefc2fafa000a3102f2931598d2d",
 	}
 	testAccount := identifier.Account{Address: "f7e6413e94feda9c"}
@@ -270,7 +270,7 @@ func TestRetriever_Balances(t *testing.T) {
 		}
 		invoker := &mocks.Invoker{
 			ScriptFunc: func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
-				assert.Equal(t, testBlockID.Index, height)
+				assert.Equal(t, testBlockID.Index, &height)
 				assert.Equal(t, testScript, script)
 				if assert.Len(t, parameters, 1) {
 					assert.Equal(t, cadence.NewAddress(flow.HexToAddress(testAccount.Address)), parameters[0])
@@ -422,7 +422,7 @@ func TestRetriever_Balances(t *testing.T) {
 		}
 		invoker := &mocks.Invoker{
 			ScriptFunc: func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
-				assert.Equal(t, testBlockID.Index, height)
+				assert.Equal(t, testBlockID.Index, &height)
 				assert.Equal(t, testScript, script)
 				if assert.Len(t, parameters, 1) {
 					assert.Equal(t, cadence.NewAddress(flow.HexToAddress(testAccount.Address)), parameters[0])
@@ -458,7 +458,7 @@ func TestRetriever_Block(t *testing.T) {
 	id2, err := flow.HexStringToIdentifier("fcd01710d4a40c11f4aa884bcb926b43f162f4cf302e4c4f1dd0f9e231c30878")
 	require.NoError(t, err)
 	testBlockID := identifier.Block{
-		Index: testHeight,
+		Index: &testHeight,
 		Hash:  "69c5a0c3dce44c9e80f7ee41995f6746f78013787a88057995cb3556e721a4b6",
 	}
 	depositOp := object.Operation{
@@ -581,7 +581,7 @@ func TestRetriever_Block(t *testing.T) {
 		wantBlock := &object.Block{
 			ID: testBlockID,
 			ParentID: identifier.Block{
-				Index: testHeight - 1,
+				Index: getUint64P(testHeight - 1),
 				Hash:  parentID.String(),
 			},
 			Timestamp: testHeader.Timestamp.UnixNano() / 1_000_000,
@@ -666,7 +666,7 @@ func TestRetriever_Block(t *testing.T) {
 		wantBlock := &object.Block{
 			ID: testBlockID,
 			ParentID: identifier.Block{
-				Index: 41,
+				Index: getUint64P(41),
 				Hash:  parentID.String(),
 			},
 			Timestamp: testHeader.Timestamp.UnixNano() / 1_000_000,
@@ -752,7 +752,7 @@ func TestRetriever_Block(t *testing.T) {
 		wantBlock := &object.Block{
 			ID: testBlockID,
 			ParentID: identifier.Block{
-				Index: 41,
+				Index: getUint64P(41),
 				Hash:  parentID.String(),
 			},
 			Timestamp: testHeader.Timestamp.UnixNano() / 1_000_000,
@@ -1205,7 +1205,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 	testHeight := uint64(42)
 	testBlockID := identifier.Block{
-		Index: testHeight,
+		Index: &testHeight,
 		Hash:  "2c4c176c5c095bc3529ab425735077efb2afedd16c9ffc215a898df14fa8ac91",
 	}
 	testTransactionID := identifier.Transaction{
@@ -1821,4 +1821,8 @@ func baselineRetriever(t *testing.T) (*Retriever, error) {
 	}
 
 	return &retriever, nil
+}
+
+func getUint64P(n uint64) *uint64 {
+	return &n
 }

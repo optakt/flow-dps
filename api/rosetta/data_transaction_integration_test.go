@@ -88,7 +88,7 @@ func TestAPI_Transaction(t *testing.T) {
 			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: 165,
+					Index: &multipleTxHeader.Height,
 				},
 				TransactionID: identifier.Transaction{
 					Hash: midBlockTxs[1],
@@ -126,10 +126,11 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
+	var testHeight uint64 = 106
+
 	const (
 		lastHeight = 425
 
-		testHeight    = 106
 		testBlockHash = "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
 		testTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
 
@@ -141,7 +142,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 
 	var (
 		testBlock = identifier.Block{
-			Index: testHeight,
+			Index: &testHeight,
 			Hash:  testBlockHash,
 		}
 
@@ -219,7 +220,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: 0,
+					Index: nil,
 					Hash:  "",
 				},
 				TransactionID: testTx,
@@ -232,7 +233,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: testHeight,
+					Index: &testHeight,
 					Hash:  trimmedBlockHash,
 				},
 				TransactionID: testTx,
@@ -256,7 +257,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: testHeight,
+					Index: &testHeight,
 					Hash:  invalidBlockHash,
 				},
 				TransactionID: testTx,
@@ -269,7 +270,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: lastHeight + 1,
+					Index: getUint64P(lastHeight + 1),
 				},
 				TransactionID: testTx,
 			},
@@ -281,7 +282,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			request: rosetta.TransactionRequest{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
-					Index: 44,
+					Index: getUint64P(44),
 					Hash:  testBlockHash,
 				},
 				TransactionID: testTx,
@@ -465,7 +466,7 @@ func requestTransaction(header flow.Header, txID string) rosetta.TransactionRequ
 	return rosetta.TransactionRequest{
 		NetworkID: defaultNetwork(),
 		BlockID: identifier.Block{
-			Index: header.Height,
+			Index: &header.Height,
 			Hash:  header.ID().String(),
 		},
 		TransactionID: identifier.Transaction{

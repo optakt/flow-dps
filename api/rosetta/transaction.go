@@ -56,7 +56,7 @@ func (d *Data) Transaction(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: network field is empty"))
 	}
 
-	if req.BlockID.Index == 0 && req.BlockID.Hash == "" {
+	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: at least one of hash or index is required"))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
