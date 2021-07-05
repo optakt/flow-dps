@@ -14,6 +14,10 @@
 
 package fail
 
+import (
+	"github.com/optakt/flow-dps/rosetta/configuration"
+)
+
 // UnknownBlock error is returned when the requested block is not known, because
 // the height of the requested block is larger than the height of the last known block.
 type UnknownBlock struct {
@@ -28,5 +32,5 @@ func (u UnknownBlock) Error() string {
 
 // RosettaError returns the error information in a Rosetta-compatible format.
 func (u UnknownBlock) RosettaError() Error {
-	return newError(ErrorUnknownBlock, u.Description, u.Details...)
+	return newError(configuration.ErrorUnknownBlock, u.Description, u.Details...)
 }

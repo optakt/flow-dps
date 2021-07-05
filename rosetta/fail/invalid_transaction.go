@@ -14,6 +14,10 @@
 
 package fail
 
+import (
+	"github.com/optakt/flow-dps/rosetta/configuration"
+)
+
 // InvalidTransaction is returned when the specified transaction identifier is invalid.
 // Transaction identifier is considered invalid when the transaction hash is not a
 // valid hex-encoded string.
@@ -29,5 +33,5 @@ func (i InvalidTransaction) Error() string {
 
 // RosettaError returns the error information in a Rosetta-compatible format.
 func (i InvalidTransaction) RosettaError() Error {
-	return newError(ErrorInvalidTransaction, i.Description, i.Details...)
+	return newError(configuration.ErrorInvalidTransaction, i.Description, i.Details...)
 }

@@ -14,6 +14,10 @@
 
 package fail
 
+import (
+	"github.com/optakt/flow-dps/rosetta/configuration"
+)
+
 // InvalidAccount error is returned when the specified account identifier is invalid.
 // Account identifier is considered invalid when:
 //	- account address is not a valid hex-encoded string
@@ -30,5 +34,5 @@ func (i InvalidAccount) Error() string {
 
 // RosettaError returns the error information in a Rosetta-compatible format.
 func (i InvalidAccount) RosettaError() Error {
-	return newError(ErrorInvalidAccount, i.Description, i.Details...)
+	return newError(configuration.ErrorInvalidAccount, i.Description, i.Details...)
 }

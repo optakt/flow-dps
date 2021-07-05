@@ -14,6 +14,10 @@
 
 package fail
 
+import (
+	"github.com/optakt/flow-dps/rosetta/configuration"
+)
+
 // InvalidNetwork error is returned when the specified network identifier is invalid.
 // Network identifier is considered invalid when the specified blockchain or network
 // fields are not the same as the configured ones.
@@ -29,5 +33,5 @@ func (i InvalidNetwork) Error() string {
 
 // RosettaError returns the error information in a Rosetta-compatible format.
 func (i InvalidNetwork) RosettaError() Error {
-	return newError(ErrorInvalidNetwork, i.Description, i.Details...)
+	return newError(configuration.ErrorInvalidNetwork, i.Description, i.Details...)
 }

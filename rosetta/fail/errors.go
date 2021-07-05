@@ -15,6 +15,7 @@
 package fail
 
 import (
+	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
@@ -34,14 +35,14 @@ type Error struct {
 // such as retrieving requested data from the index, or request data validation
 // could not be executed.
 func Internal(message string, details ...Detail) Error {
-	return newError(ErrorInternal, message, details...)
+	return newError(configuration.ErrorInternal, message, details...)
 }
 
 // InvalidFormat returns a Rosetta Error with the given message and details.
 // This error is typically returned when the request data is incorrect.
 // Some examples are malformed JSON payload, or missing mandatory fields.
 func InvalidFormat(message string, details ...Detail) Error {
-	return newError(ErrorInvalidFormat, message, details...)
+	return newError(configuration.ErrorInvalidFormat, message, details...)
 }
 
 // newError returns a new Rosetta-compatible error according to the specified parameters.

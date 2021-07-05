@@ -14,6 +14,10 @@
 
 package fail
 
+import (
+	"github.com/optakt/flow-dps/rosetta/configuration"
+)
+
 // UnknownCurrency error is returned when the requested currency is not known.
 // This happens when the specified currency symbol is not configured.
 type UnknownCurrency struct {
@@ -28,5 +32,5 @@ func (u UnknownCurrency) Error() string {
 
 // RosettaError returns the error information in a Rosetta-compatible format.
 func (u UnknownCurrency) RosettaError() Error {
-	return newError(ErrorUnknownCurrency, u.Description, u.Details...)
+	return newError(configuration.ErrorUnknownCurrency, u.Description, u.Details...)
 }

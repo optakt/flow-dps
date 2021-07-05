@@ -14,6 +14,10 @@
 
 package fail
 
+import (
+	"github.com/optakt/flow-dps/rosetta/configuration"
+)
+
 // InvalidBlock error is returned when the specified block identifier is invalid.
 // Block identifier is considered invalid when:
 //	- block hash is not a valid hex-encoded string
@@ -31,5 +35,5 @@ func (i InvalidBlock) Error() string {
 
 // RosettaError returns the error information in a Rosetta-compatible format.
 func (i InvalidBlock) RosettaError() Error {
-	return newError(ErrorInvalidBlock, i.Description, i.Details...)
+	return newError(configuration.ErrorInvalidBlock, i.Description, i.Details...)
 }
