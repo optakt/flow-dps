@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
@@ -467,9 +468,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 			},
 			LastFunc: func(height uint64) error {
 				assert.Equal(t, testHeight+uint64(lastCalled), height)
-
 				lastCalled++
-
 				return nil
 			},
 		}
