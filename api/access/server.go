@@ -16,6 +16,7 @@ package dps
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
@@ -47,23 +48,23 @@ func NewServer(index index.Reader, codec index.Codec) *Server {
 }
 
 func (s *Server) Ping(ctx context.Context, in *access.PingRequest) (*access.PingResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetLatestBlockHeader(_ context.Context, _ *access.GetLatestBlockHeaderRequest) (*access.BlockHeaderResponse, error) {
-	lastHeight, err := s.index.Last()
+	height, err := s.index.Last()
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve last block height: %w", err)
+		return nil, fmt.Errorf("could not retrieve last block height: %w", err)
 	}
 
-	header, err := s.index.Header(lastHeight)
+	header, err := s.index.Header(height)
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve last block header: %w", err)
+		return nil, fmt.Errorf("could not retrieve last block header: %w", err)
 	}
 
 	block, err := convert.BlockHeaderToMessage(header)
 	if err != nil {
-		return nil, fmt.Errorf("unable to convert block header to RPC entity: %w", err)
+		return nil, fmt.Errorf("could not convert block header to RPC entity: %w", err)
 	}
 
 	resp := access.BlockHeaderResponse{
@@ -77,19 +78,19 @@ func (s *Server) GetBlockHeaderByID(_ context.Context, in *access.GetBlockHeader
 	var blockID flow.Identifier
 	copy(blockID[:], in.Id)
 
-	blockHeight, err := s.index.HeightForBlock(blockID)
+	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve last block height: %w", err)
+		return nil, fmt.Errorf("could not retrieve last block height: %w", err)
 	}
 
-	header, err := s.index.Header(blockHeight)
+	header, err := s.index.Header(height)
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve last block header: %w", err)
+		return nil, fmt.Errorf("could not retrieve last block header: %w", err)
 	}
 
 	block, err := convert.BlockHeaderToMessage(header)
 	if err != nil {
-		return nil, fmt.Errorf("unable to convert block header to RPC entity: %w", err)
+		return nil, fmt.Errorf("could not convert block header to RPC entity: %w", err)
 	}
 
 	resp := access.BlockHeaderResponse{
@@ -102,12 +103,12 @@ func (s *Server) GetBlockHeaderByID(_ context.Context, in *access.GetBlockHeader
 func (s *Server) GetBlockHeaderByHeight(_ context.Context, in *access.GetBlockHeaderByHeightRequest) (*access.BlockHeaderResponse, error) {
 	header, err := s.index.Header(in.Height)
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve last block header: %w", err)
+		return nil, fmt.Errorf("could not retrieve last block header: %w", err)
 	}
 
 	block, err := convert.BlockHeaderToMessage(header)
 	if err != nil {
-		return nil, fmt.Errorf("unable to convert block header to RPC entity: %w", err)
+		return nil, fmt.Errorf("could not convert block header to RPC entity: %w", err)
 	}
 
 	resp := access.BlockHeaderResponse{
@@ -118,69 +119,69 @@ func (s *Server) GetBlockHeaderByHeight(_ context.Context, in *access.GetBlockHe
 }
 
 func (s *Server) GetLatestBlock(ctx context.Context, in *access.GetLatestBlockRequest) (*access.BlockResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetBlockByID(ctx context.Context, in *access.GetBlockByIDRequest) (*access.BlockResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetBlockByHeight(ctx context.Context, in *access.GetBlockByHeightRequest) (*access.BlockResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetCollectionByID(ctx context.Context, in *access.GetCollectionByIDRequest) (*access.CollectionResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) SendTransaction(ctx context.Context, in *access.SendTransactionRequest) (*access.SendTransactionResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetTransaction(ctx context.Context, in *access.GetTransactionRequest) (*access.TransactionResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetTransactionResult(ctx context.Context, in *access.GetTransactionRequest) (*access.TransactionResultResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetAccount(ctx context.Context, in *access.GetAccountRequest) (*access.GetAccountResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetAccountAtLatestBlock(ctx context.Context, in *access.GetAccountAtLatestBlockRequest) (*access.AccountResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetAccountAtBlockHeight(ctx context.Context, in *access.GetAccountAtBlockHeightRequest) (*access.AccountResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) ExecuteScriptAtLatestBlock(ctx context.Context, in *access.ExecuteScriptAtLatestBlockRequest) (*access.ExecuteScriptResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) ExecuteScriptAtBlockID(ctx context.Context, in *access.ExecuteScriptAtBlockIDRequest) (*access.ExecuteScriptResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) ExecuteScriptAtBlockHeight(ctx context.Context, in *access.ExecuteScriptAtBlockHeightRequest) (*access.ExecuteScriptResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetEventsForHeightRange(ctx context.Context, in *access.GetEventsForHeightRangeRequest) (*access.EventsResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetEventsForBlockIDs(ctx context.Context, in *access.GetEventsForBlockIDsRequest) (*access.EventsResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetNetworkParameters(ctx context.Context, in *access.GetNetworkParametersRequest) (*access.GetNetworkParametersResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }
 
 func (s *Server) GetLatestProtocolStateSnapshot(ctx context.Context, in *access.GetLatestProtocolStateSnapshotRequest) (*access.ProtocolStateSnapshotResponse, error) {
-	panic("implement me")
+	return nil, errors.New("not implemented")
 }

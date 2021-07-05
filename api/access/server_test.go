@@ -20,7 +20,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 
@@ -28,8 +27,8 @@ import (
 )
 
 func TestNewServer(t *testing.T) {
-	index := &mocks.Reader{}
-	codec := &mocks.Codec{}
+	index := mocks.BaselineReader(t)
+	codec := mocks.BaselineCodec(t)
 
 	s := NewServer(index, codec)
 
@@ -41,15 +40,11 @@ func TestNewServer(t *testing.T) {
 
 func TestServer_GetLatestBlockHeader(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
-		index := &mocks.Reader{
-			LastFunc: func() (uint64, error) {
-				return mocks.GenericHeight, nil
-			},
-			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				assert.Equal(t, mocks.GenericHeight, height)
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
 
-				return mocks.GenericHeader, nil
-			},
+			return mocks.GenericHeader, nil
 		}
 
 		s := baselineServer(t)
@@ -66,10 +61,9 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 	})
 
 	t.Run("handles indexer error on Last", func(t *testing.T) {
-		index := &mocks.Reader{
-			LastFunc: func() (uint64, error) {
-				return 0, mocks.DummyError
-			},
+		index := mocks.BaselineReader(t)
+		index.LastFunc = func() (uint64, error) {
+			return 0, mocks.DummyError
 		}
 
 		s := baselineServer(t)
@@ -81,13 +75,9 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 	})
 
 	t.Run("handles indexer error on Header", func(t *testing.T) {
-		index := &mocks.Reader{
-			LastFunc: func() (uint64, error) {
-				return mocks.GenericHeight, nil
-			},
-			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				return nil, mocks.DummyError
-			},
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			return nil, mocks.DummyError
 		}
 
 		s := baselineServer(t)
@@ -101,17 +91,16 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 
 func TestServer_GetBlockHeaderByID(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
-		index := &mocks.Reader{
-			HeightForBlockFunc: func(blockID flow.Identifier) (uint64, error) {
-				assert.Equal(t, mocks.GenericIdentifiers[0], blockID)
+		index := mocks.BaselineReader(t)
+		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
+			assert.Equal(t, mocks.GenericIdentifiers[0], blockID)
 
-				return mocks.GenericHeight, nil
-			},
-			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				assert.Equal(t, mocks.GenericHeight, height)
+			return mocks.GenericHeight, nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
 
-				return mocks.GenericHeader, nil
-			},
+			return mocks.GenericHeader, nil
 		}
 
 		s := baselineServer(t)
@@ -129,10 +118,9 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 	})
 
 	t.Run("handles indexer error on HeightForBlock", func(t *testing.T) {
-		index := &mocks.Reader{
-			HeightForBlockFunc: func(blockID flow.Identifier) (uint64, error) {
-				return 0, mocks.DummyError
-			},
+		index := mocks.BaselineReader(t)
+		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
+			return 0, mocks.DummyError
 		}
 
 		s := baselineServer(t)
@@ -145,13 +133,12 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 	})
 
 	t.Run("handles indexer error on header", func(t *testing.T) {
-		index := &mocks.Reader{
-			HeightForBlockFunc: func(blockID flow.Identifier) (uint64, error) {
-				return mocks.GenericHeight, nil
-			},
-			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				return nil, mocks.DummyError
-			},
+		index := mocks.BaselineReader(t)
+		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
+			return mocks.GenericHeight, nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			return nil, mocks.DummyError
 		}
 
 		s := baselineServer(t)
@@ -166,12 +153,11 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 
 func TestServer_GetBlockHeaderByHeight(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
-		index := &mocks.Reader{
-			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				assert.Equal(t, mocks.GenericHeight, height)
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
 
-				return mocks.GenericHeader, nil
-			},
+			return mocks.GenericHeader, nil
 		}
 
 		s := baselineServer(t)
@@ -189,10 +175,9 @@ func TestServer_GetBlockHeaderByHeight(t *testing.T) {
 	})
 
 	t.Run("handles indexer error on header", func(t *testing.T) {
-		index := &mocks.Reader{
-			HeaderFunc: func(height uint64) (*flow.Header, error) {
-				return nil, mocks.DummyError
-			},
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			return nil, mocks.DummyError
 		}
 
 		s := baselineServer(t)
@@ -208,48 +193,9 @@ func TestServer_GetBlockHeaderByHeight(t *testing.T) {
 func baselineServer(t *testing.T) *Server {
 	t.Helper()
 
-	index := &mocks.Reader{
-		FirstFunc: func() (uint64, error) {
-			return mocks.GenericHeight, nil
-		},
-		LastFunc: func() (uint64, error) {
-			return mocks.GenericHeight, nil
-		},
-		HeightForBlockFunc: func(blockID flow.Identifier) (uint64, error) {
-			return mocks.GenericHeight, nil
-		},
-		CommitFunc: func(height uint64) (flow.StateCommitment, error) {
-			return mocks.GenericCommits[0], nil
-		},
-		HeaderFunc: func(height uint64) (*flow.Header, error) {
-			return mocks.GenericHeader, nil
-		},
-		EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-			return mocks.GenericEvents, nil
-		},
-		ValuesFunc: func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
-			return mocks.GenericLedgerValues, nil
-		},
-		TransactionFunc: func(txID flow.Identifier) (*flow.TransactionBody, error) {
-			return mocks.GenericTransactions[0], nil
-		},
-		TransactionsByHeightFunc: func(height uint64) ([]flow.Identifier, error) {
-			return mocks.GenericIdentifiers, nil
-		},
-	}
-
-	codec := &mocks.Codec{
-		UnmarshalFunc: func(b []byte, v interface{}) error {
-			return nil
-		},
-		MarshalFunc: func(v interface{}) ([]byte, error) {
-			return []byte(`test`), nil
-		},
-	}
-
 	s := Server{
-		index: index,
-		codec: codec,
+		index: mocks.BaselineReader(t),
+		codec: mocks.BaselineCodec(t),
 	}
 
 	return &s

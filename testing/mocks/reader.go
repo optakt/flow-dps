@@ -15,6 +15,8 @@
 package mocks
 
 import (
+	"testing"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
@@ -29,6 +31,42 @@ type Reader struct {
 	ValuesFunc               func(height uint64, paths []ledger.Path) ([]ledger.Value, error)
 	TransactionFunc          func(txID flow.Identifier) (*flow.TransactionBody, error)
 	TransactionsByHeightFunc func(height uint64) ([]flow.Identifier, error)
+}
+
+func BaselineReader(t *testing.T) *Reader {
+	t.Helper()
+
+	r := Reader{
+		FirstFunc: func() (uint64, error) {
+			return GenericHeight, nil
+		},
+		LastFunc: func() (uint64, error) {
+			return GenericHeight, nil
+		},
+		HeightForBlockFunc: func(blockID flow.Identifier) (uint64, error) {
+			return GenericHeight, nil
+		},
+		CommitFunc: func(height uint64) (flow.StateCommitment, error) {
+			return GenericCommits[0], nil
+		},
+		HeaderFunc: func(height uint64) (*flow.Header, error) {
+			return GenericHeader, nil
+		},
+		EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+			return GenericEvents, nil
+		},
+		ValuesFunc: func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+			return GenericLedgerValues, nil
+		},
+		TransactionFunc: func(txID flow.Identifier) (*flow.TransactionBody, error) {
+			return GenericTransactions[0], nil
+		},
+		TransactionsByHeightFunc: func(height uint64) ([]flow.Identifier, error) {
+			return GenericIdentifiers, nil
+		},
+	}
+
+	return &r
 }
 
 func (r *Reader) First() (uint64, error) {
