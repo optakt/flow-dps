@@ -24,11 +24,11 @@ type Writer struct {
 	LastFunc         func(height uint64) error
 	HeaderFunc       func(height uint64, header *flow.Header) error
 	CommitFunc       func(height uint64, commit flow.StateCommitment) error
-	EventsFunc       func(height uint64, events []flow.Event) error
 	PayloadsFunc     func(height uint64, paths []ledger.Path, value []*ledger.Payload) error
 	HeightFunc       func(blockID flow.Identifier, height uint64) error
-	TransactionsFunc func(height uint64, transactions []*flow.TransactionBody) error
 	CollectionsFunc  func(height uint64, collections []*flow.LightCollection) error
+	TransactionsFunc func(height uint64, transactions []*flow.TransactionBody) error
+	EventsFunc       func(height uint64, events []flow.Event) error
 }
 
 func (w *Writer) First(height uint64) error {
@@ -47,10 +47,6 @@ func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
 	return w.CommitFunc(height, commit)
 }
 
-func (w *Writer) Events(height uint64, events []flow.Event) error {
-	return w.EventsFunc(height, events)
-}
-
 func (w *Writer) Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error {
 	return w.PayloadsFunc(height, paths, values)
 }
@@ -59,10 +55,14 @@ func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
 	return w.HeightFunc(blockID, height)
 }
 
+func (w *Writer) Collections(height uint64, collections []*flow.LightCollection) error {
+	return w.CollectionsFunc(height, collections)
+}
+
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
 	return w.TransactionsFunc(height, transactions)
 }
 
-func (w *Writer) Collections(height uint64, collections []*flow.LightCollection) error {
-	return w.CollectionsFunc(height, collections)
+func (w *Writer) Events(height uint64, events []flow.Event) error {
+	return w.EventsFunc(height, events)
 }

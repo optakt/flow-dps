@@ -20,9 +20,9 @@ type Chain struct {
 	RootFunc         func() (uint64, error)
 	HeaderFunc       func(height uint64) (*flow.Header, error)
 	CommitFunc       func(height uint64) (flow.StateCommitment, error)
-	EventsFunc       func(height uint64) ([]flow.Event, error)
-	TransactionsFunc func(height uint64) ([]*flow.TransactionBody, error)
 	CollectionsFunc  func(height uint64) ([]*flow.LightCollection, error)
+	TransactionsFunc func(height uint64) ([]*flow.TransactionBody, error)
+	EventsFunc       func(height uint64) ([]flow.Event, error)
 }
 
 func (c *Chain) Root() (uint64, error) {
@@ -37,14 +37,14 @@ func (c *Chain) Commit(height uint64) (flow.StateCommitment, error) {
 	return c.CommitFunc(height)
 }
 
-func (c *Chain) Events(height uint64) ([]flow.Event, error) {
-	return c.EventsFunc(height)
+func (c *Chain) Collections(height uint64) ([]*flow.LightCollection, error) {
+	return c.CollectionsFunc(height)
 }
 
 func (c *Chain) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	return c.TransactionsFunc(height)
 }
 
-func (c *Chain) Collections(height uint64) ([]*flow.LightCollection, error) {
-	return c.CollectionsFunc(height)
+func (c *Chain) Events(height uint64) ([]flow.Event, error) {
+	return c.EventsFunc(height)
 }

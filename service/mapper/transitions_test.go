@@ -65,6 +65,7 @@ func TestNewTransitions(t *testing.T) {
 			WithIndexCommit(true),
 			WithIndexHeader(true),
 			WithIndexPayloads(true),
+			WithIndexCollections(true),
 			WithIndexTransactions(true),
 		)
 
@@ -80,6 +81,7 @@ func TestNewTransitions(t *testing.T) {
 		assert.True(t, tr.cfg.IndexTransactions)
 		assert.True(t, tr.cfg.IndexHeader)
 		assert.True(t, tr.cfg.IndexPayloads)
+		assert.True(t, tr.cfg.IndexCollections)
 		assert.True(t, tr.cfg.IndexTransactions)
 	})
 }
@@ -603,20 +605,20 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 				return testCommit, nil
 			},
-			EventsFunc: func(height uint64) ([]flow.Event, error) {
+			CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
 				assert.Equal(t, testHeight, height)
 
-				return testEvents, nil
+				return testCollections, nil
 			},
 			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
 				assert.Equal(t, testHeight, height)
 
 				return testTransactions, nil
 			},
-			CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
+			EventsFunc: func(height uint64) ([]flow.Event, error) {
 				assert.Equal(t, testHeight, height)
 
-				return testCollections, nil
+				return testEvents, nil
 			},
 		}
 
@@ -633,15 +635,15 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 				return nil
 			},
-			EventsFunc: func(height uint64, events []flow.Event) error {
-				assert.Equal(t, testHeight, height)
-				assert.Equal(t, testEvents, events)
-
-				return nil
-			},
 			HeightFunc: func(blockID flow.Identifier, height uint64) error {
 				assert.Equal(t, testHeight, height)
 				assert.Equal(t, testBlockID, blockID)
+
+				return nil
+			},
+			CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error {
+				assert.Equal(t, testHeight, height)
+				assert.Equal(t, testCollections, collections)
 
 				return nil
 			},
@@ -651,9 +653,9 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 				return nil
 			},
-			CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error {
+			EventsFunc: func(height uint64, events []flow.Event) error {
 				assert.Equal(t, testHeight, height)
-				assert.Equal(t, testCollections, collections)
+				assert.Equal(t, testEvents, events)
 
 				return nil
 			},
@@ -712,9 +714,9 @@ func TestTransitions_IndexChain(t *testing.T) {
 			CommitFunc: func(height uint64) (flow.StateCommitment, error) {
 				return flow.StateCommitment{}, mocks.DummyError
 			},
-			EventsFunc:       func(height uint64) ([]flow.Event, error) { return testEvents, nil },
-			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
 			CollectionsFunc:  func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
+			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
+			EventsFunc:       func(height uint64) ([]flow.Event, error) { return testEvents, nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -733,10 +735,10 @@ func TestTransitions_IndexChain(t *testing.T) {
 			CommitFunc: func(height uint64, commit flow.StateCommitment) error {
 				return mocks.DummyError
 			},
-			EventsFunc:       func(height uint64, events []flow.Event) error { return nil },
 			HeightFunc:       func(blockID flow.Identifier, height uint64) error { return nil },
-			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
 			CollectionsFunc:  func(height uint64, collections []*flow.LightCollection) error { return nil },
+			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
+			EventsFunc:       func(height uint64, events []flow.Event) error { return nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -755,9 +757,9 @@ func TestTransitions_IndexChain(t *testing.T) {
 				return nil, mocks.DummyError
 			},
 			CommitFunc:       func(height uint64) (flow.StateCommitment, error) { return testCommit, nil },
-			EventsFunc:       func(height uint64) ([]flow.Event, error) { return testEvents, nil },
-			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
 			CollectionsFunc:  func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
+			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
+			EventsFunc:       func(height uint64) ([]flow.Event, error) { return testEvents, nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -776,10 +778,10 @@ func TestTransitions_IndexChain(t *testing.T) {
 				return mocks.DummyError
 			},
 			CommitFunc:       func(height uint64, commit flow.StateCommitment) error { return nil },
-			EventsFunc:       func(height uint64, events []flow.Event) error { return nil },
 			HeightFunc:       func(blockID flow.Identifier, height uint64) error { return nil },
-			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
 			CollectionsFunc:  func(height uint64, collections []*flow.LightCollection) error { return nil },
+			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
+			EventsFunc:       func(height uint64, events []flow.Event) error { return nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -794,13 +796,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := &mocks.Chain{
-			HeaderFunc: func(height uint64) (*flow.Header, error) { return testHeader, nil },
-			CommitFunc: func(height uint64) (flow.StateCommitment, error) { return testCommit, nil },
-			EventsFunc: func(height uint64) ([]flow.Event, error) { return testEvents, nil },
+			HeaderFunc:      func(height uint64) (*flow.Header, error) { return testHeader, nil },
+			CommitFunc:      func(height uint64) (flow.StateCommitment, error) { return testCommit, nil },
+			CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
 			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
 				return nil, mocks.DummyError
 			},
-			CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
+			EventsFunc: func(height uint64) ([]flow.Event, error) { return testEvents, nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -815,14 +817,14 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := &mocks.Writer{
-			HeaderFunc: func(height uint64, header *flow.Header) error { return nil },
-			CommitFunc: func(height uint64, commit flow.StateCommitment) error { return nil },
-			EventsFunc: func(height uint64, events []flow.Event) error { return nil },
-			HeightFunc: func(blockID flow.Identifier, height uint64) error { return nil },
+			HeaderFunc:      func(height uint64, header *flow.Header) error { return nil },
+			CommitFunc:      func(height uint64, commit flow.StateCommitment) error { return nil },
+			HeightFunc:      func(blockID flow.Identifier, height uint64) error { return nil },
+			CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error { return nil },
 			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error {
 				return mocks.DummyError
 			},
-			CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error { return nil },
+			EventsFunc: func(height uint64, events []flow.Event) error { return nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -837,13 +839,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := &mocks.Chain{
-			HeaderFunc:       func(height uint64) (*flow.Header, error) { return testHeader, nil },
-			CommitFunc:       func(height uint64) (flow.StateCommitment, error) { return testCommit, nil },
-			EventsFunc:       func(height uint64) ([]flow.Event, error) { return testEvents, nil },
-			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
+			HeaderFunc: func(height uint64) (*flow.Header, error) { return testHeader, nil },
+			CommitFunc: func(height uint64) (flow.StateCommitment, error) { return testCommit, nil },
 			CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
 				return nil, mocks.DummyError
 			},
+			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
+			EventsFunc:       func(height uint64) ([]flow.Event, error) { return testEvents, nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -858,14 +860,14 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := &mocks.Writer{
-			HeaderFunc:       func(height uint64, header *flow.Header) error { return nil },
-			CommitFunc:       func(height uint64, commit flow.StateCommitment) error { return nil },
-			EventsFunc:       func(height uint64, events []flow.Event) error { return nil },
-			HeightFunc:       func(blockID flow.Identifier, height uint64) error { return nil },
-			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
+			HeaderFunc: func(height uint64, header *flow.Header) error { return nil },
+			CommitFunc: func(height uint64, commit flow.StateCommitment) error { return nil },
+			HeightFunc: func(blockID flow.Identifier, height uint64) error { return nil },
 			CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error {
 				return mocks.DummyError
 			},
+			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
+			EventsFunc:       func(height uint64, events []flow.Event) error { return nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -880,13 +882,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := &mocks.Chain{
-			HeaderFunc: func(height uint64) (*flow.Header, error) { return testHeader, nil },
-			CommitFunc: func(height uint64) (flow.StateCommitment, error) { return testCommit, nil },
+			HeaderFunc:       func(height uint64) (*flow.Header, error) { return testHeader, nil },
+			CommitFunc:       func(height uint64) (flow.StateCommitment, error) { return testCommit, nil },
+			CollectionsFunc:  func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
+			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
 			EventsFunc: func(height uint64) ([]flow.Event, error) {
 				return nil, mocks.DummyError
 			},
-			TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) { return testTransactions, nil },
-			CollectionsFunc:  func(height uint64) ([]*flow.LightCollection, error) { return testCollections, nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -901,15 +903,15 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := &mocks.Writer{
-			HeaderFunc: func(height uint64, header *flow.Header) error { return nil },
-			CommitFunc: func(height uint64, commit flow.StateCommitment) error { return nil },
+			HeaderFunc:       func(height uint64, header *flow.Header) error { return nil },
+			CommitFunc:       func(height uint64, commit flow.StateCommitment) error { return nil },
+			HeightFunc:       func(blockID flow.Identifier, height uint64) error { return nil },
+			PayloadsFunc:     func(height uint64, paths []ledger.Path, value []*ledger.Payload) error { return nil },
+			CollectionsFunc:  func(height uint64, collections []*flow.LightCollection) error { return nil },
+			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
 			EventsFunc: func(height uint64, events []flow.Event) error {
 				return mocks.DummyError
 			},
-			PayloadsFunc:     func(height uint64, paths []ledger.Path, value []*ledger.Payload) error { return nil },
-			HeightFunc:       func(blockID flow.Identifier, height uint64) error { return nil },
-			TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error { return nil },
-			CollectionsFunc:  func(height uint64, collections []*flow.LightCollection) error { return nil },
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -977,14 +979,14 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 		CommitFunc: func(height uint64) (flow.StateCommitment, error) {
 			return testNextCommit, nil
 		},
-		EventsFunc: func(height uint64) ([]flow.Event, error) {
-			return testEvents, nil
+		CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
+			return testCollections, nil
 		},
 		TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
 			return testTransactions, nil
 		},
-		CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
-			return testCollections, nil
+		EventsFunc: func(height uint64) ([]flow.Event, error) {
+			return testEvents, nil
 		},
 	}
 
@@ -1001,19 +1003,19 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 		CommitFunc: func(height uint64, commit flow.StateCommitment) error {
 			return nil
 		},
-		EventsFunc: func(height uint64, events []flow.Event) error {
-			return nil
-		},
 		PayloadsFunc: func(height uint64, paths []ledger.Path, value []*ledger.Payload) error {
 			return nil
 		},
 		HeightFunc: func(blockID flow.Identifier, height uint64) error {
 			return nil
 		},
+		CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error {
+			return nil
+		},
 		TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error {
 			return nil
 		},
-		CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error {
+		EventsFunc: func(height uint64, events []flow.Event) error {
 			return nil
 		},
 	}
@@ -1052,10 +1054,10 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 		cfg: Config{
 			IndexCommit:       true,
 			IndexHeader:       true,
-			IndexTransactions: true,
-			IndexEvents:       true,
 			IndexPayloads:     true,
 			IndexCollections:  true,
+			IndexTransactions: true,
+			IndexEvents:       true,
 		},
 		log:   testLog,
 		load:  load,

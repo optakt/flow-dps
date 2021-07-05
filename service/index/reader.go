@@ -79,26 +79,6 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 	return &header, err
 }
 
-// Events returns the events of all transactions that were part of the
-// finalized block at the given height. It can optionally filter them by event
-// type; if no event types are given, all events are returned.
-func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-	first, err := r.First()
-	if err != nil {
-		return nil, fmt.Errorf("could not check first height: %w", err)
-	}
-	last, err := r.Last()
-	if err != nil {
-		return nil, fmt.Errorf("could not check last height: %w", err)
-	}
-	if height < first || height > last {
-		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
-	}
-	var events []flow.Event
-	err = r.db.View(r.storage.RetrieveEvents(height, types, &events))
-	return events, err
-}
-
 // Values returns the Ledger values of the execution state at the given paths
 // as they were after the execution of the finalized block at the given height.
 // For compatibility with existing Flow execution node code, a path that is not
@@ -152,4 +132,24 @@ func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) 
 		return nil
 	})
 	return txIDs, err
+}
+
+// Events returns the events of all transactions that were part of the
+// finalized block at the given height. It can optionally filter them by event
+// type; if no event types are given, all events are returned.
+func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+	first, err := r.First()
+	if err != nil {
+		return nil, fmt.Errorf("could not check first height: %w", err)
+	}
+	last, err := r.Last()
+	if err != nil {
+		return nil, fmt.Errorf("could not check last height: %w", err)
+	}
+	if height < first || height > last {
+		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
+	}
+	var events []flow.Event
+	err = r.db.View(r.storage.RetrieveEvents(height, types, &events))
+	return events, err
 }

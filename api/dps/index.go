@@ -124,30 +124,6 @@ func (i *Index) Header(height uint64) (*flow.Header, error) {
 	return &header, nil
 }
 
-// Events returns the events of all transactions that were part of the
-// finalized block at the given height. It can optionally filter them by event
-// type; if no event types are given, all events are returned.
-func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-	tt := convert.TypesToStrings(types)
-
-	req := GetEventsRequest{
-		Height: height,
-		Types:  tt,
-	}
-	res, err := i.client.GetEvents(context.Background(), &req)
-	if err != nil {
-		return nil, fmt.Errorf("could not get events: %w", err)
-	}
-
-	var events []flow.Event
-	err = i.codec.Unmarshal(res.Data, &events)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode events: %w", err)
-	}
-
-	return events, nil
-}
-
 // Values returns the Ledger values of the execution state at the given paths
 // as they were after the execution of the finalized block at the given height.
 // For compatibility with existing Flow execution node code, a path that is not
@@ -207,4 +183,28 @@ func (i *Index) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	}
 
 	return txIDs, nil
+}
+
+// Events returns the events of all transactions that were part of the
+// finalized block at the given height. It can optionally filter them by event
+// type; if no event types are given, all events are returned.
+func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+	tt := convert.TypesToStrings(types)
+
+	req := GetEventsRequest{
+		Height: height,
+		Types:  tt,
+	}
+	res, err := i.client.GetEvents(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get events: %w", err)
+	}
+
+	var events []flow.Event
+	err = i.codec.Unmarshal(res.Data, &events)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode events: %w", err)
+	}
+
+	return events, nil
 }
