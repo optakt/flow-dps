@@ -21,11 +21,12 @@ import (
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
+
 	"github.com/optakt/flow-dps/models/index"
 )
 
-// Server is a simple implementation of the generated APIServer interface. It
-// uses an index reader interface as the backend to retrieve the desired data.
+// Server is a simple implementation of the generated AccessAPIServer interface.
+// It uses an index reader interface as the backend to retrieve the desired data.
 // This is generally an on-disk interface, but could be a GRPC-based index as
 // well, in which case there is a double redirection.
 type Server struct {
