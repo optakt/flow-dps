@@ -67,6 +67,10 @@ func (d *Disk) Update() (*ledger.TrieUpdate, error) {
 			continue
 		}
 
+		// However, we need to make sure that all slices are copied, because the
+		// decode function will reuse the underlying slices later.
+		update = clone(update)
+
 		return update, nil
 	}
 }

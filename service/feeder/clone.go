@@ -12,19 +12,35 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package feeder
 
 import (
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-	"github.com/onflow/flow-go/model/flow"
 )
 
-type Forest interface {
-	Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment)
-	Has(commit flow.StateCommitment) bool
-	Tree(commit flow.StateCommitment) (*trie.MTrie, bool)
-	Paths(commit flow.StateCommitment) ([]ledger.Path, bool)
-	Parent(commit flow.StateCommitment) (flow.StateCommitment, bool)
-	Reset(finalized flow.StateCommitment)
+func clone(update *ledger.TrieUpdate) *ledger.TrieUpdate {
+
+	var hash ledger.RootHash
+	copy(hash[:], update.RootHash[:])
+
+	paths := make([]ledger.Path, 0, len(update.Paths))
+	for _, path := range update.Paths {
+		var dup ledger.Path
+		copy(dup[:], path[:])
+		paths = append(paths, dup)
+	}
+
+	payloads := make([]*ledger.Payload, 0, len(update.Payloads))
+	for _, payload := range update.Payloads {
+		dup := payload.DeepCopy()
+		payloads = append(payloads, dup)
+	}
+
+	dup := ledger.TrieUpdate{
+		RootHash: hash,
+		Paths:    paths,
+		Payloads: payloads,
+	}
+
+	return &dup
 }
