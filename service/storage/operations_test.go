@@ -15,7 +15,6 @@
 package storage
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/OneOfOne/xxhash"
@@ -25,51 +24,51 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/testing/mocks"
 
 	"github.com/optakt/flow-dps/testing/helpers"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestLibrary_SaveAndRetrieveFirst(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	testHeight := uint64(42)
-	testValue := []byte(`testHeight`)
 	testKey := encodeKey(prefixFirst)
 
 	t.Run("save first height", func(t *testing.T) {
 
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, uint64(0), v)
-					return testValue, nil
-				},
-			},
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, uint64(0), v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.SaveFirst(testHeight))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SaveFirst(mocks.GenericHeight))
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve first height", func(t *testing.T) {
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, testValue)
+			return tx.Set(testKey, mocks.GenericByteSlice)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, testValue, b)
-					assert.IsType(t, &testHeight, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &mocks.GenericHeight, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got uint64
@@ -84,42 +83,42 @@ func TestLibrary_SaveAndRetrieveLast(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	testHeight := uint64(42)
-	testValue := []byte(`testHeight`)
 	testKey := encodeKey(prefixLast)
 
 	t.Run("save last height", func(t *testing.T) {
 
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, uint64(0), v)
-					return testValue, nil
-				},
-			},
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, uint64(0), v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.SaveLast(testHeight))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SaveLast(mocks.GenericHeight))
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve last height", func(t *testing.T) {
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, testValue)
+			return tx.Set(testKey, mocks.GenericByteSlice)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, testValue, b)
-					assert.IsType(t, &testHeight, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &mocks.GenericHeight, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got uint64
@@ -134,46 +133,46 @@ func TestLibrary_SaveAndRetrieveCommit(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	commit, _ := flow.ToStateCommitment([]byte("07018030187ecf04945f35f1e33a89dc"))
-	testHeight := uint64(42)
-	testKey := encodeKey(prefixCommit, testHeight)
-	testValue := []byte(`testCommit`)
+	testKey := encodeKey(prefixCommit, mocks.GenericHeight)
 
 	t.Run("save commit", func(t *testing.T) {
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, flow.StateCommitment{}, v)
-					return testValue, nil
-				},
-			},
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, flow.StateCommitment{}, v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.SaveCommit(42, commit))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SaveCommit(mocks.GenericHeight, mocks.GenericCommits[0]))
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve commit", func(t *testing.T) {
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, testValue)
+			return tx.Set(testKey, mocks.GenericByteSlice)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, testValue, b)
-					assert.IsType(t, &flow.StateCommitment{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &flow.StateCommitment{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got flow.StateCommitment
-		err = db.View(l.RetrieveCommit(42, &got))
+		err = db.View(l.RetrieveCommit(mocks.GenericHeight, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -184,49 +183,47 @@ func TestLibrary_SaveAndRetrieveHeader(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	header := flow.Header{ChainID: "flow-testnet"}
-
-	testHeight := uint64(42)
-	testKey := encodeKey(prefixHeader, testHeight)
-	testValue := []byte(`testHeader`)
+	testKey := encodeKey(prefixHeader, mocks.GenericHeight)
 
 	t.Run("save header", func(t *testing.T) {
 
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, &flow.Header{}, v)
-					return testValue, nil
-				},
-			},
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, &flow.Header{}, v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.SaveHeader(testHeight, &header))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SaveHeader(mocks.GenericHeight, mocks.GenericHeader))
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve header", func(t *testing.T) {
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, testValue)
+			return tx.Set(testKey, mocks.GenericByteSlice)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, testValue, b)
-					assert.IsType(t, &flow.Header{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &flow.Header{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got flow.Header
-		err = db.View(l.RetrieveHeader(testHeight, &got))
+		err = db.View(l.RetrieveHeader(mocks.GenericHeight, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -234,45 +231,54 @@ func TestLibrary_SaveAndRetrieveHeader(t *testing.T) {
 }
 
 func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
+	testKey1 := encodeKey(prefixEvents, mocks.GenericHeight, xxhash.ChecksumString64(string(mocks.GenericEventTypes[0])))
+	testKey2 := encodeKey(prefixEvents, mocks.GenericHeight, xxhash.ChecksumString64(string(mocks.GenericEventTypes[1])))
 
-	testHeight := uint64(42)
-	testTyp1 := flow.EventType("test1")
-	testTyp2 := flow.EventType("test2")
-	testEventType1 := xxhash.ChecksumString64(string(testTyp1))
-	testEventType2 := xxhash.ChecksumString64(string(testTyp2))
-
-	testKey1 := encodeKey(prefixEvents, testHeight, testEventType1)
-	testValue1 := []byte(`events1`)
-	testKey2 := encodeKey(prefixEvents, testHeight, testEventType2)
-	testValue2 := []byte(`events2`)
 	t.Run("save multiple events under different types", func(t *testing.T) {
-		testEvents1 := []flow.Event{{Type: testTyp1}, {Type: testTyp1}, {Type: testTyp1}}
-		testEvents2 := []flow.Event{{Type: testTyp2}, {Type: testTyp2}, {Type: testTyp2}}
+		t.Parallel()
 
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, []flow.Event{}, v)
-					return testValue1, nil
-				},
-			},
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		testEvents1 := []flow.Event{
+			{Type: mocks.GenericEventTypes[0]},
+			{Type: mocks.GenericEventTypes[0]},
+			{Type: mocks.GenericEventTypes[0]},
+		}
+		testEvents2 := []flow.Event{
+			{Type: mocks.GenericEventTypes[1]},
+			{Type: mocks.GenericEventTypes[1]},
+			{Type: mocks.GenericEventTypes[1]},
 		}
 
-		err := db.Update(l.SaveEvents(42, testTyp1, testEvents1))
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, []flow.Event{}, v)
+			return mocks.GenericLedgerValues[0], nil
+		}
+
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SaveEvents(mocks.GenericHeight, mocks.GenericEventTypes[0], testEvents1))
 		assert.NoError(t, err)
 
-		err = db.Update(l.SaveEvents(42, testTyp2, testEvents2))
+		err = db.Update(l.SaveEvents(mocks.GenericHeight, mocks.GenericEventTypes[1], testEvents2))
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve events nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		err := db.Update(func(tx *badger.Txn) error {
-			err := tx.Set(testKey1, testValue1)
+			err := tx.Set(testKey1, mocks.GenericByteSlice)
 			require.NoError(t, err)
 
-			err = tx.Set(testKey2, testValue2)
+			err = tx.Set(testKey2, mocks.GenericByteSlice)
 			require.NoError(t, err)
 
 			return nil
@@ -280,84 +286,135 @@ func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					// We should find both batches of events since they are both allowed by filter.
-					assert.True(t, bytes.Equal(testValue1, b) || bytes.Equal(testValue2, b))
-					assert.IsType(t, &[]flow.Event{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &[]flow.Event{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got []flow.Event
-		err = db.View(l.RetrieveEvents(42, []flow.EventType{testTyp1, testTyp2}, &got))
+		err = db.View(l.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 2, decodeCallCount)
 	})
 
 	t.Run("retrieve events returns all types when no filter given", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		err := db.Update(func(tx *badger.Txn) error {
+			err := tx.Set(testKey1, mocks.GenericByteSlice)
+			require.NoError(t, err)
+
+			err = tx.Set(testKey2, mocks.GenericByteSlice)
+			require.NoError(t, err)
+
+			return nil
+		})
+		require.NoError(t, err)
+
 		decodeCallCount := 0
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &[]flow.Event{}, v)
+			decodeCallCount++
+
+			return nil
+		}
+
 		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					// We should find both batches of events since they are not filtered.
-					assert.True(t, bytes.Equal(testValue1, b) || bytes.Equal(testValue2, b))
-					assert.IsType(t, &[]flow.Event{}, v)
-					decodeCallCount++
-					return nil
-				},
-			},
+			codec: codec,
 		}
 
 		var got []flow.Event
-		err := db.View(l.RetrieveEvents(42, []flow.EventType{}, &got))
+		err = db.View(l.RetrieveEvents(mocks.GenericHeight, []flow.EventType{}, &got))
 
 		assert.Equal(t, 2, decodeCallCount)
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve events does not include types not asked for", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		err := db.Update(func(tx *badger.Txn) error {
+			err := tx.Set(testKey1, []byte(`value1`))
+			require.NoError(t, err)
+
+			err = tx.Set(testKey2, []byte(`value2`))
+			require.NoError(t, err)
+
+			return nil
+		})
+		require.NoError(t, err)
+
 		decodeCallCount := 0
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, []byte(`value1`), b)
+			assert.IsType(t, &[]flow.Event{}, v)
+			decodeCallCount++
+
+			return nil
+		}
+
 		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					// We should find both only testValue1 because of the filter.
-					assert.Equal(t, testValue1, b)
-					assert.IsType(t, &[]flow.Event{}, v)
-					decodeCallCount++
-					return nil
-				},
-			},
+			codec: codec,
 		}
 
 		var got []flow.Event
-		err := db.View(l.RetrieveEvents(42, []flow.EventType{testTyp1, "another-type"}, &got))
+		err = db.View(l.RetrieveEvents(mocks.GenericHeight, []flow.EventType{mocks.GenericEventTypes[0], "another-type"}, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
 	})
 
 	t.Run("retrieve events does not include types not asked for", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		err := db.Update(func(tx *badger.Txn) error {
+			err := tx.Set(testKey1, []byte(`value1`))
+			require.NoError(t, err)
+
+			err = tx.Set(testKey2, []byte(`value2`))
+			require.NoError(t, err)
+
+			return nil
+		})
+		require.NoError(t, err)
+
 		decodeCallCount := 0
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, []byte(`value2`), b)
+			assert.IsType(t, &[]flow.Event{}, v)
+			decodeCallCount++
+
+			return nil
+		}
+
 		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					// We should find both only testValue2 because of the filter.
-					assert.Equal(t, testValue2, b)
-					assert.IsType(t, &[]flow.Event{}, v)
-					decodeCallCount++
-					return nil
-				},
-			},
+			codec: codec,
 		}
 
 		var got []flow.Event
-		err := db.View(l.RetrieveEvents(42, []flow.EventType{"another-type", testTyp2}, &got))
+		err = db.View(l.RetrieveEvents(mocks.GenericHeight, []flow.EventType{"another-type", mocks.GenericEventTypes[1]}, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -365,53 +422,43 @@ func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
 }
 
 func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	path := ledger.Path{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1}
-	key := ledger.NewKey([]ledger.KeyPart{
-		ledger.NewKeyPart(0, []byte(`owner`)),
-		ledger.NewKeyPart(1, []byte(`controller`)),
-		ledger.NewKeyPart(2, []byte(`key`)),
-	})
-	payload1 := ledger.NewPayload(
-		key,
-		ledger.Value(`test1`),
-	)
-	payload2 := ledger.NewPayload(
-		key,
-		ledger.Value(`test2`),
-	)
-	testHeight1 := uint64(42)
-	testHeight2 := uint64(84)
-	testKey1 := encodeKey(prefixPayload, path, testHeight1)
-	testValue1 := []byte(`payload1`)
-	testKey2 := encodeKey(prefixPayload, path, testHeight2)
-	testValue2 := []byte(`payload2`)
+	testKey1 := encodeKey(prefixPayload, mocks.GenericLedgerPaths[0], mocks.GenericHeight)
+	testKey2 := encodeKey(prefixPayload, mocks.GenericLedgerPaths[0], mocks.GenericHeight*2)
 
 	t.Run("save two different payloads for same path at different heights", func(t *testing.T) {
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, &ledger.Payload{}, v)
-					return testValue1, nil
-				},
-			},
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, &ledger.Payload{}, v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.SavePayload(42, path, payload1))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPaths[0], mocks.GenericLedgerPayloads[0]))
 		assert.NoError(t, err)
 
-		err = db.Update(l.SavePayload(84, path, payload2))
+		err = db.Update(l.SavePayload(mocks.GenericHeight*2, mocks.GenericLedgerPaths[0], mocks.GenericLedgerPayloads[1]))
 		assert.NoError(t, err)
 	})
 
 	t.Run("save and retrieve payload at its first indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		err := db.Update(func(tx *badger.Txn) error {
-			err := tx.Set(testKey1, testValue1)
+			err := tx.Set(testKey1, mocks.GenericLedgerValues[0])
 			require.NoError(t, err)
 
-			err = tx.Set(testKey2, testValue2)
+			err = tx.Set(testKey2, mocks.GenericLedgerValues[1])
 			require.NoError(t, err)
 
 			return nil
@@ -419,31 +466,37 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					// We should find value 1 since it's the indexed value at height 42.
-					assert.Equal(t, testValue1, b)
-					assert.IsType(t, &ledger.Payload{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			// We should find the first value since it's the indexed value at GenericHeight.
+			assert.Equal(t, []byte(mocks.GenericLedgerValues[0]), b)
+			assert.IsType(t, &ledger.Payload{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got ledger.Payload
-		err = db.View(l.RetrievePayload(testHeight1, path, &got))
+		err = db.View(l.RetrievePayload(mocks.GenericHeight, mocks.GenericLedgerPaths[0], &got))
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve payload at its second indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		err := db.Update(func(tx *badger.Txn) error {
-			err := tx.Set(testKey1, testValue1)
+			err := tx.Set(testKey1, mocks.GenericLedgerValues[0])
 			require.NoError(t, err)
 
-			err = tx.Set(testKey2, testValue2)
+			err = tx.Set(testKey2, mocks.GenericLedgerValues[1])
 			require.NoError(t, err)
 
 			return nil
@@ -451,32 +504,38 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					// We should find value 1 since it's the indexed value at height 84.
-					assert.Equal(t, testValue2, b)
-					assert.IsType(t, &ledger.Payload{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			// We should find the second value since it's the indexed value at GenericHeight*2.
+			assert.Equal(t, []byte(mocks.GenericLedgerValues[1]), b)
+			assert.IsType(t, &ledger.Payload{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got ledger.Payload
-		err = db.View(l.RetrievePayload(84, path, &got))
+		err = db.View(l.RetrievePayload(mocks.GenericHeight*2, mocks.GenericLedgerPaths[0], &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
 	})
 
 	t.Run("retrieve payload between first and second indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		err := db.Update(func(tx *badger.Txn) error {
-			err := tx.Set(testKey1, testValue1)
+			err := tx.Set(testKey1, mocks.GenericLedgerValues[0])
 			require.NoError(t, err)
 
-			err = tx.Set(testKey2, testValue2)
+			err = tx.Set(testKey2, mocks.GenericLedgerValues[1])
 			require.NoError(t, err)
 
 			return nil
@@ -484,32 +543,39 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					// We should find value 1 since it's the last indexed value at any height between 42 and 84.
-					assert.Equal(t, testValue1, b)
-					assert.IsType(t, &ledger.Payload{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			// We should find the first value since it's the last indexed value at any
+			// height between GenericHeight and GenericHeight*2.
+			assert.Equal(t, []byte(mocks.GenericLedgerValues[0]), b)
+			assert.IsType(t, &ledger.Payload{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got ledger.Payload
-		err = db.View(l.RetrievePayload(63, path, &got))
+		err = db.View(l.RetrievePayload(mocks.GenericHeight+mocks.GenericHeight/2, mocks.GenericLedgerPaths[0], &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
 	})
 
 	t.Run("retrieve payload after last indexed", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		err := db.Update(func(tx *badger.Txn) error {
-			err := tx.Set(testKey1, testValue1)
+			err := tx.Set(testKey1, mocks.GenericLedgerValues[0])
 			require.NoError(t, err)
 
-			err = tx.Set(testKey2, testValue2)
+			err = tx.Set(testKey2, mocks.GenericLedgerValues[1])
 			require.NoError(t, err)
 
 			return nil
@@ -517,32 +583,39 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					// We should find value 2 since it's the last indexed value at height 999.
-					assert.Equal(t, testValue2, b)
-					assert.IsType(t, &ledger.Payload{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			// We should find the second value since it's the last indexed value
+			// at any height beyond the last indexed one.
+			assert.Equal(t, []byte(mocks.GenericLedgerValues[1]), b)
+			assert.IsType(t, &ledger.Payload{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got ledger.Payload
-		err = db.View(l.RetrievePayload(999, path, &got))
+		err = db.View(l.RetrievePayload(999*mocks.GenericHeight, mocks.GenericLedgerPaths[0], &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
 	})
 
 	t.Run("retrieve payload before it was ever indexed", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		err := db.Update(func(tx *badger.Txn) error {
-			err := tx.Set(testKey1, testValue1)
+			err := tx.Set(testKey1, mocks.GenericLedgerValues[0])
 			require.NoError(t, err)
 
-			err = tx.Set(testKey2, testValue2)
+			err = tx.Set(testKey2, mocks.GenericLedgerValues[1])
 			require.NoError(t, err)
 
 			return nil
@@ -550,31 +623,35 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got ledger.Payload
-		err = db.View(l.RetrievePayload(10, path, &got))
+		err = db.View(l.RetrievePayload(mocks.GenericHeight/2, mocks.GenericLedgerPaths[0], &got))
 
 		assert.Error(t, err)
 		assert.Equal(t, 0, decodeCallCount) // Should never be called since key does not match anything.
 	})
 
 	t.Run("should fail if path does not match", func(t *testing.T) {
-		unknownPath := ledger.Path{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			err := tx.Set(testKey1, testValue1)
+			err := tx.Set(testKey1, mocks.GenericLedgerValues[0])
 			require.NoError(t, err)
 
-			err = tx.Set(testKey2, testValue2)
+			err = tx.Set(testKey2, mocks.GenericLedgerValues[1])
 			require.NoError(t, err)
 
 			return nil
@@ -582,18 +659,21 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
 		}
 
+		l := &Library{
+			codec: codec,
+		}
+
+		unknownPath := ledger.Path{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+
 		var got ledger.Payload
-		err = db.View(l.RetrievePayload(42, unknownPath, &got))
+		err = db.View(l.RetrievePayload(mocks.GenericHeight, unknownPath, &got))
 
 		assert.Error(t, err)
 		assert.Equal(t, 0, decodeCallCount) // Should never be called since key does not match anything.
@@ -601,51 +681,56 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 }
 
 func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	testHeight := uint64(42)
-	blockID, _ := flow.HexStringToIdentifier("aac513eb1a0457700ac3fa8d292513e18ad7fd70065146b35ab48fa5a6cab007")
-	testKey := encodeKey(prefixHeightForBlock, blockID)
-	testValue := []byte(`testValue`)
+	testKey := encodeKey(prefixHeightForBlock, mocks.GenericIdentifiers[0])
 
 	t.Run("save height of block", func(t *testing.T) {
+		t.Parallel()
 
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, uint64(0), v)
-					return testValue, nil
-				},
-			},
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, uint64(0), v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.IndexHeightForBlock(blockID, testHeight))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.IndexHeightForBlock(mocks.GenericIdentifiers[0], mocks.GenericHeight))
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve height of block", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, testValue)
+			return tx.Set(testKey, mocks.GenericByteSlice)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, testValue, b)
-					assert.IsType(t, &testHeight, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &mocks.GenericHeight, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got uint64
-		err = db.View(l.LookupHeightForBlock(blockID, &got))
+		err = db.View(l.LookupHeightForBlock(mocks.GenericIdentifiers[0], &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -653,54 +738,56 @@ func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_Transaction(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	testID := flow.Identifier{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x8a, 0xd7, 0xfd, 0x70, 0x06, 0x51, 0x46, 0xb3, 0x5a, 0xb4, 0x8f, 0xa5, 0xa6, 0xca, 0xb0, 0x07}
-	testTransaction := &flow.TransactionBody{
-		ReferenceBlockID: testID,
-	}
-	testKey := encodeKey(prefixTransaction, testID)
-	testValue := []byte(`testValue`)
+	testKey := encodeKey(prefixTransaction, mocks.GenericIdentifiers[0])
 
 	t.Run("save transaction", func(t *testing.T) {
+		t.Parallel()
 
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, &flow.TransactionBody{}, v)
-					return testValue, nil
-				},
-			},
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, &flow.TransactionBody{}, v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.SaveTransaction(testTransaction))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SaveTransaction(mocks.GenericTransactions[0]))
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve transaction", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, testValue)
+			return tx.Set(testKey, mocks.GenericByteSlice)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, testValue, b)
-					assert.IsType(t, &flow.TransactionBody{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &flow.TransactionBody{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got flow.TransactionBody
-		err = db.View(l.RetrieveTransaction(testTransaction.ID(), &got))
+		err = db.View(l.RetrieveTransaction(mocks.GenericIdentifiers[0], &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -708,53 +795,56 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 }
 
 func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	testHeight := uint64(1337)
-	testTransactionID := flow.Identifier{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	testTxIDs := []flow.Identifier{testTransactionID, testTransactionID, testTransactionID, testTransactionID, testTransactionID}
-	testKey := encodeKey(prefixTransactionsForHeight, testHeight)
-	testValue := []byte(`testValue`)
+	testKey := encodeKey(prefixTransactionsForHeight, mocks.GenericHeight)
 
 	t.Run("save transactions", func(t *testing.T) {
+		t.Parallel()
 
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, []flow.Identifier{}, v)
-					return testValue, nil
-				},
-			},
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, []flow.Identifier{}, v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.IndexTransactionsForHeight(testHeight, testTxIDs))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.IndexTransactionsForHeight(mocks.GenericHeight, mocks.GenericIdentifiers))
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve transactions", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, testValue)
+			return tx.Set(testKey, mocks.GenericLedgerValues[0])
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, testValue, b)
-					assert.IsType(t, &[]flow.Identifier{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, []byte(mocks.GenericLedgerValues[0]), b)
+			assert.IsType(t, &[]flow.Identifier{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got []flow.Identifier
-		err = db.View(l.LookupTransactionsForHeight(testHeight, &got))
+		err = db.View(l.LookupTransactionsForHeight(mocks.GenericHeight, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -762,53 +852,56 @@ func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_Collection(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	testID := flow.Identifier{0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70, 0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1, 0x8a, 0xd7, 0xfd, 0x70, 0x06, 0x51, 0x46, 0xb3, 0x5a, 0xb4, 0x8f, 0xa5, 0xa6, 0xca, 0xb0, 0x07}
-	testCollection := &flow.LightCollection{
-		Transactions: []flow.Identifier{testID},
-	}
-	testKey := encodeKey(prefixCollection, testID)
-	testValue := []byte(`testValue`)
+	testKey := encodeKey(prefixCollection, mocks.GenericIdentifiers[0])
 
 	t.Run("save collection", func(t *testing.T) {
+		t.Parallel()
 
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, &flow.LightCollection{}, v)
-					return testValue, nil
-				},
-			},
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, &flow.LightCollection{}, v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.SaveCollection(testCollection))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SaveCollection(mocks.GenericCollections[0]))
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve collection", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, testValue)
+			return tx.Set(testKey, mocks.GenericByteSlice)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, testValue, b)
-					assert.IsType(t, &flow.LightCollection{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &flow.LightCollection{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got flow.LightCollection
-		err = db.View(l.RetrieveCollection(testCollection.ID(), &got))
+		err = db.View(l.RetrieveCollection(mocks.GenericIdentifiers[0], &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -816,52 +909,113 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 }
 
 func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	testHeight := uint64(1337)
-	testCollectionID := flow.Identifier{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	testCollIDs := []flow.Identifier{testCollectionID, testCollectionID, testCollectionID, testCollectionID, testCollectionID}
-	testKey := encodeKey(prefixCollectionsForHeight, testHeight)
-	testValue := []byte(`testValue`)
+	testKey := encodeKey(prefixCollectionsForHeight, mocks.GenericHeight)
 
 	t.Run("save collections", func(t *testing.T) {
+		t.Parallel()
 
-		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, []flow.Identifier{}, v)
-					return testValue, nil
-				},
-			},
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, []flow.Identifier{}, v)
+			return mocks.GenericLedgerValues[0], nil
 		}
 
-		err := db.Update(l.IndexCollectionsForHeight(testHeight, testCollIDs))
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.IndexCollectionsForHeight(mocks.GenericHeight, mocks.GenericIdentifiers))
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("retrieve collections", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, testValue)
+			return tx.Set(testKey, mocks.GenericByteSlice)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
-		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, testValue, b)
-					assert.IsType(t, &[]flow.Identifier{}, v)
-					decodeCallCount++
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &[]flow.Identifier{}, v)
+			decodeCallCount++
 
-					return nil
-				},
-			},
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
 		}
 
 		var got []flow.Identifier
-		err = db.View(l.LookupCollectionsForHeight(testHeight, &got))
+		err = db.View(l.LookupCollectionsForHeight(mocks.GenericHeight, &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, decodeCallCount)
+	})
+}
+
+func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
+	testKey := encodeKey(prefixTransactionResults, mocks.GenericTransactionResults[0].TransactionID)
+
+	t.Run("save transaction result", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, &flow.TransactionResult{}, v)
+			return mocks.GenericLedgerValues[0], nil
+		}
+
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SaveTransactionResult(mocks.GenericTransactionResults[0]))
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("retrieve transaction result", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		err := db.Update(func(tx *badger.Txn) error {
+			return tx.Set(testKey, mocks.GenericByteSlice)
+		})
+		require.NoError(t, err)
+
+		decodeCallCount := 0
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.IsType(t, &flow.TransactionResult{}, v)
+			decodeCallCount++
+
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
+		}
+
+		var got *flow.TransactionResult
+		err = db.View(l.RetrieveTransactionResult(mocks.GenericTransactionResults[0].TransactionID, got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)

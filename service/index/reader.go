@@ -134,6 +134,19 @@ func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) 
 	return txIDs, err
 }
 
+// TransactionResult returns the transaction result for the given transaction ID.
+func (r *Reader) TransactionResult(txID flow.Identifier) (*flow.TransactionResult, error) {
+	var txRes *flow.TransactionResult
+	err := r.db.View(func(tx *badger.Txn) error {
+		err := r.storage.RetrieveTransactionResult(txID, txRes)(tx)
+		if err != nil {
+			return fmt.Errorf("could not look up transactions: %w", err)
+		}
+		return nil
+	})
+	return txRes, err
+}
+
 // Events returns the events of all transactions that were part of the
 // finalized block at the given height. It can optionally filter them by event
 // type; if no event types are given, all events are returned.

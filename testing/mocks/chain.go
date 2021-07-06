@@ -14,15 +14,50 @@
 
 package mocks
 
-import "github.com/onflow/flow-go/model/flow"
+import (
+	"testing"
+
+	"github.com/onflow/flow-go/model/flow"
+)
 
 type Chain struct {
-	RootFunc         func() (uint64, error)
-	HeaderFunc       func(height uint64) (*flow.Header, error)
-	CommitFunc       func(height uint64) (flow.StateCommitment, error)
-	CollectionsFunc  func(height uint64) ([]*flow.LightCollection, error)
-	TransactionsFunc func(height uint64) ([]*flow.TransactionBody, error)
-	EventsFunc       func(height uint64) ([]flow.Event, error)
+	RootFunc               func() (uint64, error)
+	HeaderFunc             func(height uint64) (*flow.Header, error)
+	CommitFunc             func(height uint64) (flow.StateCommitment, error)
+	CollectionsFunc        func(height uint64) ([]*flow.LightCollection, error)
+	TransactionsFunc       func(height uint64) ([]*flow.TransactionBody, error)
+	TransactionResultsFunc func(height uint64) ([]*flow.TransactionResult, error)
+	EventsFunc             func(height uint64) ([]flow.Event, error)
+}
+
+func BaselineChain(t *testing.T) *Chain {
+	t.Helper()
+
+	c := Chain{
+		RootFunc: func() (uint64, error) {
+			return GenericHeight, nil
+		},
+		HeaderFunc: func(height uint64) (*flow.Header, error) {
+			return GenericHeader, nil
+		},
+		CommitFunc: func(height uint64) (flow.StateCommitment, error) {
+			return GenericCommits[0], nil
+		},
+		CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
+			return GenericCollections, nil
+		},
+		TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
+			return GenericTransactions, nil
+		},
+		TransactionResultsFunc: func(height uint64) ([]*flow.TransactionResult, error) {
+			return GenericTransactionResults, nil
+		},
+		EventsFunc: func(height uint64) ([]flow.Event, error) {
+			return GenericEvents, nil
+		},
+	}
+
+	return &c
 }
 
 func (c *Chain) Root() (uint64, error) {
@@ -43,6 +78,10 @@ func (c *Chain) Collections(height uint64) ([]*flow.LightCollection, error) {
 
 func (c *Chain) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	return c.TransactionsFunc(height)
+}
+
+func (c *Chain) TransactionResults(height uint64) ([]*flow.TransactionResult, error) {
+	return c.TransactionResultsFunc(height)
 }
 
 func (c *Chain) Events(height uint64) ([]flow.Event, error) {

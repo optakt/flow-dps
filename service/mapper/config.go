@@ -16,22 +16,22 @@ package mapper
 
 // DefaultConfig has the default values of the config set.
 var DefaultConfig = Config{
-	IndexCommit:       false,
-	IndexHeader:       false,
-	IndexCollections:  false,
-	IndexTransactions: false,
-	IndexEvents:       false,
-	IndexPayloads:     false,
+	IndexCommit:             false,
+	IndexHeader:             false,
+	IndexCollections:        false,
+	IndexTransactions:       false,
+	IndexEvents:             false,
+	IndexPayloads:           false,
 }
 
 // Config contains optional parameters for the mapper.
 type Config struct {
-	IndexCommit       bool
-	IndexHeader       bool
-	IndexCollections  bool
-	IndexTransactions bool
-	IndexEvents       bool
-	IndexPayloads     bool
+	IndexCommit             bool
+	IndexHeader             bool
+	IndexCollections        bool
+	IndexTransactions       bool
+	IndexEvents             bool
+	IndexPayloads           bool
 }
 
 // WithIndexCommit sets up the mapper to build the commits index.

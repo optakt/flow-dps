@@ -23,7 +23,7 @@ import (
 )
 
 func TestEmptyState(t *testing.T) {
-	f := &mocks.Forest{}
+	f := mocks.BaselineForest(t, true)
 	s := EmptyState(f)
 
 	assert.Equal(t, f, s.forest)

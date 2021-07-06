@@ -43,6 +43,7 @@ type ReadLibrary interface {
 
 	RetrieveCollection(collID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error
 	RetrieveTransaction(txID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error
+	RetrieveTransactionResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error
 }
 
 type WriteLibrary interface {
@@ -62,4 +63,5 @@ type WriteLibrary interface {
 
 	SaveCollection(collection *flow.LightCollection) func(*badger.Txn) error
 	SaveTransaction(transaction *flow.TransactionBody) func(*badger.Txn) error
+	SaveTransactionResult(txRes *flow.TransactionResult) func(*badger.Txn) error
 }

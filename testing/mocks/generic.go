@@ -15,18 +15,32 @@
 package mocks
 
 import (
+	"io"
+	"time"
+
+	"github.com/rs/zerolog"
+
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 // Global variables that can be used for testing. They are non-nil valid values for the types commonly needed
 // test DPS components.
 var (
-	GenericHeight = uint64(42)
+	GenericLogger = zerolog.New(io.Discard)
+
+	GenericHeight    = uint64(42)
+	GenericByteSlice = []byte(`test`)
 
 	GenericCommits = []flow.StateCommitment{
 		{
@@ -44,8 +58,9 @@ var (
 	}
 
 	GenericHeader = &flow.Header{
-		ChainID: dps.FlowTestnet,
-		Height:  GenericHeight,
+		ChainID:   dps.FlowTestnet,
+		Height:    GenericHeight,
+		Timestamp: time.Date(1972, 0, 0, 0, 0, 0, 0, time.Local),
 	}
 
 	GenericIdentifiers = []flow.Identifier{
@@ -81,12 +96,80 @@ var (
 		},
 	}
 
+	GenericEventTypes        = []flow.EventType{"deposit", "withdrawal"}
+	GenericCadenceEventTypes = []*cadence.EventType{
+		{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "deposit",
+			Fields: []cadence.Field{
+				{
+					Identifier: "amount",
+					Type:       cadence.UInt64Type{},
+				},
+				{
+					Identifier: "address",
+					Type:       cadence.AddressType{},
+				},
+			},
+		},
+		{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "withdrawal",
+			Fields: []cadence.Field{
+				{
+					Identifier: "amount",
+					Type:       cadence.UInt64Type{},
+				},
+				{
+					Identifier: "address",
+					Type:       cadence.AddressType{},
+				},
+			},
+		},
+	}
+	GenericCadenceEvents = []cadence.Event{
+		cadence.NewEvent(
+			[]cadence.Value{
+				cadence.NewUInt64(42),
+				cadence.NewAddress([8]byte{2, 3, 4, 5, 6, 7, 8, 9}),
+			},
+		).WithType(GenericCadenceEventTypes[0]),
+		cadence.NewEvent(
+			[]cadence.Value{
+				cadence.NewUInt64(42),
+				cadence.NewAddress([8]byte{2, 3, 4, 5, 6, 7, 8, 9}),
+			},
+		).WithType(GenericCadenceEventTypes[1]),
+	}
+	GenericCadenceEventPayloads = [][]byte{
+		json.MustEncode(GenericCadenceEvents[0]),
+		json.MustEncode(GenericCadenceEvents[1]),
+	}
 	GenericEvents = []flow.Event{
-		{TransactionID: GenericIdentifiers[0]},
-		{TransactionID: GenericIdentifiers[1]},
-		{TransactionID: GenericIdentifiers[2]},
-		{TransactionID: GenericIdentifiers[3]},
-		{TransactionID: GenericIdentifiers[4]},
+		{
+			TransactionID: GenericIdentifiers[0],
+			EventIndex:    0,
+			Type:          GenericEventTypes[0],
+			Payload:       GenericCadenceEventPayloads[0],
+		},
+		{
+			TransactionID: GenericIdentifiers[0],
+			EventIndex:    1,
+			Type:          GenericEventTypes[1],
+			Payload:       GenericCadenceEventPayloads[1],
+		},
+		{
+			TransactionID: GenericIdentifiers[1],
+			EventIndex:    2,
+			Type:          GenericEventTypes[0],
+			Payload:       GenericCadenceEventPayloads[0],
+		},
+		{
+			TransactionID: GenericIdentifiers[1],
+			EventIndex:    3,
+			Type:          GenericEventTypes[1],
+			Payload:       GenericCadenceEventPayloads[1],
+		},
 	}
 
 	GenericTransactions = []*flow.TransactionBody{
@@ -94,7 +177,33 @@ var (
 		{ReferenceBlockID: GenericIdentifiers[1]},
 		{ReferenceBlockID: GenericIdentifiers[2]},
 		{ReferenceBlockID: GenericIdentifiers[3]},
-		{ReferenceBlockID: GenericIdentifiers[4]},
+	}
+	GenericCadenceTransactionIDs = []identifier.Transaction{
+		{Hash: GenericIdentifiers[0].String()},
+		{Hash: GenericIdentifiers[1].String()},
+	}
+	GenericCadenceTransactions = []*object.Transaction{
+		{
+			ID: GenericCadenceTransactionIDs[0],
+			Operations: []object.Operation{
+				*GenericOperations[0],
+				*GenericOperations[1],
+			},
+		},
+		{
+			ID: GenericCadenceTransactionIDs[1],
+			Operations: []object.Operation{
+				*GenericOperations[0],
+				*GenericOperations[1],
+			},
+		},
+	}
+
+	GenericTransactionResults = []*flow.TransactionResult{
+		{TransactionID: GenericIdentifiers[0]},
+		{TransactionID: GenericIdentifiers[1]},
+		{TransactionID: GenericIdentifiers[2]},
+		{TransactionID: GenericIdentifiers[3]},
 	}
 
 	GenericCollections = []*flow.LightCollection{
@@ -167,10 +276,10 @@ var (
 
 	GenericTrieUpdate = &ledger.TrieUpdate{
 		RootHash: ledger.RootHash{
-			0xb4, 0xcd, 0xba, 0x9f, 0xcf, 0x45, 0xae, 0xff,
-			0x39, 0x0a, 0x18, 0xd2, 0xb4, 0x25, 0x43, 0xfc,
-			0xf6, 0xae, 0x9a, 0xc9, 0x05, 0xec, 0xd9, 0x1b,
-			0x89, 0x21, 0xf4, 0x6d, 0x74, 0x02, 0x7f, 0xba,
+			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
+			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
+			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
+			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
 		},
 		Paths:    GenericLedgerPaths,
 		Payloads: GenericLedgerPayloads,
@@ -183,9 +292,9 @@ var (
 	//        / \   \
 	//       1   2   4
 	GenericRootNode = node.NewNode(
-		42,
+		256,
 		node.NewNode(
-			42,
+			256,
 			node.NewLeaf(GenericLedgerPaths[0], GenericLedgerPayloads[0], 42),
 			node.NewLeaf(GenericLedgerPaths[1], GenericLedgerPayloads[1], 42),
 			GenericLedgerPaths[2],
@@ -195,7 +304,7 @@ var (
 			64,
 		),
 		node.NewNode(
-			42,
+			256,
 			node.NewLeaf(GenericLedgerPaths[3], GenericLedgerPayloads[3], 42),
 			nil,
 			GenericLedgerPaths[4],
@@ -210,4 +319,55 @@ var (
 		64,
 		64,
 	)
+
+	GenericTrie, _ = trie.NewMTrie(GenericRootNode)
+
+	GenericCurrency = identifier.Currency{
+		Symbol:   dps.FlowSymbol,
+		Decimals: dps.FlowDecimals,
+	}
+	GenericAccount = flow.Account{
+		Address: flow.Address{
+			0x2a, 0x2a, 0x2a, 0x2a,
+			0x2a, 0x2a, 0x2a, 0x2a,
+		},
+	}
+	GenericCadenceAccount = identifier.Account{
+		Address: "2a2a2a2a2a2a2a2a",
+	}
+	GenericOperations = []*object.Operation{
+		{
+			ID:         identifier.Operation{Index: 0},
+			RelatedIDs: []identifier.Operation{{Index: 1}},
+			Type:       dps.OperationTransfer,
+			Status:     dps.StatusCompleted,
+			AccountID:  GenericCadenceAccount,
+			Amount: object.Amount{
+				Value:    "42",
+				Currency: GenericCurrency,
+			},
+		},
+		{
+			ID:         identifier.Operation{Index: 1},
+			RelatedIDs: []identifier.Operation{{Index: 0}},
+			Type:       dps.OperationTransfer,
+			Status:     dps.StatusCompleted,
+			AccountID:  GenericCadenceAccount, // FIXME: Does this break some tests?
+			Amount: object.Amount{
+				Value:    "-42",
+				Currency: GenericCurrency,
+			},
+		},
+	}
+
+	GenericCadenceValue = cadence.NewUInt64(42)
+
+	GenericBlockID = identifier.Block{
+		Index: &GenericHeight,
+		Hash:  GenericHeader.ID().String(),
+	}
+	GenericCryptoID = identifier.Currency{
+		Symbol:   dps.FlowSymbol,
+		Decimals: dps.FlowDecimals,
+	}
 )

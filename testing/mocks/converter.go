@@ -15,6 +15,8 @@
 package mocks
 
 import (
+	"testing"
+
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/rosetta/object"
@@ -22,6 +24,18 @@ import (
 
 type Converter struct {
 	EventToOperationFunc func(flow.Event) (*object.Operation, error)
+}
+
+func BaselineConverter(t *testing.T) *Converter {
+	t.Helper()
+
+	c := Converter{
+		EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
+			return GenericOperations[0], nil
+		},
+	}
+
+	return &c
 }
 
 func (c *Converter) EventToOperation(event flow.Event) (transaction *object.Operation, err error) {

@@ -14,10 +14,30 @@
 
 package mocks
 
+import "testing"
+
 type Generator struct {
 	GetBalanceFunc      func(symbol string) ([]byte, error)
 	TokensDepositedFunc func(symbol string) (string, error)
 	TokensWithdrawnFunc func(symbol string) (string, error)
+}
+
+func BaselineGenerator(t *testing.T) *Generator {
+	t.Helper()
+
+	g := Generator{
+		GetBalanceFunc: func(symbol string) ([]byte, error) {
+			return []byte(`42`), nil
+		},
+		TokensDepositedFunc: func(symbol string) (string, error) {
+			return "deposit", nil
+		},
+		TokensWithdrawnFunc: func(symbol string) (string, error) {
+			return "withdrawal", nil
+		},
+	}
+
+	return &g
 }
 
 func (g *Generator) GetBalance(symbol string) ([]byte, error) {

@@ -34,52 +34,43 @@ import (
 
 func TestNew(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
-		generatorMock := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) {
-				assert.Equal(t, dps.FlowSymbol, symbol)
-				return "deposit", nil
-			},
-			TokensWithdrawnFunc: func(symbol string) (string, error) {
-				assert.Equal(t, dps.FlowSymbol, symbol)
-				return "withdrawal", nil
-			},
+		generator := mocks.BaselineGenerator(t)
+		generator.TokensDepositedFunc = func(symbol string) (string, error) {
+			assert.Equal(t, dps.FlowSymbol, symbol)
+			return string(mocks.GenericEventTypes[0]), nil
+		}
+		generator.TokensWithdrawnFunc = func(symbol string) (string, error) {
+			assert.Equal(t, dps.FlowSymbol, symbol)
+			return string(mocks.GenericEventTypes[1]), nil
 		}
 
-		cvt, err := New(generatorMock)
+		cvt, err := New(generator)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, cvt.deposit, flow.EventType("deposit"))
-			assert.Equal(t, cvt.withdrawal, flow.EventType("withdrawal"))
+			assert.Equal(t, cvt.deposit, mocks.GenericEventTypes[0])
+			assert.Equal(t, cvt.withdrawal, mocks.GenericEventTypes[1])
 		}
 	})
 
 	t.Run("handles generator failure for deposit event type", func(t *testing.T) {
-		generatorMock := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) {
-				assert.Equal(t, dps.FlowSymbol, symbol)
-				return "", mocks.DummyError
-			},
+		generator := mocks.BaselineGenerator(t)
+		generator.TokensDepositedFunc = func(symbol string) (string, error) {
+			return "", mocks.DummyError
 		}
 
-		cvt, err := New(generatorMock)
+		cvt, err := New(generator)
 
 		assert.Error(t, err)
 		assert.Nil(t, cvt)
 	})
 
 	t.Run("handles generator failure for withdrawal event type", func(t *testing.T) {
-		generatorMock := &mocks.Generator{
-			TokensDepositedFunc: func(symbol string) (string, error) {
-				assert.Equal(t, dps.FlowSymbol, symbol)
-				return "deposit", nil
-			},
-			TokensWithdrawnFunc: func(symbol string) (string, error) {
-				assert.Equal(t, dps.FlowSymbol, symbol)
-				return "", mocks.DummyError
-			},
+		generator := mocks.BaselineGenerator(t)
+		generator.TokensWithdrawnFunc = func(symbol string) (string, error) {
+			return "", mocks.DummyError
 		}
 
-		cvt, err := New(generatorMock)
+		cvt, err := New(generator)
 
 		assert.Error(t, err)
 		assert.Nil(t, cvt)

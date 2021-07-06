@@ -164,6 +164,27 @@ func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	return transactions, nil
 }
 
+func (d *Disk) TransactionResults(height uint64) ([]*flow.TransactionResult, error) {
+	blockID, err := d.block(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get block for height: %w", err)
+	}
+
+	var txRes []flow.TransactionResult
+	err = d.db.View(operation.LookupTransactionResultsByBlockID(blockID, &txRes))
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup transaction results: %w", err)
+	}
+
+	// Convert to pointer slice for consistency.
+	var results []*flow.TransactionResult
+	for _, result := range txRes {
+		results = append(results, &result)
+	}
+
+	return results, nil
+}
+
 func (d *Disk) block(height uint64) (flow.Identifier, error) {
 
 	if d.height == height {
