@@ -231,19 +231,19 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		count++
 	}
 
-	h := header.Height - 1
 	parent := identifier.Block{
-		Index: &h,
-		Hash:  header.ParentID.String(),
+		Index: &header.Height,
+		Hash:  header.ID().String(),
 	}
 
 	// Rosetta spec notes that for genesis block, it is recommended to use the
 	// genesis block identifier also for the parent block identifier.
 	// See https://www.rosetta-api.org/docs/common_mistakes.html#malformed-genesis-block
-	if header.Height == 0 {
+	if header.Height > 0 {
+		h := header.Height - 1
 		parent = identifier.Block{
-			Index: &header.Height,
-			Hash:  header.ID().String(),
+			Index: &h,
+			Hash:  header.ParentID.String(),
 		}
 	}
 
