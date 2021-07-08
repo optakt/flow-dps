@@ -31,124 +31,129 @@ type Error struct {
 	Details     map[string]interface{} `json:"details,omitempty"`
 }
 
-func RosettaError(definition meta.ErrorDefinition, details failure.Details, fields ...Field) Error {
-	details := make(map[string]interface{})
-	for key, val := range details.Fields {
+type DetailFunc func(map[string]interface{})
+
+func WithError(err error) DetailFunc {
+	return func(details map[string]interface{}) {
+		details["error"] = err.Error()
+	}
+}
+
+func WithDetail(key string, val interface{}) DetailFunc {
+	return func(details map[string]interface{}) {
 		details[key] = val
+	}
+}
+
+func RosettaError(definition meta.ErrorDefinition, description string, details ...DetailFunc) Error {
+	dd := make(map[string]interface{})
+	for _, detail := range details {
+		detail(dd)
 	}
 	e := Error{
 		ErrorDefinition: definition,
 		Description:     description,
-		Details:         details,
+		Details:         dd,
 	}
 	return e
 }
 
-func Internal(err error) Error {
+func Internal(description string, err error) Error {
 	return RosettaError(
 		configuration.ErrorInternal,
-		"",
-		failure.WithError(err),
+		description,
+		WithError(err),
 	)
 }
 
-func InvalidEncoding(err error) Error {
+func InvalidEncoding(description string, err error) Error {
 	return RosettaError(
 		configuration.ErrorInvalidEncoding,
-		"body does not have valid JSON",
-		failure.WithError(err),
+		description,
+		WithError(err),
 	)
 }
 
-func InvalidFormat(description string, fields ...failure.Field) Error {
+func InvalidFormat(description string, details ...DetailFunc) Error {
 	return RosettaError(
 		configuration.ErrorInvalidFormat,
 		description,
-		fields...,
+		details...,
 	)
 }
 
+func ConvertError(definition meta.ErrorDefinition, description failure.Description, details ...DetailFunc) Error {
+	description.Fields.Iterate(func(key string, val interface{}) {
+		details = append(details, WithDetail(key, val))
+	})
+	return RosettaError(definition, description.Text, details...)
+}
+
 func InvalidNetwork(fail failure.InvalidNetwork) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorInvalidNetwork,
-		Description:     fail.Description,
-		Details: map[string]interface{}{
-			"blockchain": fail.Blockchain,
-			"network":    fail.Network,
-		},
-	}
+	return ConvertError(
+		configuration.ErrorInvalidNetwork,
+		fail.Description,
+		WithDetail("blockchain", fail.Blockchain),
+		WithDetail("network", fail.Network),
+	)
 }
 
 func InvalidAccount(fail failure.InvalidAccount) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorInvalidAccount,
-		Description:     fail.Description,
-		Details: map[string]interface{}{
-			"address": fail.Address,
-			"chain":   fail.Chain,
-		},
-	}
+	return ConvertError(
+		configuration.ErrorInvalidAccount,
+		fail.Description,
+		WithDetail("address", fail.Address),
+	)
 }
 
 func InvalidCurrency(fail failure.InvalidCurrency) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorInvalidCurrency,
-		Description:     fail.Description,
-		Details: map[string]interface{}{
-			"symbol":   fail.Symbol,
-			"decimals": fail.Decimals,
-		},
-	}
+	return ConvertError(
+		configuration.ErrorInvalidCurrency,
+		fail.Description,
+		WithDetail("symbol", fail.Symbol),
+		WithDetail("decimals", fail.Decimals),
+	)
 }
 
 func InvalidBlock(fail failure.InvalidBlock) Error {
-	return RosettaError(
+	return ConvertError(
 		configuration.ErrorInvalidBlock,
-		fail.Details,
-		WithString(fail.Hash),
-		WithInt(fail.Index),
+		fail.Description,
+		WithDetail("index", fail.Index),
+		WithDetail("hash", fail.Hash),
 	)
 }
 
 func InvalidTransaction(fail failure.InvalidTransaction) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorInvalidTransaction,
-		Description:     fail.Description,
-		Details: map[string]interface{}{
-			"hash": fail.Hash,
-		},
-	}
+	return ConvertError(
+		configuration.ErrorInvalidTransaction,
+		fail.Description,
+		WithDetail("hash", fail.Hash),
+	)
 }
 
 func UnknownCurrency(fail failure.UnknownCurrency) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorUnknownCurrency,
-		Description:     fail.Description,
-		Details: map[string]interface{}{
-			"symbol":   fail.Symbol,
-			"decimals": fail.Decimals,
-		},
-	}
+	return ConvertError(
+		configuration.ErrorUnknownCurrency,
+		fail.Description,
+		WithDetail("symbol", fail.Symbol),
+		WithDetail("decimals", fail.Decimals),
+	)
 }
 
 func UnknownBlock(fail failure.UnknownBlock) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorUnknownBlock,
-		Description:     fail.Description,
-		Details: map[string]interface{}{
-			"index": fail.Index,
-			"hash":  fail.Hash,
-		},
-	}
+	return ConvertError(
+		configuration.ErrorUnknownBlock,
+		fail.Description,
+		WithDetail("index", fail.Index),
+		WithDetail("hash", fail.Hash),
+	)
 }
 
 func UnknownTransaction(fail failure.UnknownTransaction) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorUnknownTransaction,
-		Description:     fail.Description,
-		Details: map[string]interface{}{
-			"index": fail.Index,
-			"hash":  fail.Hash,
-		},
-	}
+	return ConvertError(
+		configuration.ErrorUnknownTransaction,
+		fail.Description,
+		WithDetail("hash", fail.Hash),
+	)
 }

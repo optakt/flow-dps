@@ -20,10 +20,9 @@ import (
 
 type UnknownTransaction struct {
 	Description Description
-	Index       uint64
 	Hash        string
 }
 
 func (u UnknownTransaction) Error() string {
-	return fmt.Sprintf("unknown transaction (index: %d, hash: %s): %s", u.Index, u.Hash, u.Description)
+	return fmt.Sprintf("unknown transaction (hash: %s): %s", u.Hash, u.Description)
 }

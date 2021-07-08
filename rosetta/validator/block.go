@@ -71,7 +71,7 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 		return identifier.Block{}, failure.UnknownBlock{
 			Index: *block.Index,
 			Hash:  block.Hash,
-			Description: failure.NewDescription("block index is above first indexed height",
+			Description: failure.NewDescription("block index is above last indexed height",
 				failure.WithUint64("last_index", last),
 			),
 		}

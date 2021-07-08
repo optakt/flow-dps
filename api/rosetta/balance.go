@@ -48,7 +48,7 @@ func (d *Data) Balance(ctx echo.Context) error {
 	var req BalanceRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding(err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding("request does not contain valid JSON-encoded body", err))
 	}
 
 	if req.NetworkID.Blockchain == "" {
@@ -62,10 +62,10 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier has empty index and hash fields"))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier has invalid block field length",
-			WithInt("have_length", len(req.BlockID.Hash)),
-			WithInt("want_length", hexIDSize)),
-		)
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier has invalid hash field length",
+			WithDetail("have_length", len(req.BlockID.Hash)),
+			WithDetail("want_length", hexIDSize),
+		))
 	}
 
 	if req.AccountID.Address == "" {
@@ -73,8 +73,8 @@ func (d *Data) Balance(ctx echo.Context) error {
 	}
 	if len(req.AccountID.Address) != hexAddressSize {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier has invalid address field length",
-			WithInt("have_length", len(req.AccountID.Address)),
-			WithInt("want_length", hexAddressSize)),
+			WithDetail("have_length", len(req.AccountID.Address)),
+			WithDetail("want_length", hexAddressSize)),
 		)
 	}
 
@@ -97,7 +97,7 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to check network configuration", err))
 	}
 
 	block, balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
@@ -126,7 +126,7 @@ func (d *Data) Balance(ctx echo.Context) error {
 	}
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to retrieve balances", err))
 	}
 
 	res := BalanceResponse{

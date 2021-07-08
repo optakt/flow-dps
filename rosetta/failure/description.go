@@ -51,6 +51,12 @@ type FieldList struct {
 	fields []Field
 }
 
+func (f FieldList) Iterate(handle func(key string, val interface{})) {
+	for _, field := range f.fields {
+		handle(field.Key, field.Val)
+	}
+}
+
 func (f FieldList) String() string {
 	parts := make([]string, 0, len(f.fields))
 	for _, field := range f.fields {
