@@ -17,14 +17,15 @@ package metrics
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/service/index"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Writer struct {
-	write index.Writer
+	write dps.Writer
 }
 
-func NewWriter(write index.Writer) *Writer {
+func NewWriter(write dps.Writer) *Writer {
 	w := Writer{
 		write: write,
 	}

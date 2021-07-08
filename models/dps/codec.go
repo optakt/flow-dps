@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package dps
 
 type Codec interface {
 	Marshal(v interface{}) ([]byte, error)

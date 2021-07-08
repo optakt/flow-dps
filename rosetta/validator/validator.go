@@ -16,15 +16,14 @@ package validator
 
 import (
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/models/index"
 )
 
 type Validator struct {
 	params dps.Params
-	index  index.Reader
+	index  dps.Reader
 }
 
-func New(params dps.Params, index index.Reader) *Validator {
+func New(params dps.Params, index dps.Reader) *Validator {
 
 	v := &Validator{
 		params: params,

@@ -12,25 +12,24 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package dps
 
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type Reader interface {
-	First() (uint64, error)
-	Last() (uint64, error)
+type Writer interface {
+	First(height uint64) error
+	Last(height uint64) error
 
-	HeightForBlock(blockID flow.Identifier) (uint64, error)
+	Height(blockID flow.Identifier, height uint64) error
 
-	Commit(height uint64) (flow.StateCommitment, error)
-	Header(height uint64) (*flow.Header, error)
-	Events(height uint64, types ...flow.EventType) ([]flow.Event, error)
-	Values(height uint64, paths []ledger.Path) ([]ledger.Value, error)
+	Commit(height uint64, commit flow.StateCommitment) error
+	Header(height uint64, header *flow.Header) error
+	Events(height uint64, events []flow.Event) error
+	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
 
-	Transaction(txID flow.Identifier) (*flow.TransactionBody, error)
-
-	TransactionsByHeight(height uint64) ([]flow.Identifier, error)
+	Collections(height uint64, collections []*flow.LightCollection) error
+	Transactions(height uint64, transactions []*flow.TransactionBody) error
 }

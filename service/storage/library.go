@@ -15,14 +15,14 @@
 package storage
 
 import (
-	"github.com/optakt/flow-dps/models/index"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Library struct {
-	codec index.Codec
+	codec dps.Codec
 }
 
-func New(codec index.Codec) *Library {
+func New(codec dps.Codec) *Library {
 	lib := Library{
 		codec: codec,
 	}

@@ -17,14 +17,14 @@ package metrics
 import (
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/index"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Chain struct {
-	chain index.Chain
+	chain dps.Chain
 }
 
-func NewChain(chain index.Chain) *Chain {
+func NewChain(chain dps.Chain) *Chain {
 	c := Chain{
 		chain: chain,
 	}

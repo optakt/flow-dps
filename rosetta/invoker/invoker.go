@@ -23,21 +23,20 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
-
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/programs"
 
-	"github.com/optakt/flow-dps/models/index"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Invoker struct {
-	index index.Reader
+	index dps.Reader
 	vm    *fvm.VirtualMachine
 	cache *ristretto.Cache
 }
 
-func New(index index.Reader, options ...func(*Config)) (*Invoker, error) {
+func New(index dps.Reader, options ...func(*Config)) (*Invoker, error) {
 
 	// Initialize the invoker configuration with conservative default values.
 	cfg := Config{

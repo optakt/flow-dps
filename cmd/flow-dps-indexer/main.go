@@ -33,6 +33,7 @@ import (
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
+	"github.com/optakt/flow-dps/service/metrics"
 	"github.com/optakt/flow-dps/service/storage"
 )
 
@@ -65,6 +66,7 @@ func run() int {
 		flagIndexPayloads     bool
 		flagIndexTransactions bool
 		flagLevel             string
+		flagMetrics           bool
 		flagTrie              string
 	)
 
@@ -73,13 +75,14 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
-	pflag.BoolVarP(&flagIndexCollections, "index-collections", "o", false, "index collections")
-	pflag.BoolVarP(&flagIndexCommit, "index-commits", "m", false, "index commits")
-	pflag.BoolVarP(&flagIndexEvents, "index-events", "e", false, "index events")
-	pflag.BoolVarP(&flagIndexHeader, "index-headers", "h", false, "index headers")
-	pflag.BoolVarP(&flagIndexPayloads, "index-payloads", "p", false, "index payloads")
-	pflag.BoolVarP(&flagIndexTransactions, "index-transactions", "x", false, "index transactions")
+	pflag.BoolVar(&flagIndexCollections, "index-collections", false, "index collections")
+	pflag.BoolVar(&flagIndexCommit, "index-commits", false, "index commits")
+	pflag.BoolVar(&flagIndexEvents, "index-events", false, "index events")
+	pflag.BoolVar(&flagIndexHeader, "index-headers", false, "index headers")
+	pflag.BoolVar(&flagIndexPayloads, "index-payloads", false, "index payloads")
+	pflag.BoolVar(&flagIndexTransactions, "index-transactions", false, "index transactions")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.BoolVarP(&flagMetrics, "metrics", "m", false, "enable metrics collection and output")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
 	pflag.Parse()
@@ -143,11 +146,19 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the dependencies needed for the FSM and the state transitions.
+	// The loader component is responsible for loading and decoding the checkpoint.
 	load := loader.New(
 		loader.WithCheckpointPath(flagCheckpoint),
 	)
-	chain := chain.FromDisk(data)
+
+	// The chain is responsible for reading blockchain data from the protocol state.
+	var disk dps.Chain
+	disk = chain.FromDisk(data)
+	if flagMetrics {
+		disk = metrics.NewChain(disk)
+	}
+
+	// Feeder is responsible for reading the write-ahead log of the execution state.
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
@@ -158,10 +169,16 @@ func run() int {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 		return failure
 	}
-	index := index.NewWriter(db, storage)
+
+	// Writer is responsible for writing the index data to the index database.
+	var write dps.Writer
+	write = index.NewWriter(db, storage)
+	if flagMetrics {
+		write = metrics.NewWriter(write)
+	}
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	transitions := mapper.NewTransitions(log, load, chain, feed, index,
+	transitions := mapper.NewTransitions(log, load, disk, feed, write,
 		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),

@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
-	"github.com/optakt/flow-dps/models/index"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Index implements the `index.Reader` interface on top of the DPS server's
@@ -31,12 +31,12 @@ import (
 // machines across a network.
 type Index struct {
 	client APIClient
-	codec  index.Codec
+	codec  dps.Codec
 }
 
 // IndexFromAPI creates a new instance of an index reader that uses the provided
 // GRPC API client to retrieve state from the index.
-func IndexFromAPI(client APIClient, codec index.Codec) *Index {
+func IndexFromAPI(client APIClient, codec dps.Codec) *Index {
 
 	i := Index{
 		client: client,

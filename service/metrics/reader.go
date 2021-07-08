@@ -18,14 +18,14 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/service/index"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Reader struct {
-	read index.Reader
+	read dps.Reader
 }
 
-func NewReader(read index.Reader) *Reader {
+func NewReader(read dps.Reader) *Reader {
 	r := Reader{
 		read: read,
 	}
