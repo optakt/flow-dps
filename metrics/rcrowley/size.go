@@ -22,12 +22,14 @@ import (
 
 type Size struct {
 	sync.Mutex
+	title   string
 	total   map[string]metrics.Counter
 	reduced map[string]metrics.Counter
 }
 
-func NewSize() *Size {
+func NewSize(title string) *Size {
 	s := Size{
+		title:   title,
 		total:   make(map[string]metrics.Counter),
 		reduced: make(map[string]metrics.Counter),
 	}

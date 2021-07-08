@@ -141,7 +141,7 @@ func run() int {
 		return failure
 	}
 	if flagMetrics {
-		codec = metrics.NewCodec(codec, rcrowley.NewSize())
+		codec = metrics.NewCodec(codec, rcrowley.NewSize("store"))
 	}
 	storage := storage.New(codec)
 
@@ -162,7 +162,7 @@ func run() int {
 	var disk dps.Chain
 	disk = chain.FromDisk(data)
 	if flagMetrics {
-		disk = metrics.NewChain(disk, rcrowley.NewTime())
+		disk = metrics.NewChain(disk, rcrowley.NewTime("read"))
 	}
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
@@ -181,7 +181,7 @@ func run() int {
 	var write dps.Writer
 	write = index.NewWriter(db, storage)
 	if flagMetrics {
-		write = metrics.NewWriter(write, rcrowley.NewTime())
+		write = metrics.NewWriter(write, rcrowley.NewTime("write"))
 	}
 
 	// Initialize the transitions with the dependencies and add them to the FSM.

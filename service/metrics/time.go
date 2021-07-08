@@ -15,5 +15,5 @@
 package metrics
 
 type Time interface {
-	Duration(io string, name string) func()
+	Duration(name string) func()
 }

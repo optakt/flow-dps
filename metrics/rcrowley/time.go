@@ -23,23 +23,24 @@ import (
 
 type Time struct {
 	sync.Mutex
+	title  string
 	timers map[string]metrics.Timer
 }
 
-func NewTime() *Time {
+func NewTime(title string) *Time {
 	t := Time{
+		title:  title,
 		timers: make(map[string]metrics.Timer),
 	}
 	return &t
 }
 
-func (t *Time) Duration(io string, name string) func() {
-	key := io + "-" + name
+func (t *Time) Duration(name string) func() {
 	t.Lock()
-	timer, ok := t.timers[key]
+	timer, ok := t.timers[name]
 	if !ok {
 		timer = metrics.NewTimer()
-		t.timers[key] = timer
+		t.timers[name] = timer
 	}
 	t.Unlock()
 	now := time.Now()
