@@ -19,7 +19,7 @@ import (
 )
 
 type InvalidCurrency struct {
-	Description string
+	Description Description
 	Symbol      string
 	Decimals    uint
 }

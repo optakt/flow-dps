@@ -15,8 +15,6 @@
 package validator
 
 import (
-	"fmt"
-
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -29,9 +27,11 @@ func (v *Validator) Currency(currency identifier.Currency) (identifier.Currency,
 	_, ok := v.params.Tokens[currency.Symbol]
 	if !ok {
 		return identifier.Currency{}, failure.UnknownCurrency{
-			Symbol:      currency.Symbol,
-			Decimals:    currency.Decimals,
-			Description: "currency symbol has not been configured",
+			Symbol:   currency.Symbol,
+			Decimals: currency.Decimals,
+			Description: failure.NewDescription("currency symbol is unknown",
+				failure.WithStrings("available_symbols", v.params.Symbols()...),
+			),
 		}
 	}
 
@@ -39,9 +39,11 @@ func (v *Validator) Currency(currency identifier.Currency) (identifier.Currency,
 	// `UFix64` for tokens on Flow.
 	if currency.Decimals != 0 && currency.Decimals != dps.FlowDecimals {
 		return identifier.Currency{}, failure.InvalidCurrency{
-			Symbol:      currency.Symbol,
-			Decimals:    currency.Decimals,
-			Description: fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
+			Symbol:   currency.Symbol,
+			Decimals: currency.Decimals,
+			Description: failure.NewDescription("currency decimals mismatch with authoritative decimals for symbol",
+				failure.WithInt("want_decimals", dps.FlowDecimals),
+			),
 		}
 	}
 

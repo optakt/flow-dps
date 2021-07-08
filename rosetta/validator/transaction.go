@@ -27,7 +27,7 @@ func (v *Validator) Transaction(transaction identifier.Transaction) error {
 	if err != nil {
 		return failure.InvalidTransaction{
 			Hash:        transaction.Hash,
-			Description: "transaction hash is not a valid hex-encoded string",
+			Description: failure.NewDescription("transaction hash is not a valid hex-encoded string"),
 		}
 	}
 

@@ -31,10 +31,9 @@ type Error struct {
 	Details     map[string]interface{} `json:"details,omitempty"`
 }
 
-func RosettaError(definition meta.ErrorDefinition, description string, fields ...failure.Field) Error {
+func RosettaError(definition meta.ErrorDefinition, details failure.Details, fields ...Field) Error {
 	details := make(map[string]interface{})
-	for _, field := range fields {
-		key, val := field()
+	for key, val := range details.Fields {
 		details[key] = val
 	}
 	e := Error{
@@ -105,10 +104,9 @@ func InvalidCurrency(fail failure.InvalidCurrency) Error {
 func InvalidBlock(fail failure.InvalidBlock) Error {
 	return RosettaError(
 		configuration.ErrorInvalidBlock,
-		fail.Description,
-		failure.WithUint64("index", fail.Index),
-		failure.WithString("hash", fail.Hash),
-		fail.Fields...,
+		fail.Details,
+		WithString(fail.Hash),
+		WithInt(fail.Index),
 	)
 }
 

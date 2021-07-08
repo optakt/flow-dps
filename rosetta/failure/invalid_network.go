@@ -19,7 +19,7 @@ import (
 )
 
 type InvalidNetwork struct {
-	Description string
+	Description Description
 	Blockchain  string
 	Network     string
 }

@@ -19,20 +19,11 @@ import (
 )
 
 type InvalidBlock struct {
-	Index   uint64
-	Hash    string
-	Details Details
+	Description Description
+	Index       uint64
+	Hash        string
 }
 
 func (i InvalidBlock) Error() string {
-	return fmt.Sprintf("invalid block (index: %d, hash: %x): %s", i.Index, i.Hash, i.Details)
-}
-
-type Details struct {
-	Description string
-	Fields      map[string]interface{}
-}
-
-func (d Details) String() string {
-	return ""
+	return fmt.Sprintf("invalid block (index: %d, hash: %x): %s", i.Index, i.Hash, i.Description)
 }

@@ -19,11 +19,10 @@ import (
 )
 
 type InvalidAccount struct {
-	Description string
+	Description Description
 	Address     string
-	Chain       string
 }
 
 func (i InvalidAccount) Error() string {
-	return fmt.Sprintf("invalid account (address: %s, chain: %s): %s", i.Address, i.Description, i.Chain)
+	return fmt.Sprintf("invalid account (address: %s): %s", i.Address, i.Description)
 }

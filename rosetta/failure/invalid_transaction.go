@@ -19,7 +19,7 @@ import (
 )
 
 type InvalidTransaction struct {
-	Description string
+	Description Description
 	Hash        string
 }
 

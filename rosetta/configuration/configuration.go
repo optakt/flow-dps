@@ -15,8 +15,6 @@
 package configuration
 
 import (
-	"fmt"
-
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -100,16 +98,20 @@ func (c *Configuration) Errors() []meta.ErrorDefinition {
 func (c *Configuration) Check(network identifier.Network) error {
 	if network.Blockchain != c.network.Blockchain {
 		return failure.InvalidNetwork{
-			Blockchain:  network.Blockchain,
-			Network:     network.Network,
-			Description: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", network.Blockchain, c.network.Blockchain),
+			Blockchain: network.Blockchain,
+			Network:    network.Network,
+			Description: failure.NewDescription("network identifier has unknown blockchain field",
+				failure.WithStrings("available_blockchains", c.network.Blockchain),
+			),
 		}
 	}
 	if network.Network != c.network.Network {
 		return failure.InvalidNetwork{
-			Blockchain:  network.Blockchain,
-			Network:     network.Network,
-			Description: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", network.Network, c.network.Network),
+			Blockchain: network.Blockchain,
+			Network:    network.Network,
+			Description: failure.NewDescription("network identifier has unknown network field",
+				failure.WithStrings("available_networks", c.network.Network),
+			),
 		}
 	}
 	return nil

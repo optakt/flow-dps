@@ -19,7 +19,7 @@ import (
 )
 
 type UnknownBlock struct {
-	Description string
+	Description Description
 	Index       uint64
 	Hash        string
 }
