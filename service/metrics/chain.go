@@ -34,31 +34,31 @@ func NewChain(chain dps.Chain, time Time) *Chain {
 }
 
 func (c *Chain) Root() (uint64, error) {
-	defer c.time.Duration("read", "root")()
+	defer c.time.Duration(IORead, "root")()
 	return c.chain.Root()
 }
 
 func (c *Chain) Commit(height uint64) (flow.StateCommitment, error) {
-	defer c.time.Duration("read", "commit")()
+	defer c.time.Duration(IORead, "commit")()
 	return c.chain.Commit(height)
 }
 
 func (c *Chain) Header(height uint64) (*flow.Header, error) {
-	defer c.time.Duration("read", "height")()
+	defer c.time.Duration(IORead, "height")()
 	return c.chain.Header(height)
 }
 
 func (c *Chain) Collections(height uint64) ([]*flow.LightCollection, error) {
-	defer c.time.Duration("read", "collections")()
+	defer c.time.Duration(IORead, "collections")()
 	return c.chain.Collections(height)
 }
 
 func (c *Chain) Transactions(height uint64) ([]*flow.TransactionBody, error) {
-	defer c.time.Duration("read", "transactions")()
+	defer c.time.Duration(IORead, "transactions")()
 	return c.chain.Transactions(height)
 }
 
 func (c *Chain) Events(height uint64) ([]flow.Event, error) {
-	defer c.time.Duration("read", "events")()
+	defer c.time.Duration(IORead, "events")()
 	return c.chain.Events(height)
 }

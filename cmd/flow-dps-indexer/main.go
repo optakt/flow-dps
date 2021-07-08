@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
@@ -140,7 +141,7 @@ func run() int {
 		return failure
 	}
 	if flagMetrics {
-		codec = metrics.NewCodec(codec, nil) // FIXME
+		codec = metrics.NewCodec(codec, rcrowley.NewSize())
 	}
 	storage := storage.New(codec)
 
@@ -161,7 +162,7 @@ func run() int {
 	var disk dps.Chain
 	disk = chain.FromDisk(data)
 	if flagMetrics {
-		disk = metrics.NewChain(disk, nil) // FIXME
+		disk = metrics.NewChain(disk, rcrowley.NewTime())
 	}
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
@@ -180,7 +181,7 @@ func run() int {
 	var write dps.Writer
 	write = index.NewWriter(db, storage)
 	if flagMetrics {
-		write = metrics.NewWriter(write, nil) // FIXME
+		write = metrics.NewWriter(write, rcrowley.NewTime())
 	}
 
 	// Initialize the transitions with the dependencies and add them to the FSM.

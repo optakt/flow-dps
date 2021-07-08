@@ -12,8 +12,38 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package metrics
+package rcrowley
 
-type Size interface {
-	Bytes(name string, before int, after int)
+import (
+	"sync"
+	"time"
+
+	"github.com/rcrowley/go-metrics"
+)
+
+type Time struct {
+	sync.Mutex
+	timers map[string]metrics.Timer
+}
+
+func NewTime() *Time {
+	t := Time{
+		timers: make(map[string]metrics.Timer),
+	}
+	return &t
+}
+
+func (t *Time) Duration(io string, name string) func() {
+	key := io + "-" + name
+	t.Lock()
+	timer, ok := t.timers[key]
+	if !ok {
+		timer = metrics.NewTimer()
+		t.timers[key] = timer
+	}
+	t.Unlock()
+	now := time.Now()
+	return func() {
+		timer.UpdateSince(now)
+	}
 }

@@ -14,6 +14,7 @@
 
 package metrics
 
-type Size interface {
-	Bytes(name string, before int, after int)
-}
+const (
+	IORead  = "read"
+	IOWrite = "write"
+)
