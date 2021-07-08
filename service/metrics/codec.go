@@ -62,7 +62,7 @@ func (c *Codec) Marshal(value interface{}) ([]byte, error) {
 	case *flow.LightCollection:
 		name = "collection"
 	case []flow.Identifier:
-		name = "indentifiers"
+		name = "identifiers"
 	}
 	c.size.Bytes(name, len(data), len(compressed))
 	return compressed, nil

@@ -15,5 +15,5 @@
 package metrics
 
 type Size interface {
-	Bytes(name string, before int, after int)
+	Bytes(name string, original int, compressed int)
 }
