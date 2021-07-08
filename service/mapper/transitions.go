@@ -33,13 +33,13 @@ type Transitions struct {
 	cfg   Config
 	log   zerolog.Logger
 	load  Loader
-	chain Chain
+	chain index.Chain
 	feed  Feeder
 	index index.Writer
 	once  *sync.Once
 }
 
-func NewTransitions(log zerolog.Logger, load Loader, chain Chain, feed Feeder, index index.Writer, options ...func(*Config)) *Transitions {
+func NewTransitions(log zerolog.Logger, load Loader, chain index.Chain, feed Feeder, index index.Writer, options ...func(*Config)) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {
