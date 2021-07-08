@@ -231,11 +231,20 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 		count++
 	}
 
-	// We need the *uint64 for the parent block identifier.
-	var parentHeight *uint64
+	parent := identifier.Block{
+		Index: &header.Height,
+		Hash:  header.ID().String(),
+	}
+
+	// Rosetta spec notes that for genesis block, it is recommended to use the
+	// genesis block identifier also for the parent block identifier.
+	// See https://www.rosetta-api.org/docs/common_mistakes.html#malformed-genesis-block
 	if header.Height > 0 {
 		h := header.Height - 1
-		parentHeight = &h
+		parent = identifier.Block{
+			Index: &h,
+			Hash:  header.ParentID.String(),
+		}
 	}
 
 	// Now we just need to build the block.
@@ -244,10 +253,7 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 			Index: &header.Height,
 			Hash:  header.ID().String(),
 		},
-		ParentID: identifier.Block{
-			Index: parentHeight,
-			Hash:  header.ParentID.String(),
-		},
+		ParentID:     parent,
 		Timestamp:    header.Timestamp.UnixNano() / 1_000_000,
 		Transactions: blockTransactions,
 	}

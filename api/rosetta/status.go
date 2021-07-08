@@ -36,6 +36,7 @@ type StatusResponse struct {
 	CurrentBlockID        identifier.Block `json:"current_block_identifier"`
 	CurrentBlockTimestamp int64            `json:"current_block_timestamp"`
 	OldestBlockID         identifier.Block `json:"oldest_block_identifier"`
+	GenesisBlockID        identifier.Block `json:"genesis_block_identifier"`
 }
 
 // Status implements the /network/status endpoint of the Rosetta Data API.
@@ -77,6 +78,7 @@ func (d *Data) Status(ctx echo.Context) error {
 		CurrentBlockID:        current,
 		CurrentBlockTimestamp: timestamp.UnixNano() / 1_000_000,
 		OldestBlockID:         oldest,
+		GenesisBlockID:        oldest,
 	}
 
 	// TODO: Implement genesis block return

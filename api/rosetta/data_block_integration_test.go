@@ -70,25 +70,29 @@ func TestAPI_Block(t *testing.T) {
 
 		wantTimestamp        int64
 		wantParentHash       string
+		wantParentHeight     uint64
 		validateTransactions validateTxFunc
 		validateBlock        validateBlockFunc
 	}{
 		{
-			// First block.
+			// First block. Besides the standard validation, it's also a special case
+			// since according to the Rosetta spec, it should point to itself as the parent.
 			name:    "first block",
 			request: blockRequest(firstHeader),
 
-			wantTimestamp:  convert.RosettaTime(firstHeader.Timestamp),
-			wantParentHash: firstHeader.ParentID.String(),
-			validateBlock:  validateByHeader(t, firstHeader),
+			wantTimestamp:    convert.RosettaTime(firstHeader.Timestamp),
+			wantParentHash:   firstHeader.ID().String(),
+			wantParentHeight: firstHeader.Height,
+			validateBlock:    validateByHeader(t, firstHeader),
 		},
 		{
 			name:    "child of first block",
 			request: blockRequest(secondHeader),
 
-			wantTimestamp:  convert.RosettaTime(secondHeader.Timestamp),
-			wantParentHash: secondHeader.ParentID.String(),
-			validateBlock:  validateByHeader(t, secondHeader),
+			wantTimestamp:    convert.RosettaTime(secondHeader.Timestamp),
+			wantParentHash:   secondHeader.ParentID.String(),
+			wantParentHeight: secondHeader.Height - 1,
+			validateBlock:    validateByHeader(t, secondHeader),
 		},
 		{
 			// Initial transfer of currency from the root account to the user - 100 tokens.
@@ -97,6 +101,7 @@ func TestAPI_Block(t *testing.T) {
 
 			wantTimestamp:        convert.RosettaTime(midHeader1.Timestamp),
 			wantParentHash:       midHeader1.ParentID.String(),
+			wantParentHeight:     midHeader1.Height - 1,
 			validateBlock:        validateByHeader(t, midHeader1),
 			validateTransactions: validateTransfer(t, initialLoadTx, rootAccount, senderAccount, 100_00000000),
 		},
@@ -104,9 +109,10 @@ func TestAPI_Block(t *testing.T) {
 			name:    "block mid-chain without transactions",
 			request: blockRequest(midHeader2),
 
-			wantTimestamp:  convert.RosettaTime(midHeader2.Timestamp),
-			validateBlock:  validateByHeader(t, midHeader2),
-			wantParentHash: midHeader2.ParentID.String(),
+			wantTimestamp:    convert.RosettaTime(midHeader2.Timestamp),
+			wantParentHash:   midHeader2.ParentID.String(),
+			wantParentHeight: midHeader2.Height - 1,
+			validateBlock:    validateByHeader(t, midHeader2),
 		},
 		{
 			// Transaction between two users.
@@ -115,6 +121,7 @@ func TestAPI_Block(t *testing.T) {
 
 			wantTimestamp:        convert.RosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
+			wantParentHeight:     midHeader3.Height - 1,
 			validateBlock:        validateByHeader(t, midHeader3),
 			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
 		},
@@ -127,6 +134,7 @@ func TestAPI_Block(t *testing.T) {
 
 			wantTimestamp:        convert.RosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
+			wantParentHeight:     midHeader3.Height - 1,
 			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
 			validateBlock:        validateBlock(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
 		},
@@ -134,9 +142,10 @@ func TestAPI_Block(t *testing.T) {
 			name:    "last indexed block",
 			request: blockRequest(lastHeader),
 
-			wantTimestamp:  convert.RosettaTime(lastHeader.Timestamp),
-			validateBlock:  validateByHeader(t, lastHeader),
-			wantParentHash: lastHeader.ParentID.String(),
+			wantTimestamp:    convert.RosettaTime(lastHeader.Timestamp),
+			wantParentHash:   lastHeader.ParentID.String(),
+			wantParentHeight: lastHeader.Height - 1,
+			validateBlock:    validateByHeader(t, lastHeader),
 		},
 	}
 
@@ -159,21 +168,14 @@ func TestAPI_Block(t *testing.T) {
 
 			test.validateBlock(blockResponse.Block.ID)
 
-			// Verify that the information about the parent block (index and hash) is correct.
-
-			// For the first block, verify the parent block index is empty.
-			// For subsequent blocks, verify the index of the parent block.
-			if *test.request.BlockID.Index == 0 {
-				assert.Nil(t, blockResponse.Block.ParentID.Index)
-
-			} else {
-				if assert.NotNil(t, blockResponse.Block.ParentID.Index) && assert.NotNil(t, test.request.BlockID.Index) {
-					assert.Equal(t, *(test.request.BlockID.Index)-1, *blockResponse.Block.ParentID.Index)
-				}
-			}
-
-			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 			assert.Equal(t, test.wantTimestamp, blockResponse.Block.Timestamp)
+
+			// Verify that the information about the parent block (index and hash) is correct.
+			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
+
+			if assert.NotNil(t, blockResponse.Block.ParentID.Index) {
+				assert.Equal(t, test.wantParentHeight, *blockResponse.Block.ParentID.Index)
+			}
 
 			if test.validateTransactions != nil {
 				test.validateTransactions(blockResponse.Block.Transactions)
