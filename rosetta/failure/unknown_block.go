@@ -19,11 +19,11 @@ import (
 )
 
 type UnknownBlock struct {
-	Index   uint64
-	Hash    string
-	Message string
+	Description string
+	Index       uint64
+	Hash        string
 }
 
 func (u UnknownBlock) Error() string {
-	return fmt.Sprintf("unknown block (index: %d, hash: %s): %s", u.Index, u.Hash, u.Message)
+	return fmt.Sprintf("unknown block (index: %d, hash: %s): %s", u.Index, u.Hash, u.Description)
 }

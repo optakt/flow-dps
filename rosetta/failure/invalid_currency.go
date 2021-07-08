@@ -19,11 +19,11 @@ import (
 )
 
 type InvalidCurrency struct {
-	Symbol   string
-	Decimals uint
-	Message  string
+	Description string
+	Symbol      string
+	Decimals    uint
 }
 
 func (i InvalidCurrency) Error() string {
-	return fmt.Sprintf("invalid currency (symbol: %s, decimals: %d): %s", i.Symbol, i.Decimals, i.Message)
+	return fmt.Sprintf("invalid currency (symbol: %s, decimals: %d): %s", i.Symbol, i.Decimals, i.Description)
 }

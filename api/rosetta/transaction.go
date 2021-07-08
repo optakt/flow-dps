@@ -60,14 +60,14 @@ func (d *Data) Transaction(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: at least one of hash or index is required"))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: hash field has wrong length (have: %d, want: %d)", len(req.BlockID.Hash), hexIDSize))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: hash field has wrong length (have: %d, want: %d)"))
 	}
 
 	if req.TransactionID.Hash == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier: hash field is empty"))
 	}
 	if len(req.TransactionID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier: hash field has wrong length (have: %d, want: %d)", len(req.TransactionID.Hash), hexIDSize))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("transaction identifier: hash field has wrong length (have: %d, want: %d)"))
 	}
 
 	err = d.config.Check(req.NetworkID)

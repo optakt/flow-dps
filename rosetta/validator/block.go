@@ -40,9 +40,9 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 		_, err := flow.HexStringToIdentifier(block.Hash)
 		if err != nil {
 			return identifier.Block{}, failure.InvalidBlock{
-				Index:   *block.Index,
-				Hash:    block.Hash,
-				Message: "block hash is not a valid hex-encoded string",
+				Index:       *block.Index,
+				Hash:        block.Hash,
+				Description: "block hash is not a valid hex-encoded string",
 			}
 		}
 	}
@@ -54,9 +54,9 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	}
 	if *block.Index < first {
 		return identifier.Block{}, failure.InvalidBlock{
-			Index:   *block.Index,
-			Hash:    block.Hash,
-			Message: fmt.Sprintf("block index is below first indexed block (first: %d)", first),
+			Index:       *block.Index,
+			Hash:        block.Hash,
+			Description: "block index is below first indexed block",
 		}
 	}
 
@@ -67,9 +67,9 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	}
 	if *block.Index > last {
 		return identifier.Block{}, failure.UnknownBlock{
-			Index:   *block.Index,
-			Hash:    block.Hash,
-			Message: fmt.Sprintf("block index is above last indexed block (last: %d)", last),
+			Index:       *block.Index,
+			Hash:        block.Hash,
+			Description: "block index is above last indexed block",
 		}
 	}
 
@@ -80,9 +80,9 @@ func (v *Validator) Block(block identifier.Block) (identifier.Block, error) {
 	}
 	if block.Hash != "" && block.Hash != header.ID().String() {
 		return identifier.Block{}, failure.InvalidBlock{
-			Index:   *block.Index,
-			Hash:    block.Hash,
-			Message: fmt.Sprintf("block hash does not match known hash for height (known: %s)", header.ID().String()),
+			Index:       *block.Index,
+			Hash:        block.Hash,
+			Description: "block hash does not match known hash for height",
 		}
 	}
 

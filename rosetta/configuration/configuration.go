@@ -100,16 +100,16 @@ func (c *Configuration) Errors() []meta.ErrorDefinition {
 func (c *Configuration) Check(network identifier.Network) error {
 	if network.Blockchain != c.network.Blockchain {
 		return failure.InvalidNetwork{
-			Blockchain: network.Blockchain,
-			Network:    network.Network,
-			Message:    fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", network.Blockchain, c.network.Blockchain),
+			Blockchain:  network.Blockchain,
+			Network:     network.Network,
+			Description: fmt.Sprintf("invalid network identifier blockchain (have: %s, want: %s)", network.Blockchain, c.network.Blockchain),
 		}
 	}
 	if network.Network != c.network.Network {
 		return failure.InvalidNetwork{
-			Blockchain: network.Blockchain,
-			Network:    network.Network,
-			Message:    fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", network.Network, c.network.Network),
+			Blockchain:  network.Blockchain,
+			Network:     network.Network,
+			Description: fmt.Sprintf("invalid network identifier network (have: %s, want: %s)", network.Network, c.network.Network),
 		}
 	}
 	return nil

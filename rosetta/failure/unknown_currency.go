@@ -19,11 +19,11 @@ import (
 )
 
 type UnknownCurrency struct {
-	Symbol   string
-	Decimals uint
-	Message  string
+	Description string
+	Symbol      string
+	Decimals    uint
 }
 
 func (u UnknownCurrency) Error() string {
-	return fmt.Sprintf("unknown currency (symbol: %s, decimals: %d): %s", u.Symbol, u.Decimals, u.Message)
+	return fmt.Sprintf("unknown currency (symbol: %s, decimals: %d): %s", u.Symbol, u.Decimals, u.Description)
 }

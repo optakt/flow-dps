@@ -46,7 +46,7 @@ func (d *Data) Block(ctx echo.Context) error {
 	var req BlockRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding(err))
 	}
 
 	if req.NetworkID.Blockchain == "" {
@@ -60,7 +60,7 @@ func (d *Data) Block(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: at least one of hash or index is required"))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: hash field has wrong length (have: %d, want: %d)", len(req.BlockID.Hash), hexIDSize))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier: hash field has wrong length (have: %d, want: %d)"))
 	}
 
 	err = d.config.Check(req.NetworkID)

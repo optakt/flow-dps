@@ -29,9 +29,9 @@ func (v *Validator) Currency(currency identifier.Currency) (identifier.Currency,
 	_, ok := v.params.Tokens[currency.Symbol]
 	if !ok {
 		return identifier.Currency{}, failure.UnknownCurrency{
-			Symbol:   currency.Symbol,
-			Decimals: currency.Decimals,
-			Message:  "currency symbol has not been configured",
+			Symbol:      currency.Symbol,
+			Decimals:    currency.Decimals,
+			Description: "currency symbol has not been configured",
 		}
 	}
 
@@ -39,9 +39,9 @@ func (v *Validator) Currency(currency identifier.Currency) (identifier.Currency,
 	// `UFix64` for tokens on Flow.
 	if currency.Decimals != 0 && currency.Decimals != dps.FlowDecimals {
 		return identifier.Currency{}, failure.InvalidCurrency{
-			Symbol:   currency.Symbol,
-			Decimals: currency.Decimals,
-			Message:  fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
+			Symbol:      currency.Symbol,
+			Decimals:    currency.Decimals,
+			Description: fmt.Sprintf("currency decimals do not match configured default (default: %d)", dps.FlowDecimals),
 		}
 	}
 

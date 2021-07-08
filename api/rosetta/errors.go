@@ -15,8 +15,6 @@
 package rosetta
 
 import (
-	"fmt"
-
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/meta"
@@ -33,26 +31,48 @@ type Error struct {
 	Details     map[string]interface{} `json:"details,omitempty"`
 }
 
-func Internal(err error) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorInternal,
-		Description:     err.Error(),
-		Details:         nil,
+func RosettaError(definition meta.ErrorDefinition, description string, fields ...failure.Field) Error {
+	details := make(map[string]interface{})
+	for _, field := range fields {
+		key, val := field()
+		details[key] = val
 	}
+	e := Error{
+		ErrorDefinition: definition,
+		Description:     description,
+		Details:         details,
+	}
+	return e
 }
 
-func InvalidFormat(message string, args ...interface{}) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorInvalidFormat,
-		Description:     fmt.Sprintf(message, args...),
-		Details:         nil,
-	}
+func Internal(err error) Error {
+	return RosettaError(
+		configuration.ErrorInternal,
+		"",
+		failure.WithError(err),
+	)
+}
+
+func InvalidEncoding(err error) Error {
+	return RosettaError(
+		configuration.ErrorInvalidEncoding,
+		"body does not have valid JSON",
+		failure.WithError(err),
+	)
+}
+
+func InvalidFormat(description string, fields ...failure.Field) Error {
+	return RosettaError(
+		configuration.ErrorInvalidFormat,
+		description,
+		fields...,
+	)
 }
 
 func InvalidNetwork(fail failure.InvalidNetwork) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorInvalidNetwork,
-		Description:     fail.Message,
+		Description:     fail.Description,
 		Details: map[string]interface{}{
 			"blockchain": fail.Blockchain,
 			"network":    fail.Network,
@@ -63,7 +83,7 @@ func InvalidNetwork(fail failure.InvalidNetwork) Error {
 func InvalidAccount(fail failure.InvalidAccount) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorInvalidAccount,
-		Description:     fail.Message,
+		Description:     fail.Description,
 		Details: map[string]interface{}{
 			"address": fail.Address,
 			"chain":   fail.Chain,
@@ -74,7 +94,7 @@ func InvalidAccount(fail failure.InvalidAccount) Error {
 func InvalidCurrency(fail failure.InvalidCurrency) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorInvalidCurrency,
-		Description:     fail.Message,
+		Description:     fail.Description,
 		Details: map[string]interface{}{
 			"symbol":   fail.Symbol,
 			"decimals": fail.Decimals,
@@ -83,20 +103,19 @@ func InvalidCurrency(fail failure.InvalidCurrency) Error {
 }
 
 func InvalidBlock(fail failure.InvalidBlock) Error {
-	return Error{
-		ErrorDefinition: configuration.ErrorInvalidBlock,
-		Description:     fail.Message,
-		Details: map[string]interface{}{
-			"index": fail.Index,
-			"hash":  fail.Hash,
-		},
-	}
+	return RosettaError(
+		configuration.ErrorInvalidBlock,
+		fail.Description,
+		failure.WithUint64("index", fail.Index),
+		failure.WithString("hash", fail.Hash),
+		fail.Fields...,
+	)
 }
 
 func InvalidTransaction(fail failure.InvalidTransaction) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorInvalidTransaction,
-		Description:     fail.Message,
+		Description:     fail.Description,
 		Details: map[string]interface{}{
 			"hash": fail.Hash,
 		},
@@ -106,7 +125,7 @@ func InvalidTransaction(fail failure.InvalidTransaction) Error {
 func UnknownCurrency(fail failure.UnknownCurrency) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorUnknownCurrency,
-		Description:     fail.Message,
+		Description:     fail.Description,
 		Details: map[string]interface{}{
 			"symbol":   fail.Symbol,
 			"decimals": fail.Decimals,
@@ -117,7 +136,7 @@ func UnknownCurrency(fail failure.UnknownCurrency) Error {
 func UnknownBlock(fail failure.UnknownBlock) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorUnknownBlock,
-		Description:     fail.Message,
+		Description:     fail.Description,
 		Details: map[string]interface{}{
 			"index": fail.Index,
 			"hash":  fail.Hash,
@@ -128,7 +147,7 @@ func UnknownBlock(fail failure.UnknownBlock) Error {
 func UnknownTransaction(fail failure.UnknownTransaction) Error {
 	return Error{
 		ErrorDefinition: configuration.ErrorUnknownTransaction,
-		Description:     fail.Message,
+		Description:     fail.Description,
 		Details: map[string]interface{}{
 			"index": fail.Index,
 			"hash":  fail.Hash,

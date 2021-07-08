@@ -26,8 +26,8 @@ func (v *Validator) Transaction(transaction identifier.Transaction) error {
 	_, err := flow.HexStringToIdentifier(transaction.Hash)
 	if err != nil {
 		return failure.InvalidTransaction{
-			Hash:    transaction.Hash,
-			Message: "transaction hash is not a valid hex-encoded string",
+			Hash:        transaction.Hash,
+			Description: "transaction hash is not a valid hex-encoded string",
 		}
 	}
 

@@ -30,9 +30,9 @@ func (v *Validator) Account(account identifier.Account) error {
 	bytes, err := hex.DecodeString(account.Address)
 	if err != nil {
 		return failure.InvalidAccount{
-			Address: account.Address,
-			Chain:   v.params.ChainID.String(),
-			Message: "account address is not a valid hex-encoded string",
+			Address:     account.Address,
+			Chain:       v.params.ChainID.String(),
+			Description: "account address is not a valid hex-encoded string",
 		}
 	}
 
@@ -43,9 +43,9 @@ func (v *Validator) Account(account identifier.Account) error {
 	ok := v.params.ChainID.Chain().IsValid(address)
 	if !ok {
 		return failure.InvalidAccount{
-			Address: account.Address,
-			Chain:   v.params.ChainID.String(),
-			Message: "account address is not valid for configured chain",
+			Address:     account.Address,
+			Chain:       v.params.ChainID.String(),
+			Description: "account address is not valid for configured chain",
 		}
 	}
 

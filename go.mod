@@ -15,6 +15,7 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/klauspost/compress v1.12.2
 	github.com/labstack/echo/v4 v4.3.0
+	github.com/markphelps/optional v0.9.0 // indirect
 	github.com/onflow/cadence v0.16.1
 	github.com/onflow/flow-go v0.17.4
 	github.com/prometheus/tsdb v0.7.1
