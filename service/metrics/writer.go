@@ -23,47 +23,58 @@ import (
 
 type Writer struct {
 	write dps.Writer
+	time  Time
 }
 
-func NewWriter(write dps.Writer) *Writer {
+func NewWriter(write dps.Writer, time Time) *Writer {
 	w := Writer{
 		write: write,
+		time:  time,
 	}
 	return &w
 }
 
 func (w *Writer) First(height uint64) error {
+	defer w.time.Duration("write", "first")()
 	return w.write.First(height)
 }
 
 func (w *Writer) Last(height uint64) error {
+	defer w.time.Duration("write", "last")()
 	return w.write.Last(height)
 }
 
 func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
+	defer w.time.Duration("write", "height")()
 	return w.write.Height(blockID, height)
 }
 
 func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
+	defer w.time.Duration("write", "commit")()
 	return w.write.Commit(height, commit)
 }
 
 func (w *Writer) Header(height uint64, header *flow.Header) error {
+	defer w.time.Duration("write", "header")()
 	return w.write.Header(height, header)
 }
 
 func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
+	defer w.time.Duration("write", "payloads")()
 	return w.write.Payloads(height, paths, payloads)
 }
 
 func (w *Writer) Collections(height uint64, collections []*flow.LightCollection) error {
+	defer w.time.Duration("write", "collections")()
 	return w.write.Collections(height, collections)
 }
 
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
+	defer w.time.Duration("write", "transactions")()
 	return w.write.Transactions(height, transactions)
 }
 
 func (w *Writer) Events(height uint64, events []flow.Event) error {
+	defer w.time.Duration("write", "events")()
 	return w.write.Events(height, events)
 }

@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package dps
 
 import (
 	"github.com/dgraph-io/badger/v2"
@@ -21,7 +21,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type Storage interface {
+type Library interface {
 	ReadLibrary
 	WriteLibrary
 }

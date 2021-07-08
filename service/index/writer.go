@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
@@ -26,17 +27,17 @@ import (
 // Writer implements the `index.Writer` interface to write indexing data to
 // an underlying Badger database.
 type Writer struct {
-	db      *badger.DB
-	storage Storage
+	db  *badger.DB
+	lib dps.WriteLibrary
 }
 
 // NewWriter creates a new index writer that writes new indexing data to the
 // given Badger database.
-func NewWriter(db *badger.DB, storage Storage) *Writer {
+func NewWriter(db *badger.DB, lib dps.WriteLibrary) *Writer {
 
 	w := Writer{
-		db:      db,
-		storage: storage,
+		db:  db,
+		lib: lib,
 	}
 
 	return &w
@@ -44,28 +45,28 @@ func NewWriter(db *badger.DB, storage Storage) *Writer {
 
 // First indexes the height of the first finalized block.
 func (w *Writer) First(height uint64) error {
-	return w.db.Update(w.storage.SaveFirst(height))
+	return w.db.Update(w.lib.SaveFirst(height))
 }
 
 // Last indexes the height of the last finalized block.
 func (w *Writer) Last(height uint64) error {
-	return w.db.Update(w.storage.SaveLast(height))
+	return w.db.Update(w.lib.SaveLast(height))
 }
 
 // Height indexes the height for the given block ID.
 func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
-	return w.db.Update(w.storage.IndexHeightForBlock(blockID, height))
+	return w.db.Update(w.lib.IndexHeightForBlock(blockID, height))
 }
 
 // Commit indexes the given commitment of the execution state as it was after
 // the execution of the finalized block at the given height.
 func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
-	return w.db.Update(w.storage.SaveCommit(height, commit))
+	return w.db.Update(w.lib.SaveCommit(height, commit))
 }
 
 // Header indexes the given header of a finalized block at the given height.
 func (w *Writer) Header(height uint64, header *flow.Header) error {
-	return w.db.Update(w.storage.SaveHeader(height, header))
+	return w.db.Update(w.lib.SaveHeader(height, header))
 }
 
 // Payloads indexes the given payloads, which should represent a trie update
@@ -78,7 +79,7 @@ func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger
 	return w.db.Update(func(tx *badger.Txn) error {
 		for i, path := range paths {
 			payload := payloads[i]
-			err := w.storage.SavePayload(height, path, payload)(tx)
+			err := w.lib.SavePayload(height, path, payload)(tx)
 			if err != nil {
 				return fmt.Errorf("could not save payload (path: %x): %w", path, err)
 			}
@@ -91,18 +92,18 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 	var collIDs []flow.Identifier
 	return w.db.Update(func(tx *badger.Txn) error {
 		for _, collection := range collections {
-			err := w.storage.SaveCollection(collection)(tx)
+			err := w.lib.SaveCollection(collection)(tx)
 			if err != nil {
 				return fmt.Errorf("could not store collection (id: %x): %w", collection.ID(), err)
 			}
 			collID := collection.ID()
-			err = w.storage.IndexTransactionsForCollection(collID, collection.Transactions)(tx)
+			err = w.lib.IndexTransactionsForCollection(collID, collection.Transactions)(tx)
 			if err != nil {
 				return fmt.Errorf("could not index transactions for collection (id: %x): %w", collID, err)
 			}
 			collIDs = append(collIDs, collID)
 		}
-		err := w.storage.IndexCollectionsForHeight(height, collIDs)(tx)
+		err := w.lib.IndexCollectionsForHeight(height, collIDs)(tx)
 		if err != nil {
 			return fmt.Errorf("could not index collections for height: %w", err)
 		}
@@ -114,13 +115,13 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 	var txIDs []flow.Identifier
 	return w.db.Update(func(tx *badger.Txn) error {
 		for _, transaction := range transactions {
-			err := w.db.Update(w.storage.SaveTransaction(transaction))
+			err := w.db.Update(w.lib.SaveTransaction(transaction))
 			if err != nil {
 				return fmt.Errorf("could not save transaction (id: %x): %w", transaction.ID(), err)
 			}
 			txIDs = append(txIDs, transaction.ID())
 		}
-		err := w.db.Update(w.storage.IndexTransactionsForHeight(height, txIDs))
+		err := w.db.Update(w.lib.IndexTransactionsForHeight(height, txIDs))
 		if err != nil {
 			return fmt.Errorf("could not index transactions for height: %w", err)
 		}
@@ -137,7 +138,7 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 	}
 	err := w.db.Update(func(tx *badger.Txn) error {
 		for typ, evts := range buckets {
-			err := w.storage.SaveEvents(height, typ, evts)(tx)
+			err := w.lib.SaveEvents(height, typ, evts)(tx)
 			if err != nil {
 				return fmt.Errorf("could not persist events: %w", err)
 			}

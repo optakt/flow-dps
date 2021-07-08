@@ -22,35 +22,43 @@ import (
 
 type Chain struct {
 	chain dps.Chain
+	time  Time
 }
 
-func NewChain(chain dps.Chain) *Chain {
+func NewChain(chain dps.Chain, time Time) *Chain {
 	c := Chain{
 		chain: chain,
+		time:  time,
 	}
 	return &c
 }
 
 func (c *Chain) Root() (uint64, error) {
+	defer c.time.Duration("read", "root")()
 	return c.chain.Root()
 }
 
 func (c *Chain) Commit(height uint64) (flow.StateCommitment, error) {
+	defer c.time.Duration("read", "commit")()
 	return c.chain.Commit(height)
 }
 
 func (c *Chain) Header(height uint64) (*flow.Header, error) {
+	defer c.time.Duration("read", "height")()
 	return c.chain.Header(height)
 }
 
 func (c *Chain) Collections(height uint64) ([]*flow.LightCollection, error) {
+	defer c.time.Duration("read", "collections")()
 	return c.chain.Collections(height)
 }
 
 func (c *Chain) Transactions(height uint64) ([]*flow.TransactionBody, error) {
+	defer c.time.Duration("read", "transactions")()
 	return c.chain.Transactions(height)
 }
 
 func (c *Chain) Events(height uint64) ([]flow.Event, error) {
+	defer c.time.Duration("read", "events")()
 	return c.chain.Events(height)
 }

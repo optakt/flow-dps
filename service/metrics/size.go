@@ -12,15 +12,8 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package dps
+package metrics
 
-type Codec interface {
-	Encode(value interface{}) ([]byte, error)
-	Compress(data []byte) ([]byte, error)
-
-	Decode(data []byte, value interface{}) error
-	Decompress(compressed []byte) ([]byte, error)
-
-	Marshal(value interface{}) ([]byte, error)
-	Unmarshal(compressed []byte, value interface{}) error
+type Size interface {
+	Bytes(name string, pre int, post int)
 }

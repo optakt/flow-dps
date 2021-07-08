@@ -130,11 +130,17 @@ func run() int {
 	}
 	defer data.Close()
 
-	// Initialize storage library.
-	codec, err := zbor.NewCodec()
+	// The storage library is initialized with a codec and provides functions to
+	// interact with a Badger database while encoding and compressing
+	// transparently.
+	var codec dps.Codec
+	codec, err = zbor.NewCodec()
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize storage codec")
 		return failure
+	}
+	if flagMetrics {
+		codec = metrics.NewCodec(codec, nil) // FIXME
 	}
 	storage := storage.New(codec)
 
@@ -155,7 +161,7 @@ func run() int {
 	var disk dps.Chain
 	disk = chain.FromDisk(data)
 	if flagMetrics {
-		disk = metrics.NewChain(disk)
+		disk = metrics.NewChain(disk, nil) // FIXME
 	}
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
@@ -174,7 +180,7 @@ func run() int {
 	var write dps.Writer
 	write = index.NewWriter(db, storage)
 	if flagMetrics {
-		write = metrics.NewWriter(write)
+		write = metrics.NewWriter(write, nil) // FIXME
 	}
 
 	// Initialize the transitions with the dependencies and add them to the FSM.

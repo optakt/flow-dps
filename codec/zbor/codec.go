@@ -61,23 +61,44 @@ func NewCodec() (*Codec, error) {
 	return &c, nil
 }
 
-func (c *Codec) Unmarshal(compressed []byte, value interface{}) error {
-	data, err := c.decompressor.DecodeAll(compressed, nil)
+func (c *Codec) Encode(value interface{}) ([]byte, error) {
+	return c.encoder.Marshal(value)
+}
+
+func (c *Codec) Compress(data []byte) ([]byte, error) {
+	compressed := c.compressor.EncodeAll(data, nil)
+	return compressed, nil
+}
+
+func (c *Codec) Marshal(value interface{}) ([]byte, error) {
+	data, err := c.Encode(value)
 	if err != nil {
-		return fmt.Errorf("could not decompress value: %w", err)
+		return nil, fmt.Errorf("could not encode value: %w", err)
 	}
-	err = cbor.Unmarshal(data, value)
+	compressed, err := c.Compress(data)
+	if err != nil {
+		return nil, fmt.Errorf("could not compress data: %w", err)
+	}
+	return compressed, nil
+}
+
+func (c *Codec) Decode(data []byte, value interface{}) error {
+	return cbor.Unmarshal(data, value)
+}
+
+func (c *Codec) Decompress(compressed []byte) ([]byte, error) {
+	data, err := c.decompressor.DecodeAll(compressed, nil)
+	return data, err
+}
+
+func (c *Codec) Unmarshal(compressed []byte, value interface{}) error {
+	data, err := c.Decompress(compressed)
+	if err != nil {
+		return fmt.Errorf("could not decompress data: %w", err)
+	}
+	err = c.Decode(data, value)
 	if err != nil {
 		return fmt.Errorf("could not decode value: %w", err)
 	}
 	return nil
-}
-
-func (c *Codec) Marshal(value interface{}) ([]byte, error) {
-	data, err := c.encoder.Marshal(value)
-	if err != nil {
-		return nil, fmt.Errorf("could not encode value: %w", err)
-	}
-	compressed := c.compressor.EncodeAll(data, nil)
-	return compressed, nil
 }
