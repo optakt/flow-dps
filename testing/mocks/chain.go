@@ -21,13 +21,13 @@ import (
 )
 
 type Chain struct {
-	RootFunc               func() (uint64, error)
-	HeaderFunc             func(height uint64) (*flow.Header, error)
-	CommitFunc             func(height uint64) (flow.StateCommitment, error)
-	CollectionsFunc        func(height uint64) ([]*flow.LightCollection, error)
-	TransactionsFunc       func(height uint64) ([]*flow.TransactionBody, error)
-	TransactionResultsFunc func(height uint64) ([]*flow.TransactionResult, error)
-	EventsFunc             func(height uint64) ([]flow.Event, error)
+	RootFunc         func() (uint64, error)
+	HeaderFunc       func(height uint64) (*flow.Header, error)
+	CommitFunc       func(height uint64) (flow.StateCommitment, error)
+	CollectionsFunc  func(height uint64) ([]*flow.LightCollection, error)
+	TransactionsFunc func(height uint64) ([]*flow.TransactionBody, error)
+	ResultsFunc      func(height uint64) ([]*flow.TransactionResult, error)
+	EventsFunc       func(height uint64) ([]flow.Event, error)
 }
 
 func BaselineChain(t *testing.T) *Chain {
@@ -49,7 +49,7 @@ func BaselineChain(t *testing.T) *Chain {
 		TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
 			return GenericTransactions(4), nil
 		},
-		TransactionResultsFunc: func(height uint64) ([]*flow.TransactionResult, error) {
+		ResultsFunc: func(height uint64) ([]*flow.TransactionResult, error) {
 			return GenericResults(4), nil
 		},
 		EventsFunc: func(height uint64) ([]flow.Event, error) {
@@ -81,7 +81,7 @@ func (c *Chain) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 }
 
 func (c *Chain) Results(height uint64) ([]*flow.TransactionResult, error) {
-	return c.TransactionResultsFunc(height)
+	return c.ResultsFunc(height)
 }
 
 func (c *Chain) Events(height uint64) ([]flow.Event, error) {

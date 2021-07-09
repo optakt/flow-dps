@@ -54,9 +54,7 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		var gotID flow.Identifier
-		copy(gotID[:], resp.Block.Id)
-		assert.Equal(t, mocks.GenericHeader.ID(), gotID)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.Block.Id)
 		assert.Equal(t, mocks.GenericHeader.Height, resp.Block.Height)
 	})
 
@@ -106,15 +104,12 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		id := mocks.GenericIdentifier(0)
-		req := &access.GetBlockHeaderByIDRequest{Id: id[:]}
+		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
 		resp, err := s.GetBlockHeaderByID(context.Background(), req)
 
 		assert.NoError(t, err)
 
-		var gotID flow.Identifier
-		copy(gotID[:], resp.Block.Id)
-		assert.Equal(t, mocks.GenericHeader.ID(), gotID)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.Block.Id)
 		assert.Equal(t, mocks.GenericHeader.Height, resp.Block.Height)
 	})
 
@@ -127,8 +122,7 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		id := mocks.GenericIdentifier(0)
-		req := &access.GetBlockHeaderByIDRequest{Id: id[:]}
+		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
 		_, err := s.GetBlockHeaderByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -146,8 +140,7 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		id := mocks.GenericIdentifier(0)
-		req := &access.GetBlockHeaderByIDRequest{Id: id[:]}
+		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
 		_, err := s.GetBlockHeaderByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -171,9 +164,7 @@ func TestServer_GetBlockHeaderByHeight(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		var gotID flow.Identifier
-		copy(gotID[:], resp.Block.Id)
-		assert.Equal(t, mocks.GenericHeader.ID(), gotID)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.Block.Id)
 		assert.Equal(t, mocks.GenericHeader.Height, resp.Block.Height)
 	})
 

@@ -38,10 +38,16 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
+var seed int64
+
+func init() {
+	seed = time.Now().UnixNano()
+}
+
 // Global variables that can be used for testing. They are non-nil valid values for the types commonly needed
 // test DPS components.
 var (
-	GenericLogger = zerolog.New(io.Discard)
+	NoopLogger = zerolog.New(io.Discard)
 
 	GenericError = errors.New("dummy error")
 
@@ -125,8 +131,7 @@ var (
 
 func GenericCommits(number int) []flow.StateCommitment {
 	// Ensure consistent deterministic results.
-	seed := rand.NewSource(0)
-	random := rand.New(seed)
+	random := rand.New(rand.NewSource(seed))
 
 	var commits []flow.StateCommitment
 	for i := 0; i < number; i++ {
@@ -148,8 +153,7 @@ func GenericCommit(index int) flow.StateCommitment {
 
 func GenericIdentifiers(number int) []flow.Identifier {
 	// Ensure consistent deterministic results.
-	seed := rand.NewSource(1)
-	random := rand.New(seed)
+	random := rand.New(rand.NewSource(seed + 1))
 
 	var ids []flow.Identifier
 	for i := 0; i < number; i++ {
@@ -171,7 +175,7 @@ func GenericIdentifier(index int) flow.Identifier {
 
 func GenericLedgerPaths(number int) []ledger.Path {
 	// Ensure consistent deterministic results.
-	seed := rand.NewSource(2)
+	seed := rand.NewSource(seed + 2)
 	random := rand.New(seed)
 
 	var paths []ledger.Path
@@ -194,8 +198,7 @@ func GenericLedgerPath(index int) ledger.Path {
 
 func GenericLedgerValues(number int) []ledger.Value {
 	// Ensure consistent deterministic results.
-	seed := rand.NewSource(3)
-	random := rand.New(seed)
+	random := rand.New(rand.NewSource(seed + 3))
 
 	var values []ledger.Value
 	for i := 0; i < number; i++ {
@@ -243,8 +246,7 @@ func GenericTransaction(index int) *flow.TransactionBody {
 
 func GenericEventTypes(number int) []flow.EventType {
 	// Ensure consistent deterministic results.
-	seed := rand.NewSource(4)
-	random := rand.New(seed)
+	random := rand.New(rand.NewSource(seed+4))
 
 	var types []flow.EventType
 	for i := 0; i < number; i++ {
@@ -286,8 +288,7 @@ func GenericCadenceEventType(index int) *cadence.EventType {
 
 func GenericAddresses(number int) []flow.Address {
 	// Ensure consistent deterministic results.
-	seed := rand.NewSource(5)
-	random := rand.New(seed)
+	random := rand.New(rand.NewSource(seed+5))
 
 	var addresses []flow.Address
 	for i := 0; i < number; i++ {
@@ -310,8 +311,7 @@ func GenericAccountID(index int) identifier.Account {
 
 func GenericCadenceEvents(number int) []cadence.Event {
 	// Ensure consistent deterministic results.
-	seed := rand.NewSource(6)
-	random := rand.New(seed)
+	random := rand.New(rand.NewSource(seed+6))
 
 	var events []cadence.Event
 	for i := 0; i < number; i++ {
@@ -434,9 +434,20 @@ func GenericResult(index int) *flow.TransactionResult {
 	return GenericResults(index + 1)[index]
 }
 
-func GenericAmount(seed int) cadence.Value {
+func GenericAmount(delta int) cadence.Value {
 	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(int64(seed)))
+	random := rand.New(rand.NewSource(seed + int64(delta)))
 
 	return cadence.NewUInt64(random.Uint64())
+}
+
+func ByteSlice(v interface{}) []byte {
+	switch vv := v.(type) {
+	case flow.Identifier:
+		return vv[:]
+	case flow.StateCommitment:
+		return vv[:]
+	default:
+		panic("invalid type")
+	}
 }

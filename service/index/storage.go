@@ -63,5 +63,5 @@ type WriteLibrary interface {
 
 	SaveCollection(collection *flow.LightCollection) func(*badger.Txn) error
 	SaveTransaction(transaction *flow.TransactionBody) func(*badger.Txn) error
-	SaveResult(txRes *flow.TransactionResult) func(*badger.Txn) error
+	SaveResult(results *flow.TransactionResult) func(*badger.Txn) error
 }

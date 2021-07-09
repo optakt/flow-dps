@@ -170,19 +170,19 @@ func (d *Disk) Results(height uint64) ([]*flow.TransactionResult, error) {
 		return nil, fmt.Errorf("could not get block for height: %w", err)
 	}
 
-	var txRes []flow.TransactionResult
-	err = d.db.View(operation.LookupTransactionResultsByBlockID(blockID, &txRes))
+	var results []flow.TransactionResult
+	err = d.db.View(operation.LookupTransactionResultsByBlockID(blockID, &results))
 	if err != nil {
 		return nil, fmt.Errorf("could not lookup transaction results: %w", err)
 	}
 
 	// Convert to pointer slice for consistency.
-	var results []*flow.TransactionResult
-	for _, result := range txRes {
-		results = append(results, &result)
+	var converted []*flow.TransactionResult
+	for _, result := range results {
+		converted = append(converted, &result)
 	}
 
-	return results, nil
+	return converted, nil
 }
 
 func (d *Disk) block(height uint64) (flow.Identifier, error) {

@@ -195,9 +195,8 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 
 			s := Server{index: index}
 
-			id := mocks.GenericIdentifier(0)
 			req := &GetHeightForBlockRequest{
-				BlockID: id[:],
+				BlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
 			}
 			gotRes, gotErr := s.GetHeightForBlock(context.Background(), req)
 
@@ -211,7 +210,6 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 }
 
 func TestServer_GetCommit(t *testing.T) {
-	testCommit := mocks.GenericCommit(0)
 	tests := []struct {
 		name string
 
@@ -230,7 +228,7 @@ func TestServer_GetCommit(t *testing.T) {
 
 			wantRes: &GetCommitResponse{
 				Height: mocks.GenericHeight,
-				Commit: testCommit[:],
+				Commit:  mocks.ByteSlice(mocks.GenericCommit(0)),
 			},
 
 			checkErr: assert.NoError,
@@ -580,15 +578,14 @@ func TestServer_GetTransaction(t *testing.T) {
 
 			s := Server{index: index}
 
-			id := mocks.GenericIdentifier(0)
 			req := &GetTransactionRequest{
-				TransactionID: id[:],
+				TransactionID:  mocks.ByteSlice(mocks.GenericIdentifier(0)),
 			}
 			gotRes, gotErr := s.GetTransaction(context.Background(), req)
 
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
-				assert.Equal(t, gotRes.TransactionID, id[:])
+				assert.Equal(t, gotRes.TransactionID,  mocks.ByteSlice(mocks.GenericIdentifier(0)))
 				assert.NotEmpty(t, gotRes.Data)
 			}
 		})

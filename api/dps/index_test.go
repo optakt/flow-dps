@@ -123,7 +123,7 @@ func TestIndex_Last(t *testing.T) {
 }
 
 func TestIndex_Header(t *testing.T) {
-	headerB, err := cbor.Marshal(mocks.GenericHeader)
+	headerBytes, err := cbor.Marshal(mocks.GenericHeader)
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -140,7 +140,7 @@ func TestIndex_Header(t *testing.T) {
 
 					return &GetHeaderResponse{
 						Height: mocks.GenericHeader.Height,
-						Data:   headerB,
+						Data:   headerBytes,
 					}, nil
 				},
 			},
@@ -202,7 +202,6 @@ func TestIndex_Commit(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		commit := mocks.GenericCommit(0)
 		index := Index{
 			client: &apiMock{
 				GetCommitFunc: func(_ context.Context, in *GetCommitRequest, _ ...grpc.CallOption) (*GetCommitResponse, error) {
@@ -210,7 +209,7 @@ func TestIndex_Commit(t *testing.T) {
 
 					return &GetCommitResponse{
 						Height: mocks.GenericHeight,
-						Commit: commit[:],
+						Commit: mocks.ByteSlice(mocks.GenericCommit(0)),
 					}, nil
 				},
 			},
@@ -327,14 +326,13 @@ func TestIndex_Height(t *testing.T) {
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = cbor.Unmarshal
 
-		id := mocks.GenericIdentifier(0)
 		index := Index{
 			client: &apiMock{
 				GetHeightForBlockFunc: func(_ context.Context, in *GetHeightForBlockRequest, _ ...grpc.CallOption) (*GetHeightForBlockResponse, error) {
-					assert.Equal(t, id[:], in.BlockID)
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.BlockID)
 
 					return &GetHeightForBlockResponse{
-						BlockID: id[:],
+						BlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
 						Height:  mocks.GenericHeight,
 					}, nil
 				},
@@ -354,11 +352,10 @@ func TestIndex_Height(t *testing.T) {
 	t.Run("handles index failures", func(t *testing.T) {
 		t.Parallel()
 
-		id := mocks.GenericIdentifier(0)
 		index := Index{
 			client: &apiMock{
 				GetHeightForBlockFunc: func(_ context.Context, in *GetHeightForBlockRequest, _ ...grpc.CallOption) (*GetHeightForBlockResponse, error) {
-					assert.Equal(t, id[:], in.BlockID)
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.BlockID)
 
 					return nil, mocks.GenericError
 				},
@@ -372,7 +369,7 @@ func TestIndex_Height(t *testing.T) {
 }
 
 func TestIndex_Transaction(t *testing.T) {
-	testTransactionB, err := cbor.Marshal(mocks.GenericTransaction(0))
+	testTransactionBytes, err := cbor.Marshal(mocks.GenericTransaction(0))
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -381,16 +378,15 @@ func TestIndex_Transaction(t *testing.T) {
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = cbor.Unmarshal
 
-		id := mocks.GenericIdentifier(0)
 		index := Index{
 			codec: codec,
 			client: &apiMock{
 				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
-					assert.Equal(t, id[:], in.TransactionID)
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.TransactionID)
 
 					return &GetTransactionResponse{
-						TransactionID: id[:],
-						Data:          testTransactionB,
+						TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+						Data:          testTransactionBytes,
 					}, nil
 				},
 			},
@@ -409,11 +405,10 @@ func TestIndex_Transaction(t *testing.T) {
 	t.Run("handles index failures", func(t *testing.T) {
 		t.Parallel()
 
-		id := mocks.GenericIdentifier(0)
 		index := Index{
 			client: &apiMock{
 				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
-					assert.Equal(t, id[:], in.TransactionID)
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.TransactionID)
 
 					return nil, mocks.GenericError
 				},
@@ -427,7 +422,7 @@ func TestIndex_Transaction(t *testing.T) {
 }
 
 func TestIndex_Events(t *testing.T) {
-	testEventsB, err := cbor.Marshal(mocks.GenericEvents(4))
+	testEventsBytes, err := cbor.Marshal(mocks.GenericEvents(4))
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -446,7 +441,7 @@ func TestIndex_Events(t *testing.T) {
 					return &GetEventsResponse{
 						Height: mocks.GenericHeight,
 						Types:  convert.TypesToStrings(mocks.GenericEventTypes(2)),
-						Data:   testEventsB,
+						Data:   testEventsBytes,
 					}, nil
 				},
 			},

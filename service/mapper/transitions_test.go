@@ -34,7 +34,7 @@ func TestNewTransitions(t *testing.T) {
 		feed := mocks.BaselineFeeder(t)
 		index := mocks.BaselineWriter(t)
 
-		tr := NewTransitions(mocks.GenericLogger, load, chain, feed, index)
+		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, index)
 
 		assert.NotNil(t, tr)
 		assert.Equal(t, load, tr.load)
@@ -51,7 +51,7 @@ func TestNewTransitions(t *testing.T) {
 		feed := mocks.BaselineFeeder(t)
 		index := mocks.BaselineWriter(t)
 
-		tr := NewTransitions(mocks.GenericLogger, load, chain, feed, index,
+		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, index,
 			WithIndexCommit(true),
 			WithIndexHeader(true),
 			WithIndexPayloads(true),
@@ -502,7 +502,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 			return mocks.GenericTransactions(4), nil
 		}
-		chain.TransactionResultsFunc = func(height uint64) ([]*flow.TransactionResult, error) {
+		chain.ResultsFunc = func(height uint64) ([]*flow.TransactionResult, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
 			return mocks.GenericResults(4), nil
@@ -684,7 +684,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
-		chain.TransactionResultsFunc = func(height uint64) ([]*flow.TransactionResult, error) {
+		chain.ResultsFunc = func(height uint64) ([]*flow.TransactionResult, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -799,7 +799,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			IndexResults:      true,
 			IndexEvents:       true,
 		},
-		log:   mocks.GenericLogger,
+		log:   mocks.NoopLogger,
 		load:  load,
 		chain: chain,
 		feed:  feeder,
