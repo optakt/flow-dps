@@ -289,9 +289,11 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 	if !found {
 		return nil, failure.UnknownTransaction{
-			Index:   *completed.Index,
-			Hash:    id.Hash,
-			Message: "transaction not found in block",
+			Hash: id.Hash,
+			Description: failure.NewDescription("transaction not found in given block",
+				failure.WithUint64("block_index", *completed.Index),
+				failure.WithString("block_hash", completed.Hash),
+			),
 		}
 	}
 

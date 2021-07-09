@@ -19,11 +19,11 @@ import (
 )
 
 type InvalidBlock struct {
-	Index   uint64
-	Hash    string
-	Message string
+	Description Description
+	Index       uint64
+	Hash        string
 }
 
 func (i InvalidBlock) Error() string {
-	return fmt.Sprintf("invalid block (index: %d, hash: %x): %s", i.Index, i.Hash, i.Message)
+	return fmt.Sprintf("invalid block (index: %d, hash: %s): %s", i.Index, i.Hash, i.Description)
 }

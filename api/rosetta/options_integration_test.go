@@ -27,163 +27,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/optakt/flow-dps/api/rosetta"
-	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
-
-func TestAPI_Status(t *testing.T) {
-
-	db := setupDB(t)
-	api := setupAPI(t, db)
-
-	oldestBlockID := knownHeader(0).ID().String()
-	lastBlock := knownHeader(425)
-
-	request := rosetta.StatusRequest{
-		NetworkID: defaultNetwork(),
-	}
-
-	rec, ctx, err := setupRecorder(statusEndpoint, request)
-	require.NoError(t, err)
-
-	err = api.Status(ctx)
-	assert.NoError(t, err)
-
-	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
-
-	var status rosetta.StatusResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &status))
-
-	currentHeight := status.CurrentBlockID.Index
-	if assert.NotNil(t, currentHeight) {
-		assert.Equal(t, *currentHeight, lastBlock.Height)
-	}
-	assert.Equal(t, status.CurrentBlockID.Hash, lastBlock.ID().String())
-	assert.Equal(t, status.CurrentBlockTimestamp, convert.RosettaTime(lastBlock.Timestamp))
-
-	assert.Equal(t, status.OldestBlockID.Hash, oldestBlockID)
-
-	oldestHeight := status.OldestBlockID.Index
-	if assert.NotNil(t, oldestHeight) {
-		assert.Equal(t, *oldestHeight, uint64(0))
-	}
-
-	assert.Equal(t, status.GenesisBlockID.Hash, oldestBlockID)
-
-	genesisBlockHeight := status.GenesisBlockID.Index
-	if assert.NotNil(t, genesisBlockHeight) {
-		assert.Equal(t, *genesisBlockHeight, uint64(0))
-	}
-}
-
-func TestAPI_StatusHandlesErrors(t *testing.T) {
-
-	db := setupDB(t)
-	api := setupAPI(t, db)
-
-	tests := []struct {
-		name string
-
-		request rosetta.StatusRequest
-
-		checkError assert.ErrorAssertionFunc
-	}{
-		{
-			name: "missing blockchain",
-			request: rosetta.StatusRequest{
-				NetworkID: identifier.Network{
-					Blockchain: "",
-					Network:    dps.FlowTestnet.String(),
-				},
-			},
-
-			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
-		},
-		{
-			name: "invalid blockchain",
-			request: rosetta.StatusRequest{
-				NetworkID: identifier.Network{
-					Blockchain: invalidBlockchain,
-					Network:    dps.FlowTestnet.String(),
-				},
-			},
-
-			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
-		},
-		{
-			name: "missing network",
-			request: rosetta.StatusRequest{
-				NetworkID: identifier.Network{
-					Blockchain: dps.FlowBlockchain,
-					Network:    "",
-				},
-			},
-
-			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
-		},
-		{
-			name: "invalid network",
-			request: rosetta.StatusRequest{
-				NetworkID: identifier.Network{
-					Blockchain: dps.FlowBlockchain,
-					Network:    invalidNetwork,
-				},
-			},
-
-			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
-		},
-	}
-
-	for _, test := range tests {
-
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-
-			t.Parallel()
-
-			_, ctx, err := setupRecorder(statusEndpoint, test.request)
-			require.NoError(t, err)
-
-			err = api.Status(ctx)
-			test.checkError(t, err)
-		})
-	}
-}
-
-func TestAPI_Networks(t *testing.T) {
-
-	db := setupDB(t)
-	api := setupAPI(t, db)
-
-	// network request is basically an empty payload at the moment,
-	// there is a 'metadata' object that we're ignoring;
-	// but we can have the scaffolding here in case something changes
-
-	var netReq rosetta.NetworksRequest
-
-	rec, ctx, err := setupRecorder(listEndpoint, netReq)
-	require.NoError(t, err)
-
-	err = api.Networks(ctx)
-	assert.NoError(t, err)
-
-	var network rosetta.NetworksResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &network))
-
-	if assert.Len(t, network.NetworkIDs, 1) {
-		assert.Equal(t, network.NetworkIDs[0].Blockchain, dps.FlowBlockchain)
-		assert.Equal(t, network.NetworkIDs[0].Network, dps.FlowTestnet.String())
-	}
-}
 
 func TestAPI_Options(t *testing.T) {
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const wantErrorCount = 9
+	const wantErrorCount = 10
 
 	// verify version string is in the format of x.y.z
 	versionRe := regexp.MustCompile(`\d+\.\d+\.\d+`)
@@ -239,6 +93,10 @@ func TestAPI_Options(t *testing.T) {
 			case configuration.ErrorInternal.Code:
 				assert.Equal(t, configuration.ErrorInternal.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorInternal.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidEncoding.Code:
+				assert.Equal(t, configuration.ErrorInvalidEncoding.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidEncoding.Retriable, rosettaErr.Retriable)
 
 			case configuration.ErrorInvalidFormat.Code:
 				assert.Equal(t, configuration.ErrorInvalidFormat.Message, rosettaErr.Message)
@@ -355,91 +213,6 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 
 }
 
-func TestAPI_StatusHandlerMalformedRequest(t *testing.T) {
-
-	db := setupDB(t)
-	api := setupAPI(t, db)
-
-	const (
-		// wrong type for 'network' field
-		wrongFieldType = `{
-			"network_identifier": {
-				"blockchain": "flow",
-				"network": 99
-			}
-		}`
-
-		// malformed JSON - unclosed bracket
-		unclosedBracket = `{
-			"network_identifier": {
-				"blockchain": "flow",
-				"network": "flow-testnet"
-			}`
-
-		validPayload = `{
-			"network_identifier": {
-				"blockchain": "flow",
-				"network": "flow-testnet"
-			}
-		}`
-	)
-
-	tests := []struct {
-		name string
-
-		payload []byte
-
-		prepare func(*http.Request)
-	}{
-		{
-			name:    "invalid status input types",
-			payload: []byte(wrongFieldType),
-			prepare: func(req *http.Request) {
-				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-			},
-		},
-		{
-			name:    "invalid status json format",
-			payload: []byte(unclosedBracket),
-			prepare: func(req *http.Request) {
-				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-			},
-		},
-		{
-			name:    "valid status payload with no MIME type",
-			payload: []byte(validPayload),
-			prepare: func(req *http.Request) {
-				req.Header.Set(echo.HeaderContentType, "")
-			},
-		},
-	}
-
-	for _, test := range tests {
-
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-
-			t.Parallel()
-
-			_, ctx, err := setupRecorder(statusEndpoint, test.payload, test.prepare)
-			require.NoError(t, err)
-
-			// execute the request
-			err = api.Status(ctx)
-			assert.Error(t, err)
-
-			echoErr, ok := err.(*echo.HTTPError)
-			require.True(t, ok)
-
-			assert.Equal(t, http.StatusBadRequest, echoErr.Code)
-			gotErr, ok := echoErr.Message.(rosetta.Error)
-			require.True(t, ok)
-
-			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
-		})
-	}
-}
-
 func TestAPI_OptionsHandlesMalformedRequest(t *testing.T) {
 
 	db := setupDB(t)
@@ -519,7 +292,7 @@ func TestAPI_OptionsHandlesMalformedRequest(t *testing.T) {
 			gotErr, ok := echoErr.Message.(rosetta.Error)
 			require.True(t, ok)
 
-			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.Equal(t, configuration.ErrorInvalidEncoding, gotErr.ErrorDefinition)
 		})
 	}
 }

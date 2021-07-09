@@ -406,13 +406,6 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 		prepare func(*http.Request)
 	}{
 		{
-			name:    "empty request",
-			payload: []byte(``),
-			prepare: func(req *http.Request) {
-				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-			},
-		},
-		{
 			name:    "wrong field type",
 			payload: []byte(wrongFieldType),
 			prepare: func(req *http.Request) {
@@ -454,7 +447,7 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 			gotErr, ok := echoErr.Message.(rosetta.Error)
 			require.True(t, ok)
 
-			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.Equal(t, configuration.ErrorInvalidEncoding, gotErr.ErrorDefinition)
 			assert.NotEmpty(t, gotErr.Description)
 		})
 	}

@@ -46,32 +46,32 @@ func (d *Data) Status(ctx echo.Context) error {
 	var req StatusRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(err.Error()))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: blockchain field is missing"))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier: network field is missing"))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
 	err = d.config.Check(req.NetworkID)
 	var netErr failure.InvalidNetwork
 	if errors.As(err, &netErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(netErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(networkCheck, err))
 	}
 
 	oldest, _, err := d.retrieve.Oldest()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(oldestRetrieval, err))
 	}
 	current, timestamp, err := d.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(currentRetrieval, err))
 	}
 
 	res := StatusResponse{
@@ -80,9 +80,6 @@ func (d *Data) Status(ctx echo.Context) error {
 		OldestBlockID:         oldest,
 		GenesisBlockID:        oldest,
 	}
-
-	// TODO: Implement genesis block return
-	//       https://github.com/optakt/flow-dps/issues/229
 
 	return ctx.JSON(http.StatusOK, res)
 }

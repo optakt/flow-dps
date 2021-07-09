@@ -19,11 +19,11 @@ import (
 )
 
 type InvalidNetwork struct {
-	Blockchain string
-	Network    string
-	Message    string
+	Description Description
+	Blockchain  string
+	Network     string
 }
 
 func (i InvalidNetwork) Error() string {
-	return fmt.Sprintf("invalid network (blockchain: %s, network: %s): %s", i.Blockchain, i.Network, i.Message)
+	return fmt.Sprintf("invalid network (blockchain: %s, network: %s): %s", i.Blockchain, i.Network, i.Description)
 }

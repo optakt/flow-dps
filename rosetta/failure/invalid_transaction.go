@@ -19,10 +19,10 @@ import (
 )
 
 type InvalidTransaction struct {
-	Hash    string
-	Message string
+	Description Description
+	Hash        string
 }
 
 func (i InvalidTransaction) Error() string {
-	return fmt.Sprintf("invalid transaction (transaction: %s): %s", i.Hash, i.Message)
+	return fmt.Sprintf("invalid transaction (transaction: %s): %s", i.Hash, i.Description)
 }

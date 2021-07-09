@@ -15,6 +15,8 @@
 package dps
 
 import (
+	"sort"
+
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -41,6 +43,15 @@ type Params struct {
 	StakingProxy     flow.Address
 	NonFungibleToken flow.Address
 	Tokens           map[string]Token
+}
+
+func (p Params) Symbols() []string {
+	symbols := make([]string, 0, len(p.Tokens))
+	for symbol := range p.Tokens {
+		symbols = append(symbols, symbol)
+	}
+	sort.Strings(symbols)
+	return symbols
 }
 
 type Token struct {
