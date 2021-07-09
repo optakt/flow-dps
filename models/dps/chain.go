@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package dps
 
 import (
 	"github.com/onflow/flow-go/model/flow"

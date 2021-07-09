@@ -15,8 +15,28 @@
 package mocks
 
 type Codec struct {
-	UnmarshalFunc func(b []byte, v interface{}) error
-	MarshalFunc   func(v interface{}) ([]byte, error)
+	EncodeFunc     func(value interface{}) ([]byte, error)
+	DecodeFunc     func(data []byte, value interface{}) error
+	CompressFunc   func(data []byte) ([]byte, error)
+	DecompressFunc func(compressed []byte) ([]byte, error)
+	MarshalFunc    func(value interface{}) ([]byte, error)
+	UnmarshalFunc  func(compressed []byte, value interface{}) error
+}
+
+func (c *Codec) Encode(value interface{}) ([]byte, error) {
+	return c.EncodeFunc(value)
+}
+
+func (c *Codec) Decode(data []byte, value interface{}) error {
+	return c.DecodeFunc(data, value)
+}
+
+func (c *Codec) Compress(data []byte) ([]byte, error) {
+	return c.CompressFunc(data)
+}
+
+func (c *Codec) Decompress(data []byte) ([]byte, error) {
+	return c.DecompressFunc(data)
 }
 
 func (c *Codec) Unmarshal(b []byte, v interface{}) error {

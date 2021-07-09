@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/index"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type TransitionFunc func(*State) error
@@ -33,13 +33,13 @@ type Transitions struct {
 	cfg   Config
 	log   zerolog.Logger
 	load  Loader
-	chain Chain
+	chain dps.Chain
 	feed  Feeder
-	index index.Writer
+	index dps.Writer
 	once  *sync.Once
 }
 
-func NewTransitions(log zerolog.Logger, load Loader, chain Chain, feed Feeder, index index.Writer, options ...func(*Config)) *Transitions {
+func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feeder, index dps.Writer, options ...func(*Config)) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {

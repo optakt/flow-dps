@@ -87,22 +87,6 @@ func (d *Disk) Header(height uint64) (*flow.Header, error) {
 	return &header, nil
 }
 
-func (d *Disk) Events(height uint64) ([]flow.Event, error) {
-
-	blockID, err := d.block(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get block for height: %w", err)
-	}
-
-	var events []flow.Event
-	err = d.db.View(operation.LookupEventsByBlockID(blockID, &events))
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve events: %w", err)
-	}
-
-	return events, nil
-}
-
 func (d *Disk) Collections(height uint64) ([]*flow.LightCollection, error) {
 
 	blockID, err := d.block(height)
@@ -162,6 +146,22 @@ func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	}
 
 	return transactions, nil
+}
+
+func (d *Disk) Events(height uint64) ([]flow.Event, error) {
+
+	blockID, err := d.block(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get block for height: %w", err)
+	}
+
+	var events []flow.Event
+	err = d.db.View(operation.LookupEventsByBlockID(blockID, &events))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve events: %w", err)
+	}
+
+	return events, nil
 }
 
 func (d *Disk) block(height uint64) (flow.Identifier, error) {

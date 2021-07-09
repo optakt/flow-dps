@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
@@ -27,18 +28,18 @@ import (
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
 type Reader struct {
-	db      *badger.DB
-	storage Storage
+	db  *badger.DB
+	lib dps.ReadLibrary
 }
 
 // NewReader creates a new index reader, using the given database as the
 // underlying state repository. It is recommended to provide a read-only Badger
 // database.
-func NewReader(db *badger.DB, storage Storage) *Reader {
+func NewReader(db *badger.DB, lib dps.ReadLibrary) *Reader {
 
 	r := Reader{
-		db:      db,
-		storage: storage,
+		db:  db,
+		lib: lib,
 	}
 
 	return &r
@@ -47,20 +48,20 @@ func NewReader(db *badger.DB, storage Storage) *Reader {
 // First returns the height of the first finalized block that was indexed.
 func (r *Reader) First() (uint64, error) {
 	var height uint64
-	err := r.db.View(r.storage.RetrieveFirst(&height))
+	err := r.db.View(r.lib.RetrieveFirst(&height))
 	return height, err
 }
 
 // Last returns the height of the last finalized block that was indexed.
 func (r *Reader) Last() (uint64, error) {
 	var height uint64
-	err := r.db.View(r.storage.RetrieveLast(&height))
+	err := r.db.View(r.lib.RetrieveLast(&height))
 	return height, err
 }
 
 func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 	var height uint64
-	err := r.db.View(r.storage.LookupHeightForBlock(blockID, &height))
+	err := r.db.View(r.lib.LookupHeightForBlock(blockID, &height))
 	return height, err
 }
 
@@ -68,14 +69,14 @@ func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 // execution of the finalized block at the given height.
 func (r *Reader) Commit(height uint64) (flow.StateCommitment, error) {
 	var commit flow.StateCommitment
-	err := r.db.View(r.storage.RetrieveCommit(height, &commit))
+	err := r.db.View(r.lib.RetrieveCommit(height, &commit))
 	return commit, err
 }
 
 // Header returns the header for the finalized block at the given height.
 func (r *Reader) Header(height uint64) (*flow.Header, error) {
 	var header flow.Header
-	err := r.db.View(r.storage.RetrieveHeader(height, &header))
+	err := r.db.View(r.lib.RetrieveHeader(height, &header))
 	return &header, err
 }
 
@@ -99,7 +100,7 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 	err = r.db.View(func(tx *badger.Txn) error {
 		for _, path := range paths {
 			var payload ledger.Payload
-			err := r.storage.RetrievePayload(height, path, &payload)(tx)
+			err := r.lib.RetrievePayload(height, path, &payload)(tx)
 			if errors.Is(err, badger.ErrKeyNotFound) {
 				values = append(values, nil)
 				continue
@@ -117,7 +118,7 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 // Transaction returns the transaction with the given ID.
 func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
 	var transaction flow.TransactionBody
-	err := r.db.View(r.storage.RetrieveTransaction(txID, &transaction))
+	err := r.db.View(r.lib.RetrieveTransaction(txID, &transaction))
 	return &transaction, err
 }
 
@@ -125,7 +126,7 @@ func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error
 func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	var txIDs []flow.Identifier
 	err := r.db.View(func(tx *badger.Txn) error {
-		err := r.storage.LookupTransactionsForHeight(height, &txIDs)(tx)
+		err := r.lib.LookupTransactionsForHeight(height, &txIDs)(tx)
 		if err != nil {
 			return fmt.Errorf("could not look up transactions: %w", err)
 		}
@@ -150,6 +151,6 @@ func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, e
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
 	var events []flow.Event
-	err = r.db.View(r.storage.RetrieveEvents(height, types, &events))
+	err = r.db.View(r.lib.RetrieveEvents(height, types, &events))
 	return events, err
 }

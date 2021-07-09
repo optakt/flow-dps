@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
-	"github.com/optakt/flow-dps/models/index"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Server is a simple implementation of the generated APIServer interface. It
@@ -31,13 +31,13 @@ import (
 // This is generally an on-disk interface, but could be a GRPC-based index as
 // well, in which case there is a double redirection.
 type Server struct {
-	index index.Reader
-	codec index.Codec
+	index dps.Reader
+	codec dps.Codec
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index index.Reader, codec index.Codec) *Server {
+func NewServer(index dps.Reader, codec dps.Codec) *Server {
 
 	s := Server{
 		index: index,

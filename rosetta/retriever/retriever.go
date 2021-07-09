@@ -26,7 +26,6 @@ import (
 	"github.com/optakt/flow-dps/rosetta/failure"
 
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/models/index"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -35,14 +34,14 @@ type Retriever struct {
 	cfg Config
 
 	params    dps.Params
-	index     index.Reader
+	index     dps.Reader
 	validate  Validator
 	generator Generator
 	invoke    Invoker
 	convert   Converter
 }
 
-func New(params dps.Params, index index.Reader, validate Validator, generator Generator, invoke Invoker, convert Converter, options ...func(*Config)) *Retriever {
+func New(params dps.Params, index dps.Reader, validate Validator, generator Generator, invoke Invoker, convert Converter, options ...func(*Config)) *Retriever {
 
 	cfg := Config{
 		TransactionLimit: 200,

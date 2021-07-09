@@ -12,23 +12,15 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package validator
+package dps
 
-import (
-	"github.com/optakt/flow-dps/models/dps"
-)
+type Codec interface {
+	Encode(value interface{}) ([]byte, error)
+	Compress(data []byte) ([]byte, error)
 
-type Validator struct {
-	params dps.Params
-	index  dps.Reader
-}
+	Decode(data []byte, value interface{}) error
+	Decompress(compressed []byte) ([]byte, error)
 
-func New(params dps.Params, index dps.Reader) *Validator {
-
-	v := &Validator{
-		params: params,
-		index:  index,
-	}
-
-	return v
+	Marshal(value interface{}) ([]byte, error)
+	Unmarshal(compressed []byte, value interface{}) error
 }

@@ -26,6 +26,8 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/metrics/output"
+	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
@@ -33,6 +35,7 @@ import (
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
+	"github.com/optakt/flow-dps/service/metrics"
 	"github.com/optakt/flow-dps/service/storage"
 )
 
@@ -65,6 +68,8 @@ func run() int {
 		flagIndexPayloads     bool
 		flagIndexTransactions bool
 		flagLevel             string
+		flagMetrics           bool
+		flagMetricsInterval   time.Duration
 		flagTrie              string
 	)
 
@@ -73,13 +78,15 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
-	pflag.BoolVarP(&flagIndexCollections, "index-collections", "o", false, "index collections")
-	pflag.BoolVarP(&flagIndexCommit, "index-commits", "m", false, "index commits")
-	pflag.BoolVarP(&flagIndexEvents, "index-events", "e", false, "index events")
-	pflag.BoolVarP(&flagIndexHeader, "index-headers", "h", false, "index headers")
-	pflag.BoolVarP(&flagIndexPayloads, "index-payloads", "p", false, "index payloads")
-	pflag.BoolVarP(&flagIndexTransactions, "index-transactions", "x", false, "index transactions")
+	pflag.BoolVar(&flagIndexCollections, "index-collections", false, "index collections")
+	pflag.BoolVar(&flagIndexCommit, "index-commits", false, "index commits")
+	pflag.BoolVar(&flagIndexEvents, "index-events", false, "index events")
+	pflag.BoolVar(&flagIndexHeader, "index-headers", false, "index headers")
+	pflag.BoolVar(&flagIndexPayloads, "index-payloads", false, "index payloads")
+	pflag.BoolVar(&flagIndexTransactions, "index-transactions", false, "index transactions")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.BoolVarP(&flagMetrics, "metrics", "m", false, "enable metrics collection and output")
+	pflag.DurationVar(&flagMetricsInterval, "metrics-interval", 5*time.Minute, "defines the interval of metrics output to log")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
 	pflag.Parse()
@@ -127,11 +134,23 @@ func run() int {
 	}
 	defer data.Close()
 
-	// Initialize storage library.
-	codec, err := zbor.NewCodec()
+	// We initialize a metrics logger regardless of whether metrics are enabled;
+	// it will just do nothing if there are no registered metrics.
+	mout := output.New(log, flagMetricsInterval)
+
+	// The storage library is initialized with a codec and provides functions to
+	// interact with a Badger database while encoding and compressing
+	// transparently.
+	var codec dps.Codec
+	codec, err = zbor.NewCodec()
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize storage codec")
 		return failure
+	}
+	if flagMetrics {
+		size := rcrowley.NewSize("store")
+		mout.Register(size)
+		codec = metrics.NewCodec(codec, size)
 	}
 	storage := storage.New(codec)
 
@@ -143,11 +162,21 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the dependencies needed for the FSM and the state transitions.
+	// The loader component is responsible for loading and decoding the checkpoint.
 	load := loader.New(
 		loader.WithCheckpointPath(flagCheckpoint),
 	)
-	chain := chain.FromDisk(data)
+
+	// The chain is responsible for reading blockchain data from the protocol state.
+	var disk dps.Chain
+	disk = chain.FromDisk(data)
+	if flagMetrics {
+		time := rcrowley.NewTime("read")
+		mout.Register(time)
+		disk = metrics.NewChain(disk, time)
+	}
+
+	// Feeder is responsible for reading the write-ahead log of the execution state.
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
@@ -158,10 +187,18 @@ func run() int {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 		return failure
 	}
-	index := index.NewWriter(db, storage)
+
+	// Writer is responsible for writing the index data to the index database.
+	var write dps.Writer
+	write = index.NewWriter(db, storage)
+	if flagMetrics {
+		time := rcrowley.NewTime("write")
+		mout.Register(time)
+		write = metrics.NewWriter(write, time)
+	}
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	transitions := mapper.NewTransitions(log, load, chain, feed, index,
+	transitions := mapper.NewTransitions(log, load, disk, feed, write,
 		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),
@@ -200,6 +237,11 @@ func run() int {
 		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
 	}()
 
+	// Start metrics output.
+	if flagMetrics {
+		mout.Run()
+	}
+
 	select {
 	case <-sig:
 		log.Info().Msg("Flow DPS Indexer stopping")
@@ -214,6 +256,11 @@ func run() int {
 		log.Warn().Msg("forcing exit")
 		os.Exit(1)
 	}()
+
+	// Stop metrics output.
+	if flagMetrics {
+		mout.Stop()
+	}
 
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the

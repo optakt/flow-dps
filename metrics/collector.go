@@ -12,9 +12,12 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package metrics
 
-type Codec interface {
-	Marshal(v interface{}) ([]byte, error)
-	Unmarshal(b []byte, v interface{}) error
+import (
+	"github.com/rs/zerolog"
+)
+
+type Collector interface {
+	Output(log zerolog.Logger)
 }

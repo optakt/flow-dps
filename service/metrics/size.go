@@ -12,23 +12,8 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package validator
+package metrics
 
-import (
-	"github.com/optakt/flow-dps/models/dps"
-)
-
-type Validator struct {
-	params dps.Params
-	index  dps.Reader
-}
-
-func New(params dps.Params, index dps.Reader) *Validator {
-
-	v := &Validator{
-		params: params,
-		index:  index,
-	}
-
-	return v
+type Size interface {
+	Bytes(name string, original int, compressed int)
 }
