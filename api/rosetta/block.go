@@ -46,48 +46,48 @@ func (d *Data) Block(ctx echo.Context) error {
 	var req BlockRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding(invalidJSON, err))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockchainEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(networkEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
 	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockLength,
-			WithDetail("have_length", len(req.BlockID.Hash)),
-			WithDetail("want_length", hexIDSize),
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
+			withDetail("have_length", len(req.BlockID.Hash)),
+			withDetail("want_length", hexIDSize),
 		))
 	}
 
 	err = d.config.Check(req.NetworkID)
 	var netErr failure.InvalidNetwork
 	if errors.As(err, &netErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(netErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(networkCheck, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(networkCheck, err))
 	}
 
 	block, other, err := d.retrieve.Block(req.BlockID)
 
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidBlock(ibErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
 	}
 	var ubErr failure.UnknownBlock
 	if errors.As(err, &ubErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownBlock(ubErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
 	}
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(blockRetrieval, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(blockRetrieval, err))
 	}
 
 	res := BlockResponse{

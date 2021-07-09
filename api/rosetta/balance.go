@@ -48,42 +48,42 @@ func (d *Data) Balance(ctx echo.Context) error {
 	var req BalanceRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding(invalidJSON, err))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockchainEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(networkEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
 	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockLength,
-			WithDetail("have_length", len(req.BlockID.Hash)),
-			WithDetail("want_length", hexIDSize),
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
+			withDetail("have_length", len(req.BlockID.Hash)),
+			withDetail("want_length", hexIDSize),
 		))
 	}
 
 	if req.AccountID.Address == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(addressEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(addressEmpty))
 	}
 	if len(req.AccountID.Address) != hexAddressSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(addressLength,
-			WithDetail("have_length", len(req.AccountID.Address)),
-			WithDetail("want_length", hexAddressSize),
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(addressLength,
+			withDetail("have_length", len(req.AccountID.Address)),
+			withDetail("want_length", hexAddressSize),
 		))
 	}
 
 	if len(req.Currencies) == 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(currenciesEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(currenciesEmpty))
 	}
 	for _, currency := range req.Currencies {
 		if currency.Symbol == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(symbolEmpty))
+			return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(symbolEmpty))
 		}
 	}
 
@@ -94,39 +94,39 @@ func (d *Data) Balance(ctx echo.Context) error {
 	err = d.config.Check(req.NetworkID)
 	var netErr failure.InvalidNetwork
 	if errors.As(err, &netErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(netErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(networkCheck, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(networkCheck, err))
 	}
 
 	block, balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
 
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidBlock(ibErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
 	}
 	var ubErr failure.UnknownBlock
 	if errors.As(err, &ubErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownBlock(ubErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
 	}
 
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidAccount(iaErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
 	}
 
 	var icErr failure.InvalidCurrency
 	if errors.As(err, &icErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidCurrency(icErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidCurrency(icErr))
 	}
 	var ucErr failure.UnknownCurrency
 	if errors.As(err, &ucErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, UnknownCurrency(ucErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownCurrency(ucErr))
 	}
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal(balancesRetrieval, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(balancesRetrieval, err))
 	}
 
 	res := BalanceResponse{

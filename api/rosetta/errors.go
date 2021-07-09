@@ -53,21 +53,21 @@ type Error struct {
 	Details     map[string]interface{} `json:"details,omitempty"`
 }
 
-type DetailFunc func(map[string]interface{})
+type detailFunc func(map[string]interface{})
 
-func WithError(err error) DetailFunc {
+func withError(err error) detailFunc {
 	return func(details map[string]interface{}) {
 		details["error"] = err.Error()
 	}
 }
 
-func WithDetail(key string, val interface{}) DetailFunc {
+func withDetail(key string, val interface{}) detailFunc {
 	return func(details map[string]interface{}) {
 		details[key] = val
 	}
 }
 
-func RosettaError(definition meta.ErrorDefinition, description string, details ...DetailFunc) Error {
+func rosettaError(definition meta.ErrorDefinition, description string, details ...detailFunc) Error {
 	dd := make(map[string]interface{})
 	for _, detail := range details {
 		detail(dd)
@@ -80,102 +80,102 @@ func RosettaError(definition meta.ErrorDefinition, description string, details .
 	return e
 }
 
-func Internal(description string, err error) Error {
-	return RosettaError(
+func internal(description string, err error) Error {
+	return rosettaError(
 		configuration.ErrorInternal,
 		description,
-		WithError(err),
+		withError(err),
 	)
 }
 
-func InvalidEncoding(description string, err error) Error {
-	return RosettaError(
+func invalidEncoding(description string, err error) Error {
+	return rosettaError(
 		configuration.ErrorInvalidEncoding,
 		description,
-		WithError(err),
+		withError(err),
 	)
 }
 
-func InvalidFormat(description string, details ...DetailFunc) Error {
-	return RosettaError(
+func invalidFormat(description string, details ...detailFunc) Error {
+	return rosettaError(
 		configuration.ErrorInvalidFormat,
 		description,
 		details...,
 	)
 }
 
-func ConvertError(definition meta.ErrorDefinition, description failure.Description, details ...DetailFunc) Error {
+func convertError(definition meta.ErrorDefinition, description failure.Description, details ...detailFunc) Error {
 	description.Fields.Iterate(func(key string, val interface{}) {
-		details = append(details, WithDetail(key, val))
+		details = append(details, withDetail(key, val))
 	})
-	return RosettaError(definition, description.Text, details...)
+	return rosettaError(definition, description.Text, details...)
 }
 
-func InvalidNetwork(fail failure.InvalidNetwork) Error {
-	return ConvertError(
+func invalidNetwork(fail failure.InvalidNetwork) Error {
+	return convertError(
 		configuration.ErrorInvalidNetwork,
 		fail.Description,
-		WithDetail("blockchain", fail.Blockchain),
-		WithDetail("network", fail.Network),
+		withDetail("blockchain", fail.Blockchain),
+		withDetail("network", fail.Network),
 	)
 }
 
-func InvalidAccount(fail failure.InvalidAccount) Error {
-	return ConvertError(
+func invalidAccount(fail failure.InvalidAccount) Error {
+	return convertError(
 		configuration.ErrorInvalidAccount,
 		fail.Description,
-		WithDetail("address", fail.Address),
+		withDetail("address", fail.Address),
 	)
 }
 
-func InvalidCurrency(fail failure.InvalidCurrency) Error {
-	return ConvertError(
+func invalidCurrency(fail failure.InvalidCurrency) Error {
+	return convertError(
 		configuration.ErrorInvalidCurrency,
 		fail.Description,
-		WithDetail("symbol", fail.Symbol),
-		WithDetail("decimals", fail.Decimals),
+		withDetail("symbol", fail.Symbol),
+		withDetail("decimals", fail.Decimals),
 	)
 }
 
-func InvalidBlock(fail failure.InvalidBlock) Error {
-	return ConvertError(
+func invalidBlock(fail failure.InvalidBlock) Error {
+	return convertError(
 		configuration.ErrorInvalidBlock,
 		fail.Description,
-		WithDetail("index", fail.Index),
-		WithDetail("hash", fail.Hash),
+		withDetail("index", fail.Index),
+		withDetail("hash", fail.Hash),
 	)
 }
 
-func InvalidTransaction(fail failure.InvalidTransaction) Error {
-	return ConvertError(
+func invalidTransaction(fail failure.InvalidTransaction) Error {
+	return convertError(
 		configuration.ErrorInvalidTransaction,
 		fail.Description,
-		WithDetail("hash", fail.Hash),
+		withDetail("hash", fail.Hash),
 	)
 }
 
-func UnknownCurrency(fail failure.UnknownCurrency) Error {
-	return ConvertError(
+func unknownCurrency(fail failure.UnknownCurrency) Error {
+	return convertError(
 		configuration.ErrorUnknownCurrency,
 		fail.Description,
-		WithDetail("symbol", fail.Symbol),
-		WithDetail("decimals", fail.Decimals),
+		withDetail("symbol", fail.Symbol),
+		withDetail("decimals", fail.Decimals),
 	)
 }
 
-func UnknownBlock(fail failure.UnknownBlock) Error {
-	return ConvertError(
+func unknownBlock(fail failure.UnknownBlock) Error {
+	return convertError(
 		configuration.ErrorUnknownBlock,
 		fail.Description,
-		WithDetail("index", fail.Index),
-		WithDetail("hash", fail.Hash),
+		withDetail("index", fail.Index),
+		withDetail("hash", fail.Hash),
 	)
 }
 
-func UnknownTransaction(fail failure.UnknownTransaction) Error {
-	return ConvertError(
+func unknownTransaction(fail failure.UnknownTransaction) Error {
+	return convertError(
 		configuration.ErrorUnknownTransaction,
 		fail.Description,
-		WithDetail("hash", fail.Hash),
+		withDetail("hash", fail.Hash),
 	)
 }
