@@ -48,42 +48,42 @@ func (d *Data) Balance(ctx echo.Context) error {
 	var req BalanceRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding("request does not contain valid JSON-encoded body", err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding(invalidJSON, err))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier has empty blockchain field"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockchainEmpty))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("blockchain identifier has empty network field"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(networkEmpty))
 	}
 
 	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier has empty index and hash fields"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockEmpty))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier has invalid hash field length",
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockLength,
 			WithDetail("have_length", len(req.BlockID.Hash)),
 			WithDetail("want_length", hexIDSize),
 		))
 	}
 
 	if req.AccountID.Address == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier has empty address field"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(addressEmpty))
 	}
 	if len(req.AccountID.Address) != hexAddressSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("account identifier has invalid address field length",
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(addressLength,
 			WithDetail("have_length", len(req.AccountID.Address)),
-			WithDetail("want_length", hexAddressSize)),
-		)
+			WithDetail("want_length", hexAddressSize),
+		))
 	}
 
 	if len(req.Currencies) == 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifier list is empty"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(currenciesEmpty))
 	}
 	for _, currency := range req.Currencies {
 		if currency.Symbol == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("currency identifier has empty symbol field"))
+			return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(symbolEmpty))
 		}
 	}
 
@@ -97,7 +97,7 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to check network configuration", err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(networkCheck, err))
 	}
 
 	block, balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
@@ -126,7 +126,7 @@ func (d *Data) Balance(ctx echo.Context) error {
 	}
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to retrieve balances", err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(balancesRetrieval, err))
 	}
 
 	res := BalanceResponse{

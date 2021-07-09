@@ -46,14 +46,14 @@ func (d *Data) Status(ctx echo.Context) error {
 	var req StatusRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding("request does not contain valid JSON-encoded body", err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding(invalidJSON, err))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("network identifier has empty blockchain field"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockchainEmpty))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("network identifier has empty network field"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(networkEmpty))
 	}
 
 	err = d.config.Check(req.NetworkID)
@@ -62,16 +62,16 @@ func (d *Data) Status(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to check network configuration", err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(networkCheck, err))
 	}
 
 	oldest, _, err := d.retrieve.Oldest()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to retrieve oldest block", err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(oldestRetrieval, err))
 	}
 	current, timestamp, err := d.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to retrieve current block", err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(currentRetrieval, err))
 	}
 
 	res := StatusResponse{

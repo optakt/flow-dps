@@ -46,21 +46,21 @@ func (d *Data) Block(ctx echo.Context) error {
 	var req BlockRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding("request does not contain valid JSON-encoded body", err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding(invalidJSON, err))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("network identifier has empty blockchain field"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockchainEmpty))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("network identifier has empty network field"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(networkEmpty))
 	}
 
 	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier has empty index and hash fields"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockEmpty))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("block identifier has invalid hash field length",
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockLength,
 			WithDetail("have_length", len(req.BlockID.Hash)),
 			WithDetail("want_length", hexIDSize),
 		))
@@ -72,7 +72,7 @@ func (d *Data) Block(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to check network configuration", err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(networkCheck, err))
 	}
 
 	block, other, err := d.retrieve.Block(req.BlockID)
@@ -87,7 +87,7 @@ func (d *Data) Block(ctx echo.Context) error {
 	}
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to retrieve block", err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(blockRetrieval, err))
 	}
 
 	res := BlockResponse{

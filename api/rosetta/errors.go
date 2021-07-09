@@ -20,6 +20,28 @@ import (
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
+const (
+	invalidJSON = "request does not contain valid JSON-encoded body"
+
+	blockchainEmpty = "blockchain identifier has empty blockchain field"
+	networkEmpty    = "blockchain identifier has empty network field"
+	blockEmpty      = "block identifier has empty index and hash fields"
+	blockLength     = "block identifier has invalid hash field length"
+	addressEmpty    = "account identifier has empty address field"
+	addressLength   = "account identifier has invalid address field length"
+	currenciesEmpty = "currency identifier list is empty"
+	symbolEmpty     = "currency identifier has empty symbol field"
+	txEmpty         = "transaction identifier has empty hash field"
+	txLength        = "transaction identifier has invalid hash filed length"
+
+	networkCheck      = "unable to check network"
+	blockRetrieval    = "unable to retrieve block"
+	balancesRetrieval = "unable to retrieve balances"
+	oldestRetrieval   = "unable to retrieve oldest block"
+	currentRetrieval  = "unable to retrieve current block"
+	txRetrieval       = "unable to retrieve transaction"
+)
+
 // Error represents an error as defined by the Rosetta API specification. It
 // contains an error definition, which has an error code, error message and
 // retriable flag that never change, as well as a description and a list of

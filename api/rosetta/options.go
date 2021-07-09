@@ -53,14 +53,14 @@ func (d *Data) Options(ctx echo.Context) error {
 	var req OptionsRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding("request does not contain valid JSON-encoded body", err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding(invalidJSON, err))
 	}
 
 	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("network identifier has empty blockchain field"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(blockchainEmpty))
 	}
 	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat("network identifier has empty network field"))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidFormat(networkEmpty))
 	}
 
 	err = d.config.Check(req.NetworkID)
@@ -69,7 +69,7 @@ func (d *Data) Options(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, InvalidNetwork(netErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, Internal("unable to check network configuration", err))
+		return echo.NewHTTPError(http.StatusInternalServerError, Internal(networkCheck, err))
 	}
 
 	// Create the allow object, which is native to the response.

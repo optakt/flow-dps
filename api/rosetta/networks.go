@@ -41,7 +41,7 @@ func (d *Data) Networks(ctx echo.Context) error {
 	var req NetworksRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding("request does not contain valid JSON-encoded body", err))
+		return echo.NewHTTPError(http.StatusBadRequest, InvalidEncoding(invalidJSON, err))
 	}
 
 	// Get the network we are running on from the configuration.
