@@ -536,9 +536,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 			return nil
 		}
-		index.TransactionsFunc = func(height uint64, transactions []*flow.TransactionBody, results []*flow.TransactionResult) error {
+		index.TransactionsFunc = func(height uint64, transactions []*flow.TransactionBody) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericTransactions, transactions)
+
+			return nil
+		}
+		index.ResultsFunc = func(results []*flow.TransactionResult) error {
 			assert.Equal(t, mocks.GenericTransactionResults, results)
 
 			return nil
@@ -694,7 +698,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.TransactionsFunc = func(height uint64, transactions []*flow.TransactionBody, results []*flow.TransactionResult) error {
+		index.ResultsFunc = func(results []*flow.TransactionResult) error {
 			return mocks.DummyError
 		}
 

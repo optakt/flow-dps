@@ -363,13 +363,18 @@ func (t *Transitions) IndexChain(s *State) error {
 		if err != nil {
 			return fmt.Errorf("could not get transactions: %w", err)
 		}
+		err = t.index.Transactions(s.height, transactions)
+		if err != nil {
+			return fmt.Errorf("could not index transactions: %w", err)
+		}
+
 		results, err := t.chain.TransactionResults(s.height)
 		if err != nil {
 			return fmt.Errorf("could not get transaction results: %w", err)
 		}
-		err = t.index.Transactions(s.height, transactions, results)
+		err = t.index.Results(results)
 		if err != nil {
-			return fmt.Errorf("could not index transactions: %w", err)
+			return fmt.Errorf("could not index transaction results: %w", err)
 		}
 		log = log.Int("transactions", len(transactions)).Int("transaction_results", len(results))
 	}
