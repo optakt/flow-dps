@@ -15,7 +15,11 @@
 package mocks
 
 import (
+	"encoding/binary"
+	"errors"
+	"fmt"
 	"io"
+	"math/rand"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -39,215 +43,16 @@ import (
 var (
 	GenericLogger = zerolog.New(io.Discard)
 
-	GenericHeight    = uint64(42)
-	GenericByteSlice = []byte(`test`)
+	GenericError = errors.New("dummy error")
 
-	GenericCommits = []flow.StateCommitment{
-		{
-			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-		},
-		{
-			0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b,
-			0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b,
-			0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b,
-			0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b, 0x4b,
-		},
-	}
+	GenericHeight = uint64(42)
+
+	GenericByteSlice = []byte(`test`)
 
 	GenericHeader = &flow.Header{
 		ChainID:   dps.FlowTestnet,
 		Height:    GenericHeight,
 		Timestamp: time.Date(1972, 0, 0, 0, 0, 0, 0, time.Local),
-	}
-
-	GenericIdentifiers = []flow.Identifier{
-		{
-			0xd5, 0xf5, 0x0b, 0xc1, 0x7b, 0xa1, 0xea, 0xad,
-			0x83, 0x0c, 0x86, 0xac, 0xce, 0x64, 0x5c, 0xa6,
-			0xc0, 0x9f, 0xf0, 0xfe, 0xc5, 0x1c, 0x76, 0x10,
-			0x03, 0x1c, 0xb9, 0x99, 0xa5, 0xb0, 0xb3, 0x22,
-		},
-		{
-			0x2a, 0x04, 0x51, 0x3c, 0xc3, 0xc9, 0xa7, 0xf2,
-			0xec, 0x08, 0x93, 0x56, 0x5f, 0x52, 0xc2, 0x9e,
-			0x19, 0xf5, 0x58, 0x88, 0x10, 0x11, 0xe1, 0x13,
-			0x60, 0x43, 0x9e, 0x57, 0x60, 0x18, 0xe3, 0xde,
-		},
-		{
-			0xd6, 0x41, 0x58, 0x46, 0x8d, 0x94, 0x04, 0x77,
-			0x61, 0x69, 0xfb, 0x50, 0x95, 0x64, 0xa4, 0xca,
-			0x1c, 0xc1, 0x0d, 0x7e, 0xbb, 0x10, 0x8c, 0xbc,
-			0xfc, 0x41, 0x94, 0xa6, 0x0e, 0x39, 0xda, 0xe1,
-		},
-		{
-			0xd0, 0x90, 0xe0, 0x9b, 0x6d, 0x20, 0xd6, 0xd5,
-			0x60, 0xa8, 0x05, 0x57, 0x71, 0x4a, 0xac, 0x1d,
-			0x31, 0xfd, 0xa1, 0x6f, 0xb2, 0xdd, 0xe2, 0x58,
-			0x4c, 0x06, 0x61, 0x4b, 0x6b, 0xde, 0x8c, 0xd5,
-		},
-		{
-			0xf9, 0xa8, 0xc7, 0xbe, 0x46, 0xdd, 0x1a, 0x3c,
-			0x4d, 0x66, 0xec, 0x19, 0xe2, 0x43, 0xf0, 0x15,
-			0x7c, 0x90, 0xa5, 0x32, 0xe1, 0x1e, 0x15, 0xad,
-			0x6b, 0xbe, 0xa0, 0x64, 0x3b, 0x83, 0xf4, 0xcc,
-		},
-	}
-
-	GenericEventTypes        = []flow.EventType{"deposit", "withdrawal"}
-	GenericCadenceEventTypes = []*cadence.EventType{
-		{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "deposit",
-			Fields: []cadence.Field{
-				{
-					Identifier: "amount",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "address",
-					Type:       cadence.AddressType{},
-				},
-			},
-		},
-		{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "withdrawal",
-			Fields: []cadence.Field{
-				{
-					Identifier: "amount",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "address",
-					Type:       cadence.AddressType{},
-				},
-			},
-		},
-	}
-	GenericCadenceEvents = []cadence.Event{
-		cadence.NewEvent(
-			[]cadence.Value{
-				cadence.NewUInt64(42),
-				cadence.NewAddress([8]byte{2, 3, 4, 5, 6, 7, 8, 9}),
-			},
-		).WithType(GenericCadenceEventTypes[0]),
-		cadence.NewEvent(
-			[]cadence.Value{
-				cadence.NewUInt64(42),
-				cadence.NewAddress([8]byte{2, 3, 4, 5, 6, 7, 8, 9}),
-			},
-		).WithType(GenericCadenceEventTypes[1]),
-	}
-	GenericCadenceEventPayloads = [][]byte{
-		json.MustEncode(GenericCadenceEvents[0]),
-		json.MustEncode(GenericCadenceEvents[1]),
-	}
-	GenericEvents = []flow.Event{
-		{
-			TransactionID: GenericIdentifiers[0],
-			EventIndex:    0,
-			Type:          GenericEventTypes[0],
-			Payload:       GenericCadenceEventPayloads[0],
-		},
-		{
-			TransactionID: GenericIdentifiers[0],
-			EventIndex:    1,
-			Type:          GenericEventTypes[1],
-			Payload:       GenericCadenceEventPayloads[1],
-		},
-		{
-			TransactionID: GenericIdentifiers[1],
-			EventIndex:    2,
-			Type:          GenericEventTypes[0],
-			Payload:       GenericCadenceEventPayloads[0],
-		},
-		{
-			TransactionID: GenericIdentifiers[1],
-			EventIndex:    3,
-			Type:          GenericEventTypes[1],
-			Payload:       GenericCadenceEventPayloads[1],
-		},
-	}
-
-	GenericTransactions = []*flow.TransactionBody{
-		{ReferenceBlockID: GenericIdentifiers[0]},
-		{ReferenceBlockID: GenericIdentifiers[1]},
-		{ReferenceBlockID: GenericIdentifiers[2]},
-		{ReferenceBlockID: GenericIdentifiers[3]},
-	}
-	GenericCadenceTransactionIDs = []identifier.Transaction{
-		{Hash: GenericIdentifiers[0].String()},
-		{Hash: GenericIdentifiers[1].String()},
-	}
-	GenericCadenceTransactions = []*object.Transaction{
-		{
-			ID: GenericCadenceTransactionIDs[0],
-			Operations: []object.Operation{
-				*GenericOperations[0],
-				*GenericOperations[1],
-			},
-		},
-		{
-			ID: GenericCadenceTransactionIDs[1],
-			Operations: []object.Operation{
-				*GenericOperations[0],
-				*GenericOperations[1],
-			},
-		},
-	}
-
-	GenericTransactionResults = []*flow.TransactionResult{
-		{TransactionID: GenericIdentifiers[0]},
-		{TransactionID: GenericIdentifiers[1]},
-		{TransactionID: GenericIdentifiers[2]},
-		{TransactionID: GenericIdentifiers[3]},
-	}
-
-	GenericCollections = []*flow.LightCollection{
-		{Transactions: GenericIdentifiers[:2]},
-		{Transactions: GenericIdentifiers[2:]},
-	}
-
-	GenericLedgerPaths = []ledger.Path{
-		{
-			0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70,
-			0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1,
-			0xaa, 0xc5, 0x13, 0xeb, 0x1a, 0x04, 0x57, 0x70,
-			0x0a, 0xc3, 0xfa, 0x8d, 0x29, 0x25, 0x13, 0xe1,
-		},
-		{
-			0xd5, 0x08, 0x44, 0x13, 0xdb, 0xe5, 0x2b, 0xd2,
-			0x3a, 0x66, 0x7f, 0xc4, 0x08, 0xe0, 0x54, 0x60,
-			0xd5, 0x08, 0x44, 0x13, 0xdb, 0xe5, 0x2b, 0xd2,
-			0x3a, 0x66, 0x7f, 0xc4, 0x08, 0xe0, 0x54, 0x60,
-		},
-		{
-			0x60, 0x0a, 0xd8, 0xa4, 0xf1, 0x6b, 0xce, 0x2e,
-			0x57, 0x59, 0xfd, 0x6e, 0x45, 0xcf, 0xa9, 0xa0,
-			0x60, 0x0a, 0xd8, 0xa4, 0xf1, 0x6b, 0xce, 0x2e,
-			0x57, 0x59, 0xfd, 0x6e, 0x45, 0xcf, 0xa9, 0xa0,
-		},
-		{
-			0xa5, 0x68, 0x7b, 0x2d, 0x95, 0x18, 0x7b, 0xc7,
-			0xce, 0xd0, 0xe1, 0x02, 0xd6, 0xce, 0xfe, 0x93,
-			0xa5, 0x68, 0x7b, 0x2d, 0x95, 0x18, 0x7b, 0xc7,
-			0xce, 0xd0, 0xe1, 0x02, 0xd6, 0xce, 0xfe, 0x93,
-		},
-		{
-			0x60, 0x0a, 0xd8, 0xa4, 0xf1, 0x6b, 0xce, 0x2e,
-			0x57, 0x59, 0xfd, 0x6e, 0x45, 0xcf, 0xa9, 0xa0,
-			0x60, 0x0a, 0xd8, 0xa4, 0xf1, 0x6b, 0xce, 0x2e,
-			0x57, 0x59, 0xfd, 0x6e, 0x45, 0xcf, 0xa9, 0xa0,
-		},
-		{
-			0xfd, 0x84, 0xc0, 0xa7, 0xb2, 0x35, 0xc9, 0x89,
-			0xc1, 0x8e, 0x6a, 0xa2, 0x69, 0x04, 0xfe, 0xba,
-			0xfd, 0x84, 0xc0, 0xa7, 0xb2, 0x35, 0xc9, 0x89,
-			0xc1, 0x8e, 0x6a, 0xa2, 0x69, 0x04, 0xfe, 0xba,
-		},
 	}
 
 	GenericLedgerKey = ledger.NewKey([]ledger.KeyPart{
@@ -256,24 +61,6 @@ var (
 		ledger.NewKeyPart(2, []byte(`key`)),
 	})
 
-	GenericLedgerValues = []ledger.Value{
-		{0x01},
-		{0x02},
-		{0x03},
-		{0x04},
-		{0x05},
-		{0x06},
-	}
-
-	GenericLedgerPayloads = []*ledger.Payload{
-		ledger.NewPayload(GenericLedgerKey, GenericLedgerValues[0]),
-		ledger.NewPayload(GenericLedgerKey, GenericLedgerValues[1]),
-		ledger.NewPayload(GenericLedgerKey, GenericLedgerValues[2]),
-		ledger.NewPayload(GenericLedgerKey, GenericLedgerValues[3]),
-		ledger.NewPayload(GenericLedgerKey, GenericLedgerValues[4]),
-		ledger.NewPayload(GenericLedgerKey, GenericLedgerValues[5]),
-	}
-
 	GenericTrieUpdate = &ledger.TrieUpdate{
 		RootHash: ledger.RootHash{
 			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
@@ -281,8 +68,8 @@ var (
 			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
 			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
 		},
-		Paths:    GenericLedgerPaths,
-		Payloads: GenericLedgerPayloads,
+		Paths:    GenericLedgerPaths(6),
+		Payloads: GenericLedgerPayloads(6),
 	}
 
 	// GenericRootNode Visual Representation:
@@ -295,26 +82,26 @@ var (
 		256,
 		node.NewNode(
 			256,
-			node.NewLeaf(GenericLedgerPaths[0], GenericLedgerPayloads[0], 42),
-			node.NewLeaf(GenericLedgerPaths[1], GenericLedgerPayloads[1], 42),
-			GenericLedgerPaths[2],
-			GenericLedgerPayloads[2],
+			node.NewLeaf(GenericLedgerPath(0), GenericLedgerPayload(0), 42),
+			node.NewLeaf(GenericLedgerPath(1), GenericLedgerPayload(1), 42),
+			GenericLedgerPath(2),
+			GenericLedgerPayload(2),
 			hash.DummyHash,
 			64,
 			64,
 		),
 		node.NewNode(
 			256,
-			node.NewLeaf(GenericLedgerPaths[3], GenericLedgerPayloads[3], 42),
+			node.NewLeaf(GenericLedgerPath(3), GenericLedgerPayload(3), 42),
 			nil,
-			GenericLedgerPaths[4],
-			GenericLedgerPayloads[4],
+			GenericLedgerPath(4),
+			GenericLedgerPayload(4),
 			hash.DummyHash,
 			64,
 			64,
 		),
-		GenericLedgerPaths[5],
-		GenericLedgerPayloads[5],
+		GenericLedgerPath(5),
+		GenericLedgerPayload(5),
 		hash.DummyHash,
 		64,
 		64,
@@ -327,40 +114,8 @@ var (
 		Decimals: dps.FlowDecimals,
 	}
 	GenericAccount = flow.Account{
-		Address: flow.Address{
-			0x2a, 0x2a, 0x2a, 0x2a,
-			0x2a, 0x2a, 0x2a, 0x2a,
-		},
+		Address: GenericAddress(0),
 	}
-	GenericCadenceAccount = identifier.Account{
-		Address: "2a2a2a2a2a2a2a2a",
-	}
-	GenericOperations = []*object.Operation{
-		{
-			ID:         identifier.Operation{Index: 0},
-			RelatedIDs: []identifier.Operation{{Index: 1}},
-			Type:       dps.OperationTransfer,
-			Status:     dps.StatusCompleted,
-			AccountID:  GenericCadenceAccount,
-			Amount: object.Amount{
-				Value:    "42",
-				Currency: GenericCurrency,
-			},
-		},
-		{
-			ID:         identifier.Operation{Index: 1},
-			RelatedIDs: []identifier.Operation{{Index: 0}},
-			Type:       dps.OperationTransfer,
-			Status:     dps.StatusCompleted,
-			AccountID:  GenericCadenceAccount, // FIXME: Does this break some tests?
-			Amount: object.Amount{
-				Value:    "-42",
-				Currency: GenericCurrency,
-			},
-		},
-	}
-
-	GenericCadenceValue = cadence.NewUInt64(42)
 
 	GenericBlockID = identifier.Block{
 		Index: &GenericHeight,
@@ -371,3 +126,321 @@ var (
 		Decimals: dps.FlowDecimals,
 	}
 )
+
+func GenericCommits(number int) []flow.StateCommitment {
+	// Ensure consistent deterministic results.
+	seed := rand.NewSource(0)
+	random := rand.New(seed)
+
+	var commits []flow.StateCommitment
+	for i := 0; i < number; i++ {
+		var c flow.StateCommitment
+		binary.BigEndian.PutUint64(c[0:], random.Uint64())
+		binary.BigEndian.PutUint64(c[8:], random.Uint64())
+		binary.BigEndian.PutUint64(c[16:], random.Uint64())
+		binary.BigEndian.PutUint64(c[24:], random.Uint64())
+
+		commits = append(commits, c)
+	}
+
+	return commits
+}
+
+func GenericCommit(index int) flow.StateCommitment {
+	return GenericCommits(index + 1)[index]
+}
+
+func GenericIdentifiers(number int) []flow.Identifier {
+	// Ensure consistent deterministic results.
+	seed := rand.NewSource(1)
+	random := rand.New(seed)
+
+	var ids []flow.Identifier
+	for i := 0; i < number; i++ {
+		var id flow.Identifier
+		binary.BigEndian.PutUint64(id[0:], random.Uint64())
+		binary.BigEndian.PutUint64(id[8:], random.Uint64())
+		binary.BigEndian.PutUint64(id[16:], random.Uint64())
+		binary.BigEndian.PutUint64(id[24:], random.Uint64())
+
+		ids = append(ids, id)
+	}
+
+	return ids
+}
+
+func GenericIdentifier(index int) flow.Identifier {
+	return GenericIdentifiers(index + 1)[index]
+}
+
+func GenericLedgerPaths(number int) []ledger.Path {
+	// Ensure consistent deterministic results.
+	seed := rand.NewSource(2)
+	random := rand.New(seed)
+
+	var paths []ledger.Path
+	for i := 0; i < number; i++ {
+		var path ledger.Path
+		binary.BigEndian.PutUint64(path[0:], random.Uint64())
+		binary.BigEndian.PutUint64(path[8:], random.Uint64())
+		binary.BigEndian.PutUint64(path[16:], random.Uint64())
+		binary.BigEndian.PutUint64(path[24:], random.Uint64())
+
+		paths = append(paths, path)
+	}
+
+	return paths
+}
+
+func GenericLedgerPath(index int) ledger.Path {
+	return GenericLedgerPaths(index + 1)[index]
+}
+
+func GenericLedgerValues(number int) []ledger.Value {
+	// Ensure consistent deterministic results.
+	seed := rand.NewSource(3)
+	random := rand.New(seed)
+
+	var values []ledger.Value
+	for i := 0; i < number; i++ {
+		value := make(ledger.Value, 32)
+		binary.BigEndian.PutUint64(value[0:], random.Uint64())
+		binary.BigEndian.PutUint64(value[8:], random.Uint64())
+		binary.BigEndian.PutUint64(value[16:], random.Uint64())
+		binary.BigEndian.PutUint64(value[24:], random.Uint64())
+
+		values = append(values, value)
+	}
+
+	return values
+}
+
+func GenericLedgerValue(index int) ledger.Value {
+	return GenericLedgerValues(index + 1)[index]
+}
+
+func GenericLedgerPayloads(number int) []*ledger.Payload {
+	var payloads []*ledger.Payload
+	for i := 0; i < number; i++ {
+		payloads = append(payloads, ledger.NewPayload(GenericLedgerKey, GenericLedgerValue(i)))
+	}
+
+	return payloads
+}
+
+func GenericLedgerPayload(index int) *ledger.Payload {
+	return GenericLedgerPayloads(index + 1)[index]
+}
+
+func GenericTransactions(number int) []*flow.TransactionBody {
+	var txs []*flow.TransactionBody
+	for i := 0; i < number; i++ {
+		txs = append(txs, &flow.TransactionBody{ReferenceBlockID: GenericIdentifier(i)})
+	}
+
+	return txs
+}
+
+func GenericTransaction(index int) *flow.TransactionBody {
+	return GenericTransactions(index + 1)[index]
+}
+
+func GenericEventTypes(number int) []flow.EventType {
+	// Ensure consistent deterministic results.
+	seed := rand.NewSource(4)
+	random := rand.New(seed)
+
+	var types []flow.EventType
+	for i := 0; i < number; i++ {
+		types = append(types, flow.EventType(fmt.Sprint(random.Int())))
+	}
+
+	return types
+}
+
+func GenericEventType(index int) flow.EventType {
+	return GenericEventTypes(index + 1)[index]
+}
+
+func GenericCadenceEventTypes(number int) []*cadence.EventType {
+	var types []*cadence.EventType
+	for i := 0; i < number; i++ {
+		types = append(types, &cadence.EventType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: string(GenericEventType(i)),
+			Fields: []cadence.Field{
+				{
+					Identifier: "amount",
+					Type:       cadence.UInt64Type{},
+				},
+				{
+					Identifier: "address",
+					Type:       cadence.AddressType{},
+				},
+			},
+		})
+	}
+
+	return types
+}
+
+func GenericCadenceEventType(index int) *cadence.EventType {
+	return GenericCadenceEventTypes(index + 1)[index]
+}
+
+func GenericAddresses(number int) []flow.Address {
+	// Ensure consistent deterministic results.
+	seed := rand.NewSource(5)
+	random := rand.New(seed)
+
+	var addresses []flow.Address
+	for i := 0; i < number; i++ {
+		var address flow.Address
+		binary.BigEndian.PutUint64(address[0:], random.Uint64())
+
+		addresses = append(addresses, address)
+	}
+
+	return addresses
+}
+
+func GenericAddress(index int) flow.Address {
+	return GenericAddresses(index + 1)[index]
+}
+
+func GenericAccountID(index int) identifier.Account {
+	return identifier.Account{Address: GenericAddress(index).String()}
+}
+
+func GenericCadenceEvents(number int) []cadence.Event {
+	// Ensure consistent deterministic results.
+	seed := rand.NewSource(6)
+	random := rand.New(seed)
+
+	var events []cadence.Event
+	for i := 0; i < number; i++ {
+
+		// We want only two types of events to simulate deposit/withdrawal.
+		eventType := GenericCadenceEventType(i % 2)
+
+		event := cadence.NewEvent(
+			[]cadence.Value{
+				cadence.NewUInt64(random.Uint64()),
+				cadence.NewAddress(GenericAddress(i)),
+			},
+		).WithType(eventType)
+
+		events = append(events, event)
+	}
+
+	return events
+}
+
+func GenericCadenceEvent(index int) cadence.Event {
+	return GenericCadenceEvents(index + 1)[index]
+}
+
+func GenericEvents(number int) []flow.Event {
+	var events []flow.Event
+	for i := 0; i < number; i++ {
+
+		// We want only two types of events to simulate deposit/withdrawal.
+		eventType := GenericEventType(i % 2)
+		// We want each pair of events to be related to a single transaction.
+		transactionID := GenericIdentifier(i / 2)
+
+		event := flow.Event{
+			TransactionID: transactionID,
+			EventIndex:    uint32(i),
+			Type:          eventType,
+			Payload:       json.MustEncode(GenericCadenceEvent(i)),
+		}
+
+		events = append(events, event)
+	}
+
+	return events
+}
+
+func GenericTransactionQualifier(index int) identifier.Transaction {
+	return identifier.Transaction{Hash: GenericIdentifier(index).String()}
+}
+
+func GenericOperations(number int) []object.Operation {
+	var operations []object.Operation
+	for i := 0; i < number; i++ {
+		// We want only two accounts to simulate transactions between them.
+		account := GenericAccountID(i % 2)
+
+		// Simulate that every second operation is the withdrawal.
+		value := GenericAmount(i).String()
+		if i%2 == 1 {
+			value = "-" + value
+		}
+
+		operation := object.Operation{
+			ID:        identifier.Operation{Index: uint(i)},
+			Type:      dps.OperationTransfer,
+			Status:    dps.StatusCompleted,
+			AccountID: account,
+			Amount: object.Amount{
+				Value:    value,
+				Currency: GenericCurrency,
+			},
+		}
+
+		// Inject RelatedIDs.
+		for j := 0; j < number; j++ {
+			if j == i {
+				continue
+			}
+
+			operation.RelatedIDs = append(operation.RelatedIDs, identifier.Operation{Index: uint(j)})
+		}
+
+		operations = append(operations, operation)
+	}
+
+	return operations
+}
+
+func GenericOperation(index int) object.Operation {
+	return GenericOperations(index + 1)[index]
+}
+
+func GenericCollections(number int) []*flow.LightCollection {
+	txIDs := GenericIdentifiers(number * 2)
+
+	var collections []*flow.LightCollection
+	for i := 0; i < number; i++ {
+		// Since we want two transactions per collection, we use a secondary index called `j` for the transaction IDs.
+		j := i * 2
+		collections = append(collections, &flow.LightCollection{Transactions: txIDs[j : j+1]})
+	}
+
+	return collections
+}
+
+func GenericCollection(index int) *flow.LightCollection {
+	return GenericCollections(index + 1)[index]
+}
+
+func GenericResults(number int) []*flow.TransactionResult {
+	var results []*flow.TransactionResult
+	for i := 0; i < number; i++ {
+		results = append(results, &flow.TransactionResult{TransactionID: GenericIdentifier(i)})
+	}
+
+	return results
+}
+
+func GenericResult(index int) *flow.TransactionResult {
+	return GenericResults(index + 1)[index]
+}
+
+func GenericAmount(seed int) cadence.Value {
+	// Ensure consistent deterministic results.
+	random := rand.New(rand.NewSource(int64(seed)))
+
+	return cadence.NewUInt64(random.Uint64())
+}

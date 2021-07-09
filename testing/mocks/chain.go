@@ -41,19 +41,19 @@ func BaselineChain(t *testing.T) *Chain {
 			return GenericHeader, nil
 		},
 		CommitFunc: func(height uint64) (flow.StateCommitment, error) {
-			return GenericCommits[0], nil
+			return GenericCommit(0), nil
 		},
 		CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
-			return GenericCollections, nil
+			return GenericCollections(2), nil
 		},
 		TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
-			return GenericTransactions, nil
+			return GenericTransactions(4), nil
 		},
 		TransactionResultsFunc: func(height uint64) ([]*flow.TransactionResult, error) {
-			return GenericTransactionResults, nil
+			return GenericResults(4), nil
 		},
 		EventsFunc: func(height uint64) ([]flow.Event, error) {
-			return GenericEvents, nil
+			return GenericEvents(4), nil
 		},
 	}
 

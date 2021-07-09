@@ -31,14 +31,14 @@ func TestAllPaths(t *testing.T) {
 	t.Run("nominal case with single path", func(t *testing.T) {
 		t.Parallel()
 
-		testNode := node.NewLeaf(mocks.GenericLedgerPaths[0], mocks.GenericLedgerPayloads[0], 256)
+		testNode := node.NewLeaf(mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0), 256)
 		testTrie, err := trie.NewMTrie(testNode)
 		require.NoError(t, err)
 
 		got := allPaths(testTrie)
 
 		assert.NotEmpty(t, got)
-		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPaths[0]}, got)
+		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPath(0)}, got)
 	})
 
 	t.Run("nominal case with multiple paths", func(t *testing.T) {
@@ -48,7 +48,7 @@ func TestAllPaths(t *testing.T) {
 
 		// Only the paths in nodes 1, 2 and 4 are taken into account since they are the only leaves.
 		assert.Len(t, got, 3)
-		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPaths[3], mocks.GenericLedgerPaths[1], mocks.GenericLedgerPaths[0]}, got)
+		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPath(3), mocks.GenericLedgerPath(1), mocks.GenericLedgerPath(0)}, got)
 	})
 
 	t.Run("empty trie", func(t *testing.T) {
@@ -64,30 +64,37 @@ func TestPathsPayloads(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
+		// Forge test update with duplicate and unsorted paths.
+		testUpdate := mocks.GenericTrieUpdate
+		testPaths := mocks.GenericLedgerPaths(6)
+		testUpdate.Paths = []ledger.Path{
+			testPaths[0],
+			testPaths[0],
+			testPaths[1],
+			testPaths[2],
+			testPaths[3],
+			testPaths[4],
+		}
+
 		gotPaths, gotPayloads := pathsPayloads(mocks.GenericTrieUpdate)
 
 		// Expect payloads from deduplicated paths.
 		wantPayloads := []ledger.Payload{
-			*mocks.GenericLedgerPayloads[4],
-			*mocks.GenericLedgerPayloads[3],
-			*mocks.GenericLedgerPayloads[0],
-			*mocks.GenericLedgerPayloads[1],
-			*mocks.GenericLedgerPayloads[5],
+			*mocks.GenericLedgerPayload(3),
+			*mocks.GenericLedgerPayload(4),
+			*mocks.GenericLedgerPayload(5),
+			*mocks.GenericLedgerPayload(1),
+			*mocks.GenericLedgerPayload(2),
 		}
 		assert.Equal(t, wantPayloads, gotPayloads)
-		for _, wantPath := range mocks.GenericLedgerPaths {
-			assert.Contains(t, gotPaths, wantPath)
-		}
 
 		// Verify that paths are sorted and deduplicated.
-		// mocks.GenericLedgerPaths[2] and mocks.GenericLedgerPaths[4]
-		// are identical so the latter is omitted because of deduplication.
 		sortedPaths := []ledger.Path{
-			mocks.GenericLedgerPaths[2],
-			mocks.GenericLedgerPaths[3],
-			mocks.GenericLedgerPaths[0],
-			mocks.GenericLedgerPaths[1],
-			mocks.GenericLedgerPaths[5],
+			testPaths[2],
+			testPaths[3],
+			testPaths[4],
+			testPaths[0],
+			testPaths[1],
 		}
 		assert.Equalf(t, sortedPaths, gotPaths, "expected paths to be sorted alphabetically and deduplicated")
 	})

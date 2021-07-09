@@ -70,7 +70,7 @@ func TestIndex_First(t *testing.T) {
 				GetFirstFunc: func(_ context.Context, in *GetFirstRequest, _ ...grpc.CallOption) (*GetFirstResponse, error) {
 					assert.NotNil(t, in)
 
-					return nil, mocks.DummyError
+					return nil, mocks.GenericError
 				},
 			},
 		}
@@ -111,7 +111,7 @@ func TestIndex_Last(t *testing.T) {
 				GetLastFunc: func(_ context.Context, in *GetLastRequest, _ ...grpc.CallOption) (*GetLastResponse, error) {
 					assert.NotNil(t, in)
 
-					return nil, mocks.DummyError
+					return nil, mocks.GenericError
 				},
 			},
 		}
@@ -162,7 +162,7 @@ func TestIndex_Header(t *testing.T) {
 				GetHeaderFunc: func(_ context.Context, in *GetHeaderRequest, _ ...grpc.CallOption) (*GetHeaderResponse, error) {
 					assert.Equal(t, mocks.GenericHeader.Height, in.Height)
 
-					return nil, mocks.DummyError
+					return nil, mocks.GenericError
 				},
 			},
 		}
@@ -202,6 +202,7 @@ func TestIndex_Commit(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
+		commit := mocks.GenericCommit(0)
 		index := Index{
 			client: &apiMock{
 				GetCommitFunc: func(_ context.Context, in *GetCommitRequest, _ ...grpc.CallOption) (*GetCommitResponse, error) {
@@ -209,7 +210,7 @@ func TestIndex_Commit(t *testing.T) {
 
 					return &GetCommitResponse{
 						Height: mocks.GenericHeight,
-						Commit: mocks.GenericCommits[0][:],
+						Commit: commit[:],
 					}, nil
 				},
 			},
@@ -218,7 +219,7 @@ func TestIndex_Commit(t *testing.T) {
 		got, err := index.Commit(mocks.GenericHeight)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericCommits[0], got)
+			assert.Equal(t, mocks.GenericCommit(0), got)
 		}
 	})
 
@@ -233,7 +234,7 @@ func TestIndex_Commit(t *testing.T) {
 				GetCommitFunc: func(_ context.Context, in *GetCommitRequest, _ ...grpc.CallOption) (*GetCommitResponse, error) {
 					assert.Equal(t, mocks.GenericHeight, in.Height)
 
-					return nil, mocks.DummyError
+					return nil, mocks.GenericError
 				},
 			},
 		}
@@ -280,28 +281,23 @@ func TestIndex_Values(t *testing.T) {
 						codec := mocks.BaselineCodec(t)
 						codec.UnmarshalFunc = cbor.Unmarshal
 
-						assert.Equal(t, mocks.GenericLedgerPaths[0][:], in.Paths[0])
-						assert.Equal(t, mocks.GenericLedgerPaths[1][:], in.Paths[1])
-						assert.Equal(t, mocks.GenericLedgerPaths[2][:], in.Paths[2])
-						assert.Equal(t, mocks.GenericLedgerPaths[3][:], in.Paths[3])
-						assert.Equal(t, mocks.GenericLedgerPaths[4][:], in.Paths[4])
-						assert.Equal(t, mocks.GenericLedgerPaths[5][:], in.Paths[5])
+						assert.Equal(t, convert.PathsToBytes(mocks.GenericLedgerPaths(6)), in.Paths)
 					}
 					assert.Equal(t, in.Height, mocks.GenericHeight)
 
 					return &GetRegisterValuesResponse{
 						Height: mocks.GenericHeight,
-						Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths),
-						Values: convert.ValuesToBytes(mocks.GenericLedgerValues),
+						Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
+						Values: convert.ValuesToBytes(mocks.GenericLedgerValues(6)),
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Values(mocks.GenericHeight, mocks.GenericLedgerPaths)
+		got, err := index.Values(mocks.GenericHeight, mocks.GenericLedgerPaths(6))
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericLedgerValues, got)
+			assert.Equal(t, mocks.GenericLedgerValues(6), got)
 		}
 	})
 
@@ -313,12 +309,12 @@ func TestIndex_Values(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetRegisterValuesFunc: func(_ context.Context, in *GetRegisterValuesRequest, _ ...grpc.CallOption) (*GetRegisterValuesResponse, error) {
-					return nil, mocks.DummyError
+					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Values(mocks.GenericHeight, mocks.GenericLedgerPaths)
+		_, err := index.Values(mocks.GenericHeight, mocks.GenericLedgerPaths(6))
 
 		assert.Error(t, err)
 	})
@@ -331,20 +327,21 @@ func TestIndex_Height(t *testing.T) {
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = cbor.Unmarshal
 
+		id := mocks.GenericIdentifier(0)
 		index := Index{
 			client: &apiMock{
 				GetHeightForBlockFunc: func(_ context.Context, in *GetHeightForBlockRequest, _ ...grpc.CallOption) (*GetHeightForBlockResponse, error) {
-					assert.Equal(t, mocks.GenericIdentifiers[0][:], in.BlockID)
+					assert.Equal(t, id[:], in.BlockID)
 
 					return &GetHeightForBlockResponse{
-						BlockID: mocks.GenericIdentifiers[0][:],
+						BlockID: id[:],
 						Height:  mocks.GenericHeight,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.HeightForBlock(mocks.GenericIdentifiers[0])
+		got, err := index.HeightForBlock(mocks.GenericIdentifier(0))
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, mocks.GenericHeight, got)
@@ -357,24 +354,25 @@ func TestIndex_Height(t *testing.T) {
 	t.Run("handles index failures", func(t *testing.T) {
 		t.Parallel()
 
+		id := mocks.GenericIdentifier(0)
 		index := Index{
 			client: &apiMock{
 				GetHeightForBlockFunc: func(_ context.Context, in *GetHeightForBlockRequest, _ ...grpc.CallOption) (*GetHeightForBlockResponse, error) {
-					assert.Equal(t, mocks.GenericIdentifiers[0][:], in.BlockID)
+					assert.Equal(t, id[:], in.BlockID)
 
-					return nil, mocks.DummyError
+					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.HeightForBlock(mocks.GenericIdentifiers[0])
+		_, err := index.HeightForBlock(mocks.GenericIdentifier(0))
 
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_Transaction(t *testing.T) {
-	testTransactionB, err := cbor.Marshal(mocks.GenericTransactions[0])
+	testTransactionB, err := cbor.Marshal(mocks.GenericTransaction(0))
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -383,24 +381,25 @@ func TestIndex_Transaction(t *testing.T) {
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = cbor.Unmarshal
 
+		id := mocks.GenericIdentifier(0)
 		index := Index{
 			codec: codec,
 			client: &apiMock{
 				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
-					assert.Equal(t, mocks.GenericIdentifiers[0][:], in.TransactionID)
+					assert.Equal(t, id[:], in.TransactionID)
 
 					return &GetTransactionResponse{
-						TransactionID: mocks.GenericIdentifiers[0][:],
+						TransactionID: id[:],
 						Data:          testTransactionB,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Transaction(mocks.GenericIdentifiers[0])
+		got, err := index.Transaction(mocks.GenericIdentifier(0))
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericTransactions[0], got)
+			assert.Equal(t, mocks.GenericTransaction(0), got)
 		}
 	})
 
@@ -410,24 +409,25 @@ func TestIndex_Transaction(t *testing.T) {
 	t.Run("handles index failures", func(t *testing.T) {
 		t.Parallel()
 
+		id := mocks.GenericIdentifier(0)
 		index := Index{
 			client: &apiMock{
 				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
-					assert.Equal(t, mocks.GenericIdentifiers[0][:], in.TransactionID)
+					assert.Equal(t, id[:], in.TransactionID)
 
-					return nil, mocks.DummyError
+					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Transaction(mocks.GenericIdentifiers[0])
+		_, err := index.Transaction(mocks.GenericIdentifier(0))
 
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_Events(t *testing.T) {
-	testEventsB, err := cbor.Marshal(mocks.GenericEvents)
+	testEventsB, err := cbor.Marshal(mocks.GenericEvents(4))
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -441,21 +441,21 @@ func TestIndex_Events(t *testing.T) {
 			client: &apiMock{
 				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
 					assert.Equal(t, mocks.GenericHeight, in.Height)
-					assert.Equal(t, convert.TypesToStrings(mocks.GenericEventTypes), in.Types)
+					assert.Equal(t, convert.TypesToStrings(mocks.GenericEventTypes(2)), in.Types)
 
 					return &GetEventsResponse{
 						Height: mocks.GenericHeight,
-						Types:  convert.TypesToStrings(mocks.GenericEventTypes),
+						Types:  convert.TypesToStrings(mocks.GenericEventTypes(2)),
 						Data:   testEventsB,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes...)
+		got, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes(2)...)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericEvents, got)
+			assert.Equal(t, mocks.GenericEvents(4), got)
 		}
 	})
 	t.Run("handles index failures", func(t *testing.T) {
@@ -469,14 +469,14 @@ func TestIndex_Events(t *testing.T) {
 			client: &apiMock{
 				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
 					assert.Equal(t, mocks.GenericHeight, in.Height)
-					assert.Equal(t, convert.TypesToStrings(mocks.GenericEventTypes), in.Types)
+					assert.Equal(t, convert.TypesToStrings(mocks.GenericEventTypes(2)), in.Types)
 
-					return nil, mocks.DummyError
+					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes...)
+		_, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes(2)...)
 
 		assert.Error(t, err)
 	})
@@ -492,18 +492,18 @@ func TestIndex_Events(t *testing.T) {
 			client: &apiMock{
 				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
 					assert.Equal(t, mocks.GenericHeight, in.Height)
-					assert.Equal(t, convert.TypesToStrings(mocks.GenericEventTypes), in.Types)
+					assert.Equal(t, convert.TypesToStrings(mocks.GenericEventTypes(2)), in.Types)
 
 					return &GetEventsResponse{
 						Height: mocks.GenericHeight,
-						Types:  convert.TypesToStrings(mocks.GenericEventTypes),
+						Types:  convert.TypesToStrings(mocks.GenericEventTypes(2)),
 						Data:   []byte(`invalid data`),
 					}, nil
 				},
 			},
 		}
 
-		_, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes...)
+		_, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes(2)...)
 
 		assert.Error(t, err)
 	})

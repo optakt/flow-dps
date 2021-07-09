@@ -27,13 +27,13 @@ func BaselineGenerator(t *testing.T) *Generator {
 
 	g := Generator{
 		GetBalanceFunc: func(symbol string) ([]byte, error) {
-			return []byte(`42`), nil
+			return []byte(GenericAmount(0).String()), nil
 		},
 		TokensDepositedFunc: func(symbol string) (string, error) {
-			return "deposit", nil
+			return string(GenericEventType(0)), nil
 		},
 		TokensWithdrawnFunc: func(symbol string) (string, error) {
-			return "withdrawal", nil
+			return string(GenericEventType(1)), nil
 		},
 	}
 

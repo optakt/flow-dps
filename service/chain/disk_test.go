@@ -63,7 +63,7 @@ func TestDisk_Commit(t *testing.T) {
 
 	commit, err := c.Commit(mocks.GenericHeight)
 	assert.NoError(t, err)
-	assert.Equal(t, mocks.GenericCommits[0], commit)
+	assert.Equal(t, mocks.GenericCommit(0), commit)
 
 	_, err = c.Commit(math.MaxUint64)
 	assert.Error(t, err)
@@ -119,17 +119,17 @@ func populateDB(t *testing.T) *badger.DB {
 			return err
 		}
 
-		err = operation.InsertHeader(mocks.GenericIdentifiers[0], &flow.Header{ChainID: dps.FlowMainnet})(tx)
+		err = operation.InsertHeader(mocks.GenericIdentifier(0), &flow.Header{ChainID: dps.FlowMainnet})(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericIdentifiers[0])(tx)
+		err = operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericIdentifier(0))(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.IndexStateCommitment(mocks.GenericIdentifiers[0], mocks.GenericCommits[0])(tx)
+		err = operation.IndexStateCommitment(mocks.GenericIdentifier(0), mocks.GenericCommit(0))(tx)
 		if err != nil {
 			return err
 		}
@@ -146,32 +146,32 @@ func populateDB(t *testing.T) *badger.DB {
 				EventIndex:       4,
 			},
 		}
-		err = operation.InsertEvent(mocks.GenericIdentifiers[0], events[0])(tx)
+		err = operation.InsertEvent(mocks.GenericIdentifier(0), events[0])(tx)
 		if err != nil {
 			return err
 		}
-		err = operation.InsertEvent(mocks.GenericIdentifiers[0], events[1])(tx)
+		err = operation.InsertEvent(mocks.GenericIdentifier(0), events[1])(tx)
 		if err != nil {
 			return err
 		}
 
 		tb1 := flow.TransactionBody{
-			ReferenceBlockID: mocks.GenericIdentifiers[0],
+			ReferenceBlockID: mocks.GenericIdentifier(0),
 			GasLimit:         42,
 			Payer:            flow.Address{0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12},
 		}
 		tb2 := flow.TransactionBody{
-			ReferenceBlockID: mocks.GenericIdentifiers[0],
+			ReferenceBlockID: mocks.GenericIdentifier(0),
 			GasLimit:         84,
 			Payer:            flow.Address{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
 		}
 		tb3 := flow.TransactionBody{
-			ReferenceBlockID: mocks.GenericIdentifiers[0],
+			ReferenceBlockID: mocks.GenericIdentifier(0),
 			GasLimit:         21,
 			Payer:            flow.Address{0xb0, 0x20, 0xe8, 0x58, 0x72, 0xc8, 0x12, 0x59},
 		}
 		tb4 := flow.TransactionBody{
-			ReferenceBlockID: mocks.GenericIdentifiers[0],
+			ReferenceBlockID: mocks.GenericIdentifier(0),
 			GasLimit:         168,
 			Payer:            flow.Address{0x94, 0x2f, 0x2f, 0xf3, 0x50, 0x6b, 0xa8, 0xde},
 		}
@@ -209,27 +209,27 @@ func populateDB(t *testing.T) *badger.DB {
 			return err
 		}
 
-		err = operation.IndexPayloadGuarantees(mocks.GenericIdentifiers[0], []flow.Identifier{collection1.ID(), collection2.ID()})(tx)
+		err = operation.IndexPayloadGuarantees(mocks.GenericIdentifier(0), []flow.Identifier{collection1.ID(), collection2.ID()})(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.InsertTransactionResult(mocks.GenericIdentifiers[0], &flow.TransactionResult{TransactionID: tb1.ID()})(tx)
+		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb1.ID()})(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.InsertTransactionResult(mocks.GenericIdentifiers[0], &flow.TransactionResult{TransactionID: tb2.ID()})(tx)
+		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb2.ID()})(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.InsertTransactionResult(mocks.GenericIdentifiers[0], &flow.TransactionResult{TransactionID: tb3.ID()})(tx)
+		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb3.ID()})(tx)
 		if err != nil {
 			return err
 		}
 
-		err = operation.InsertTransactionResult(mocks.GenericIdentifiers[0], &flow.TransactionResult{TransactionID: tb4.ID()})(tx)
+		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb4.ID()})(tx)
 		if err != nil {
 			return err
 		}

@@ -31,7 +31,8 @@ func BaselineConverter(t *testing.T) *Converter {
 
 	c := Converter{
 		EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
-			return GenericOperations[0], nil
+			op := GenericOperation(0)
+			return &op, nil
 		},
 	}
 

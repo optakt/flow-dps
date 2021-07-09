@@ -29,7 +29,7 @@ func BaselineInvoker(t *testing.T) *Invoker {
 
 	i := Invoker{
 		ScriptFunc: func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
-			return GenericCadenceValue, nil
+			return GenericAmount(0), nil
 		},
 	}
 

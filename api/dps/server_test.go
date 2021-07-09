@@ -62,7 +62,7 @@ func TestServer_GetFirst(t *testing.T) {
 		{
 			name: "error case",
 
-			mockErr: mocks.DummyError,
+			mockErr: mocks.GenericError,
 
 			wantRes: nil,
 
@@ -118,7 +118,7 @@ func TestServer_GetLast(t *testing.T) {
 		{
 			name: "error case",
 
-			mockErr: mocks.DummyError,
+			mockErr: mocks.GenericError,
 
 			wantRes: nil,
 
@@ -164,20 +164,20 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 		{
 			name: "happy case",
 
-			reqBlockID: mocks.GenericIdentifiers[0],
+			reqBlockID: mocks.GenericIdentifier(0),
 
 			mockErr: nil,
 
-			wantBlockID: mocks.GenericIdentifiers[0],
+			wantBlockID: mocks.GenericIdentifier(0),
 
 			checkErr: assert.NoError,
 		},
 		{
 			name: "error handling",
 
-			reqBlockID: mocks.GenericIdentifiers[0],
+			reqBlockID: mocks.GenericIdentifier(0),
 
-			mockErr: mocks.DummyError,
+			mockErr: mocks.GenericError,
 
 			checkErr: assert.Error,
 		},
@@ -195,8 +195,9 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 
 			s := Server{index: index}
 
+			id := mocks.GenericIdentifier(0)
 			req := &GetHeightForBlockRequest{
-				BlockID: mocks.GenericIdentifiers[0][:],
+				BlockID: id[:],
 			}
 			gotRes, gotErr := s.GetHeightForBlock(context.Background(), req)
 
@@ -210,6 +211,7 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 }
 
 func TestServer_GetCommit(t *testing.T) {
+	testCommit := mocks.GenericCommit(0)
 	tests := []struct {
 		name string
 
@@ -223,12 +225,12 @@ func TestServer_GetCommit(t *testing.T) {
 		{
 			name: "happy case",
 
-			mockCommit: mocks.GenericCommits[0],
+			mockCommit: mocks.GenericCommit(0),
 			mockErr:    nil,
 
 			wantRes: &GetCommitResponse{
 				Height: mocks.GenericHeight,
-				Commit: mocks.GenericCommits[0][:],
+				Commit: testCommit[:],
 			},
 
 			checkErr: assert.NoError,
@@ -237,7 +239,7 @@ func TestServer_GetCommit(t *testing.T) {
 			name: "error case",
 
 			mockCommit: flow.StateCommitment{},
-			mockErr:    mocks.DummyError,
+			mockErr:    mocks.GenericError,
 
 			wantRes: nil,
 
@@ -308,7 +310,7 @@ func TestServer_GetHeader(t *testing.T) {
 
 			reqHeight: mocks.GenericHeight,
 
-			mockErr: mocks.DummyError,
+			mockErr: mocks.GenericError,
 
 			wantHeight: mocks.GenericHeight,
 			wantRes:    nil,
@@ -373,16 +375,16 @@ func TestServer_GetEvents(t *testing.T) {
 			name: "happy case",
 
 			reqHeight: mocks.GenericHeight,
-			reqTypes:  mocks.GenericEventTypes,
+			reqTypes:  mocks.GenericEventTypes(2),
 
-			mockEvents: mocks.GenericEvents,
+			mockEvents: mocks.GenericEvents(4),
 			mockErr:    nil,
 
 			wantHeight: mocks.GenericHeight,
-			wantTypes:  mocks.GenericEventTypes,
+			wantTypes:  mocks.GenericEventTypes(2),
 			wantRes: &GetEventsResponse{
 				Height: mocks.GenericHeight,
-				Types:  convert.TypesToStrings(mocks.GenericEventTypes),
+				Types:  convert.TypesToStrings(mocks.GenericEventTypes(2)),
 				Data:   mocks.GenericByteSlice,
 			},
 
@@ -392,13 +394,13 @@ func TestServer_GetEvents(t *testing.T) {
 			name: "error case",
 
 			reqHeight: mocks.GenericHeight,
-			reqTypes:  mocks.GenericEventTypes,
+			reqTypes:  mocks.GenericEventTypes(2),
 
-			mockEvents: mocks.GenericEvents,
-			mockErr:    mocks.DummyError,
+			mockEvents: mocks.GenericEvents(4),
+			mockErr:    mocks.GenericError,
 
 			wantHeight: mocks.GenericHeight,
-			wantTypes:  mocks.GenericEventTypes,
+			wantTypes:  mocks.GenericEventTypes(2),
 			wantRes:    nil,
 
 			checkErr: assert.Error,
@@ -466,17 +468,17 @@ func TestServer_GetRegisterValues(t *testing.T) {
 			name: "happy case",
 
 			reqHeight: mocks.GenericHeight,
-			reqPaths:  mocks.GenericLedgerPaths,
+			reqPaths:  mocks.GenericLedgerPaths(6),
 
-			mockValues: mocks.GenericLedgerValues,
+			mockValues: mocks.GenericLedgerValues(6),
 			mockErr:    nil,
 
 			wantHeight: mocks.GenericHeight,
-			wantPaths:  mocks.GenericLedgerPaths,
+			wantPaths:  mocks.GenericLedgerPaths(6),
 			wantRes: &GetRegisterValuesResponse{
 				Height: mocks.GenericHeight,
-				Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths),
-				Values: convert.ValuesToBytes(mocks.GenericLedgerValues),
+				Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
+				Values: convert.ValuesToBytes(mocks.GenericLedgerValues(6)),
 			},
 
 			checkErr: assert.NoError,
@@ -485,13 +487,13 @@ func TestServer_GetRegisterValues(t *testing.T) {
 			name: "error case",
 
 			reqHeight: mocks.GenericHeight,
-			reqPaths:  mocks.GenericLedgerPaths,
+			reqPaths:  mocks.GenericLedgerPaths(6),
 
-			mockValues: mocks.GenericLedgerValues,
-			mockErr:    mocks.DummyError,
+			mockValues: mocks.GenericLedgerValues(6),
+			mockErr:    mocks.GenericError,
 
 			wantHeight: mocks.GenericHeight,
-			wantPaths:  mocks.GenericLedgerPaths,
+			wantPaths:  mocks.GenericLedgerPaths(6),
 			wantRes:    nil,
 
 			checkErr: assert.Error,
@@ -548,19 +550,19 @@ func TestServer_GetTransaction(t *testing.T) {
 		{
 			name: "happy case",
 
-			reqTransactionID: mocks.GenericIdentifiers[0],
+			reqTransactionID: mocks.GenericIdentifier(0),
 
-			mockTransaction: mocks.GenericTransactions[0],
+			mockTransaction: mocks.GenericTransaction(0),
 
-			wantTransaction: mocks.GenericTransactions[0],
+			wantTransaction: mocks.GenericTransaction(0),
 			checkErr:        assert.NoError,
 		},
 		{
 			name: "handles index failure",
 
-			reqTransactionID: mocks.GenericIdentifiers[0],
+			reqTransactionID: mocks.GenericIdentifier(0),
 
-			mockErr: mocks.DummyError,
+			mockErr: mocks.GenericError,
 
 			checkErr: assert.Error,
 		},
@@ -578,14 +580,15 @@ func TestServer_GetTransaction(t *testing.T) {
 
 			s := Server{index: index}
 
+			id := mocks.GenericIdentifier(0)
 			req := &GetTransactionRequest{
-				TransactionID: mocks.GenericIdentifiers[0][:],
+				TransactionID: id[:],
 			}
 			gotRes, gotErr := s.GetTransaction(context.Background(), req)
 
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
-				assert.Equal(t, gotRes.TransactionID, mocks.GenericIdentifiers[0][:])
+				assert.Equal(t, gotRes.TransactionID, id[:])
 				assert.NotEmpty(t, gotRes.Data)
 			}
 		})
@@ -610,9 +613,9 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 
 			reqHeight: mocks.GenericHeight,
 
-			mockTransactions: mocks.GenericIdentifiers,
+			mockTransactions: mocks.GenericIdentifiers(5),
 
-			wantTransactions: mocks.GenericIdentifiers,
+			wantTransactions: mocks.GenericIdentifiers(5),
 			checkErr:         assert.NoError,
 		},
 		{
@@ -620,7 +623,7 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 
 			reqHeight: mocks.GenericHeight,
 
-			mockErr: mocks.DummyError,
+			mockErr: mocks.GenericError,
 
 			checkErr: assert.Error,
 		},

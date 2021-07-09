@@ -239,7 +239,7 @@ func TestLibrary_Retrieve(t *testing.T) {
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
 			assert.Equal(t, wantUnencodedValue, b)
-			return mocks.DummyError
+			return mocks.GenericError
 		}
 
 		l := &Library{

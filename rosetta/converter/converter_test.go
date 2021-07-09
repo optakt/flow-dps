@@ -37,25 +37,25 @@ func TestNew(t *testing.T) {
 		generator := mocks.BaselineGenerator(t)
 		generator.TokensDepositedFunc = func(symbol string) (string, error) {
 			assert.Equal(t, dps.FlowSymbol, symbol)
-			return string(mocks.GenericEventTypes[0]), nil
+			return string(mocks.GenericEventType(0)), nil
 		}
 		generator.TokensWithdrawnFunc = func(symbol string) (string, error) {
 			assert.Equal(t, dps.FlowSymbol, symbol)
-			return string(mocks.GenericEventTypes[1]), nil
+			return string(mocks.GenericEventType(1)), nil
 		}
 
 		cvt, err := New(generator)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, cvt.deposit, mocks.GenericEventTypes[0])
-			assert.Equal(t, cvt.withdrawal, mocks.GenericEventTypes[1])
+			assert.Equal(t, cvt.deposit, mocks.GenericEventType(0))
+			assert.Equal(t, cvt.withdrawal, mocks.GenericEventType(1))
 		}
 	})
 
 	t.Run("handles generator failure for deposit event type", func(t *testing.T) {
 		generator := mocks.BaselineGenerator(t)
 		generator.TokensDepositedFunc = func(symbol string) (string, error) {
-			return "", mocks.DummyError
+			return "", mocks.GenericError
 		}
 
 		cvt, err := New(generator)
@@ -67,7 +67,7 @@ func TestNew(t *testing.T) {
 	t.Run("handles generator failure for withdrawal event type", func(t *testing.T) {
 		generator := mocks.BaselineGenerator(t)
 		generator.TokensWithdrawnFunc = func(symbol string) (string, error) {
-			return "", mocks.DummyError
+			return "", mocks.GenericError
 		}
 
 		cvt, err := New(generator)
@@ -80,7 +80,7 @@ func TestNew(t *testing.T) {
 func TestConverter_EventToOperation(t *testing.T) {
 	depositType := &cadence.EventType{
 		Location:            utils.TestLocation,
-		QualifiedIdentifier: "deposit",
+		QualifiedIdentifier: string(mocks.GenericEventType(0)),
 		Fields: []cadence.Field{
 			{
 				Identifier: "amount",
@@ -102,7 +102,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 
 	withdrawalType := &cadence.EventType{
 		Location:            utils.TestLocation,
-		QualifiedIdentifier: "withdrawal",
+		QualifiedIdentifier: string(mocks.GenericEventType(1)),
 		Fields: []cadence.Field{
 			{
 				Identifier: "amount",
@@ -245,7 +245,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 
 			event: flow.Event{
 				TransactionID: id,
-				Type:          "deposit",
+				Type:          mocks.GenericEventType(0),
 				Payload:       depositEventPayload,
 				EventIndex:    0,
 			},
@@ -259,7 +259,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 
 			event: flow.Event{
 				TransactionID: id,
-				Type:          "withdrawal",
+				Type:          mocks.GenericEventType(1),
 				Payload:       withdrawalEventPayload,
 				EventIndex:    1,
 			},
@@ -285,7 +285,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 			name: "wrong amount of fields",
 
 			event: flow.Event{
-				Type:    "deposit",
+				Type:    mocks.GenericEventType(0),
 				Payload: threeFieldsEventPayload,
 			},
 
@@ -296,7 +296,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 			name: "missing amount field",
 
 			event: flow.Event{
-				Type:    "deposit",
+				Type:    mocks.GenericEventType(0),
 				Payload: missingAmountEventPayload,
 			},
 
@@ -307,7 +307,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 			name: "missing address field",
 
 			event: flow.Event{
-				Type:    "deposit",
+				Type:    mocks.GenericEventType(0),
 				Payload: missingAddressEventPayload,
 			},
 
@@ -322,8 +322,8 @@ func TestConverter_EventToOperation(t *testing.T) {
 			t.Parallel()
 
 			cvt := &Converter{
-				deposit:    "deposit",
-				withdrawal: "withdrawal",
+				deposit:    mocks.GenericEventType(0),
+				withdrawal: mocks.GenericEventType(1),
 			}
 
 			got, err := cvt.EventToOperation(test.event)

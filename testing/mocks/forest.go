@@ -44,10 +44,10 @@ func BaselineForest(t *testing.T, hasCommit bool) *Forest {
 			return GenericTrie, true
 		},
 		PathsFunc: func(commit flow.StateCommitment) ([]ledger.Path, bool) {
-			return GenericLedgerPaths, true
+			return GenericLedgerPaths(6), true
 		},
 		ParentFunc: func(commit flow.StateCommitment) (flow.StateCommitment, bool) {
-			return GenericCommits[1], true
+			return GenericCommit(1), true
 		},
 		ResetFunc: func(finalized flow.StateCommitment) {},
 		SizeFunc: func() uint {
