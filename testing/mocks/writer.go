@@ -22,15 +22,15 @@ import (
 )
 
 type Writer struct {
-	FirstFunc              func(height uint64) error
-	LastFunc               func(height uint64) error
-	HeaderFunc             func(height uint64, header *flow.Header) error
-	CommitFunc             func(height uint64, commit flow.StateCommitment) error
-	PayloadsFunc           func(height uint64, paths []ledger.Path, value []*ledger.Payload) error
-	HeightFunc             func(blockID flow.Identifier, height uint64) error
-	CollectionsFunc        func(height uint64, collections []*flow.LightCollection) error
-	TransactionsFunc       func(height uint64, transactions []*flow.TransactionBody, results []*flow.TransactionResult) error
-	EventsFunc             func(height uint64, events []flow.Event) error
+	FirstFunc        func(height uint64) error
+	LastFunc         func(height uint64) error
+	HeaderFunc       func(height uint64, header *flow.Header) error
+	CommitFunc       func(height uint64, commit flow.StateCommitment) error
+	PayloadsFunc     func(height uint64, paths []ledger.Path, value []*ledger.Payload) error
+	HeightFunc       func(blockID flow.Identifier, height uint64) error
+	CollectionsFunc  func(height uint64, collections []*flow.LightCollection) error
+	TransactionsFunc func(height uint64, transactions []*flow.TransactionBody, results []*flow.TransactionResult) error
+	EventsFunc       func(height uint64, events []flow.Event) error
 }
 
 func BaselineWriter(t *testing.T) *Writer {

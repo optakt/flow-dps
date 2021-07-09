@@ -785,12 +785,12 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 
 	tr := &Transitions{
 		cfg: Config{
-			IndexCommit:             true,
-			IndexHeader:             true,
-			IndexPayloads:           true,
-			IndexCollections:        true,
-			IndexTransactions:       true,
-			IndexEvents:             true,
+			IndexCommit:       true,
+			IndexHeader:       true,
+			IndexPayloads:     true,
+			IndexCollections:  true,
+			IndexTransactions: true,
+			IndexEvents:       true,
 		},
 		log:   mocks.GenericLogger,
 		load:  load,

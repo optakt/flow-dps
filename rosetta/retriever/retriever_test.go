@@ -22,6 +22,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
