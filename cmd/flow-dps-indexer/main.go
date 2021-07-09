@@ -18,6 +18,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"runtime"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
@@ -90,6 +91,10 @@ func run() int {
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
 	pflag.Parse()
+
+	// Increase the GOMAXPROCS value in order to use the full IOPS available, see:
+	// https://groups.google.com/g/golang-nuts/c/jPb_h3TvlKE
+	_ = runtime.GOMAXPROCS(128)
 
 	// Logger initialization.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
