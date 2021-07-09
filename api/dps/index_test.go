@@ -123,7 +123,14 @@ func TestIndex_Last(t *testing.T) {
 }
 
 func TestIndex_Header(t *testing.T) {
-	headerBytes, err := cbor.Marshal(mocks.GenericHeader)
+	// We need to use the proper encoding to support nanoseconds
+	// and timezones in timestamps.
+	options := cbor.CanonicalEncOptions()
+	options.Time = cbor.TimeRFC3339Nano
+	encoder, err := options.EncMode()
+	require.NoError(t, err)
+
+	headerBytes, err := encoder.Marshal(mocks.GenericHeader)
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {

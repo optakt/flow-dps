@@ -58,7 +58,7 @@ var (
 	GenericHeader = &flow.Header{
 		ChainID:   dps.FlowTestnet,
 		Height:    GenericHeight,
-		Timestamp: time.Date(1972, 11, 12, 13, 14, 15, 0, time.Local),
+		Timestamp: time.Date(1972, 11, 12, 13, 14, 15, 16, time.UTC),
 	}
 
 	GenericLedgerKey = ledger.NewKey([]ledger.KeyPart{
