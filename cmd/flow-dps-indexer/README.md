@@ -9,20 +9,22 @@ The index is generated in the form of a Badger database that allows random acces
 ## Usage
 
 ```sh
-Usage of ./flow-dps-indexer:
-  -c, --checkpoint string    checkpoint file for state trie
-  -d, --data string          database directory for protocol data
-  -f, --force bool           overwrite existing index database (default "false")
-  -i, --index string         database directory for state index (default "index")
-  -a, --index-all            index everything (default "false")
-  -b, --index-blocks         index blocks (default "false")
-  -e, --index-events         index events (default "false")
-  -h, --index-headers        index headers (default "false")
-  -p, --index-payloads       index payloads (default "false")
-  -r, --index-registers      index registers (default "false")
-  -x, --index-transactions   index transactions (default "false")
-  -l, --level string         log output level (default "info")
-  -t, --trie string          data directory for state ledger
+Usage of flow-dps-indexer:
+  -c, --checkpoint string           checkpoint file for state trie
+  -d, --data string                 database directory for protocol data
+  -f, --force                       overwrite existing index database
+  -i, --index string                database directory for state index (default "index")
+  -a, --index-all                   index everything
+      --index-collections           index collections
+      --index-commits               index commits
+      --index-events                index events
+      --index-headers               index headers
+      --index-payloads              index payloads
+      --index-transactions          index transactions
+  -l, --level string                log output level (default "info")
+  -m, --metrics                     enable metrics collection and output
+      --metrics-interval duration   defines the interval of metrics output to log (default 5m0s)
+  -t, --trie string                 data directory for state ledger
 ```
 
 ## Example
@@ -30,5 +32,5 @@ Usage of ./flow-dps-indexer:
 The below command line starts indexing a past spork from the on-disk information.
 
 ```sh
-./flow-dps-indexer -d /var/flow/data/protocol -t /var/flow/data/execution -c /var/flow/bootstrap/root.checkpoint -i /var/flow/data/index
+./flow-dps-indexer -a -l debug -d /var/flow/data/protocol -t /var/flow/data/execution -c /var/flow/bootstrap/root.checkpoint -i /var/flow/data/index
 ```
