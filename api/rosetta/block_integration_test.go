@@ -211,6 +211,13 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
+			// Effectively the same as the 'missing blockchain name' test case, since it's the first validation step.
+			name:    "empty block request",
+			request: rosetta.BlockRequest{},
+
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
+		},
+		{
 			name: "missing blockchain name",
 			request: rosetta.BlockRequest{
 				NetworkID: identifier.Network{
@@ -328,13 +335,6 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 
 			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidBlock),
 		},
-		{
-			// Effectively the same as the 'missing blockchain name' test case, since it's the first validation step.
-			name:    "empty block request",
-			request: rosetta.BlockRequest{},
-
-			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
-		},
 	}
 
 	for _, test := range tests {
@@ -398,13 +398,6 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 		prepare func(*http.Request)
 	}{
 		{
-			name:    "empty request",
-			payload: []byte(``),
-			prepare: func(req *http.Request) {
-				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-			},
-		},
-		{
 			name:    "wrong field type",
 			payload: []byte(wrongFieldType),
 			prepare: func(req *http.Request) {
@@ -448,7 +441,7 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 			gotErr, ok := echoErr.Message.(rosetta.Error)
 			require.True(t, ok)
 
-			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.Equal(t, configuration.ErrorInvalidEncoding, gotErr.ErrorDefinition)
 			assert.NotEmpty(t, gotErr.Description)
 		})
 	}

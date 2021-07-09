@@ -22,13 +22,14 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAPI_Status(t *testing.T) {
@@ -223,7 +224,7 @@ func TestAPI_StatusHandlerMalformedRequest(t *testing.T) {
 			gotErr, ok := echoErr.Message.(rosetta.Error)
 			require.True(t, ok)
 
-			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.Equal(t, configuration.ErrorInvalidEncoding, gotErr.ErrorDefinition)
 		})
 	}
 }

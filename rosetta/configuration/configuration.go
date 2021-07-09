@@ -54,6 +54,7 @@ func New(chain flow.ChainID) *Configuration {
 
 	errors := []meta.ErrorDefinition{
 		ErrorInternal,
+		ErrorInvalidEncoding,
 		ErrorInvalidFormat,
 		ErrorInvalidNetwork,
 		ErrorInvalidAccount,

@@ -37,7 +37,7 @@ func TestAPI_Options(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const wantErrorCount = 9
+	const wantErrorCount = 10
 
 	// verify version string is in the format of x.y.z
 	versionRe := regexp.MustCompile(`\d+\.\d+\.\d+`)
@@ -93,6 +93,10 @@ func TestAPI_Options(t *testing.T) {
 			case configuration.ErrorInternal.Code:
 				assert.Equal(t, configuration.ErrorInternal.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorInternal.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidEncoding.Code:
+				assert.Equal(t, configuration.ErrorInvalidEncoding.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidEncoding.Retriable, rosettaErr.Retriable)
 
 			case configuration.ErrorInvalidFormat.Code:
 				assert.Equal(t, configuration.ErrorInvalidFormat.Message, rosettaErr.Message)
@@ -288,7 +292,7 @@ func TestAPI_OptionsHandlesMalformedRequest(t *testing.T) {
 			gotErr, ok := echoErr.Message.(rosetta.Error)
 			require.True(t, ok)
 
-			assert.Equal(t, configuration.ErrorInvalidFormat, gotErr.ErrorDefinition)
+			assert.Equal(t, configuration.ErrorInvalidEncoding, gotErr.ErrorDefinition)
 		})
 	}
 }
