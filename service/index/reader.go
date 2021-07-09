@@ -140,7 +140,7 @@ func (r *Reader) Result(txID flow.Identifier) (*flow.TransactionResult, error) {
 	err := r.db.View(func(tx *badger.Txn) error {
 		err := r.storage.RetrieveResult(txID, results)(tx)
 		if err != nil {
-			return fmt.Errorf("could not look up transactions: %w", err)
+			return fmt.Errorf("could not look up transaction results: %w", err)
 		}
 		return nil
 	})
