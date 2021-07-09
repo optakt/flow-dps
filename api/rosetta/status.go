@@ -81,8 +81,5 @@ func (d *Data) Status(ctx echo.Context) error {
 		GenesisBlockID:        oldest,
 	}
 
-	// TODO: Implement genesis block return
-	//       https://github.com/optakt/flow-dps/issues/229
-
 	return ctx.JSON(http.StatusOK, res)
 }

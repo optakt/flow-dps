@@ -68,6 +68,13 @@ func TestAPI_Status(t *testing.T) {
 	if assert.NotNil(t, oldestHeight) {
 		assert.Equal(t, *oldestHeight, uint64(0))
 	}
+
+	assert.Equal(t, status.GenesisBlockID.Hash, oldestBlockID)
+
+	genesisBlockHeight := status.GenesisBlockID.Index
+	if assert.NotNil(t, genesisBlockHeight) {
+		assert.Equal(t, *genesisBlockHeight, uint64(0))
+	}
 }
 
 func TestAPI_StatusHandlesErrors(t *testing.T) {
