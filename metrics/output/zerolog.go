@@ -18,8 +18,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/optakt/flow-dps/metrics"
 	"github.com/rs/zerolog"
+
+	"github.com/optakt/flow-dps/metrics"
 )
 
 type Output struct {
