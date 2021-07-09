@@ -22,6 +22,7 @@ var DefaultConfig = Config{
 	IndexTransactions: false,
 	IndexEvents:       false,
 	IndexPayloads:     false,
+	SkipBootstrap:     false,
 }
 
 // Config contains optional parameters for the mapper.
@@ -32,6 +33,7 @@ type Config struct {
 	IndexTransactions bool
 	IndexEvents       bool
 	IndexPayloads     bool
+	SkipBootstrap     bool
 }
 
 // WithIndexCommit sets up the mapper to build the commits index.
@@ -73,5 +75,13 @@ func WithIndexEvents(b bool) func(*Config) {
 func WithIndexPayloads(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexPayloads = b
+	}
+}
+
+// WithSkipBootstrap sets the mapper up to skip indexing the registers from the
+// initial checkpoint.
+func WithSkipBootstrap(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.SkipBootstrap = b
 	}
 }

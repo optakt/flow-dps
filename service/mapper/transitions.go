@@ -98,7 +98,10 @@ func (t *Transitions) BootstrapState(s *State) error {
 	}
 
 	// Here, we store all the paths so we can index the payloads, if wanted.
-	paths := allPaths(checkpoint)
+	var paths []ledger.Path
+	if !t.cfg.SkipBootstrap {
+		paths = allPaths(checkpoint)
+	}
 	s.forest.Save(checkpoint, paths, first)
 
 	second := checkpoint.RootHash()
