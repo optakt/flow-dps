@@ -21,13 +21,13 @@ import (
 
 type Description struct {
 	Text   string
-	Fields FieldList
+	Fields Fields
 }
 
 func NewDescription(text string, fields ...FieldFunc) Description {
 	d := Description{
 		Text:   text,
-		Fields: FieldList{},
+		Fields: []Field{},
 	}
 	for _, field := range fields {
 		field(&d.Fields)
@@ -36,7 +36,7 @@ func NewDescription(text string, fields ...FieldFunc) Description {
 }
 
 func (d Description) String() string {
-	if len(d.Fields.fields) == 0 {
+	if len(d.Fields) == 0 {
 		return d.Text
 	}
 	return fmt.Sprintf("%s (%s)", d.Text, d.Fields)
@@ -47,58 +47,56 @@ type Field struct {
 	Val interface{}
 }
 
-type FieldList struct {
-	fields []Field
-}
+type Fields []Field
 
-func (f FieldList) Iterate(handle func(key string, val interface{})) {
-	for _, field := range f.fields {
+func (f Fields) Iterate(handle func(key string, val interface{})) {
+	for _, field := range f {
 		handle(field.Key, field.Val)
 	}
 }
 
-func (f FieldList) String() string {
-	parts := make([]string, 0, len(f.fields))
-	for _, field := range f.fields {
+func (f Fields) String() string {
+	parts := make([]string, 0, len(f))
+	for _, field := range f {
 		part := fmt.Sprintf("%s: %s", field.Key, field.Val)
 		parts = append(parts, part)
 	}
 	return strings.Join(parts, ", ")
 }
 
-type FieldFunc func(*FieldList)
+type FieldFunc func(*Fields)
 
 func WithErr(err error) FieldFunc {
-	return func(f *FieldList) {
+	return func(f *Fields) {
 		field := Field{Key: "error", Val: err.Error()}
-		f.fields = append(f.fields, field)
+		*f = append(*f, field)
 	}
 }
 
 func WithInt(key string, val int) FieldFunc {
-	return func(f *FieldList) {
+	return func(f *Fields) {
 		field := Field{Key: key, Val: val}
-		f.fields = append(f.fields, field)
+		*f = append(*f, field)
 	}
 }
 
 func WithUint64(key string, val uint64) FieldFunc {
-	return func(f *FieldList) {
+	return func(f *Fields) {
 		field := Field{Key: key, Val: val}
-		f.fields = append(f.fields, field)
+		*f = append(*f, field)
 	}
 }
 
 func WithString(key string, val string) FieldFunc {
-	return func(f *FieldList) {
+	return func(f *Fields) {
 		field := Field{Key: key, Val: val}
-		f.fields = append(f.fields, field)
+		*f = append(*f, field)
 	}
 }
 
 func WithStrings(key string, vals ...string) FieldFunc {
-	return func(f *FieldList) {
+	return func(f *Fields) {
 		field := Field{Key: key, Val: vals}
-		f.fields = append(f.fields, field)
+		*f = append(*f, field)
 	}
 }
