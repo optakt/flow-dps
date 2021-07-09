@@ -16,7 +16,6 @@ package rcrowley
 
 import (
 	"sync"
-	"time"
 
 	"github.com/rcrowley/go-metrics"
 	"github.com/rs/zerolog"
@@ -29,30 +28,28 @@ type Size struct {
 	compressed map[string]metrics.Counter
 }
 
-func NewSize(log zerolog.Logger, title string, interval time.Duration) *Size {
+func NewSize(title string) *Size {
 	s := Size{
 		title:      title,
 		original:   make(map[string]metrics.Counter),
 		compressed: make(map[string]metrics.Counter),
 	}
 
-	go s.output(log, interval)
-
 	return &s
 }
 
-func (s *Size) Bytes(name string, originalCount int, compressedCount int) {
+func (s *Size) Bytes(category string, originalCount int, compressedCount int) {
 	s.Lock()
 	defer s.Unlock()
-	original, ok := s.original[name]
+	original, ok := s.original[category]
 	if !ok {
 		original = metrics.NewCounter()
-		s.original[name] = original
+		s.original[category] = original
 	}
-	compressed, ok := s.compressed[name]
+	compressed, ok := s.compressed[category]
 	if !ok {
 		compressed = metrics.NewCounter()
-		s.compressed[name] = compressed
+		s.compressed[category] = compressed
 	}
 	original.Inc(int64(originalCount))
 	compressed.Inc(int64(compressedCount))
@@ -62,7 +59,7 @@ func (s *Size) Output(log zerolog.Logger) {
 	s.Lock()
 	defer s.Unlock()
 
-	log = log.With().Str("title", s.title).Logger()
+	log = log.With().Str("metrics", s.title).Str("type", "size").Logger()
 
 	originalTotal := int64(0)
 	compressedTotal := int64(0)
@@ -80,10 +77,10 @@ func (s *Size) Output(log zerolog.Logger) {
 		Int64("original_total", originalTotal).
 		Int64("compressed_total", compressedTotal).
 		Float64("ratio", totalRatio).
-		Msg("size metrics for all types")
+		Msg("size metrics for all categories")
 
-	for name, original := range s.original {
-		compressed := s.compressed[name]
+	for category, original := range s.original {
+		compressed := s.compressed[category]
 		originalCount := original.Count()
 		compressedCount := compressed.Count()
 		ratio := float64(compressedCount) / float64(originalCount)
@@ -92,19 +89,12 @@ func (s *Size) Output(log zerolog.Logger) {
 		originalTotal += originalCount
 		compressedTotal += compressedCount
 		log.Info().
-			Str("name", name).
+			Str("category", category).
 			Int64("original_count", originalCount).
 			Int64("compressed_count", compressedCount).
 			Float64("original_percentage", originalPercentage).
 			Float64("compressed_percentage", compressedPercentage).
 			Float64("ratio", ratio).
-			Msg("size metrics for one type")
-	}
-}
-
-func (s *Size) output(log zerolog.Logger, interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	for range ticker.C {
-		s.Output(log)
+			Msg("size metrics for one category")
 	}
 }

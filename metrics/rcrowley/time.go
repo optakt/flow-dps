@@ -28,25 +28,23 @@ type Time struct {
 	timers map[string]metrics.Timer
 }
 
-func NewTime(log zerolog.Logger, title string, interval time.Duration) *Time {
+func NewTime(title string) *Time {
 
 	t := Time{
 		title:  title,
 		timers: make(map[string]metrics.Timer),
 	}
 
-	go t.output(log, interval)
-
 	return &t
 }
 
-func (t *Time) Duration(name string) func() {
+func (t *Time) Duration(category string) func() {
 	t.Lock()
 	defer t.Unlock()
-	timer, ok := t.timers[name]
+	timer, ok := t.timers[category]
 	if !ok {
 		timer = metrics.NewTimer()
-		t.timers[name] = timer
+		t.timers[category] = timer
 	}
 	now := time.Now()
 	return func() {
@@ -58,7 +56,7 @@ func (t *Time) Output(log zerolog.Logger) {
 	t.Lock()
 	defer t.Unlock()
 
-	log = log.With().Str("title", t.title).Logger()
+	log = log.With().Str("metrics", t.title).Str("type", "time").Logger()
 
 	totalDuration := time.Duration(0)
 	for _, timer := range t.timers {
@@ -68,22 +66,15 @@ func (t *Time) Output(log zerolog.Logger) {
 
 	log.Info().
 		Str("duration_total", totalDuration.String()).
-		Msg("time metrics for all types")
+		Msg("time metrics for all categories")
 
-	for name, timer := range t.timers {
+	for category, timer := range t.timers {
 		duration := time.Duration(timer.Sum())
 		percentage := float64(duration) / float64(totalDuration)
 		log.Info().
-			Str("name", name).
+			Str("category", category).
 			Str("duration_count", duration.String()).
 			Float64("duration_percentage", percentage).
 			Msg("time metrics for one type")
-	}
-}
-
-func (t *Time) output(log zerolog.Logger, interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	for range ticker.C {
-		t.Output(log)
 	}
 }
