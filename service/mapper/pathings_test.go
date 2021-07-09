@@ -15,6 +15,8 @@
 package mapper
 
 import (
+	"bytes"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,9 +46,9 @@ func TestAllPaths(t *testing.T) {
 	t.Run("nominal case with multiple paths", func(t *testing.T) {
 		t.Parallel()
 
-		got := allPaths(mocks.GenericTrie)
+		got := allPaths(mocks.GenericTrie())
 
-		// Only the paths in nodes 1, 2 and 4 are taken into account since they are the only leaves.
+		// Only the paths in nodes 0, 1 and 3 are taken into account since they are the only leaves.
 		assert.Len(t, got, 3)
 		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPath(3), mocks.GenericLedgerPath(1), mocks.GenericLedgerPath(0)}, got)
 	})
@@ -65,38 +67,44 @@ func TestPathsPayloads(t *testing.T) {
 		t.Parallel()
 
 		// Forge test update with duplicate and unsorted paths.
-		testUpdate := mocks.GenericTrieUpdate
-		testPaths := mocks.GenericLedgerPaths(6)
-		testUpdate.Paths = []ledger.Path{
-			testPaths[0],
-			testPaths[0],
-			testPaths[1],
-			testPaths[2],
-			testPaths[3],
-			testPaths[4],
+		testUpdate := mocks.GenericTrieUpdate()
+		testPaths := []ledger.Path{
+			testUpdate.Paths[0],
+			testUpdate.Paths[0],
+			testUpdate.Paths[1],
+			testUpdate.Paths[2],
+			testUpdate.Paths[3],
+			testUpdate.Paths[4],
 		}
-
-		gotPaths, gotPayloads := pathsPayloads(mocks.GenericTrieUpdate)
-
-		// Expect payloads from deduplicated paths.
-		wantPayloads := []ledger.Payload{
-			*mocks.GenericLedgerPayload(3),
-			*mocks.GenericLedgerPayload(4),
-			*mocks.GenericLedgerPayload(5),
-			*mocks.GenericLedgerPayload(1),
-			*mocks.GenericLedgerPayload(2),
+		testPayloads := []*ledger.Payload{
+			testUpdate.Payloads[0],
+			testUpdate.Payloads[0],
+			testUpdate.Payloads[1],
+			testUpdate.Payloads[2],
+			testUpdate.Payloads[3],
+			testUpdate.Payloads[4],
 		}
-		assert.Equal(t, wantPayloads, gotPayloads)
+		testUpdate.Paths = testPaths
+		testUpdate.Payloads = testPayloads
+
+		gotPaths, gotPayloads := pathsPayloads(testUpdate)
+
+		// Expect paths to be sorted.
+		wantPaths := []ledger.Path{
+			testUpdate.Paths[1],
+			testUpdate.Paths[2],
+			testUpdate.Paths[3],
+			testUpdate.Paths[4],
+			testUpdate.Paths[5],
+		}
+		sort.Slice(wantPaths, func(i, j int) bool {
+			return bytes.Compare(wantPaths[i][:], wantPaths[j][:]) < 0
+		})
+
+		assert.Len(t, gotPayloads, 5)
 
 		// Verify that paths are sorted and deduplicated.
-		sortedPaths := []ledger.Path{
-			testPaths[2],
-			testPaths[3],
-			testPaths[4],
-			testPaths[0],
-			testPaths[1],
-		}
-		assert.Equalf(t, sortedPaths, gotPaths, "expected paths to be sorted alphabetically and deduplicated")
+		assert.Equalf(t, wantPaths, gotPaths, "expected paths to be sorted alphabetically and deduplicated")
 	})
 
 	t.Run("nominal case with empty trie update", func(t *testing.T) {

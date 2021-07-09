@@ -29,7 +29,7 @@ func BaselineLoader(t *testing.T) *Loader {
 
 	l := Loader{
 		CheckpointFunc: func() (*trie.MTrie, error) {
-			return GenericTrie, nil
+			return GenericTrie(), nil
 		},
 	}
 

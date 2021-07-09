@@ -228,7 +228,7 @@ func TestServer_GetCommit(t *testing.T) {
 
 			wantRes: &GetCommitResponse{
 				Height: mocks.GenericHeight,
-				Commit:  mocks.ByteSlice(mocks.GenericCommit(0)),
+				Commit: mocks.ByteSlice(mocks.GenericCommit(0)),
 			},
 
 			checkErr: assert.NoError,
@@ -579,13 +579,13 @@ func TestServer_GetTransaction(t *testing.T) {
 			s := Server{index: index}
 
 			req := &GetTransactionRequest{
-				TransactionID:  mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
 			}
 			gotRes, gotErr := s.GetTransaction(context.Background(), req)
 
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
-				assert.Equal(t, gotRes.TransactionID,  mocks.ByteSlice(mocks.GenericIdentifier(0)))
+				assert.Equal(t, gotRes.TransactionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
 				assert.NotEmpty(t, gotRes.Data)
 			}
 		})
