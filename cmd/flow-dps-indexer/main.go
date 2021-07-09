@@ -71,6 +71,7 @@ func run() int {
 		flagLevel             string
 		flagMetrics           bool
 		flagMetricsInterval   time.Duration
+		flagSkipBootstrap     bool
 		flagTrie              string
 	)
 
@@ -88,6 +89,7 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.BoolVarP(&flagMetrics, "metrics", "m", false, "enable metrics collection and output")
 	pflag.DurationVar(&flagMetricsInterval, "metrics-interval", 5*time.Minute, "defines the interval of metrics output to log")
+	pflag.BoolVar(&flagSkipBootstrap, "skip-bootstrap", false, "enable skipping checkpoint register payloads indexing")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
 	pflag.Parse()
@@ -210,6 +212,7 @@ func run() int {
 		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
 		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),
 		mapper.WithIndexPayloads(flagIndexAll || flagIndexPayloads),
+		mapper.WithSkipBootstrap(flagSkipBootstrap),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
