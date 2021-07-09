@@ -133,7 +133,7 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 func (w *Writer) Results(results []*flow.TransactionResult) error {
 	return w.db.Update(func(tx *badger.Txn) error {
 		for _, result := range results {
-			err := w.db.Update(w.storage.SaveTransactionResult(result))
+			err := w.db.Update(w.storage.SaveResult(result))
 			if err != nil {
 				return fmt.Errorf("could not index transaction results: %w", err)
 			}

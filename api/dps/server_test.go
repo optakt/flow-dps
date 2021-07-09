@@ -300,7 +300,7 @@ func TestServer_GetHeader(t *testing.T) {
 			wantHeight: mocks.GenericHeight,
 			wantRes: &GetHeaderResponse{
 				Height: mocks.GenericHeight,
-				Data:   mocks.GenericByteSlice,
+				Data:   mocks.GenericBytes,
 			},
 
 			checkErr: assert.NoError,
@@ -327,7 +327,7 @@ func TestServer_GetHeader(t *testing.T) {
 			codec := mocks.BaselineCodec(t)
 			codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 				assert.IsType(t, &flow.Header{}, v)
-				return mocks.GenericByteSlice, nil
+				return mocks.GenericBytes, nil
 			}
 
 			var gotHeight uint64
@@ -385,7 +385,7 @@ func TestServer_GetEvents(t *testing.T) {
 			wantRes: &GetEventsResponse{
 				Height: mocks.GenericHeight,
 				Types:  convert.TypesToStrings(mocks.GenericEventTypes(2)),
-				Data:   mocks.GenericByteSlice,
+				Data:   mocks.GenericBytes,
 			},
 
 			checkErr: assert.NoError,
@@ -415,7 +415,7 @@ func TestServer_GetEvents(t *testing.T) {
 			codec := mocks.BaselineCodec(t)
 			codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 				assert.IsType(t, []flow.Event{}, v)
-				return mocks.GenericByteSlice, nil
+				return mocks.GenericBytes, nil
 			}
 
 			var gotHeight uint64

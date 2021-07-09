@@ -200,7 +200,7 @@ func TestLibrary_Retrieve(t *testing.T) {
 			assert.Equal(t, wantEncodedValue, b)
 
 			ptr, ok := v.(*uint64)
-			assert.True(t, ok)
+			require.True(t, ok)
 
 			*ptr = 42
 			return nil

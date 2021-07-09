@@ -35,13 +35,13 @@ func BaselineValidator(t *testing.T) *Validator {
 			return nil
 		},
 		BlockFunc: func(block identifier.Block) (identifier.Block, error) {
-			return GenericBlockID, nil
+			return GenericBlockQualifier, nil
 		},
 		TransactionFunc: func(transaction identifier.Transaction) error {
 			return nil
 		},
 		CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) {
-			return GenericCryptoID, nil
+			return GenericCurrency, nil
 		},
 	}
 

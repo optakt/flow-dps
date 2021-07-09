@@ -25,5 +25,5 @@ type Chain interface {
 	Events(height uint64) ([]flow.Event, error)
 	Collections(height uint64) ([]*flow.LightCollection, error)
 	Transactions(height uint64) ([]*flow.TransactionBody, error)
-	TransactionResults(height uint64) ([]*flow.TransactionResult, error)
+	Results(height uint64) ([]*flow.TransactionResult, error)
 }

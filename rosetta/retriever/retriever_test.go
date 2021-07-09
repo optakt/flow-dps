@@ -184,7 +184,7 @@ func TestRetriever_Balances(t *testing.T) {
 			return nil
 		}
 		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockID, block)
+			assert.Equal(t, mocks.GenericBlockQualifier, block)
 			return block, nil
 		}
 		validator.CurrencyFunc = func(currency identifier.Currency) (identifier.Currency, error) {
@@ -200,7 +200,7 @@ func TestRetriever_Balances(t *testing.T) {
 
 		invoker := mocks.BaselineInvoker(t)
 		invoker.ScriptFunc = func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
-			assert.Equal(t, mocks.GenericBlockID.Index, &height)
+			assert.Equal(t, mocks.GenericBlockQualifier.Index, &height)
 			assert.Equal(t, []byte(`test`), script)
 			if assert.Len(t, parameters, 1) {
 				assert.Equal(t, cadence.NewAddress(mocks.GenericAccount.Address), parameters[0])
@@ -216,13 +216,13 @@ func TestRetriever_Balances(t *testing.T) {
 		ret.invoke = invoker
 
 		blockID, amounts, err := ret.Balances(
-			mocks.GenericBlockID,
+			mocks.GenericBlockQualifier,
 			mocks.GenericAccountID(0),
 			[]identifier.Currency{mocks.GenericCurrency},
 		)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericBlockID, blockID)
+			assert.Equal(t, mocks.GenericBlockQualifier, blockID)
 
 			wantAmounts := []object.Amount{
 				mocks.GenericOperation(0).Amount,
@@ -236,7 +236,7 @@ func TestRetriever_Balances(t *testing.T) {
 
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockID, block)
+			assert.Equal(t, mocks.GenericBlockQualifier, block)
 			return identifier.Block{}, mocks.GenericError
 		}
 
@@ -246,7 +246,7 @@ func TestRetriever_Balances(t *testing.T) {
 		ret.validate = validator
 
 		_, _, err = ret.Balances(
-			mocks.GenericBlockID,
+			mocks.GenericBlockQualifier,
 			mocks.GenericAccountID(0),
 			[]identifier.Currency{mocks.GenericCurrency},
 		)
@@ -267,7 +267,7 @@ func TestRetriever_Balances(t *testing.T) {
 		ret.validate = validator
 
 		_, _, err = ret.Balances(
-			mocks.GenericBlockID,
+			mocks.GenericBlockQualifier,
 			mocks.GenericAccountID(0),
 			[]identifier.Currency{mocks.GenericCurrency},
 		)
@@ -288,7 +288,7 @@ func TestRetriever_Balances(t *testing.T) {
 		ret.validate = validator
 
 		_, _, err = ret.Balances(
-			mocks.GenericBlockID,
+			mocks.GenericBlockQualifier,
 			mocks.GenericAccountID(0),
 			[]identifier.Currency{mocks.GenericCurrency},
 		)
@@ -309,7 +309,7 @@ func TestRetriever_Balances(t *testing.T) {
 		ret.generator = generator
 
 		_, _, err = ret.Balances(
-			mocks.GenericBlockID,
+			mocks.GenericBlockQualifier,
 			mocks.GenericAccountID(0),
 			[]identifier.Currency{mocks.GenericCurrency},
 		)
@@ -330,7 +330,7 @@ func TestRetriever_Balances(t *testing.T) {
 		ret.invoke = invoker
 
 		_, _, err = ret.Balances(
-			mocks.GenericBlockID,
+			mocks.GenericBlockQualifier,
 			mocks.GenericAccountID(0),
 			[]identifier.Currency{mocks.GenericCurrency},
 		)
@@ -358,7 +358,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockID, block)
+			assert.Equal(t, mocks.GenericBlockQualifier, block)
 			return block, nil
 		}
 
@@ -396,10 +396,10 @@ func TestRetriever_Block(t *testing.T) {
 		ret.generator = generator
 		ret.convert = convert
 
-		block, extra, err := ret.Block(mocks.GenericBlockID)
+		block, extra, err := ret.Block(mocks.GenericBlockQualifier)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericBlockID, block.ID)
+			assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
 			assert.Len(t, block.Transactions, 2)
 
 			assert.Empty(t, extra)
@@ -425,7 +425,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockID, block)
+			assert.Equal(t, mocks.GenericBlockQualifier, block)
 			return block, nil
 		}
 
@@ -464,11 +464,11 @@ func TestRetriever_Block(t *testing.T) {
 		ret.convert = convert
 		ret.cfg.TransactionLimit = 2
 
-		block, extra, err := ret.Block(mocks.GenericBlockID)
+		block, extra, err := ret.Block(mocks.GenericBlockQualifier)
 
 		if assert.NoError(t, err) {
 			assert.Len(t, block.Transactions, 2)
-			assert.Equal(t, mocks.GenericBlockID, block.ID)
+			assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
 
 			assert.Empty(t, extra)
 		}
@@ -492,7 +492,7 @@ func TestRetriever_Block(t *testing.T) {
 		}
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockID, block)
+			assert.Equal(t, mocks.GenericBlockQualifier, block)
 			return block, nil
 		}
 		generator := mocks.BaselineGenerator(t)
@@ -529,10 +529,10 @@ func TestRetriever_Block(t *testing.T) {
 		ret.convert = convert
 		ret.cfg.TransactionLimit = 1
 
-		block, extra, err := ret.Block(mocks.GenericBlockID)
+		block, extra, err := ret.Block(mocks.GenericBlockQualifier)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericBlockID, block.ID)
+			assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
 			assert.Len(t, block.Transactions, 1)
 
 			assert.Len(t, extra, 1)
@@ -552,7 +552,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		ret.index = index
 
-		got, _, err := ret.Block(mocks.GenericBlockID)
+		got, _, err := ret.Block(mocks.GenericBlockQualifier)
 		if assert.NoError(t, err) {
 			assert.Empty(t, got.Transactions)
 		}
@@ -571,7 +571,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		ret.index = index
 
-		got, _, err := ret.Block(mocks.GenericBlockID)
+		got, _, err := ret.Block(mocks.GenericBlockQualifier)
 
 		if assert.NoError(t, err) {
 			assert.Empty(t, got.Transactions)
@@ -591,7 +591,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		ret.validate = validator
 
-		_, _, err = ret.Block(mocks.GenericBlockID)
+		_, _, err = ret.Block(mocks.GenericBlockQualifier)
 		assert.Error(t, err)
 	})
 
@@ -608,7 +608,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		ret.generator = generator
 
-		_, _, err = ret.Block(mocks.GenericBlockID)
+		_, _, err = ret.Block(mocks.GenericBlockQualifier)
 		assert.Error(t, err)
 	})
 
@@ -625,7 +625,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		ret.generator = generator
 
-		_, _, err = ret.Block(mocks.GenericBlockID)
+		_, _, err = ret.Block(mocks.GenericBlockQualifier)
 		assert.Error(t, err)
 	})
 
@@ -642,7 +642,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		ret.index = index
 
-		_, _, err = ret.Block(mocks.GenericBlockID)
+		_, _, err = ret.Block(mocks.GenericBlockQualifier)
 		assert.Error(t, err)
 	})
 
@@ -664,7 +664,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		ret.index = index
 
-		_, _, err = ret.Block(mocks.GenericBlockID)
+		_, _, err = ret.Block(mocks.GenericBlockQualifier)
 		assert.Error(t, err)
 	})
 
@@ -681,7 +681,7 @@ func TestRetriever_Block(t *testing.T) {
 
 		ret.convert = convert
 
-		_, _, err = ret.Block(mocks.GenericBlockID)
+		_, _, err = ret.Block(mocks.GenericBlockQualifier)
 		assert.Error(t, err)
 	})
 }
@@ -692,7 +692,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockID, block)
+			assert.Equal(t, mocks.GenericBlockQualifier, block)
 			return block, nil
 		}
 		validator.TransactionFunc = func(transaction identifier.Transaction) error {
@@ -749,7 +749,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		ret.index = index
 		ret.convert = convert
 
-		got, err := ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		got, err := ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, mocks.GenericTransactionQualifier(0), got.ID)
@@ -775,7 +775,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.index = index
 
-		got, err := ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		got, err := ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 
 		if assert.NoError(t, err) {
 			assert.Empty(t, got.Operations)
@@ -795,7 +795,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.validate = validator
 
-		_, err = ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		_, err = ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 		assert.Error(t, err)
 	})
 
@@ -812,7 +812,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.validate = validator
 
-		_, err = ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		_, err = ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 		assert.Error(t, err)
 	})
 
@@ -828,7 +828,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.index = index
 
-		_, err = ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		_, err = ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 		assert.Error(t, err)
 	})
 
@@ -844,7 +844,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.index = index
 
-		_, err = ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		_, err = ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 		assert.Error(t, err)
 	})
 
@@ -861,7 +861,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.generator = generator
 
-		_, err = ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		_, err = ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 		assert.Error(t, err)
 	})
 
@@ -878,7 +878,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.generator = generator
 
-		_, err = ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		_, err = ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 		assert.Error(t, err)
 	})
 
@@ -895,7 +895,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.index = index
 
-		_, err = ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		_, err = ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 		assert.Error(t, err)
 	})
 
@@ -912,7 +912,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.convert = convert
 
-		_, err = ret.Transaction(mocks.GenericBlockID, mocks.GenericTransactionQualifier(0))
+		_, err = ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 
 		assert.Error(t, err)
 	})

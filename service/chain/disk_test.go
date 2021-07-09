@@ -100,11 +100,11 @@ func TestDisk_TransactionResults(t *testing.T) {
 	defer db.Close()
 	c := chain.FromDisk(db)
 
-	tr, err := c.TransactionResults(mocks.GenericHeight)
+	tr, err := c.Results(mocks.GenericHeight)
 	assert.NoError(t, err)
 	assert.Len(t, tr, 4)
 
-	_, err = c.TransactionResults(math.MaxUint64)
+	_, err = c.Results(math.MaxUint64)
 	assert.Error(t, err)
 }
 

@@ -53,14 +53,14 @@ func TestLibrary_SaveAndRetrieveFirst(t *testing.T) {
 
 	t.Run("retrieve first height", func(t *testing.T) {
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, mocks.GenericByteSlice)
+			return tx.Set(testKey, mocks.GenericBytes)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &mocks.GenericHeight, v)
 			decodeCallCount++
 
@@ -103,14 +103,14 @@ func TestLibrary_SaveAndRetrieveLast(t *testing.T) {
 
 	t.Run("retrieve last height", func(t *testing.T) {
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, mocks.GenericByteSlice)
+			return tx.Set(testKey, mocks.GenericBytes)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &mocks.GenericHeight, v)
 			decodeCallCount++
 
@@ -153,14 +153,14 @@ func TestLibrary_SaveAndRetrieveCommit(t *testing.T) {
 
 	t.Run("retrieve commit", func(t *testing.T) {
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, mocks.GenericByteSlice)
+			return tx.Set(testKey, mocks.GenericBytes)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &flow.StateCommitment{}, v)
 			decodeCallCount++
 
@@ -204,14 +204,14 @@ func TestLibrary_SaveAndRetrieveHeader(t *testing.T) {
 
 	t.Run("retrieve header", func(t *testing.T) {
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, mocks.GenericByteSlice)
+			return tx.Set(testKey, mocks.GenericBytes)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &flow.Header{}, v)
 			decodeCallCount++
 
@@ -275,10 +275,10 @@ func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
 		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			err := tx.Set(testKey1, mocks.GenericByteSlice)
+			err := tx.Set(testKey1, mocks.GenericBytes)
 			require.NoError(t, err)
 
-			err = tx.Set(testKey2, mocks.GenericByteSlice)
+			err = tx.Set(testKey2, mocks.GenericBytes)
 			require.NoError(t, err)
 
 			return nil
@@ -288,7 +288,7 @@ func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &[]flow.Event{}, v)
 			decodeCallCount++
 
@@ -313,10 +313,10 @@ func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
 		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			err := tx.Set(testKey1, mocks.GenericByteSlice)
+			err := tx.Set(testKey1, mocks.GenericBytes)
 			require.NoError(t, err)
 
-			err = tx.Set(testKey2, mocks.GenericByteSlice)
+			err = tx.Set(testKey2, mocks.GenericBytes)
 			require.NoError(t, err)
 
 			return nil
@@ -326,7 +326,7 @@ func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &[]flow.Event{}, v)
 			decodeCallCount++
 
@@ -711,14 +711,14 @@ func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, mocks.GenericByteSlice)
+			return tx.Set(testKey, mocks.GenericBytes)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &mocks.GenericHeight, v)
 			decodeCallCount++
 
@@ -768,14 +768,14 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, mocks.GenericByteSlice)
+			return tx.Set(testKey, mocks.GenericBytes)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &flow.TransactionBody{}, v)
 			decodeCallCount++
 
@@ -882,14 +882,14 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, mocks.GenericByteSlice)
+			return tx.Set(testKey, mocks.GenericBytes)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &flow.LightCollection{}, v)
 			decodeCallCount++
 
@@ -939,14 +939,14 @@ func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, mocks.GenericByteSlice)
+			return tx.Set(testKey, mocks.GenericBytes)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &[]flow.Identifier{}, v)
 			decodeCallCount++
 
@@ -966,7 +966,7 @@ func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
-	testKey := encodeKey(prefixTransactionResults, mocks.GenericResult(0).TransactionID)
+	testKey := encodeKey(prefixResults, mocks.GenericResult(0).TransactionID)
 
 	t.Run("save transaction result", func(t *testing.T) {
 		t.Parallel()
@@ -984,7 +984,7 @@ func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.SaveTransactionResult(mocks.GenericResult(0)))
+		err := db.Update(l.SaveResult(mocks.GenericResult(0)))
 
 		assert.NoError(t, err)
 	})
@@ -996,14 +996,14 @@ func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
 		defer db.Close()
 
 		err := db.Update(func(tx *badger.Txn) error {
-			return tx.Set(testKey, mocks.GenericByteSlice)
+			return tx.Set(testKey, mocks.GenericBytes)
 		})
 		require.NoError(t, err)
 
 		decodeCallCount := 0
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
-			assert.Equal(t, mocks.GenericByteSlice, b)
+			assert.Equal(t, mocks.GenericBytes, b)
 			assert.IsType(t, &flow.TransactionResult{}, v)
 			decodeCallCount++
 
@@ -1015,7 +1015,7 @@ func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
 		}
 
 		var got *flow.TransactionResult
-		err = db.View(l.RetrieveTransactionResult(mocks.GenericResult(0).TransactionID, got))
+		err = db.View(l.RetrieveResult(mocks.GenericResult(0).TransactionID, got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)

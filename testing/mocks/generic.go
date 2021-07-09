@@ -47,12 +47,12 @@ var (
 
 	GenericHeight = uint64(42)
 
-	GenericByteSlice = []byte(`test`)
+	GenericBytes = []byte(`test`)
 
 	GenericHeader = &flow.Header{
 		ChainID:   dps.FlowTestnet,
 		Height:    GenericHeight,
-		Timestamp: time.Date(1972, 0, 0, 0, 0, 0, 0, time.Local),
+		Timestamp: time.Date(1972, 11, 12, 13, 14, 15, 0, time.Local),
 	}
 
 	GenericLedgerKey = ledger.NewKey([]ledger.KeyPart{
@@ -117,13 +117,9 @@ var (
 		Address: GenericAddress(0),
 	}
 
-	GenericBlockID = identifier.Block{
+	GenericBlockQualifier = identifier.Block{
 		Index: &GenericHeight,
 		Hash:  GenericHeader.ID().String(),
-	}
-	GenericCryptoID = identifier.Currency{
-		Symbol:   dps.FlowSymbol,
-		Decimals: dps.FlowDecimals,
 	}
 )
 

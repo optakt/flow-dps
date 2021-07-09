@@ -80,7 +80,7 @@ func (c *Chain) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	return c.TransactionsFunc(height)
 }
 
-func (c *Chain) TransactionResults(height uint64) ([]*flow.TransactionResult, error) {
+func (c *Chain) Results(height uint64) ([]*flow.TransactionResult, error) {
 	return c.TransactionResultsFunc(height)
 }
 

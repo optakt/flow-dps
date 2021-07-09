@@ -57,6 +57,7 @@ func TestNewTransitions(t *testing.T) {
 			WithIndexPayloads(true),
 			WithIndexCollections(true),
 			WithIndexTransactions(true),
+			WithIndexResults(true),
 		)
 
 		assert.NotNil(t, tr)
@@ -73,6 +74,7 @@ func TestNewTransitions(t *testing.T) {
 		assert.True(t, tr.cfg.IndexPayloads)
 		assert.True(t, tr.cfg.IndexCollections)
 		assert.True(t, tr.cfg.IndexTransactions)
+		assert.True(t, tr.cfg.IndexResults)
 	})
 }
 
@@ -794,6 +796,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			IndexPayloads:     true,
 			IndexCollections:  true,
 			IndexTransactions: true,
+			IndexResults:      true,
 			IndexEvents:       true,
 		},
 		log:   mocks.GenericLogger,

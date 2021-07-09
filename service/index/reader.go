@@ -134,11 +134,11 @@ func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) 
 	return txIDs, err
 }
 
-// TransactionResult returns the transaction result for the given transaction ID.
-func (r *Reader) TransactionResult(txID flow.Identifier) (*flow.TransactionResult, error) {
+// Result returns the transaction result for the given transaction ID.
+func (r *Reader) Result(txID flow.Identifier) (*flow.TransactionResult, error) {
 	var txRes *flow.TransactionResult
 	err := r.db.View(func(tx *badger.Txn) error {
-		err := r.storage.RetrieveTransactionResult(txID, txRes)(tx)
+		err := r.storage.RetrieveResult(txID, txRes)(tx)
 		if err != nil {
 			return fmt.Errorf("could not look up transactions: %w", err)
 		}

@@ -164,7 +164,7 @@ func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	return transactions, nil
 }
 
-func (d *Disk) TransactionResults(height uint64) ([]*flow.TransactionResult, error) {
+func (d *Disk) Results(height uint64) ([]*flow.TransactionResult, error) {
 	blockID, err := d.block(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not get block for height: %w", err)

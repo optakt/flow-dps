@@ -31,5 +31,5 @@ const (
 	prefixTransactionsForHeight     = 9
 	prefixTransactionsForCollection = 12
 	prefixCollectionsForHeight      = 11
-	prefixTransactionResults        = 13
+	prefixResults                   = 13
 )
