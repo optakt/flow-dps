@@ -196,8 +196,8 @@ func run() int {
 	}
 
 	// Writer is responsible for writing the index data to the index database.
-	var write dps.Writer
-	write = index.NewWriter(db, storage)
+	index := index.NewWriter(db, storage)
+	write := dps.Writer(index)
 	if flagMetrics {
 		time := rcrowley.NewTime("write")
 		mout.Register(time)
@@ -280,6 +280,13 @@ func run() int {
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
 		return failure
+	}
+
+	// Last but not least, we should flush the writer to commit any pending
+	// transactions to the database.
+	err = index.Close()
+	if err != nil {
+		log.Error().Err(err).Msg("could not close index")
 	}
 
 	return success

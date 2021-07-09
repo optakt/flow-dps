@@ -24,6 +24,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/ziflex/lecho/v2 v2.3.1
 	golang.org/x/mod v0.3.0
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	google.golang.org/grpc v1.37.1
 	google.golang.org/protobuf v1.26.0
 )
