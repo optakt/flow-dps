@@ -203,7 +203,7 @@ func TestRetriever_Balances(t *testing.T) {
 			assert.Equal(t, mocks.GenericBlockQualifier.Index, &height)
 			assert.Equal(t, []byte(`test`), script)
 			if assert.Len(t, parameters, 1) {
-				assert.Equal(t, cadence.NewAddress(mocks.GenericAccount().Address), parameters[0])
+				assert.Equal(t, cadence.NewAddress(mocks.GenericAccount.Address), parameters[0])
 			}
 			return mocks.GenericAmount(0), nil
 		}

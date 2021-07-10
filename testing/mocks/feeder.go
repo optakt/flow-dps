@@ -29,7 +29,7 @@ func BaselineFeeder(t *testing.T) *Feeder {
 
 	f := Feeder{
 		UpdateFunc: func() (*ledger.TrieUpdate, error) {
-			return GenericTrieUpdate(), nil
+			return GenericTrieUpdate, nil
 		},
 	}
 

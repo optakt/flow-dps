@@ -159,13 +159,16 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
 			assert.NotZero(t, tree)
 
+			// Expect the 5 deduplicated paths from mocks.
+			assert.Len(t, paths, 5)
+
 			// Parent is RootHash of the mocks.GenericTrie.
-			assert.Equal(t, mocks.GenericTrieUpdate().RootHash[:], parent[:])
+			assert.Equal(t, mocks.GenericTrieUpdate.RootHash[:], parent[:])
 		}
 		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.MTrie, bool) {
-			assert.Equal(t, mocks.GenericTrieUpdate().RootHash[:], commit[:])
+			assert.Equal(t, mocks.GenericTrieUpdate.RootHash[:], commit[:])
 
-			return mocks.GenericTrie(), true
+			return mocks.GenericTrie, true
 		}
 		st.forest = forest
 

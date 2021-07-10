@@ -38,12 +38,6 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-var seed int64
-
-func init() {
-	seed = time.Now().UnixNano()
-}
-
 // Global variables that can be used for testing. They are non-nil valid values for the types commonly needed
 // test DPS components.
 var (
@@ -67,9 +61,60 @@ var (
 		ledger.NewKeyPart(2, []byte(`key`)),
 	})
 
+	GenericTrieUpdate = &ledger.TrieUpdate{
+		RootHash: ledger.RootHash{
+			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
+			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
+			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
+			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
+		},
+		Paths:    GenericLedgerPaths(6),
+		Payloads: GenericLedgerPayloads(6),
+	}
+
+	// GenericRootNode Visual Representation:
+	//           6 (root)
+	//          / \
+	//         3   5
+	//        / \   \
+	//       1   2   4
+	GenericRootNode = node.NewNode(
+		256,
+		node.NewNode(
+			256,
+			node.NewLeaf(GenericLedgerPath(0), GenericLedgerPayload(0), 42),
+			node.NewLeaf(GenericLedgerPath(1), GenericLedgerPayload(1), 42),
+			GenericLedgerPath(2),
+			GenericLedgerPayload(2),
+			hash.DummyHash,
+			64,
+			64,
+		),
+		node.NewNode(
+			256,
+			node.NewLeaf(GenericLedgerPath(3), GenericLedgerPayload(3), 42),
+			nil,
+			GenericLedgerPath(4),
+			GenericLedgerPayload(4),
+			hash.DummyHash,
+			64,
+			64,
+		),
+		GenericLedgerPath(5),
+		GenericLedgerPayload(5),
+		hash.DummyHash,
+		64,
+		64,
+	)
+
+	GenericTrie, _ = trie.NewMTrie(GenericRootNode)
+
 	GenericCurrency = identifier.Currency{
 		Symbol:   dps.FlowSymbol,
 		Decimals: dps.FlowDecimals,
+	}
+	GenericAccount = flow.Account{
+		Address: GenericAddress(0),
 	}
 
 	GenericBlockQualifier = identifier.Block{
@@ -80,7 +125,7 @@ var (
 
 func GenericCommits(number int) []flow.StateCommitment {
 	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(seed))
+	random := rand.New(rand.NewSource(0))
 
 	var commits []flow.StateCommitment
 	for i := 0; i < number; i++ {
@@ -102,7 +147,7 @@ func GenericCommit(index int) flow.StateCommitment {
 
 func GenericIdentifiers(number int) []flow.Identifier {
 	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(seed + 1))
+	random := rand.New(rand.NewSource(1))
 
 	var ids []flow.Identifier
 	for i := 0; i < number; i++ {
@@ -124,7 +169,8 @@ func GenericIdentifier(index int) flow.Identifier {
 
 func GenericLedgerPaths(number int) []ledger.Path {
 	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(seed + 2))
+	seed := rand.NewSource(2)
+	random := rand.New(seed)
 
 	var paths []ledger.Path
 	for i := 0; i < number; i++ {
@@ -146,7 +192,7 @@ func GenericLedgerPath(index int) ledger.Path {
 
 func GenericLedgerValues(number int) []ledger.Value {
 	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(seed + 3))
+	random := rand.New(rand.NewSource(3))
 
 	var values []ledger.Value
 	for i := 0; i < number; i++ {
@@ -194,7 +240,7 @@ func GenericTransaction(index int) *flow.TransactionBody {
 
 func GenericEventTypes(number int) []flow.EventType {
 	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(seed + 4))
+	random := rand.New(rand.NewSource(4))
 
 	var types []flow.EventType
 	for i := 0; i < number; i++ {
@@ -236,7 +282,7 @@ func GenericCadenceEventType(index int) *cadence.EventType {
 
 func GenericAddresses(number int) []flow.Address {
 	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(seed + 5))
+	random := rand.New(rand.NewSource(5))
 
 	var addresses []flow.Address
 	for i := 0; i < number; i++ {
@@ -259,7 +305,7 @@ func GenericAccountID(index int) identifier.Account {
 
 func GenericCadenceEvents(number int) []cadence.Event {
 	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(seed + 6))
+	random := rand.New(rand.NewSource(6))
 
 	var events []cadence.Event
 	for i := 0; i < number; i++ {
@@ -384,69 +430,9 @@ func GenericResult(index int) *flow.TransactionResult {
 
 func GenericAmount(delta int) cadence.Value {
 	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(seed + int64(delta)))
+	random := rand.New(rand.NewSource(int64(delta)))
 
 	return cadence.NewUInt64(random.Uint64())
-}
-
-func GenericTrieUpdate() *ledger.TrieUpdate {
-	return &ledger.TrieUpdate{
-		RootHash: ledger.RootHash{
-			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-		},
-		Paths:    GenericLedgerPaths(6),
-		Payloads: GenericLedgerPayloads(6),
-	}
-}
-
-func GenericTrie() *trie.MTrie {
-	// GenericRootNode Visual Representation:
-	//           6 (root)
-	//          / \
-	//         3   5
-	//        / \   \
-	//       1   2   4
-	rootNode := node.NewNode(
-		256,
-		node.NewNode(
-			256,
-			node.NewLeaf(GenericLedgerPath(0), GenericLedgerPayload(0), 42),
-			node.NewLeaf(GenericLedgerPath(1), GenericLedgerPayload(1), 42),
-			GenericLedgerPath(2),
-			GenericLedgerPayload(2),
-			hash.DummyHash,
-			64,
-			64,
-		),
-		node.NewNode(
-			256,
-			node.NewLeaf(GenericLedgerPath(3), GenericLedgerPayload(3), 42),
-			nil,
-			GenericLedgerPath(4),
-			GenericLedgerPayload(4),
-			hash.DummyHash,
-			64,
-			64,
-		),
-		GenericLedgerPath(5),
-		GenericLedgerPayload(5),
-		hash.DummyHash,
-		64,
-		64,
-	)
-
-	mtrie, _ := trie.NewMTrie(rootNode)
-
-	return mtrie
-}
-
-func GenericAccount() flow.Account {
-	return flow.Account{
-		Address: GenericAddress(0),
-	}
 }
 
 func ByteSlice(v interface{}) []byte {
