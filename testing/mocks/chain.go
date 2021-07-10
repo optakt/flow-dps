@@ -14,7 +14,11 @@
 
 package mocks
 
-import "github.com/onflow/flow-go/model/flow"
+import (
+	"testing"
+
+	"github.com/onflow/flow-go/model/flow"
+)
 
 type Chain struct {
 	RootFunc         func() (uint64, error)
@@ -22,7 +26,38 @@ type Chain struct {
 	CommitFunc       func(height uint64) (flow.StateCommitment, error)
 	CollectionsFunc  func(height uint64) ([]*flow.LightCollection, error)
 	TransactionsFunc func(height uint64) ([]*flow.TransactionBody, error)
+	ResultsFunc      func(height uint64) ([]*flow.TransactionResult, error)
 	EventsFunc       func(height uint64) ([]flow.Event, error)
+}
+
+func BaselineChain(t *testing.T) *Chain {
+	t.Helper()
+
+	c := Chain{
+		RootFunc: func() (uint64, error) {
+			return GenericHeight, nil
+		},
+		HeaderFunc: func(height uint64) (*flow.Header, error) {
+			return GenericHeader, nil
+		},
+		CommitFunc: func(height uint64) (flow.StateCommitment, error) {
+			return GenericCommit(0), nil
+		},
+		CollectionsFunc: func(height uint64) ([]*flow.LightCollection, error) {
+			return GenericCollections(2), nil
+		},
+		TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
+			return GenericTransactions(4), nil
+		},
+		ResultsFunc: func(height uint64) ([]*flow.TransactionResult, error) {
+			return GenericResults(4), nil
+		},
+		EventsFunc: func(height uint64) ([]flow.Event, error) {
+			return GenericEvents(4), nil
+		},
+	}
+
+	return &c
 }
 
 func (c *Chain) Root() (uint64, error) {
@@ -43,6 +78,10 @@ func (c *Chain) Collections(height uint64) ([]*flow.LightCollection, error) {
 
 func (c *Chain) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	return c.TransactionsFunc(height)
+}
+
+func (c *Chain) Results(height uint64) ([]*flow.TransactionResult, error) {
+	return c.ResultsFunc(height)
 }
 
 func (c *Chain) Events(height uint64) ([]flow.Event, error) {

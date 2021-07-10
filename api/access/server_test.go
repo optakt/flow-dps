@@ -54,16 +54,14 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		var gotID flow.Identifier
-		copy(gotID[:], resp.Block.Id)
-		assert.Equal(t, mocks.GenericHeader.ID(), gotID)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.Block.Id)
 		assert.Equal(t, mocks.GenericHeader.Height, resp.Block.Height)
 	})
 
 	t.Run("handles indexer error on Last", func(t *testing.T) {
 		index := mocks.BaselineReader(t)
 		index.LastFunc = func() (uint64, error) {
-			return 0, mocks.DummyError
+			return 0, mocks.GenericError
 		}
 
 		s := baselineServer(t)
@@ -77,7 +75,7 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 	t.Run("handles indexer error on Header", func(t *testing.T) {
 		index := mocks.BaselineReader(t)
 		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
-			return nil, mocks.DummyError
+			return nil, mocks.GenericError
 		}
 
 		s := baselineServer(t)
@@ -93,7 +91,7 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		index := mocks.BaselineReader(t)
 		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
-			assert.Equal(t, mocks.GenericIdentifiers[0], blockID)
+			assert.Equal(t, mocks.GenericIdentifier(0), blockID)
 
 			return mocks.GenericHeight, nil
 		}
@@ -106,27 +104,25 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockHeaderByIDRequest{Id: mocks.GenericIdentifiers[0][:]}
+		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
 		resp, err := s.GetBlockHeaderByID(context.Background(), req)
 
 		assert.NoError(t, err)
 
-		var gotID flow.Identifier
-		copy(gotID[:], resp.Block.Id)
-		assert.Equal(t, mocks.GenericHeader.ID(), gotID)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.Block.Id)
 		assert.Equal(t, mocks.GenericHeader.Height, resp.Block.Height)
 	})
 
 	t.Run("handles indexer error on HeightForBlock", func(t *testing.T) {
 		index := mocks.BaselineReader(t)
 		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
-			return 0, mocks.DummyError
+			return 0, mocks.GenericError
 		}
 
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockHeaderByIDRequest{Id: mocks.GenericIdentifiers[0][:]}
+		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
 		_, err := s.GetBlockHeaderByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -138,13 +134,13 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 			return mocks.GenericHeight, nil
 		}
 		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
-			return nil, mocks.DummyError
+			return nil, mocks.GenericError
 		}
 
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockHeaderByIDRequest{Id: mocks.GenericIdentifiers[0][:]}
+		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
 		_, err := s.GetBlockHeaderByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -168,16 +164,14 @@ func TestServer_GetBlockHeaderByHeight(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		var gotID flow.Identifier
-		copy(gotID[:], resp.Block.Id)
-		assert.Equal(t, mocks.GenericHeader.ID(), gotID)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.Block.Id)
 		assert.Equal(t, mocks.GenericHeader.Height, resp.Block.Height)
 	})
 
 	t.Run("handles indexer error on header", func(t *testing.T) {
 		index := mocks.BaselineReader(t)
 		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
-			return nil, mocks.DummyError
+			return nil, mocks.GenericError
 		}
 
 		s := baselineServer(t)

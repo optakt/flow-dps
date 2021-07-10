@@ -20,6 +20,7 @@ var DefaultConfig = Config{
 	IndexHeader:       false,
 	IndexCollections:  false,
 	IndexTransactions: false,
+	IndexResults:      false,
 	IndexEvents:       false,
 	IndexPayloads:     false,
 	SkipBootstrap:     false,
@@ -31,6 +32,7 @@ type Config struct {
 	IndexHeader       bool
 	IndexCollections  bool
 	IndexTransactions bool
+	IndexResults      bool
 	IndexEvents       bool
 	IndexPayloads     bool
 	SkipBootstrap     bool
@@ -61,6 +63,13 @@ func WithIndexCollections(b bool) func(*Config) {
 func WithIndexTransactions(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexTransactions = b
+	}
+}
+
+// WithIndexResults sets up the mapper to build the transaction results index.
+func WithIndexResults(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexResults = b
 	}
 }
 

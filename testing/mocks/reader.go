@@ -47,22 +47,22 @@ func BaselineReader(t *testing.T) *Reader {
 			return GenericHeight, nil
 		},
 		CommitFunc: func(height uint64) (flow.StateCommitment, error) {
-			return GenericCommits[0], nil
+			return GenericCommit(0), nil
 		},
 		HeaderFunc: func(height uint64) (*flow.Header, error) {
 			return GenericHeader, nil
 		},
 		EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-			return GenericEvents, nil
+			return GenericEvents(4), nil
 		},
 		ValuesFunc: func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
-			return GenericLedgerValues, nil
+			return GenericLedgerValues(6), nil
 		},
 		TransactionFunc: func(txID flow.Identifier) (*flow.TransactionBody, error) {
-			return GenericTransactions[0], nil
+			return GenericTransaction(0), nil
 		},
 		TransactionsByHeightFunc: func(height uint64) ([]flow.Identifier, error) {
-			return GenericIdentifiers, nil
+			return GenericIdentifiers(5), nil
 		},
 	}
 

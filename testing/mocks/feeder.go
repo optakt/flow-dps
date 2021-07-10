@@ -15,11 +15,25 @@
 package mocks
 
 import (
+	"testing"
+
 	"github.com/onflow/flow-go/ledger"
 )
 
 type Feeder struct {
 	UpdateFunc func() (*ledger.TrieUpdate, error)
+}
+
+func BaselineFeeder(t *testing.T) *Feeder {
+	t.Helper()
+
+	f := Feeder{
+		UpdateFunc: func() (*ledger.TrieUpdate, error) {
+			return GenericTrieUpdate, nil
+		},
+	}
+
+	return &f
 }
 
 func (f *Feeder) Update() (*ledger.TrieUpdate, error) {
