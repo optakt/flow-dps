@@ -120,9 +120,23 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 			}
 			txIDs = append(txIDs, transaction.ID())
 		}
+
 		err := w.db.Update(w.storage.IndexTransactionsForHeight(height, txIDs))
 		if err != nil {
 			return fmt.Errorf("could not index transactions for height: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (w *Writer) Results(results []*flow.TransactionResult) error {
+	return w.db.Update(func(tx *badger.Txn) error {
+		for _, result := range results {
+			err := w.db.Update(w.storage.SaveResult(result))
+			if err != nil {
+				return fmt.Errorf("could not index transaction results: %w", err)
+			}
 		}
 		return nil
 	})

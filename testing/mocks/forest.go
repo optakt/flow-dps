@@ -15,6 +15,8 @@
 package mocks
 
 import (
+	"testing"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
@@ -28,6 +30,32 @@ type Forest struct {
 	ParentFunc func(commit flow.StateCommitment) (flow.StateCommitment, bool)
 	ResetFunc  func(finalized flow.StateCommitment)
 	SizeFunc   func() uint
+}
+
+func BaselineForest(t *testing.T, hasCommit bool) *Forest {
+	t.Helper()
+
+	f := Forest{
+		SaveFunc: func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {},
+		HasFunc: func(commit flow.StateCommitment) bool {
+			return hasCommit
+		},
+		TreeFunc: func(commit flow.StateCommitment) (*trie.MTrie, bool) {
+			return GenericTrie, true
+		},
+		PathsFunc: func(commit flow.StateCommitment) ([]ledger.Path, bool) {
+			return GenericLedgerPaths(6), true
+		},
+		ParentFunc: func(commit flow.StateCommitment) (flow.StateCommitment, bool) {
+			return GenericCommit(1), true
+		},
+		ResetFunc: func(finalized flow.StateCommitment) {},
+		SizeFunc: func() uint {
+			return 42
+		},
+	}
+
+	return &f
 }
 
 func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {

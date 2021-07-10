@@ -195,18 +195,19 @@ func TestLibrary_Retrieve(t *testing.T) {
 		err := insertKeyValue(t, db, testKey, testValue)
 		require.NoError(t, err)
 
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, wantEncodedValue, b)
+
+			ptr, ok := v.(*uint64)
+			require.True(t, ok)
+
+			*ptr = 42
+			return nil
+		}
+
 		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, wantEncodedValue, b)
-
-					ptr, ok := v.(*uint64)
-					assert.True(t, ok)
-
-					*ptr = 42
-					return nil
-				},
-			},
+			codec: codec,
 		}
 
 		var got uint64
@@ -217,7 +218,9 @@ func TestLibrary_Retrieve(t *testing.T) {
 	})
 
 	t.Run("unknown key, should fail", func(t *testing.T) {
-		l := &Library{}
+		l := &Library{
+			codec: mocks.BaselineCodec(t),
+		}
 
 		var got uint64
 		err := db.View(l.retrieve([]byte{13, 37}, &got))
@@ -233,13 +236,14 @@ func TestLibrary_Retrieve(t *testing.T) {
 		err := insertUnencodedKeyValue(t, db, testKey, testValue)
 		require.NoError(t, err)
 
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, wantUnencodedValue, b)
+			return mocks.GenericError
+		}
+
 		l := &Library{
-			codec: &mocks.Codec{
-				UnmarshalFunc: func(b []byte, v interface{}) error {
-					assert.Equal(t, wantUnencodedValue, b)
-					return mocks.DummyError
-				},
-			},
+			codec: codec,
 		}
 
 		var got uint64
@@ -254,12 +258,14 @@ func TestLibrary_Save(t *testing.T) {
 	defer db.Close()
 
 	t.Run("nominal case", func(t *testing.T) {
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, uint64(0), v)
+			return []byte{}, nil
+		}
 		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.IsType(t, uint64(0), v)
-					return []byte{}, nil
-				}},
+			codec: codec,
 		}
 
 		err := db.Update(l.save([]byte{13, 37}, uint64(42)))
@@ -268,12 +274,15 @@ func TestLibrary_Save(t *testing.T) {
 	})
 
 	t.Run("saving a nil value should work", func(t *testing.T) {
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.Nil(t, v)
+			return []byte{}, nil
+		}
+
 		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					assert.Nil(t, v)
-					return []byte{}, nil
-				}},
+			codec: codec,
 		}
 
 		err := db.Update(l.save([]byte{13, 37}, nil))
@@ -283,10 +292,7 @@ func TestLibrary_Save(t *testing.T) {
 
 	t.Run("saving a value at an empty key should fail", func(t *testing.T) {
 		l := &Library{
-			codec: &mocks.Codec{
-				MarshalFunc: func(v interface{}) ([]byte, error) {
-					return []byte{13, 37}, nil
-				}},
+			codec: mocks.BaselineCodec(t),
 		}
 
 		err := db.Update(l.save([]byte{}, uint64(42)))

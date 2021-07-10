@@ -15,6 +15,8 @@
 package mocks
 
 import (
+	"testing"
+
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -23,6 +25,27 @@ type Validator struct {
 	BlockFunc       func(block identifier.Block) (identifier.Block, error)
 	TransactionFunc func(transaction identifier.Transaction) error
 	CurrencyFunc    func(currency identifier.Currency) (identifier.Currency, error)
+}
+
+func BaselineValidator(t *testing.T) *Validator {
+	t.Helper()
+
+	v := Validator{
+		AccountFunc: func(address identifier.Account) error {
+			return nil
+		},
+		BlockFunc: func(block identifier.Block) (identifier.Block, error) {
+			return GenericBlockQualifier, nil
+		},
+		TransactionFunc: func(transaction identifier.Transaction) error {
+			return nil
+		},
+		CurrencyFunc: func(currency identifier.Currency) (identifier.Currency, error) {
+			return GenericCurrency, nil
+		},
+	}
+
+	return &v
 }
 
 func (v *Validator) Account(address identifier.Account) error {

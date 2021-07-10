@@ -15,11 +15,25 @@
 package mocks
 
 import (
+	"testing"
+
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 )
 
 type Loader struct {
 	CheckpointFunc func() (*trie.MTrie, error)
+}
+
+func BaselineLoader(t *testing.T) *Loader {
+	t.Helper()
+
+	l := Loader{
+		CheckpointFunc: func() (*trie.MTrie, error) {
+			return GenericTrie, nil
+		},
+	}
+
+	return &l
 }
 
 func (l *Loader) Checkpoint() (*trie.MTrie, error) {

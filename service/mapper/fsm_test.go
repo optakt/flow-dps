@@ -114,7 +114,7 @@ func TestFSM_Run(t *testing.T) {
 	t.Run("transition fails", func(t *testing.T) {
 		t.Parallel()
 
-		failingTransition := func(*State) error { return mocks.DummyError }
+		failingTransition := func(*State) error { return mocks.GenericError }
 
 		f := &FSM{
 			state: &State{

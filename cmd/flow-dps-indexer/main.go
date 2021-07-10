@@ -63,6 +63,7 @@ func run() int {
 		flagIndexEvents       bool
 		flagIndexHeader       bool
 		flagIndexPayloads     bool
+		flagIndexResults      bool
 		flagIndexTransactions bool
 		flagLevel             string
 		flagTrie              string
@@ -78,6 +79,7 @@ func run() int {
 	pflag.BoolVarP(&flagIndexEvents, "index-events", "e", false, "index events")
 	pflag.BoolVarP(&flagIndexHeader, "index-headers", "h", false, "index headers")
 	pflag.BoolVarP(&flagIndexPayloads, "index-payloads", "p", false, "index payloads")
+	pflag.BoolVar(&flagIndexResults, "index-results", false, "index transaction results")
 	pflag.BoolVarP(&flagIndexTransactions, "index-transactions", "x", false, "index transactions")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
@@ -96,7 +98,7 @@ func run() int {
 
 	// Ensure that at least one index is specified.
 	if !flagIndexAll && !flagIndexCommit && !flagIndexHeader && !flagIndexPayloads &&
-		!flagIndexCollections && !flagIndexTransactions && !flagIndexEvents {
+		!flagIndexCollections && !flagIndexTransactions && !flagIndexResults && !flagIndexEvents {
 		log.Error().Str("level", flagLevel).Msg("no indexing option specified, use -a/--all to build all indexes")
 		pflag.Usage()
 		return failure
@@ -105,7 +107,7 @@ func run() int {
 	// Fail if IndexAll is specified along with other index flags, as this would most likely mean that the user does
 	// not understand what they are doing.
 	if flagIndexAll && (flagIndexCommit || flagIndexHeader || flagIndexPayloads ||
-		flagIndexCollections || flagIndexTransactions || flagIndexEvents) {
+		flagIndexCollections || flagIndexTransactions || flagIndexResults || flagIndexEvents) {
 		log.Error().Str("level", flagLevel).Msg("-a/--all is mutually exclusive with specific indexing flags")
 		pflag.Usage()
 		return failure
@@ -166,6 +168,7 @@ func run() int {
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),
 		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
+		mapper.WithIndexResults(flagIndexAll || flagIndexResults),
 		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),
 		mapper.WithIndexPayloads(flagIndexAll || flagIndexPayloads),
 	)
