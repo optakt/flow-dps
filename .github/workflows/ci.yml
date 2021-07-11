@@ -25,6 +25,14 @@ jobs:
         with:
           go-version: 1.16
 
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
       # Here, we simply print the exact go version, to have it as part of the
       # action's output, which might be convenient.
       - name: Print Go version
