@@ -32,5 +32,4 @@ type Writer interface {
 
 	Collections(height uint64, collections []*flow.LightCollection) error
 	Transactions(height uint64, transactions []*flow.TransactionBody) error
-	Results(results []*flow.TransactionResult) error
 }

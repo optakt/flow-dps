@@ -26,7 +26,6 @@ type Chain struct {
 	CommitFunc       func(height uint64) (flow.StateCommitment, error)
 	CollectionsFunc  func(height uint64) ([]*flow.LightCollection, error)
 	TransactionsFunc func(height uint64) ([]*flow.TransactionBody, error)
-	ResultsFunc      func(height uint64) ([]*flow.TransactionResult, error)
 	EventsFunc       func(height uint64) ([]flow.Event, error)
 }
 
@@ -48,9 +47,6 @@ func BaselineChain(t *testing.T) *Chain {
 		},
 		TransactionsFunc: func(height uint64) ([]*flow.TransactionBody, error) {
 			return GenericTransactions(4), nil
-		},
-		ResultsFunc: func(height uint64) ([]*flow.TransactionResult, error) {
-			return GenericResults(4), nil
 		},
 		EventsFunc: func(height uint64) ([]flow.Event, error) {
 			return GenericEvents(4), nil
@@ -78,10 +74,6 @@ func (c *Chain) Collections(height uint64) ([]*flow.LightCollection, error) {
 
 func (c *Chain) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	return c.TransactionsFunc(height)
-}
-
-func (c *Chain) Results(height uint64) ([]*flow.TransactionResult, error) {
-	return c.ResultsFunc(height)
 }
 
 func (c *Chain) Events(height uint64) ([]flow.Event, error) {

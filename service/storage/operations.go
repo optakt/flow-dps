@@ -75,10 +75,6 @@ func (l *Library) IndexCollectionsForHeight(height uint64, collIDs []flow.Identi
 	return l.save(encodeKey(prefixCollectionsForHeight, height), collIDs)
 }
 
-func (l *Library) SaveResult(result *flow.TransactionResult) func(*badger.Txn) error {
-	return l.save(encodeKey(prefixResults, result.TransactionID), result)
-}
-
 func (l *Library) RetrieveFirst(height *uint64) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixFirst), height)
 }
@@ -184,8 +180,4 @@ func (l *Library) LookupTransactionsForHeight(height uint64, txIDs *[]flow.Ident
 
 func (l *Library) LookupTransactionsForCollection(collID flow.Identifier, txIDs *[]flow.Identifier) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixTransactionsForCollection, collID), txIDs)
-}
-
-func (l *Library) RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error {
-	return l.retrieve(encodeKey(prefixResults, txID), result)
 }

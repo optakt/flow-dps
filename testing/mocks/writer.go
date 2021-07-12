@@ -30,7 +30,6 @@ type Writer struct {
 	HeightFunc       func(blockID flow.Identifier, height uint64) error
 	CollectionsFunc  func(height uint64, collections []*flow.LightCollection) error
 	TransactionsFunc func(height uint64, transactions []*flow.TransactionBody) error
-	ResultsFunc      func(results []*flow.TransactionResult) error
 	EventsFunc       func(height uint64, events []flow.Event) error
 }
 
@@ -60,9 +59,6 @@ func BaselineWriter(t *testing.T) *Writer {
 			return nil
 		},
 		TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error {
-			return nil
-		},
-		ResultsFunc: func(results []*flow.TransactionResult) error {
 			return nil
 		},
 		EventsFunc: func(height uint64, events []flow.Event) error {
@@ -103,10 +99,6 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
 	return w.TransactionsFunc(height, transactions)
-}
-
-func (w *Writer) Results(results []*flow.TransactionResult) error {
-	return w.ResultsFunc(results)
 }
 
 func (w *Writer) Events(height uint64, events []flow.Event) error {

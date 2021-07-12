@@ -24,11 +24,11 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
+
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
-
-	"github.com/optakt/flow-dps/service/chain"
 )
 
 func TestDisk_Root(t *testing.T) {
@@ -92,19 +92,6 @@ func TestDisk_Transactions(t *testing.T) {
 	assert.Len(t, tt, 4)
 
 	_, err = c.Transactions(math.MaxUint64)
-	assert.Error(t, err)
-}
-
-func TestDisk_TransactionResults(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
-
-	tr, err := c.Results(mocks.GenericHeight)
-	assert.NoError(t, err)
-	assert.Len(t, tr, 4)
-
-	_, err = c.Results(math.MaxUint64)
 	assert.Error(t, err)
 }
 
@@ -210,26 +197,6 @@ func populateDB(t *testing.T) *badger.DB {
 		}
 
 		err = operation.IndexPayloadGuarantees(mocks.GenericIdentifier(0), []flow.Identifier{collection1.ID(), collection2.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb1.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb2.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb3.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb4.ID()})(tx)
 		if err != nil {
 			return err
 		}

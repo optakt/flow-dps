@@ -57,7 +57,6 @@ func TestNewTransitions(t *testing.T) {
 			WithIndexPayloads(true),
 			WithIndexCollections(true),
 			WithIndexTransactions(true),
-			WithIndexResults(true),
 		)
 
 		assert.NotNil(t, tr)
@@ -74,7 +73,6 @@ func TestNewTransitions(t *testing.T) {
 		assert.True(t, tr.cfg.IndexPayloads)
 		assert.True(t, tr.cfg.IndexCollections)
 		assert.True(t, tr.cfg.IndexTransactions)
-		assert.True(t, tr.cfg.IndexResults)
 	})
 }
 
@@ -502,11 +500,6 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 			return mocks.GenericTransactions(4), nil
 		}
-		chain.ResultsFunc = func(height uint64) ([]*flow.TransactionResult, error) {
-			assert.Equal(t, mocks.GenericHeight, height)
-
-			return mocks.GenericResults(4), nil
-		}
 		chain.EventsFunc = func(height uint64) ([]flow.Event, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
@@ -541,11 +534,6 @@ func TestTransitions_IndexChain(t *testing.T) {
 		index.TransactionsFunc = func(height uint64, transactions []*flow.TransactionBody) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericTransactions(4), transactions)
-
-			return nil
-		}
-		index.ResultsFunc = func(results []*flow.TransactionResult) error {
-			assert.Equal(t, mocks.GenericResults(4), results)
 
 			return nil
 		}
@@ -680,38 +668,6 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles chain failure to retrieve transaction results", func(t *testing.T) {
-		t.Parallel()
-
-		chain := mocks.BaselineChain(t)
-		chain.ResultsFunc = func(height uint64) ([]*flow.TransactionResult, error) {
-			return nil, mocks.GenericError
-		}
-
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.chain = chain
-
-		err := tr.IndexChain(st)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("handles indexer failure to write transactions", func(t *testing.T) {
-		t.Parallel()
-
-		index := mocks.BaselineWriter(t)
-		index.ResultsFunc = func(results []*flow.TransactionResult) error {
-			return mocks.GenericError
-		}
-
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.index = index
-
-		err := tr.IndexChain(st)
-
-		assert.Error(t, err)
-	})
-
 	t.Run("handles chain failure to retrieve collections", func(t *testing.T) {
 		t.Parallel()
 
@@ -796,7 +752,6 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			IndexPayloads:     true,
 			IndexCollections:  true,
 			IndexTransactions: true,
-			IndexResults:      true,
 			IndexEvents:       true,
 		},
 		log:   mocks.NoopLogger,
