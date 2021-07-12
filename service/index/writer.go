@@ -167,5 +167,23 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 // Seals indexes the seals, which should represent all seals in the finalized
 // block at the given height.
 func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
-	return fmt.Errorf("to be implemented")
+	sealIDs := make([]flow.Identifier, 0, len(seals))
+	return w.db.Update(func(tx *badger.Txn) error {
+		for _, seal := range seals {
+			err := w.db.Update(w.storage.SaveSeal(seal))
+			if err != nil {
+				return fmt.Errorf("could not save seal (id: %x): %w", seal.ID(), err)
+			}
+
+			sealIDs = append(sealIDs, seal.ID())
+		}
+
+		// TODO: check - do we need seals for height?
+		err := w.db.Update(w.storage.IndexSealsForHeight(height, sealIDs))
+		if err != nil {
+			return fmt.Errorf("could not index seals for height: %w", err)
+		}
+
+		return nil
+	})
 }

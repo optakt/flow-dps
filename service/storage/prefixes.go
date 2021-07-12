@@ -32,4 +32,7 @@ const (
 	prefixTransactionsForCollection = 12
 	prefixCollectionsForHeight      = 11
 	prefixResults                   = 13
+
+	prefixSeal           = 14
+	prefixSealsForHeight = 15
 )

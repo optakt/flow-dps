@@ -60,8 +60,10 @@ type WriteLibrary interface {
 	IndexTransactionsForHeight(height uint64, txIDs []flow.Identifier) func(*badger.Txn) error
 	IndexTransactionsForCollection(collID flow.Identifier, txIDs []flow.Identifier) func(*badger.Txn) error
 	IndexCollectionsForHeight(height uint64, collIDs []flow.Identifier) func(*badger.Txn) error
+	IndexSealsForHeight(height uint64, sealIDs []flow.Identifier) func(*badger.Txn) error
 
 	SaveCollection(collection *flow.LightCollection) func(*badger.Txn) error
 	SaveTransaction(transaction *flow.TransactionBody) func(*badger.Txn) error
 	SaveResult(results *flow.TransactionResult) func(*badger.Txn) error
+	SaveSeal(seal *flow.Seal) func(*badger.Txn) error
 }
