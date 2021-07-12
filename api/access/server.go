@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package dps
+package access
 
 import (
 	"context"
@@ -174,11 +174,81 @@ func (s *Server) ExecuteScriptAtBlockHeight(ctx context.Context, in *access.Exec
 }
 
 func (s *Server) GetEventsForHeightRange(ctx context.Context, in *access.GetEventsForHeightRangeRequest) (*access.EventsResponse, error) {
-	return nil, errors.New("not implemented")
+	var events []flow.BlockEvents
+	for height := in.StartHeight; height <= in.EndHeight; height++ {
+		ee, err := s.index.Events(height)
+		if err != nil {
+			return nil, fmt.Errorf("could not get events at height %d: %w", height, err)
+		}
+
+		header, err := s.index.Header(height)
+		if err != nil {
+			return nil, fmt.Errorf("could not get header at height %d: %w", height, err)
+		}
+
+		blockEvents := flow.BlockEvents{
+			BlockID:        header.ID(),
+			BlockHeight:    height,
+			BlockTimestamp: header.Timestamp,
+			Events:         ee,
+		}
+
+		events = append(events, blockEvents)
+	}
+
+	res, err := blockEventsToMessages(events)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert block events into API response: %w", err)
+	}
+
+	resp := access.EventsResponse{
+		Results: res,
+	}
+
+	return &resp, nil
 }
 
 func (s *Server) GetEventsForBlockIDs(ctx context.Context, in *access.GetEventsForBlockIDsRequest) (*access.EventsResponse, error) {
-	return nil, errors.New("not implemented")
+	var events []flow.BlockEvents
+	for _, id := range in.BlockIds {
+		var blockID flow.Identifier
+		copy(blockID[:], id)
+
+		height, err := s.index.HeightForBlock(blockID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get height of block with ID %x: %w", id, err)
+		}
+
+		ee, err := s.index.Events(height)
+		if err != nil {
+			return nil, fmt.Errorf("could not get events at height %d: %w", height, err)
+		}
+
+		header, err := s.index.Header(height)
+		if err != nil {
+			return nil, fmt.Errorf("could not get header at height %d: %w", height, err)
+		}
+
+		blockEvents := flow.BlockEvents{
+			BlockID:        header.ID(),
+			BlockHeight:    height,
+			BlockTimestamp: header.Timestamp,
+			Events:         ee,
+		}
+
+		events = append(events, blockEvents)
+	}
+
+	res, err := blockEventsToMessages(events)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert block events into API response: %w", err)
+	}
+
+	resp := access.EventsResponse{
+		Results: res,
+	}
+
+	return &resp, nil
 }
 
 func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkParametersRequest) (*access.GetNetworkParametersResponse, error) {
