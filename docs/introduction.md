@@ -432,6 +432,15 @@ It is however safe to run the indexer and any command that uses the database in 
 
 ## More Resources
 
+### Internal
+
+* [DPS Architecture](./architecture.md)
+* APIs
+    * [Rosetta API](./rosetta-api.md)
+    * [DPS API](./dps-api.md)
+
+### External
+
 * [Flow Technical Papers](https://www.onflow.org/technical-paper)
 * [Flow Developer Documentation](https://docs.onflow.org/)
 * [Flow Developer Discord Server](https://onflow.org/discord)

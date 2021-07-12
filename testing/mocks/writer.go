@@ -15,6 +15,8 @@
 package mocks
 
 import (
+	"testing"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
@@ -29,6 +31,42 @@ type Writer struct {
 	CollectionsFunc  func(height uint64, collections []*flow.LightCollection) error
 	TransactionsFunc func(height uint64, transactions []*flow.TransactionBody) error
 	EventsFunc       func(height uint64, events []flow.Event) error
+}
+
+func BaselineWriter(t *testing.T) *Writer {
+	t.Helper()
+
+	w := Writer{
+		FirstFunc: func(height uint64) error {
+			return nil
+		},
+		LastFunc: func(height uint64) error {
+			return nil
+		},
+		HeaderFunc: func(height uint64, header *flow.Header) error {
+			return nil
+		},
+		CommitFunc: func(height uint64, commit flow.StateCommitment) error {
+			return nil
+		},
+		PayloadsFunc: func(height uint64, paths []ledger.Path, value []*ledger.Payload) error {
+			return nil
+		},
+		HeightFunc: func(blockID flow.Identifier, height uint64) error {
+			return nil
+		},
+		CollectionsFunc: func(height uint64, collections []*flow.LightCollection) error {
+			return nil
+		},
+		TransactionsFunc: func(height uint64, transactions []*flow.TransactionBody) error {
+			return nil
+		},
+		EventsFunc: func(height uint64, events []flow.Event) error {
+			return nil
+		},
+	}
+
+	return &w
 }
 
 func (w *Writer) First(height uint64) error {

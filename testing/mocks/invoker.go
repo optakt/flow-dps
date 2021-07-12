@@ -15,11 +15,25 @@
 package mocks
 
 import (
+	"testing"
+
 	"github.com/onflow/cadence"
 )
 
 type Invoker struct {
 	ScriptFunc func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
+}
+
+func BaselineInvoker(t *testing.T) *Invoker {
+	t.Helper()
+
+	i := Invoker{
+		ScriptFunc: func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
+			return GenericAmount(0), nil
+		},
+	}
+
+	return &i
 }
 
 func (i *Invoker) Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {

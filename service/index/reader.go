@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
+
 	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/onflow/flow-go/ledger"
