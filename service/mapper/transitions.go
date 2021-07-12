@@ -389,6 +389,17 @@ func (t *Transitions) IndexChain(s *State) error {
 		}
 		log = log.Int("events", len(events))
 	}
+	if t.cfg.IndexSeals {
+		seals, err := t.chain.Seals(s.height)
+		if err != nil {
+			return fmt.Errorf("could not get seals: %w", err)
+		}
+		err = t.index.Seals(s.height, seals)
+		if err != nil {
+			return fmt.Errorf("could not index seals: %w", err)
+		}
+		log = log.Int("seals", len(seals))
+	}
 
 	log.Msg("chain data for next finalized block indexed")
 
