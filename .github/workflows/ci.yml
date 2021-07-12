@@ -4,7 +4,7 @@ name: CI
 # is created or updated.
 on:
   pull_request:
-    branches: [ master access-api ] # This should be reverted before the access-api branch gets merged into master.
+    branches: [ master ]
 
 # A workflow is made up of one or more jobs, which can be run in sequence or in
 # parallel. In this case, we have a single job, called "check", that runs on
