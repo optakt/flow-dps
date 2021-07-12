@@ -182,6 +182,10 @@ func (l *Library) RetrieveTransaction(transactionID flow.Identifier, transaction
 	return l.retrieve(encodeKey(prefixTransaction, transactionID), transaction)
 }
 
+func (l *Library) RetrieveSeal(sealID flow.Identifier, seal *flow.Seal) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixSeal, sealID), seal)
+}
+
 func (l *Library) LookupCollectionsForHeight(height uint64, collIDs *[]flow.Identifier) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixCollectionsForHeight, height), collIDs)
 }
@@ -192,6 +196,10 @@ func (l *Library) LookupTransactionsForHeight(height uint64, txIDs *[]flow.Ident
 
 func (l *Library) LookupTransactionsForCollection(collID flow.Identifier, txIDs *[]flow.Identifier) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixTransactionsForCollection, collID), txIDs)
+}
+
+func (l *Library) LookupSealsForHeight(height uint64, sealIDs *[]flow.Identifier) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixSealsForHeight, height), sealIDs)
 }
 
 func (l *Library) RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error {

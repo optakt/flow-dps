@@ -40,10 +40,12 @@ type ReadLibrary interface {
 	LookupTransactionsForHeight(height uint64, txIDs *[]flow.Identifier) func(*badger.Txn) error
 	LookupTransactionsForCollection(collID flow.Identifier, txIDs *[]flow.Identifier) func(*badger.Txn) error
 	LookupCollectionsForHeight(height uint64, collIDs *[]flow.Identifier) func(*badger.Txn) error
+	LookupSealsForHeight(height uint64, sealIDs *[]flow.Identifier) func(*badger.Txn) error
 
 	RetrieveCollection(collID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error
 	RetrieveTransaction(txID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error
 	RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error
+	RetrieveSeal(sealID flow.Identifier, seal *flow.Seal) func(*badger.Txn) error
 }
 
 type WriteLibrary interface {
