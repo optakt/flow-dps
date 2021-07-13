@@ -178,7 +178,6 @@ func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
 			sealIDs = append(sealIDs, seal.ID())
 		}
 
-		// TODO: check - do we need seals for height?
 		err := w.db.Update(w.storage.IndexSealsForHeight(height, sealIDs))
 		if err != nil {
 			return fmt.Errorf("could not index seals for height: %w", err)

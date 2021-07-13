@@ -439,13 +439,11 @@ func GenericSeals(number int) []*flow.Seal {
 	var seals []*flow.Seal
 	for i := 0; i < number; i++ {
 
-		// TODO: check - this identifier counting works, but isn't super-simple
-		// should I perhaps keep another 'count' variable that I can 'count++'?
 		seal := flow.Seal{
 			BlockID:    GenericIdentifier(2 * i),
 			ResultID:   GenericIdentifier(2*i + 1),
 			FinalState: GenericCommit(i),
-			// TODO: check - generate these too?
+
 			AggregatedApprovalSigs: nil,
 			ServiceEvents:          nil,
 		}
