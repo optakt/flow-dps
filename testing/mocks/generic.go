@@ -435,6 +435,31 @@ func GenericAmount(delta int) cadence.Value {
 	return cadence.NewUInt64(random.Uint64())
 }
 
+func GenericSeals(number int) []*flow.Seal {
+	var seals []*flow.Seal
+	for i := 0; i < number; i++ {
+
+		// TODO: check - this identifier counting works, but isn't super-simple
+		// should I perhaps keep another 'count' variable that I can 'count++'?
+		seal := flow.Seal{
+			BlockID:    GenericIdentifier(2 * i),
+			ResultID:   GenericIdentifier(2*i + 1),
+			FinalState: GenericCommit(i),
+			// TODO: check - generate these too?
+			AggregatedApprovalSigs: nil,
+			ServiceEvents:          nil,
+		}
+
+		seals = append(seals, &seal)
+	}
+
+	return seals
+}
+
+func GenericSeal(index int) *flow.Seal {
+	return GenericSeals(index + 1)[index]
+}
+
 func ByteSlice(v interface{}) []byte {
 	switch vv := v.(type) {
 	case flow.Identifier:

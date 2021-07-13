@@ -15,7 +15,6 @@
 package mocks
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/onflow/flow-go/model/flow"
@@ -57,9 +56,8 @@ func BaselineChain(t *testing.T) *Chain {
 		EventsFunc: func(height uint64) ([]flow.Event, error) {
 			return GenericEvents(4), nil
 		},
-		// TODO: implement
 		SealsFunc: func(height uint64) ([]*flow.Seal, error) {
-			return nil, fmt.Errorf("to be implemented")
+			return GenericSeals(4), nil
 		},
 	}
 
