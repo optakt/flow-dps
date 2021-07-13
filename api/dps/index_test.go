@@ -569,9 +569,7 @@ func TestIndex_ListSealsForHeight(t *testing.T) {
 		testSealIDs := mocks.GenericIdentifiers(4)
 		testSealBytes := make([][]byte, 0, len(testSealIDs))
 		for _, sealID := range testSealIDs {
-			id := make([]byte, len(sealID[:]))
-			copy(id, sealID[:])
-			testSealBytes = append(testSealBytes, id)
+			testSealBytes = append(testSealBytes, mocks.ByteSlice(sealID))
 		}
 
 		index := Index{
