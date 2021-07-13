@@ -58,6 +58,7 @@ func TestNewTransitions(t *testing.T) {
 			WithIndexCollections(true),
 			WithIndexTransactions(true),
 			WithIndexResults(true),
+			WithIndexSeals(true),
 		)
 
 		assert.NotNil(t, tr)
@@ -75,6 +76,7 @@ func TestNewTransitions(t *testing.T) {
 		assert.True(t, tr.cfg.IndexCollections)
 		assert.True(t, tr.cfg.IndexTransactions)
 		assert.True(t, tr.cfg.IndexResults)
+		assert.True(t, tr.cfg.IndexSeals)
 	})
 }
 
@@ -512,6 +514,11 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 			return mocks.GenericEvents(8), nil
 		}
+		chain.SealsFunc = func(height uint64) ([]*flow.Seal, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericSeals(4), nil
+		}
 
 		index := mocks.BaselineWriter(t)
 		index.HeaderFunc = func(height uint64, header *flow.Header) error {
@@ -555,6 +562,12 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 			return nil
 		}
+		index.SealsFunc = func(height uint64, seals []*flow.Seal) error {
+			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericSeals(4), seals)
+
+			return nil
+		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
 		tr.chain = chain
@@ -583,6 +596,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		tr.cfg.IndexTransactions = false
 		tr.cfg.IndexCollections = false
 		tr.cfg.IndexEvents = false
+		tr.cfg.IndexSeals = false
 
 		err := tr.IndexChain(st)
 
@@ -775,6 +789,38 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 		assert.Error(t, err)
 	})
+
+	t.Run("handles chain failure to retrieve seals", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.SealsFunc = func(height uint64) ([]*flow.Seal, error) {
+			return nil, mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.chain = chain
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure to write seals", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineWriter(t)
+		index.SealsFunc = func(height uint64, seals []*flow.Seal) error {
+			return mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.index = index
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
 }
 
 func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
@@ -798,6 +844,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			IndexTransactions: true,
 			IndexResults:      true,
 			IndexEvents:       true,
+			IndexSeals:        true,
 		},
 		log:   mocks.NoopLogger,
 		load:  load,
