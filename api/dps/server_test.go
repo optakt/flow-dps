@@ -576,7 +576,10 @@ func TestServer_GetTransaction(t *testing.T) {
 				return test.mockTransaction, test.mockErr
 			}
 
-			s := Server{index: index}
+			s := Server{
+				codec: mocks.BaselineCodec(t),
+				index: index,
+			}
 
 			req := &GetTransactionRequest{
 				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
