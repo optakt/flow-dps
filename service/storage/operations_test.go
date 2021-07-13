@@ -1078,3 +1078,58 @@ func TestSaveAndRetrieve_Seal(t *testing.T) {
 		assert.Equal(t, 1, decodeCallCount)
 	})
 }
+
+func TestIndexAndLookup_Seals(t *testing.T) {
+	testKey := encodeKey(prefixSealsForHeight, mocks.GenericHeight)
+
+	t.Run("save seals", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, []flow.Identifier{}, v)
+			return mocks.GenericLedgerValue(0), nil
+		}
+
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.IndexSealsForHeight(mocks.GenericHeight, mocks.GenericIdentifiers(5)))
+		assert.NoError(t, err)
+	})
+
+	t.Run("retrieve seals", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		err := db.Update(func(tx *badger.Txn) error {
+			return tx.Set(testKey, mocks.GenericLedgerValue(0))
+		})
+		require.NoError(t, err)
+
+		decodeCallCount := 0
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, []byte(mocks.GenericLedgerValue(0)), b)
+			assert.IsType(t, &[]flow.Identifier{}, v)
+			decodeCallCount++
+
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
+		}
+
+		var got []flow.Identifier
+		err = db.View(l.LookupSealsForHeight(mocks.GenericHeight, &got))
+
+		assert.Equal(t, 1, decodeCallCount)
+	})
+}
