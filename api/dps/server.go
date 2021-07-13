@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
@@ -188,7 +189,7 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
 	}
 
-	data, err := s.codec.Marshal(transaction)
+	data, err := cbor.Marshal(transaction)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode transaction: %w", err)
 	}
