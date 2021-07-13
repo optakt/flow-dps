@@ -353,6 +353,7 @@ func TestServer_GetHeader(t *testing.T) {
 		})
 	}
 }
+
 func TestServer_GetEvents(t *testing.T) {
 	tests := []struct {
 		name string
@@ -527,6 +528,66 @@ func TestServer_GetRegisterValues(t *testing.T) {
 				assert.Equal(t, test.wantRes.Height, gotRes.Height)
 				assert.EqualValues(t, test.wantRes.Paths, gotRes.Paths)
 				assert.EqualValues(t, test.wantRes.Values, gotRes.Values)
+			}
+		})
+	}
+}
+
+func TestServer_GetCollection(t *testing.T) {
+	tests := []struct {
+		name string
+
+		reqCollectionID flow.Identifier
+
+		mockCollection *flow.LightCollection
+		mockErr        error
+
+		wantCollection *flow.LightCollection
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "happy case",
+
+			reqCollectionID: mocks.GenericIdentifier(0),
+
+			mockCollection: mocks.GenericCollection(0),
+
+			wantCollection: mocks.GenericCollection(0),
+			checkErr:       assert.NoError,
+		},
+		{
+			name: "handles index failure",
+
+			reqCollectionID: mocks.GenericIdentifier(0),
+
+			mockErr: mocks.GenericError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			index := mocks.BaselineReader(t)
+			index.CollectionFunc = func(id flow.Identifier) (*flow.LightCollection, error) {
+				return test.mockCollection, test.mockErr
+			}
+
+			s := Server{index: index}
+
+			req := &GetCollectionRequest{
+				CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			}
+			gotRes, gotErr := s.GetCollection(context.Background(), req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, gotRes.CollectionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
+				assert.NotEmpty(t, gotRes.Data)
 			}
 		})
 	}

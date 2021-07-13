@@ -30,6 +30,7 @@ type Reader interface {
 	Events(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	Values(height uint64, paths []ledger.Path) ([]ledger.Value, error)
 
+	Collection(cID flow.Identifier) (*flow.LightCollection, error)
 	Transaction(txID flow.Identifier) (*flow.TransactionBody, error)
 	Seal(sealID flow.Identifier) (*flow.Seal, error)
 

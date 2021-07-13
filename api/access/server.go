@@ -82,9 +82,7 @@ func (s *Server) GetLatestBlockHeader(_ context.Context, _ *access.GetLatestBloc
 }
 
 func (s *Server) GetBlockHeaderByID(_ context.Context, in *access.GetBlockHeaderByIDRequest) (*access.BlockHeaderResponse, error) {
-	var blockID flow.Identifier
-	copy(blockID[:], in.Id)
-
+	blockID := flow.HashToID(in.Id)
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve last block height: %w", err)
@@ -137,8 +135,25 @@ func (s *Server) GetBlockByHeight(ctx context.Context, in *access.GetBlockByHeig
 	return nil, errors.New("not implemented")
 }
 
-func (s *Server) GetCollectionByID(ctx context.Context, in *access.GetCollectionByIDRequest) (*access.CollectionResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetCollectionByID(_ context.Context, in *access.GetCollectionByIDRequest) (*access.CollectionResponse, error) {
+	id := flow.HashToID(in.Id)
+	lightCollection, err := s.index.Collection(id)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve collection with ID %x: %w", in.Id, err)
+	}
+
+	collection := entities.Collection{
+		Id: in.Id,
+	}
+	for _, txID := range lightCollection.Transactions {
+		collection.TransactionIds = append(collection.TransactionIds, txID[:])
+	}
+
+	resp := access.CollectionResponse{
+		Collection: &collection,
+	}
+
+	return &resp, err
 }
 
 func (s *Server) SendTransaction(ctx context.Context, in *access.SendTransactionRequest) (*access.SendTransactionResponse, error) {

@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
@@ -75,7 +77,7 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
-// GetHeight implements the `GetHeight` method of the generated GRPC
+// GetHeightForBlock implements the `GetHeightForBlock` method of the generated GRPC
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
 
@@ -173,6 +175,29 @@ func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequ
 		Height: req.Height,
 		Paths:  req.Paths,
 		Values: convert.ValuesToBytes(values),
+	}
+
+	return &res, nil
+}
+
+// GetCollection implements the `GetCollection` method of the generated GRPC
+// server.
+func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*GetCollectionResponse, error) {
+	id := flow.HashToID(req.CollectionID)
+
+	collection, err := s.index.Collection(id)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve collection: %w", err)
+	}
+
+	data, err := cbor.Marshal(collection)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode collection: %w", err)
+	}
+
+	res := GetCollectionResponse{
+		CollectionID: req.CollectionID,
+		Data:         data,
 	}
 
 	return &res, nil

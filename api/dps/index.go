@@ -144,6 +144,26 @@ func (i *Index) Values(height uint64, paths []ledger.Path) ([]ledger.Value, erro
 	return values, nil
 }
 
+// Collection returns the collection with the given ID.
+func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection, error) {
+
+	req := GetCollectionRequest{
+		CollectionID: collectionID[:],
+	}
+	res, err := i.client.GetCollection(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get collection: %w", err)
+	}
+
+	var collection flow.LightCollection
+	err = i.codec.Unmarshal(res.Data, &collection)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode collection: %w", err)
+	}
+
+	return &collection, nil
+}
+
 // Transaction returns the transaction with the given ID.
 func (i *Index) Transaction(transactionID flow.Identifier) (*flow.TransactionBody, error) {
 

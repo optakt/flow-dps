@@ -29,6 +29,7 @@ type Reader struct {
 	HeaderFunc               func(height uint64) (*flow.Header, error)
 	EventsFunc               func(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	ValuesFunc               func(height uint64, paths []ledger.Path) ([]ledger.Value, error)
+	CollectionFunc           func(cID flow.Identifier) (*flow.LightCollection, error)
 	TransactionFunc          func(txID flow.Identifier) (*flow.TransactionBody, error)
 	TransactionsByHeightFunc func(height uint64) ([]flow.Identifier, error)
 	SealFunc                 func(sealID flow.Identifier) (*flow.Seal, error)
@@ -59,6 +60,9 @@ func BaselineReader(t *testing.T) *Reader {
 		},
 		ValuesFunc: func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 			return GenericLedgerValues(6), nil
+		},
+		CollectionFunc: func(cID flow.Identifier) (*flow.LightCollection, error) {
+			return GenericCollection(0), nil
 		},
 		TransactionFunc: func(txID flow.Identifier) (*flow.TransactionBody, error) {
 			return GenericTransaction(0), nil
@@ -103,6 +107,10 @@ func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, e
 
 func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 	return r.ValuesFunc(height, paths)
+}
+
+func (r *Reader) Collection(cID flow.Identifier) (*flow.LightCollection, error) {
+	return r.CollectionFunc(cID)
 }
 
 func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
