@@ -215,29 +215,29 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		blockIDs := mocks.GenericIdentifiers(4)
 		events := mocks.GenericEvents(6)
-		height := mocks.GenericHeight
+		blockIDs := mocks.GenericIdentifiers(4)
+		blocks := map[flow.Identifier]uint64{
+			blockIDs[0]: mocks.GenericHeight,
+			blockIDs[1]: mocks.GenericHeight + 1,
+			blockIDs[2]: mocks.GenericHeight + 2,
+			blockIDs[3]: mocks.GenericHeight + 3,
+		}
 
 		index := mocks.BaselineReader(t)
 		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
-			assert.Contains(t, blockIDs, blockID)
-			height++
+			assert.Contains(t, blocks, blockID)
 
-			return height, nil
+			return blocks[blockID], nil
 		}
-		index.EventsFunc = func(h uint64, types ...flow.EventType) ([]flow.Event, error) {
-			// Expect height to be between GenericHeight and GenericHeight + 4 since there are four
-			// given blockIDs.
-			assert.InDelta(t, mocks.GenericHeight, h, 4)
+		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+			assert.InDelta(t, mocks.GenericHeight, height, float64(len(blocks)))
 			assert.Empty(t, types)
 
 			return events, nil
 		}
-		index.HeaderFunc = func(h uint64) (*flow.Header, error) {
-			// Expect height to be between GenericHeight and GenericHeight + 4 since there are four
-			// given blockIDs.
-			assert.InDelta(t, mocks.GenericHeight, h, 4)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.InDelta(t, mocks.GenericHeight, height, float64(len(blocks)))
 
 			return mocks.GenericHeader, nil
 		}
@@ -328,7 +328,6 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		blockIDs := mocks.GenericIdentifiers(4)
 		events := mocks.GenericEvents(6)
 
 		index := mocks.BaselineReader(t)
@@ -351,10 +350,6 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		var ids [][]byte
-		for _, id := range blockIDs {
-			ids = append(ids, id[:])
-		}
 		req := &access.GetEventsForHeightRangeRequest{
 			StartHeight: mocks.GenericHeight,
 			EndHeight:   mocks.GenericHeight + 3,
@@ -363,7 +358,7 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		assert.Len(t, resp.Results, len(blockIDs))
+		assert.Len(t, resp.Results, 4)
 		for _, block := range resp.Results {
 			assert.Len(t, block.Events, len(events))
 		}
@@ -380,10 +375,6 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		var ids [][]byte
-		for _, id := range mocks.GenericIdentifiers(4) {
-			ids = append(ids, id[:])
-		}
 		req := &access.GetEventsForHeightRangeRequest{
 			StartHeight: mocks.GenericHeight,
 			EndHeight:   mocks.GenericHeight + 3,
@@ -404,10 +395,6 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		var ids [][]byte
-		for _, id := range mocks.GenericIdentifiers(4) {
-			ids = append(ids, id[:])
-		}
 		req := &access.GetEventsForHeightRangeRequest{
 			StartHeight: mocks.GenericHeight,
 			EndHeight:   mocks.GenericHeight + 3,
