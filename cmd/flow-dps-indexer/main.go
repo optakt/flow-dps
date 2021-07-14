@@ -82,7 +82,7 @@ func run() int {
 	pflag.BoolVarP(&flagIndexPayloads, "index-payloads", "p", false, "index payloads")
 	pflag.BoolVar(&flagIndexResults, "index-results", false, "index transaction results")
 	pflag.BoolVarP(&flagIndexTransactions, "index-transactions", "x", false, "index transactions")
-	pflag.BoolVarP(&flagIndexSeals, "index-seals", "s", false, "index seals")
+	pflag.BoolVar(&flagIndexSeals, "index-seals", false, "index seals")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 

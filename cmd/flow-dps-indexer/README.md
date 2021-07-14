@@ -21,7 +21,7 @@ Usage of flow-dps-indexer:
   -h, --index-headers        index headers
   -p, --index-payloads       index payloads
       --index-results        index transaction results
-  -s, --index-seals          index seals
+      --index-seals          index seals
   -x, --index-transactions   index transactions
   -l, --level string         log output level (default "info")
   -t, --trie string          data directory for state ledger

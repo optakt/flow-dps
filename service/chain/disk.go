@@ -195,7 +195,6 @@ func (d *Disk) Seals(height uint64) ([]*flow.Seal, error) {
 	// LookupPayloadSeals() returns the IDs of all the seals in the specified block.
 	// It should not be confused with LookupBlockSeal(), which returns the ID of the
 	// *last* payload seal found in the block.
-
 	var sealIDs []flow.Identifier
 	err = d.db.View(operation.LookupPayloadSeals(blockID, &sealIDs))
 	if err != nil {
@@ -208,13 +207,11 @@ func (d *Disk) Seals(height uint64) ([]*flow.Seal, error) {
 
 	seals := make([]*flow.Seal, 0, len(sealIDs))
 	for _, s := range sealIDs {
-
 		var seal flow.Seal
 		err = d.db.View(operation.RetrieveSeal(s, &seal))
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve seal: %w", err)
 		}
-
 		seals = append(seals, &seal)
 	}
 

@@ -512,7 +512,6 @@ func TestIndex_Events(t *testing.T) {
 }
 
 func TestIndex_Seal(t *testing.T) {
-
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
@@ -562,7 +561,6 @@ func TestIndex_Seal(t *testing.T) {
 }
 
 func TestIndex_ListSealsForHeight(t *testing.T) {
-
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
@@ -579,8 +577,8 @@ func TestIndex_ListSealsForHeight(t *testing.T) {
 					assert.Equal(t, mocks.GenericHeight, in.Height)
 
 					return &ListSealsForHeightResponse{
-						Height:   in.Height,
-						SealsIDs: testSealBytes,
+						Height:  in.Height,
+						SealIDs: testSealBytes,
 					}, nil
 				},
 			},

@@ -775,7 +775,7 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
 				assert.Equal(t, gotRes.Height, test.reqHeight)
-				assert.Len(t, gotRes.SealsIDs, 5)
+				assert.Len(t, gotRes.SealIDs, 5)
 			}
 		})
 	}

@@ -249,7 +249,6 @@ func (s *Server) GetSeal(_ context.Context, req *GetSealRequest) (*GetSealRespon
 // ListSealsForHeight implements the `ListSealsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListSealsForHeight(_ context.Context, req *ListSealsForHeightRequest) (*ListSealsForHeightResponse, error) {
-
 	sealIDs, err := s.index.SealsByHeight(req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("could not list seals by height: %w", err)
@@ -261,8 +260,8 @@ func (s *Server) ListSealsForHeight(_ context.Context, req *ListSealsForHeightRe
 	}
 
 	res := ListSealsForHeightResponse{
-		Height:   req.Height,
-		SealsIDs: sIDs,
+		Height:  req.Height,
+		SealIDs: sIDs,
 	}
 
 	return &res, nil

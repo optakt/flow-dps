@@ -126,5 +126,5 @@ message ListSealsForHeightRequest {
 
 message ListSealsForHeightResponse {
   uint64 height = 1;
-  repeated bytes sealsIDs = 2;
+  repeated bytes sealIDs = 2;
 }

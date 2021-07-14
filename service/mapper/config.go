@@ -87,7 +87,7 @@ func WithIndexPayloads(b bool) func(*Config) {
 	}
 }
 
-// WithIndexSeals sets up the mapper to build seals index.
+// WithIndexSeals sets up the mapper to build the seals index.
 func WithIndexSeals(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexSeals = b

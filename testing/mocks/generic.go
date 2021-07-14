@@ -439,9 +439,13 @@ func GenericSeals(number int) []*flow.Seal {
 	var seals []*flow.Seal
 	for i := 0; i < number; i++ {
 
+		// Since we need two identifiers per seal (for BlockID and ResultID),
+		// we'll use a secondary index.
+		j := 2 * i
+
 		seal := flow.Seal{
-			BlockID:    GenericIdentifier(2 * i),
-			ResultID:   GenericIdentifier(2*i + 1),
+			BlockID:    GenericIdentifier(j),
+			ResultID:   GenericIdentifier(j + 1),
 			FinalState: GenericCommit(i),
 
 			AggregatedApprovalSigs: nil,

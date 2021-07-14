@@ -174,6 +174,7 @@ func (r *Reader) Seal(sealID flow.Identifier) (*flow.Seal, error) {
 	return &seal, err
 }
 
+// SealsByHeight returns all of the seals that were part of the finalized block at the given height.
 func (r *Reader) SealsByHeight(height uint64) ([]flow.Identifier, error) {
 	var sealIDs []flow.Identifier
 	err := r.db.View(func(tx *badger.Txn) error {
