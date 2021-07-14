@@ -23,6 +23,7 @@ var DefaultConfig = Config{
 	IndexResults:      false,
 	IndexEvents:       false,
 	IndexPayloads:     false,
+	IndexSeals:        false,
 }
 
 // Config contains optional parameters for the mapper.
@@ -34,6 +35,7 @@ type Config struct {
 	IndexResults      bool
 	IndexEvents       bool
 	IndexPayloads     bool
+	IndexSeals        bool
 }
 
 // WithIndexCommit sets up the mapper to build the commits index.
@@ -82,5 +84,12 @@ func WithIndexEvents(b bool) func(*Config) {
 func WithIndexPayloads(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexPayloads = b
+	}
+}
+
+// WithIndexSeals sets up the mapper to build the seals index.
+func WithIndexSeals(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexSeals = b
 	}
 }

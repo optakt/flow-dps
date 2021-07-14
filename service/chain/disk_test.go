@@ -108,6 +108,20 @@ func TestDisk_TransactionResults(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDisk_Seals(t *testing.T) {
+	db := populateDB(t)
+	defer db.Close()
+
+	c := chain.FromDisk(db)
+
+	seals, err := c.Seals(mocks.GenericHeight)
+	assert.NoError(t, err)
+	assert.Len(t, seals, 4)
+
+	_, err = c.Seals(math.MaxUint64)
+	assert.Error(t, err)
+}
+
 func populateDB(t *testing.T) *badger.DB {
 	t.Helper()
 
@@ -230,6 +244,22 @@ func populateDB(t *testing.T) *badger.DB {
 		}
 
 		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb4.ID()})(tx)
+		if err != nil {
+			return err
+		}
+
+		seals := mocks.GenericSeals(4)
+		var sealIDs []flow.Identifier
+		for _, seal := range seals {
+			err = operation.InsertSeal(seal.ID(), seal)(tx)
+			if err != nil {
+				return err
+			}
+
+			sealIDs = append(sealIDs, seal.ID())
+		}
+
+		err = operation.IndexPayloadSeals(mocks.GenericIdentifier(0), sealIDs)(tx)
 		if err != nil {
 			return err
 		}

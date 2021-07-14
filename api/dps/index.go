@@ -208,3 +208,42 @@ func (i *Index) Events(height uint64, types ...flow.EventType) ([]flow.Event, er
 
 	return events, nil
 }
+
+// Seal returns the seal with the given ID.
+func (i *Index) Seal(sealID flow.Identifier) (*flow.Seal, error) {
+
+	req := GetSealRequest{
+		SealID: sealID[:],
+	}
+	res, err := i.client.GetSeal(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get seal: %w", err)
+	}
+
+	var seal flow.Seal
+	err = i.codec.Unmarshal(res.Data, &seal)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode seal: %w", err)
+	}
+
+	return &seal, nil
+}
+
+// SealsByHeight returns the seal IDs within the given block.
+func (i *Index) SealsByHeight(height uint64) ([]flow.Identifier, error) {
+
+	req := ListSealsForHeightRequest{
+		Height: height,
+	}
+	res, err := i.client.ListSealsForHeight(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get seals: %w", err)
+	}
+
+	sealIDs := make([]flow.Identifier, 0, len(res.SealIDs))
+	for _, sealID := range res.SealIDs {
+		sealIDs = append(sealIDs, flow.HashToID(sealID))
+	}
+
+	return sealIDs, nil
+}

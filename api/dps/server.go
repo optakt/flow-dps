@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fxamacker/cbor/v2"
-
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
@@ -190,7 +188,7 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
 	}
 
-	data, err := cbor.Marshal(transaction)
+	data, err := s.codec.Marshal(transaction)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode transaction: %w", err)
 	}
@@ -220,6 +218,50 @@ func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransacti
 	res := ListTransactionsForHeightResponse{
 		Height:         req.Height,
 		TransactionIDs: transactionIDs,
+	}
+
+	return &res, nil
+}
+
+// GetSeal implements the `GetSeal` method of the generated GRPC
+// server.
+func (s *Server) GetSeal(_ context.Context, req *GetSealRequest) (*GetSealResponse, error) {
+	sealID := flow.HashToID(req.SealID)
+
+	seal, err := s.index.Seal(sealID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve seal: %w", err)
+	}
+
+	data, err := s.codec.Marshal(seal)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode seal: %w", err)
+	}
+
+	res := GetSealResponse{
+		SealID: req.SealID,
+		Data:   data,
+	}
+
+	return &res, nil
+}
+
+// ListSealsForHeight implements the `ListSealsForHeight` method of the generated GRPC
+// server.
+func (s *Server) ListSealsForHeight(_ context.Context, req *ListSealsForHeightRequest) (*ListSealsForHeightResponse, error) {
+	sealIDs, err := s.index.SealsByHeight(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not list seals by height: %w", err)
+	}
+
+	sIDs := make([][]byte, 0, len(sealIDs))
+	for _, sealID := range sealIDs {
+		sIDs = append(sIDs, sealID[:])
+	}
+
+	res := ListSealsForHeightResponse{
+		Height:  req.Height,
+		SealIDs: sIDs,
 	}
 
 	return &res, nil

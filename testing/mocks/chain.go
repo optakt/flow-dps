@@ -28,6 +28,7 @@ type Chain struct {
 	TransactionsFunc func(height uint64) ([]*flow.TransactionBody, error)
 	ResultsFunc      func(height uint64) ([]*flow.TransactionResult, error)
 	EventsFunc       func(height uint64) ([]flow.Event, error)
+	SealsFunc        func(height uint64) ([]*flow.Seal, error)
 }
 
 func BaselineChain(t *testing.T) *Chain {
@@ -54,6 +55,9 @@ func BaselineChain(t *testing.T) *Chain {
 		},
 		EventsFunc: func(height uint64) ([]flow.Event, error) {
 			return GenericEvents(4), nil
+		},
+		SealsFunc: func(height uint64) ([]*flow.Seal, error) {
+			return GenericSeals(4), nil
 		},
 	}
 
@@ -86,4 +90,8 @@ func (c *Chain) Results(height uint64) ([]*flow.TransactionResult, error) {
 
 func (c *Chain) Events(height uint64) ([]flow.Event, error) {
 	return c.EventsFunc(height)
+}
+
+func (c *Chain) Seals(height uint64) ([]*flow.Seal, error) {
+	return c.SealsFunc(height)
 }

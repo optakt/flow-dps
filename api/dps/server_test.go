@@ -576,7 +576,10 @@ func TestServer_GetTransaction(t *testing.T) {
 				return test.mockTransaction, test.mockErr
 			}
 
-			s := Server{index: index}
+			s := Server{
+				codec: mocks.BaselineCodec(t),
+				index: index,
+			}
 
 			req := &GetTransactionRequest{
 				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
@@ -647,6 +650,132 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 			if gotErr == nil {
 				assert.Equal(t, gotRes.Height, mocks.GenericHeight)
 				assert.Len(t, gotRes.TransactionIDs, 5)
+			}
+		})
+	}
+}
+
+func TestServer_GetSeal(t *testing.T) {
+	tests := []struct {
+		name string
+
+		reqSealID flow.Identifier
+
+		mockSeal *flow.Seal
+		mockErr  error
+
+		wantSeal *flow.Seal
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "happy case",
+
+			reqSealID: mocks.GenericIdentifier(0),
+
+			mockSeal: mocks.GenericSeal(0),
+
+			wantSeal: mocks.GenericSeal(0),
+			checkErr: assert.NoError,
+		},
+		{
+			name: "handles index failure",
+
+			reqSealID: mocks.GenericIdentifier(0),
+			mockErr:   mocks.GenericError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			index := mocks.BaselineReader(t)
+			index.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
+				return test.mockSeal, test.mockErr
+			}
+
+			s := Server{
+				codec: mocks.BaselineCodec(t),
+				index: index,
+			}
+
+			req := GetSealRequest{
+				SealID: mocks.ByteSlice(test.reqSealID),
+			}
+			gotRes, gotErr := s.GetSeal(context.Background(), &req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, gotRes.SealID, mocks.ByteSlice(test.reqSealID))
+				assert.NotEmpty(t, gotRes.Data)
+			}
+		})
+	}
+}
+
+func TestServer_ListSealsForHeight(t *testing.T) {
+	tests := []struct {
+		name string
+
+		reqHeight uint64
+
+		mockSeals []flow.Identifier
+		mockErr   error
+
+		wantSeals []flow.Identifier
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "happy case",
+
+			reqHeight: mocks.GenericHeight,
+
+			mockSeals: mocks.GenericIdentifiers(5),
+
+			wantSeals: mocks.GenericIdentifiers(5),
+			checkErr:  assert.NoError,
+		},
+		{
+			name: "handles index failure",
+
+			reqHeight: mocks.GenericHeight,
+
+			mockErr: mocks.GenericError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			index := mocks.BaselineReader(t)
+			index.SealsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+				return test.mockSeals, test.mockErr
+			}
+
+			s := Server{
+				codec: mocks.BaselineCodec(t),
+				index: index,
+			}
+
+			req := ListSealsForHeightRequest{
+				Height: mocks.GenericHeight,
+			}
+
+			gotRes, gotErr := s.ListSealsForHeight(context.Background(), &req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, gotRes.Height, test.reqHeight)
+				assert.Len(t, gotRes.SealIDs, 5)
 			}
 		})
 	}

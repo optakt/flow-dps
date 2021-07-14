@@ -24,6 +24,8 @@ the API it exposes.
         10. [Collection Transaction Index](#collection-transaction-index)
         11. [Block Collection Index](#block-collection-index)
         12. [Transaction Result Index](#transaction-result-index)
+        13. [Seals Index](#seals-index)
+        14. [Block Seals Index](#block-seals-index)
 
 ## Chain
 
@@ -219,3 +221,23 @@ In this index, transaction IDs are mapped to their results.
 | **Example Value**  | `12`              | `45D66Q565F5DEDB[...]` |
 
 The value stored at that key is the **CBOR-encoded [flow.TransactionResult](https://pkg.go.dev/github.com/onflow/model/flow#TransactionResult)** for the referenced transaction.
+
+##### Seals Index
+
+In this index, seals are mapped by their IDs.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Seal ID                |
+| **Example Value**  | `14`              | `45D66Q565F5DEDB[...]` |
+
+##### Block Seals Index
+
+In this index, block IDs are mapped to the IDs of the seals within that block.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Block ID               |
+| **Example Value**  | `15`              | `45D66Q565F5DEDB[...]` |

@@ -166,3 +166,23 @@ func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, e
 	err = r.db.View(r.storage.RetrieveEvents(height, types, &events))
 	return events, err
 }
+
+// Seal returns the seal with the given ID.
+func (r *Reader) Seal(sealID flow.Identifier) (*flow.Seal, error) {
+	var seal flow.Seal
+	err := r.db.View(r.storage.RetrieveSeal(sealID, &seal))
+	return &seal, err
+}
+
+// SealsByHeight returns all of the seals that were part of the finalized block at the given height.
+func (r *Reader) SealsByHeight(height uint64) ([]flow.Identifier, error) {
+	var sealIDs []flow.Identifier
+	err := r.db.View(func(tx *badger.Txn) error {
+		err := r.storage.LookupSealsForHeight(height, &sealIDs)(tx)
+		if err != nil {
+			return fmt.Errorf("could not look up seals: %w", err)
+		}
+		return nil
+	})
+	return sealIDs, err
+}

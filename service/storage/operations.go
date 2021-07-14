@@ -63,6 +63,10 @@ func (l *Library) SaveCollection(collection *flow.LightCollection) func(*badger.
 	return l.save(encodeKey(prefixCollection, collection.ID()), collection)
 }
 
+func (l *Library) SaveSeal(seal *flow.Seal) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixSeal, seal.ID()), seal)
+}
+
 func (l *Library) IndexTransactionsForHeight(height uint64, txIDs []flow.Identifier) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixTransactionsForHeight, height), txIDs)
 }
@@ -73,6 +77,10 @@ func (l *Library) IndexTransactionsForCollection(collID flow.Identifier, txIDs [
 
 func (l *Library) IndexCollectionsForHeight(height uint64, collIDs []flow.Identifier) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixCollectionsForHeight, height), collIDs)
+}
+
+func (l *Library) IndexSealsForHeight(height uint64, sealIDs []flow.Identifier) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixSealsForHeight, height), sealIDs)
 }
 
 func (l *Library) SaveResult(result *flow.TransactionResult) func(*badger.Txn) error {
@@ -174,6 +182,10 @@ func (l *Library) RetrieveTransaction(transactionID flow.Identifier, transaction
 	return l.retrieve(encodeKey(prefixTransaction, transactionID), transaction)
 }
 
+func (l *Library) RetrieveSeal(sealID flow.Identifier, seal *flow.Seal) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixSeal, sealID), seal)
+}
+
 func (l *Library) LookupCollectionsForHeight(height uint64, collIDs *[]flow.Identifier) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixCollectionsForHeight, height), collIDs)
 }
@@ -184,6 +196,10 @@ func (l *Library) LookupTransactionsForHeight(height uint64, txIDs *[]flow.Ident
 
 func (l *Library) LookupTransactionsForCollection(collID flow.Identifier, txIDs *[]flow.Identifier) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixTransactionsForCollection, collID), txIDs)
+}
+
+func (l *Library) LookupSealsForHeight(height uint64, sealIDs *[]flow.Identifier) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixSealsForHeight, height), sealIDs)
 }
 
 func (l *Library) RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error {
