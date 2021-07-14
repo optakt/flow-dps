@@ -350,6 +350,10 @@ func (t *Transitions) IndexChain(s *State) error {
 			return fmt.Errorf("could not index header: %w", err)
 		}
 		blockID := header.ID()
+		err = t.index.Height(blockID, s.height)
+		if err != nil {
+			return fmt.Errorf("could not index height: %w", err)
+		}
 		log = log.Hex("block", blockID[:])
 	}
 	if t.cfg.IndexCollections {

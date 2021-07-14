@@ -521,7 +521,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		}
 		index.HeightFunc = func(blockID flow.Identifier, height uint64) error {
 			assert.Equal(t, mocks.GenericHeight, height)
-			assert.Equal(t, mocks.GenericIdentifier(0), blockID)
+			assert.Equal(t, mocks.GenericHeader.ID(), blockID)
 
 			return nil
 		}
