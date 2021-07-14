@@ -33,6 +33,7 @@ type Reader interface {
 	Collection(cID flow.Identifier) (*flow.LightCollection, error)
 	Transaction(txID flow.Identifier) (*flow.TransactionBody, error)
 	Seal(sealID flow.Identifier) (*flow.Seal, error)
+	Result(txID flow.Identifier) (*flow.TransactionResult, error)
 
 	TransactionsByHeight(height uint64) ([]flow.Identifier, error)
 	SealsByHeight(height uint64) ([]flow.Identifier, error)

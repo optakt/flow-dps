@@ -214,6 +214,115 @@ func TestServer_GetBlockHeaderByHeight(t *testing.T) {
 	})
 }
 
+func TestServer_GetTransaction(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		tx := mocks.GenericTransaction(0)
+
+		index := mocks.BaselineReader(t)
+		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), txID)
+
+			return tx, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		resp, err := s.GetTransaction(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.Equal(t, tx.Arguments, resp.Transaction.Arguments)
+		assert.Equal(t, tx.ReferenceBlockID[:], resp.Transaction.ReferenceBlockId)
+	})
+
+	t.Run("handles indexer error on transaction", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetTransaction(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestServer_GetTransactionResult(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		tx := mocks.GenericTransaction(0)
+		result := mocks.GenericResult(0)
+
+		index := mocks.BaselineReader(t)
+		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), txID)
+
+			return tx, nil
+		}
+		index.ResultFunc = func(txID flow.Identifier) (*flow.TransactionResult, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), txID)
+
+			return result, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		resp, err := s.GetTransactionResult(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.Equal(t, result.ErrorMessage, resp.ErrorMessage)
+		assert.Equal(t, tx.ReferenceBlockID[:], resp.BlockId)
+	})
+
+	t.Run("handles indexer error on transaction", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetTransactionResult(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer error on result", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.ResultFunc = func(txID flow.Identifier) (*flow.TransactionResult, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetTransactionResult(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
 func TestServer_GetEventsForBlockIDs(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()

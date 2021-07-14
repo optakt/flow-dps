@@ -161,12 +161,42 @@ func (s *Server) SendTransaction(ctx context.Context, in *access.SendTransaction
 	return nil, errors.New("not implemented")
 }
 
-func (s *Server) GetTransaction(ctx context.Context, in *access.GetTransactionRequest) (*access.TransactionResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetTransaction(_ context.Context, in *access.GetTransactionRequest) (*access.TransactionResponse, error) {
+	id := flow.HashToID(in.Id)
+	tb, err := s.index.Transaction(id)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
+	}
+
+	resp := access.TransactionResponse{
+		Transaction: convert.TransactionToMessage(*tb),
+	}
+
+	return &resp, nil
 }
 
-func (s *Server) GetTransactionResult(ctx context.Context, in *access.GetTransactionRequest) (*access.TransactionResultResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransactionRequest) (*access.TransactionResultResponse, error) {
+	id := flow.HashToID(in.Id)
+
+	tx, err := s.index.Transaction(id)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
+	}
+
+	result, err := s.index.Result(id)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction result: %w", err)
+	}
+
+	resp := access.TransactionResultResponse{
+		Status:       0, // FIXME: Need missing flow.Transaction data!
+		StatusCode:   0, // FIXME: Need missing flow.Transaction data!
+		ErrorMessage: result.ErrorMessage,
+		Events:       nil, // FIXME: Need missing flow.Transaction data!
+		BlockId:      tx.ReferenceBlockID[:],
+	}
+
+	return &resp, nil
 }
 
 func (s *Server) GetAccount(ctx context.Context, in *access.GetAccountRequest) (*access.GetAccountResponse, error) {
