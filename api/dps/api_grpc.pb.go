@@ -25,6 +25,7 @@ type APIClient interface {
 	GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
 	GetEvents(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
 	GetRegisterValues(ctx context.Context, in *GetRegisterValuesRequest, opts ...grpc.CallOption) (*GetRegisterValuesResponse, error)
+	GetCollection(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error)
 	GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
 	ListTransactionsForHeight(ctx context.Context, in *ListTransactionsForHeightRequest, opts ...grpc.CallOption) (*ListTransactionsForHeightResponse, error)
 	GetSeal(ctx context.Context, in *GetSealRequest, opts ...grpc.CallOption) (*GetSealResponse, error)
@@ -102,6 +103,15 @@ func (c *aPIClient) GetRegisterValues(ctx context.Context, in *GetRegisterValues
 	return out, nil
 }
 
+func (c *aPIClient) GetCollection(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error) {
+	out := new(GetCollectionResponse)
+	err := c.cc.Invoke(ctx, "/API/GetCollection", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *aPIClient) GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error) {
 	out := new(GetTransactionResponse)
 	err := c.cc.Invoke(ctx, "/API/GetTransaction", in, out, opts...)
@@ -149,6 +159,7 @@ type APIServer interface {
 	GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error)
 	GetEvents(context.Context, *GetEventsRequest) (*GetEventsResponse, error)
 	GetRegisterValues(context.Context, *GetRegisterValuesRequest) (*GetRegisterValuesResponse, error)
+	GetCollection(context.Context, *GetCollectionRequest) (*GetCollectionResponse, error)
 	GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error)
 	ListTransactionsForHeight(context.Context, *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error)
 	GetSeal(context.Context, *GetSealRequest) (*GetSealResponse, error)
@@ -179,6 +190,9 @@ func (UnimplementedAPIServer) GetEvents(context.Context, *GetEventsRequest) (*Ge
 }
 func (UnimplementedAPIServer) GetRegisterValues(context.Context, *GetRegisterValuesRequest) (*GetRegisterValuesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRegisterValues not implemented")
+}
+func (UnimplementedAPIServer) GetCollection(context.Context, *GetCollectionRequest) (*GetCollectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCollection not implemented")
 }
 func (UnimplementedAPIServer) GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransaction not implemented")
@@ -330,6 +344,24 @@ func _API_GetRegisterValues_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_GetCollection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCollectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetCollection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/GetCollection",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetCollection(ctx, req.(*GetCollectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _API_GetTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetTransactionRequest)
 	if err := dec(in); err != nil {
@@ -436,6 +468,10 @@ var API_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRegisterValues",
 			Handler:    _API_GetRegisterValues_Handler,
+		},
+		{
+			MethodName: "GetCollection",
+			Handler:    _API_GetCollection_Handler,
 		},
 		{
 			MethodName: "GetTransaction",

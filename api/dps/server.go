@@ -75,7 +75,7 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
-// GetHeight implements the `GetHeight` method of the generated GRPC
+// GetHeightForBlock implements the `GetHeightForBlock` method of the generated GRPC
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
 
@@ -173,6 +173,29 @@ func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequ
 		Height: req.Height,
 		Paths:  req.Paths,
 		Values: convert.ValuesToBytes(values),
+	}
+
+	return &res, nil
+}
+
+// GetCollection implements the `GetCollection` method of the generated GRPC
+// server.
+func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*GetCollectionResponse, error) {
+	collID := flow.HashToID(req.CollectionID)
+
+	collection, err := s.index.Collection(collID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve collection: %w", err)
+	}
+
+	data, err := s.codec.Marshal(collection)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode collection: %w", err)
+	}
+
+	res := GetCollectionResponse{
+		CollectionID: req.CollectionID,
+		Data:         data,
 	}
 
 	return &res, nil

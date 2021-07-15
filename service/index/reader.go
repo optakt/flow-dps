@@ -114,6 +114,13 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 	return values, err
 }
 
+// Collection returns the collection with the given ID.
+func (r *Reader) Collection(cID flow.Identifier) (*flow.LightCollection, error) {
+	var collection flow.LightCollection
+	err := r.db.View(r.storage.RetrieveCollection(cID, &collection))
+	return &collection, err
+}
+
 // Transaction returns the transaction with the given ID.
 func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
 	var transaction flow.TransactionBody

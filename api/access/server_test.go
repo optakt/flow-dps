@@ -415,6 +415,45 @@ func TestServer_GetNetworkParameters(t *testing.T) {
 	assert.Equal(t, dps.FlowMainnet.String(), resp.ChainId)
 }
 
+func TestServer_GetCollectionByID(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.CollectionFunc = func(cID flow.Identifier) (*flow.LightCollection, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), cID)
+
+			return mocks.GenericCollection(0), nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetCollectionByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		resp, err := s.GetCollectionByID(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.NotNil(t, resp.Collection)
+		for i, txID := range resp.Collection.TransactionIds {
+			assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(i)), txID)
+		}
+	})
+
+	t.Run("handles indexer failure on collection", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.CollectionFunc = func(cID flow.Identifier) (*flow.LightCollection, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetCollectionByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetCollectionByID(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
 func baselineServer(t *testing.T) *Server {
 	t.Helper()
 
