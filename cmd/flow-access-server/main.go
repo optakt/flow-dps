@@ -63,6 +63,7 @@ func run() int {
 		flagPort  uint16
 	)
 
+	// TODO: Replace with dynamic deduction of chain ID https://github.com/optakt/flow-dps/issues/285
 	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowMainnet.String(), "ID of the chain that this server uses as its data source")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
