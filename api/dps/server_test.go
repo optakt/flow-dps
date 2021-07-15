@@ -719,6 +719,69 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 	}
 }
 
+func TestServer_GetResult(t *testing.T) {
+	tests := []struct {
+		name string
+
+		reqTransactionID flow.Identifier
+
+		mockResult *flow.TransactionResult
+		mockErr    error
+
+		wantResult *flow.TransactionResult
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "happy case",
+
+			reqTransactionID: mocks.GenericIdentifier(0),
+
+			mockResult: mocks.GenericResult(0),
+
+			wantResult: mocks.GenericResult(0),
+			checkErr:   assert.NoError,
+		},
+		{
+			name: "handles index failure",
+
+			reqTransactionID: mocks.GenericIdentifier(0),
+
+			mockErr: mocks.GenericError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			index := mocks.BaselineReader(t)
+			index.ResultFunc = func(transactionID flow.Identifier) (*flow.TransactionResult, error) {
+				return test.mockResult, test.mockErr
+			}
+
+			s := Server{
+				codec: mocks.BaselineCodec(t),
+				index: index,
+			}
+
+			req := &GetResultRequest{
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			}
+			gotRes, gotErr := s.GetResult(context.Background(), req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, gotRes.TransactionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
+				assert.NotEmpty(t, gotRes.Data)
+			}
+		})
+	}
+}
+
 func TestServer_GetSeal(t *testing.T) {
 	tests := []struct {
 		name string

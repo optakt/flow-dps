@@ -483,6 +483,59 @@ func TestIndex_Transaction(t *testing.T) {
 	})
 }
 
+func TestIndex_Result(t *testing.T) {
+	testResultBytes, err := cbor.Marshal(mocks.GenericResult(0))
+	require.NoError(t, err)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = cbor.Unmarshal
+
+		index := Index{
+			codec: codec,
+			client: &apiMock{
+				GetResultFunc: func(_ context.Context, in *GetResultRequest, _ ...grpc.CallOption) (*GetResultResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.TransactionID)
+
+					return &GetResultResponse{
+						TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+						Data:          testResultBytes,
+					}, nil
+				},
+			},
+		}
+
+		got, err := index.Result(mocks.GenericIdentifier(0))
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, mocks.GenericResult(0), got)
+		}
+	})
+
+	codec := mocks.BaselineCodec(t)
+	codec.UnmarshalFunc = cbor.Unmarshal
+
+	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
+		index := Index{
+			client: &apiMock{
+				GetResultFunc: func(_ context.Context, in *GetResultRequest, _ ...grpc.CallOption) (*GetResultResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.TransactionID)
+
+					return nil, mocks.GenericError
+				},
+			},
+		}
+
+		_, err := index.Result(mocks.GenericIdentifier(0))
+
+		assert.Error(t, err)
+	})
+}
+
 func TestIndex_Events(t *testing.T) {
 	testEventsBytes, err := cbor.Marshal(mocks.GenericEvents(4))
 	require.NoError(t, err)
@@ -675,6 +728,7 @@ type apiMock struct {
 	GetCollectionFunc             func(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error)
 	GetTransactionFunc            func(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
 	ListTransactionsForHeightFunc func(ctx context.Context, in *ListTransactionsForHeightRequest, opts ...grpc.CallOption) (*ListTransactionsForHeightResponse, error)
+	GetResultFunc                 func(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*GetResultResponse, error)
 	GetSealFunc                   func(ctx context.Context, in *GetSealRequest, opts ...grpc.CallOption) (*GetSealResponse, error)
 	ListSealsForHeightFunc        func(ctx context.Context, in *ListSealsForHeightRequest, opts ...grpc.CallOption) (*ListSealsForHeightResponse, error)
 }
@@ -717,6 +771,10 @@ func (a *apiMock) GetTransaction(ctx context.Context, in *GetTransactionRequest,
 
 func (a *apiMock) ListTransactionsForHeight(ctx context.Context, in *ListTransactionsForHeightRequest, opts ...grpc.CallOption) (*ListTransactionsForHeightResponse, error) {
 	return a.ListTransactionsForHeightFunc(ctx, in, opts...)
+}
+
+func (a *apiMock) GetResult(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*GetResultResponse, error) {
+	return a.GetResultFunc(ctx, in, opts...)
 }
 
 func (a *apiMock) GetSeal(ctx context.Context, in *GetSealRequest, opts ...grpc.CallOption) (*GetSealResponse, error) {

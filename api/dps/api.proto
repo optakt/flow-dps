@@ -27,6 +27,7 @@ service API {
   rpc GetCollection (GetCollectionRequest) returns (GetCollectionResponse) {}
   rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse) {}
   rpc ListTransactionsForHeight (ListTransactionsForHeightRequest) returns (ListTransactionsForHeightResponse) {}
+  rpc GetResult (GetResultRequest) returns (GetResultResponse) {}
   rpc GetSeal(GetSealRequest) returns (GetSealResponse) {}
   rpc ListSealsForHeight(ListSealsForHeightRequest) returns (ListSealsForHeightResponse) {}
 }
@@ -119,6 +120,15 @@ message ListTransactionsForHeightRequest {
 message ListTransactionsForHeightResponse {
   uint64 height = 1;
   repeated bytes transactionIDs = 2;
+}
+
+message GetResultRequest {
+  bytes transactionID = 1;
+}
+
+message GetResultResponse {
+  bytes transactionID = 1;
+  bytes data = 2;
 }
 
 message GetSealRequest {

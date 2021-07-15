@@ -28,6 +28,7 @@ type APIClient interface {
 	GetCollection(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error)
 	GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
 	ListTransactionsForHeight(ctx context.Context, in *ListTransactionsForHeightRequest, opts ...grpc.CallOption) (*ListTransactionsForHeightResponse, error)
+	GetResult(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*GetResultResponse, error)
 	GetSeal(ctx context.Context, in *GetSealRequest, opts ...grpc.CallOption) (*GetSealResponse, error)
 	ListSealsForHeight(ctx context.Context, in *ListSealsForHeightRequest, opts ...grpc.CallOption) (*ListSealsForHeightResponse, error)
 }
@@ -130,6 +131,15 @@ func (c *aPIClient) ListTransactionsForHeight(ctx context.Context, in *ListTrans
 	return out, nil
 }
 
+func (c *aPIClient) GetResult(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*GetResultResponse, error) {
+	out := new(GetResultResponse)
+	err := c.cc.Invoke(ctx, "/API/GetResult", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *aPIClient) GetSeal(ctx context.Context, in *GetSealRequest, opts ...grpc.CallOption) (*GetSealResponse, error) {
 	out := new(GetSealResponse)
 	err := c.cc.Invoke(ctx, "/API/GetSeal", in, out, opts...)
@@ -162,6 +172,7 @@ type APIServer interface {
 	GetCollection(context.Context, *GetCollectionRequest) (*GetCollectionResponse, error)
 	GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error)
 	ListTransactionsForHeight(context.Context, *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error)
+	GetResult(context.Context, *GetResultRequest) (*GetResultResponse, error)
 	GetSeal(context.Context, *GetSealRequest) (*GetSealResponse, error)
 	ListSealsForHeight(context.Context, *ListSealsForHeightRequest) (*ListSealsForHeightResponse, error)
 }
@@ -199,6 +210,9 @@ func (UnimplementedAPIServer) GetTransaction(context.Context, *GetTransactionReq
 }
 func (UnimplementedAPIServer) ListTransactionsForHeight(context.Context, *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTransactionsForHeight not implemented")
+}
+func (UnimplementedAPIServer) GetResult(context.Context, *GetResultRequest) (*GetResultResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetResult not implemented")
 }
 func (UnimplementedAPIServer) GetSeal(context.Context, *GetSealRequest) (*GetSealResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSeal not implemented")
@@ -398,6 +412,24 @@ func _API_ListTransactionsForHeight_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_GetResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetResultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetResult(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/GetResult",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetResult(ctx, req.(*GetResultRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _API_GetSeal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetSealRequest)
 	if err := dec(in); err != nil {
@@ -480,6 +512,10 @@ var API_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListTransactionsForHeight",
 			Handler:    _API_ListTransactionsForHeight_Handler,
+		},
+		{
+			MethodName: "GetResult",
+			Handler:    _API_GetResult_Handler,
 		},
 		{
 			MethodName: "GetSeal",

@@ -417,14 +417,10 @@ func GenericCollection(index int) *flow.LightCollection {
 }
 
 func GenericResults(number int) []*flow.TransactionResult {
-	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(7))
-
 	var results []*flow.TransactionResult
 	for i := 0; i < number; i++ {
 		results = append(results, &flow.TransactionResult{
 			TransactionID: GenericIdentifier(i),
-			ErrorMessage: fmt.Sprint(random.Int()),
 		})
 	}
 

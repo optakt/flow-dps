@@ -246,6 +246,29 @@ func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransacti
 	return &res, nil
 }
 
+// GetResult implements the `GetResult` method of the generated GRPC
+// server.
+func (s *Server) GetResult(_ context.Context, req *GetResultRequest) (*GetResultResponse, error) {
+	txID := flow.HashToID(req.TransactionID)
+
+	result, err := s.index.Result(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction result: %w", err)
+	}
+
+	data, err := s.codec.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode transaction result: %w", err)
+	}
+
+	res := GetResultResponse{
+		TransactionID: req.TransactionID,
+		Data:          data,
+	}
+
+	return &res, nil
+}
+
 // GetSeal implements the `GetSeal` method of the generated GRPC
 // server.
 func (s *Server) GetSeal(_ context.Context, req *GetSealRequest) (*GetSealResponse, error) {

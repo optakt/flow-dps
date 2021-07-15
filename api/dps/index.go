@@ -165,10 +165,10 @@ func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection,
 }
 
 // Transaction returns the transaction with the given ID.
-func (i *Index) Transaction(transactionID flow.Identifier) (*flow.TransactionBody, error) {
+func (i *Index) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
 
 	req := GetTransactionRequest{
-		TransactionID: transactionID[:],
+		TransactionID: txID[:],
 	}
 	res, err := i.client.GetTransaction(context.Background(), &req)
 	if err != nil {
@@ -196,13 +196,30 @@ func (i *Index) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	}
 
 	txIDs := make([]flow.Identifier, 0, len(res.TransactionIDs))
-	for _, transactionID := range res.TransactionIDs {
-		var txID flow.Identifier
-		copy(txID[:], transactionID)
-		txIDs = append(txIDs, txID)
+	for _, txID := range res.TransactionIDs {
+		txIDs = append(txIDs, flow.HashToID(txID))
 	}
 
 	return txIDs, nil
+}
+
+func (i *Index) Result(txID flow.Identifier) (*flow.TransactionResult, error) {
+
+	req := GetResultRequest{
+		TransactionID: txID[:],
+	}
+	res, err := i.client.GetResult(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get transaction result: %w", err)
+	}
+
+	var result flow.TransactionResult
+	err = i.codec.Unmarshal(res.Data, &result)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode transaction result: %w", err)
+	}
+
+	return &result, nil
 }
 
 // Events returns the events of all transactions that were part of the
