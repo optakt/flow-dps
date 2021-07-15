@@ -12,16 +12,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package dps
+package access
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
+	"github.com/golang/protobuf/ptypes"
+
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
+	"github.com/onflow/flow/protobuf/go/flow/entities"
+
 	"github.com/optakt/flow-dps/models/index"
 )
 
@@ -173,12 +177,91 @@ func (s *Server) ExecuteScriptAtBlockHeight(ctx context.Context, in *access.Exec
 	return nil, errors.New("not implemented")
 }
 
-func (s *Server) GetEventsForHeightRange(ctx context.Context, in *access.GetEventsForHeightRangeRequest) (*access.EventsResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetEventsForHeightRange(_ context.Context, in *access.GetEventsForHeightRangeRequest) (*access.EventsResponse, error) {
+	var events []*access.EventsResponse_Result
+	for height := in.StartHeight; height <= in.EndHeight; height++ {
+		ee, err := s.index.Events(height)
+		if err != nil {
+			return nil, fmt.Errorf("could not get events at height %d: %w", height, err)
+		}
+
+		header, err := s.index.Header(height)
+		if err != nil {
+			return nil, fmt.Errorf("could not get header at height %d: %w", height, err)
+		}
+
+		timestamp, err := ptypes.TimestampProto(header.Timestamp)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse timestamp for block at height %d: %w", height, err)
+		}
+
+		messages := make([]*entities.Event, 0, len(ee))
+		for _, event := range ee {
+			messages = append(messages, convert.EventToMessage(event))
+		}
+
+		blockID := header.ID()
+		result := access.EventsResponse_Result{
+			BlockId:        blockID[:],
+			BlockHeight:    height,
+			BlockTimestamp: timestamp,
+			Events:         messages,
+		}
+
+		events = append(events, &result)
+	}
+
+	resp := access.EventsResponse{
+		Results: events,
+	}
+
+	return &resp, nil
 }
 
-func (s *Server) GetEventsForBlockIDs(ctx context.Context, in *access.GetEventsForBlockIDsRequest) (*access.EventsResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetEventsForBlockIDs(_ context.Context, in *access.GetEventsForBlockIDsRequest) (*access.EventsResponse, error) {
+	var events []*access.EventsResponse_Result
+	for _, id := range in.BlockIds {
+		blockID := flow.HashToID(id)
+		height, err := s.index.HeightForBlock(blockID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get height of block with ID %x: %w", id, err)
+		}
+
+		ee, err := s.index.Events(height)
+		if err != nil {
+			return nil, fmt.Errorf("could not get events at height %d: %w", height, err)
+		}
+
+		header, err := s.index.Header(height)
+		if err != nil {
+			return nil, fmt.Errorf("could not get header at height %d: %w", height, err)
+		}
+
+		timestamp, err := ptypes.TimestampProto(header.Timestamp)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse timestamp for block at height %d: %w", height, err)
+		}
+
+		messages := make([]*entities.Event, 0, len(ee))
+		for _, event := range ee {
+			messages = append(messages, convert.EventToMessage(event))
+		}
+
+		result := access.EventsResponse_Result{
+			BlockId:        blockID[:],
+			BlockHeight:    height,
+			BlockTimestamp: timestamp,
+			Events:         messages,
+		}
+
+		events = append(events, &result)
+	}
+
+	resp := access.EventsResponse{
+		Results: events,
+	}
+
+	return &resp, nil
 }
 
 func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkParametersRequest) (*access.GetNetworkParametersResponse, error) {

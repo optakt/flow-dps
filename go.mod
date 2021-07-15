@@ -10,6 +10,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/gammazero/deque v0.1.0
 	github.com/go-git/go-git/v5 v5.4.2
+	github.com/golang/protobuf v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2 v2.0.0-rc.2
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-20200501113911-9a95f0fdbfea
 	github.com/hashicorp/go-multierror v1.0.0
