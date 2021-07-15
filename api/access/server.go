@@ -190,12 +190,25 @@ func (s *Server) GetEventsForHeightRange(_ context.Context, in *access.GetEvents
 			return nil, fmt.Errorf("could not get header at height %d: %w", height, err)
 		}
 
-		result, err := eventsFromBlock(header, ee, header.ID(), height)
+		timestamp, err := ptypes.TimestampProto(header.Timestamp)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse timestamp for block at height %d: %w", height, err)
 		}
 
-		events = append(events, result)
+		messages := make([]*entities.Event, 0, len(ee))
+		for _, event := range ee {
+			messages = append(messages, convert.EventToMessage(event))
+		}
+
+		blockID := header.ID()
+		result := access.EventsResponse_Result{
+			BlockId:        blockID[:],
+			BlockHeight:    height,
+			BlockTimestamp: timestamp,
+			Events:         messages,
+		}
+
+		events = append(events, &result)
 	}
 
 	resp := access.EventsResponse{
@@ -224,12 +237,24 @@ func (s *Server) GetEventsForBlockIDs(_ context.Context, in *access.GetEventsFor
 			return nil, fmt.Errorf("could not get header at height %d: %w", height, err)
 		}
 
-		result, err := eventsFromBlock(header, ee, blockID, height)
+		timestamp, err := ptypes.TimestampProto(header.Timestamp)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse timestamp for block at height %d: %w", height, err)
 		}
 
-		events = append(events, result)
+		messages := make([]*entities.Event, 0, len(ee))
+		for _, event := range ee {
+			messages = append(messages, convert.EventToMessage(event))
+		}
+
+		result := access.EventsResponse_Result{
+			BlockId:        blockID[:],
+			BlockHeight:    height,
+			BlockTimestamp: timestamp,
+			Events:         messages,
+		}
+
+		events = append(events, &result)
 	}
 
 	resp := access.EventsResponse{
@@ -245,25 +270,4 @@ func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkPar
 
 func (s *Server) GetLatestProtocolStateSnapshot(ctx context.Context, in *access.GetLatestProtocolStateSnapshotRequest) (*access.ProtocolStateSnapshotResponse, error) {
 	return nil, errors.New("not implemented")
-}
-
-func eventsFromBlock(header *flow.Header, ee []flow.Event, blockID flow.Identifier, height uint64) (*access.EventsResponse_Result, error) {
-	timestamp, err := ptypes.TimestampProto(header.Timestamp)
-	if err != nil {
-		return nil, err
-	}
-
-	messages := make([]*entities.Event, 0, len(ee))
-	for _, event := range ee {
-		messages = append(messages, convert.EventToMessage(event))
-	}
-
-	result := access.EventsResponse_Result{
-		BlockId:        blockID[:],
-		BlockHeight:    height,
-		BlockTimestamp: timestamp,
-		Events:         messages,
-	}
-
-	return &result, nil
 }
