@@ -577,7 +577,10 @@ func TestServer_GetCollection(t *testing.T) {
 				return test.mockCollection, test.mockErr
 			}
 
-			s := Server{index: index}
+			s := Server{
+				codec: mocks.BaselineCodec(t),
+				index: index,
+			}
 
 			req := &GetCollectionRequest{
 				CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),

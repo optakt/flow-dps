@@ -136,21 +136,21 @@ func (s *Server) GetBlockByHeight(ctx context.Context, in *access.GetBlockByHeig
 }
 
 func (s *Server) GetCollectionByID(_ context.Context, in *access.GetCollectionByIDRequest) (*access.CollectionResponse, error) {
-	id := flow.HashToID(in.Id)
-	lightCollection, err := s.index.Collection(id)
+	collId := flow.HashToID(in.Id)
+	collection, err := s.index.Collection(collId)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve collection with ID %x: %w", in.Id, err)
 	}
 
-	collection := entities.Collection{
+	collEntity := entities.Collection{
 		Id: in.Id,
 	}
-	for _, txID := range lightCollection.Transactions {
-		collection.TransactionIds = append(collection.TransactionIds, txID[:])
+	for _, txID := range collection.Transactions {
+		collEntity.TransactionIds = append(collEntity.TransactionIds, txID[:])
 	}
 
 	resp := access.CollectionResponse{
-		Collection: &collection,
+		Collection: &collEntity,
 	}
 
 	return &resp, err

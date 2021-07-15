@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fxamacker/cbor/v2"
-
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
@@ -183,14 +181,14 @@ func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequ
 // GetCollection implements the `GetCollection` method of the generated GRPC
 // server.
 func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*GetCollectionResponse, error) {
-	id := flow.HashToID(req.CollectionID)
+	collID := flow.HashToID(req.CollectionID)
 
-	collection, err := s.index.Collection(id)
+	collection, err := s.index.Collection(collID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve collection: %w", err)
 	}
 
-	data, err := cbor.Marshal(collection)
+	data, err := s.codec.Marshal(collection)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode collection: %w", err)
 	}
