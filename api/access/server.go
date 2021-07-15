@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
-
 	"github.com/optakt/flow-dps/models/index"
 )
 
@@ -33,22 +32,26 @@ import (
 type Server struct {
 	index index.Reader
 	codec index.Codec
+
+	chainID string
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index index.Reader, codec index.Codec) *Server {
+func NewServer(index index.Reader, codec index.Codec, chainID string) *Server {
 
 	s := Server{
 		index: index,
 		codec: codec,
+
+		chainID: chainID,
 	}
 
 	return &s
 }
 
-func (s *Server) Ping(ctx context.Context, in *access.PingRequest) (*access.PingResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) Ping(_ context.Context, _ *access.PingRequest) (*access.PingResponse, error) {
+	return &access.PingResponse{}, nil
 }
 
 func (s *Server) GetLatestBlockHeader(_ context.Context, _ *access.GetLatestBlockHeaderRequest) (*access.BlockHeaderResponse, error) {
@@ -178,8 +181,8 @@ func (s *Server) GetEventsForBlockIDs(ctx context.Context, in *access.GetEventsF
 	return nil, errors.New("not implemented")
 }
 
-func (s *Server) GetNetworkParameters(ctx context.Context, in *access.GetNetworkParametersRequest) (*access.GetNetworkParametersResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkParametersRequest) (*access.GetNetworkParametersResponse, error) {
+	return &access.GetNetworkParametersResponse{ChainId: s.chainID}, nil
 }
 
 func (s *Server) GetLatestProtocolStateSnapshot(ctx context.Context, in *access.GetLatestProtocolStateSnapshotRequest) (*access.ProtocolStateSnapshotResponse, error) {

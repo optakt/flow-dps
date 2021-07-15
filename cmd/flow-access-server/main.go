@@ -57,11 +57,14 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
+		flagChain string
 		flagLevel string
 		flagIndex string
 		flagPort  uint16
 	)
 
+	// TODO: Replace with dynamic deduction of chain ID https://github.com/optakt/flow-dps/issues/285
+	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowMainnet.String(), "ID of the chain that this server uses as its data source")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 5006, "port to serve Access API on")
@@ -109,7 +112,7 @@ func run() int {
 		),
 	)
 	index := index.NewReader(db, storage)
-	server := api.NewServer(index, codec)
+	server := api.NewServer(index, codec, flagChain)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

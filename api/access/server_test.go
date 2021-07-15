@@ -23,6 +23,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -30,16 +31,28 @@ func TestNewServer(t *testing.T) {
 	index := mocks.BaselineReader(t)
 	codec := mocks.BaselineCodec(t)
 
-	s := NewServer(index, codec)
+	s := NewServer(index, codec, dps.FlowMainnet.String())
 
 	assert.NotNil(t, s)
 	assert.NotNil(t, s.codec)
 	assert.Equal(t, index, s.index)
 	assert.Equal(t, codec, s.codec)
+	assert.Equal(t, dps.FlowMainnet.String(), s.chainID)
+}
+
+func TestServer_Ping(t *testing.T) {
+	s := baselineServer(t)
+
+	req := &access.PingRequest{}
+	_, err := s.Ping(context.Background(), req)
+
+	assert.NoError(t, err)
 }
 
 func TestServer_GetLatestBlockHeader(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := mocks.BaselineReader(t)
 		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
@@ -59,6 +72,8 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 	})
 
 	t.Run("handles indexer error on Last", func(t *testing.T) {
+		t.Parallel()
+
 		index := mocks.BaselineReader(t)
 		index.LastFunc = func() (uint64, error) {
 			return 0, mocks.GenericError
@@ -73,6 +88,8 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 	})
 
 	t.Run("handles indexer error on Header", func(t *testing.T) {
+		t.Parallel()
+
 		index := mocks.BaselineReader(t)
 		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
 			return nil, mocks.GenericError
@@ -89,6 +106,8 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 
 func TestServer_GetBlockHeaderByID(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
 		index := mocks.BaselineReader(t)
 		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
 			assert.Equal(t, mocks.GenericIdentifier(0), blockID)
@@ -184,12 +203,23 @@ func TestServer_GetBlockHeaderByHeight(t *testing.T) {
 	})
 }
 
+func TestServer_GetNetworkParameters(t *testing.T) {
+	s := baselineServer(t)
+
+	req := &access.GetNetworkParametersRequest{}
+	resp, err := s.GetNetworkParameters(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, dps.FlowMainnet.String(), resp.ChainId)
+}
+
 func baselineServer(t *testing.T) *Server {
 	t.Helper()
 
 	s := Server{
-		index: mocks.BaselineReader(t),
-		codec: mocks.BaselineCodec(t),
+		index:   mocks.BaselineReader(t),
+		codec:   mocks.BaselineCodec(t),
+		chainID: dps.FlowMainnet.String(),
 	}
 
 	return &s
