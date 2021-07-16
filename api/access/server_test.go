@@ -406,13 +406,59 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 }
 
 func TestServer_GetNetworkParameters(t *testing.T) {
-	s := baselineServer(t)
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	req := &access.GetNetworkParametersRequest{}
-	resp, err := s.GetNetworkParameters(context.Background(), req)
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, height, mocks.GenericHeight)
 
-	assert.NoError(t, err)
-	assert.Equal(t, dps.FlowMainnet.String(), resp.ChainId)
+			return mocks.GenericHeader, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetNetworkParametersRequest{}
+		resp, err := s.GetNetworkParameters(context.Background(), req)
+
+		assert.NoError(t, err)
+		assert.Equal(t, dps.FlowTestnet.String(), resp.ChainId)
+	})
+
+	t.Run("handles indexer failure on first", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.FirstFunc = func() (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetNetworkParametersRequest{}
+		_, err := s.GetNetworkParameters(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure on header", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(uint64) (*flow.Header, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetNetworkParametersRequest{}
+		_, err := s.GetNetworkParameters(context.Background(), req)
+
+		assert.Error(t, err)
+	})
 }
 
 func TestServer_GetCollectionByID(t *testing.T) {
