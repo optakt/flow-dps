@@ -15,10 +15,12 @@
 package storage
 
 const (
-	prefixFirst = 1
-	prefixLast  = 2
+	prefixFirst  = 1
+	prefixLast   = 2
+	prefixSealed = 17
 
-	prefixHeightForBlock = 7
+	prefixHeightForBlock       = 7
+	prefixHeightForTransaction = 16
 
 	prefixCommit  = 4
 	prefixHeader  = 3

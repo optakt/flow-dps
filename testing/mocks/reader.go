@@ -24,6 +24,7 @@ import (
 type Reader struct {
 	FirstFunc                func() (uint64, error)
 	LastFunc                 func() (uint64, error)
+	SealedFunc               func() (uint64, error)
 	HeightForBlockFunc       func(blockID flow.Identifier) (uint64, error)
 	CommitFunc               func(height uint64) (flow.StateCommitment, error)
 	HeaderFunc               func(height uint64) (*flow.Header, error)
@@ -31,6 +32,7 @@ type Reader struct {
 	ValuesFunc               func(height uint64, paths []ledger.Path) ([]ledger.Value, error)
 	CollectionFunc           func(cID flow.Identifier) (*flow.LightCollection, error)
 	TransactionFunc          func(txID flow.Identifier) (*flow.TransactionBody, error)
+	HeightForTransactionFunc func(txID flow.Identifier) (uint64, error)
 	TransactionsByHeightFunc func(height uint64) ([]flow.Identifier, error)
 	ResultFunc               func(txID flow.Identifier) (*flow.TransactionResult, error)
 	SealFunc                 func(sealID flow.Identifier) (*flow.Seal, error)
@@ -45,6 +47,9 @@ func BaselineReader(t *testing.T) *Reader {
 			return GenericHeight, nil
 		},
 		LastFunc: func() (uint64, error) {
+			return GenericHeight, nil
+		},
+		SealedFunc: func() (uint64, error) {
 			return GenericHeight, nil
 		},
 		HeightForBlockFunc: func(blockID flow.Identifier) (uint64, error) {
@@ -67,6 +72,9 @@ func BaselineReader(t *testing.T) *Reader {
 		},
 		TransactionFunc: func(txID flow.Identifier) (*flow.TransactionBody, error) {
 			return GenericTransaction(0), nil
+		},
+		HeightForTransactionFunc: func(blockID flow.Identifier) (uint64, error) {
+			return GenericHeight, nil
 		},
 		TransactionsByHeightFunc: func(height uint64) ([]flow.Identifier, error) {
 			return GenericIdentifiers(5), nil
@@ -91,6 +99,10 @@ func (r *Reader) First() (uint64, error) {
 
 func (r *Reader) Last() (uint64, error) {
 	return r.LastFunc()
+}
+
+func (r *Reader) Sealed() (uint64, error) {
+	return r.SealedFunc()
 }
 
 func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {
@@ -119,6 +131,10 @@ func (r *Reader) Collection(cID flow.Identifier) (*flow.LightCollection, error) 
 
 func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
 	return r.TransactionFunc(txID)
+}
+
+func (r *Reader) HeightForTransaction(txID flow.Identifier) (uint64, error) {
+	return r.HeightForTransactionFunc(txID)
 }
 
 func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {

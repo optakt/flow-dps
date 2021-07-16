@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 	"github.com/onflow/flow/protobuf/go/flow/entities"
 
@@ -183,59 +184,42 @@ func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransacti
 	}
 
 	result, err := s.index.Result(txID)
-	if err != nil {
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return nil, fmt.Errorf("could not retrieve transaction result: %w", err)
 	}
 
-	// The code below is a simplified and limited implementation to derive the transaction status from
-	// https://github.com/onflow/flow-go/blob/v0.17.4/engine/access/rpc/backend/backend_transactions.go#L257-L328
-	statusCode := uint32(0)
-	if result.ErrorMessage == "" {
-		statusCode = 1
-	}
-
-	// First, we need to retrieve the last indexed height to access the latest seals.
-	lastHeight, err := s.index.Last()
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve last height: %w", err)
-	}
-
-	sealIDs, err := s.index.SealsByHeight(lastHeight)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve block seals: %w", err)
-	}
-
-	// We then go through all sealed blocks at the last height and look for the latest sealed height.
-	var sealedHeight uint64
-	for _, sealID := range sealIDs {
-		seal, err := s.index.Seal(sealID)
-		if err != nil {
-			return nil, fmt.Errorf("could not retrieve seal: %w", err)
-		}
-
-		h, err := s.index.HeightForBlock(seal.BlockID)
-		if err != nil {
-			return nil, fmt.Errorf("could not retrieve block height: %w", err)
-		}
-
-		if h > sealedHeight {
-			sealedHeight = h
-		}
-	}
-
 	// We also need the height of the transaction we're looking at.
-	height, err := s.index.HeightForBlock(tx.ReferenceBlockID)
+	height, err := s.index.HeightForTransaction(tx.ID())
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve block height: %w", err)
 	}
 
-	// Finally, if the transaction occurred after the current sealed height, we can say it's executed,
-	// otherwise that it is sealed. Pending, finalized and expired transactions are not supported by our
-	// API since we do not have access to pending and expired ones, and that finalized ones are also executed
-	// on our side, which takes precedence according to the aforementioned implementation in Flow-Go.
+	block, err := s.index.Header(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve block header: %w", err)
+	}
+	blockID := block.ID()
+
+	statusCode := uint32(0)
+	if result != nil && result.ErrorMessage == "" {
+		statusCode = 1
+	}
+
+	// If we do not have a result for that transaction, its status is pending. If it exists but is at a height lower than
+	// the sealed height, it is executed, and otherwise it is sealed.
 	status := entities.TransactionStatus_SEALED
-	if height > sealedHeight {
-		status = entities.TransactionStatus_EXECUTED
+	if result == nil {
+		status = entities.TransactionStatus_PENDING
+	} else {
+		sealedHeight, err := s.index.Sealed()
+		if err != nil && !errors.Is(err, storage.ErrNotFound) {
+			return nil, fmt.Errorf("could not retrieve sealed height: %w", err)
+		}
+
+		// There might not be a sealed height indexed yet, since blocks can be missing seals.
+		if err == nil && height > sealedHeight {
+			status = entities.TransactionStatus_EXECUTED
+		}
 	}
 
 	events, err := s.index.Events(height)
@@ -248,7 +232,7 @@ func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransacti
 		StatusCode:   statusCode,
 		ErrorMessage: result.ErrorMessage,
 		Events:       convert.EventsToMessages(events),
-		BlockId:      tx.ReferenceBlockID[:],
+		BlockId:      blockID[:],
 	}
 
 	return &resp, nil

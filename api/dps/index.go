@@ -70,6 +70,18 @@ func (i *Index) Last() (uint64, error) {
 	return res.Height, nil
 }
 
+// Sealed returns the height of the last sealed block that was indexed.
+func (i *Index) Sealed() (uint64, error) {
+
+	req := GetSealedRequest{}
+	res, err := i.client.GetSealed(context.Background(), &req)
+	if err != nil {
+		return 0, fmt.Errorf("could not get sealed height: %w", err)
+	}
+
+	return res.Height, nil
+}
+
 // HeightForBlock returns the height of the given blockID.
 func (i *Index) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 
@@ -182,6 +194,20 @@ func (i *Index) Transaction(txID flow.Identifier) (*flow.TransactionBody, error)
 	}
 
 	return &transaction, nil
+}
+
+// HeightForTransaction returns the height of the given transaction ID.
+func (i *Index) HeightForTransaction(txID flow.Identifier) (uint64, error) {
+
+	req := GetHeightForTransactionRequest{
+		TransactionID: txID[:],
+	}
+	res, err := i.client.GetHeightForTransaction(context.Background(), &req)
+	if err != nil {
+		return 0, fmt.Errorf("could not get height: %w", err)
+	}
+
+	return res.Height, nil
 }
 
 // TransactionsByHeight returns the transaction IDs within the given block.

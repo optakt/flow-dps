@@ -18,7 +18,7 @@ the API it exposes.
         4. [Commit Index](#commit-index)
         5. [Events Index](#events-index)
         6. [Path Deltas Index](#path-deltas-index)
-        7. [Height Index](#height-index)
+        7. [Block Height Index](#block-height-index)
         8. [Transaction Records](#transaction-records)
         9. [Block Transaction Index](#block-transaction-index)
         10. [Collection Transaction Index](#collection-transaction-index)
@@ -26,6 +26,8 @@ the API it exposes.
         12. [Transaction Result Index](#transaction-result-index)
         13. [Seals Index](#seals-index)
         14. [Block Seals Index](#block-seals-index)
+        15. [Sealed Height](#sealed-height)
+        16. [Transaction Height Index](#transaction-height-index)
 
 ## Chain
 
@@ -150,7 +152,7 @@ This index maps a block ID to all the paths that are changed within its state up
 The value stored at that key is **the compressed payload of the payload at the given height and given path**.
 It is compressed using [CBOR compression](https://en.wikipedia.org/wiki/CBOR).
 
-##### Height Index
+##### Block Height Index
 
 In this index, keys map the block IDs to their height.
 
@@ -241,3 +243,27 @@ In this index, block IDs are mapped to the IDs of the seals within that block.
 | **Type**           | byte              | flow.Identifier        |
 | **Description**    | Index type prefix | Block ID               |
 | **Example Value**  | `15`              | `45D66Q565F5DEDB[...]` |
+
+##### Transaction Height Index
+
+In this index, keys map the transaction IDs to their height.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Transaction ID         |
+| **Example Value**  | `16`              | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **block height** of the referenced transaction ID.
+
+##### Sealed Height
+
+The value under this key keeps track of the last sealed block.
+
+| **Length** (bytes) | `1`               |
+|:-------------------|:------------------|
+| **Type**           | byte              |
+| **Description**    | Index type prefix |
+| **Example Value**  | `17`              |
+
+The value stored (updated each indexed block) is the **height** of the last sealed block.

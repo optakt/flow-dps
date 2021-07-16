@@ -19,6 +19,7 @@ option go_package = "github.com/optakt/flow-dps/api/dps";
 service API {
   rpc GetFirst (GetFirstRequest) returns (GetFirstResponse) {}
   rpc GetLast (GetLastRequest) returns (GetLastResponse) {}
+  rpc GetSealed (GetSealedRequest) returns (GetSealedResponse) {}
   rpc GetHeightForBlock (GetHeightForBlockRequest) returns (GetHeightForBlockResponse) {}
   rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
   rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
@@ -26,6 +27,7 @@ service API {
   rpc GetRegisterValues (GetRegisterValuesRequest) returns (GetRegisterValuesResponse) {}
   rpc GetCollection (GetCollectionRequest) returns (GetCollectionResponse) {}
   rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse) {}
+  rpc GetHeightForTransaction (GetHeightForTransactionRequest) returns (GetHeightForTransactionResponse) {}
   rpc ListTransactionsForHeight (ListTransactionsForHeightRequest) returns (ListTransactionsForHeightResponse) {}
   rpc GetResult (GetResultRequest) returns (GetResultResponse) {}
   rpc GetSeal(GetSealRequest) returns (GetSealResponse) {}
@@ -43,6 +45,13 @@ message GetLastRequest {
 }
 
 message GetLastResponse {
+  uint64 height = 1;
+}
+
+message GetSealedRequest {
+}
+
+message GetSealedResponse {
   uint64 height = 1;
 }
 
@@ -111,6 +120,15 @@ message GetTransactionRequest {
 message GetTransactionResponse {
   bytes transactionID = 1;
   bytes data = 2;
+}
+
+message GetHeightForTransactionRequest {
+  bytes transactionID = 1;
+}
+
+message GetHeightForTransactionResponse {
+  bytes transactionID = 1;
+  uint64 height = 2;
 }
 
 message ListTransactionsForHeightRequest {

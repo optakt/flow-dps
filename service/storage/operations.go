@@ -34,6 +34,10 @@ func (l *Library) SaveLast(height uint64) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixLast), height)
 }
 
+func (l *Library) SaveSealed(height uint64) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixSealed), height)
+}
+
 func (l *Library) IndexHeightForBlock(blockID flow.Identifier, height uint64) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixHeightForBlock, blockID), height)
 }
@@ -57,6 +61,10 @@ func (l *Library) SavePayload(height uint64, path ledger.Path, payload *ledger.P
 
 func (l *Library) SaveTransaction(transaction *flow.TransactionBody) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixTransaction, transaction.ID()), transaction)
+}
+
+func (l *Library) IndexHeightForTransaction(txID flow.Identifier, height uint64) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixHeightForTransaction, txID), height)
 }
 
 func (l *Library) SaveCollection(collection *flow.LightCollection) func(*badger.Txn) error {
@@ -93,6 +101,10 @@ func (l *Library) RetrieveFirst(height *uint64) func(*badger.Txn) error {
 
 func (l *Library) RetrieveLast(height *uint64) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixLast), height)
+}
+
+func (l *Library) RetrieveSealed(height *uint64) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixSealed), height)
 }
 
 func (l *Library) LookupHeightForBlock(blockID flow.Identifier, height *uint64) func(*badger.Txn) error {
@@ -180,6 +192,10 @@ func (l *Library) RetrieveCollection(collectionID flow.Identifier, collection *f
 
 func (l *Library) RetrieveTransaction(transactionID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixTransaction, transactionID), transaction)
+}
+
+func (l *Library) LookupHeightForTransaction(txID flow.Identifier, height *uint64) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixHeightForTransaction, txID), height)
 }
 
 func (l *Library) RetrieveSeal(sealID flow.Identifier, seal *flow.Seal) func(*badger.Txn) error {

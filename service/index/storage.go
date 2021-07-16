@@ -29,8 +29,10 @@ type Storage interface {
 type ReadLibrary interface {
 	RetrieveFirst(height *uint64) func(*badger.Txn) error
 	RetrieveLast(height *uint64) func(*badger.Txn) error
+	RetrieveSealed(height *uint64) func(*badger.Txn) error
 
 	LookupHeightForBlock(blockID flow.Identifier, height *uint64) func(*badger.Txn) error
+	LookupHeightForTransaction(txID flow.Identifier, height *uint64) func(*badger.Txn) error
 
 	RetrieveCommit(height uint64, commit *flow.StateCommitment) func(*badger.Txn) error
 	RetrieveHeader(height uint64, header *flow.Header) func(*badger.Txn) error
@@ -51,8 +53,10 @@ type ReadLibrary interface {
 type WriteLibrary interface {
 	SaveFirst(height uint64) func(*badger.Txn) error
 	SaveLast(height uint64) func(*badger.Txn) error
+	SaveSealed(height uint64) func(*badger.Txn) error
 
 	IndexHeightForBlock(blockID flow.Identifier, height uint64) func(*badger.Txn) error
+	IndexHeightForTransaction(txID flow.Identifier, height uint64) func(*badger.Txn) error
 
 	SaveCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error
 	SaveHeader(height uint64, header *flow.Header) func(*badger.Txn) error

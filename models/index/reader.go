@@ -22,8 +22,10 @@ import (
 type Reader interface {
 	First() (uint64, error)
 	Last() (uint64, error)
+	Sealed() (uint64, error)
 
 	HeightForBlock(blockID flow.Identifier) (uint64, error)
+	HeightForTransaction(txID flow.Identifier) (uint64, error)
 
 	Commit(height uint64) (flow.StateCommitment, error)
 	Header(height uint64) (*flow.Header, error)

@@ -58,6 +58,13 @@ func (r *Reader) Last() (uint64, error) {
 	return height, err
 }
 
+// Sealed returns the height of the last seal that was indexed.
+func (r *Reader) Sealed() (uint64, error) {
+	var height uint64
+	err := r.db.View(r.storage.RetrieveSealed(&height))
+	return height, err
+}
+
 func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 	var height uint64
 	err := r.db.View(r.storage.LookupHeightForBlock(blockID, &height))
@@ -126,6 +133,12 @@ func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error
 	var transaction flow.TransactionBody
 	err := r.db.View(r.storage.RetrieveTransaction(txID, &transaction))
 	return &transaction, err
+}
+
+func (r *Reader) HeightForTransaction(txID flow.Identifier) (uint64, error) {
+	var height uint64
+	err := r.db.View(r.storage.LookupHeightForTransaction(txID, &height))
+	return height, err
 }
 
 // TransactionsByHeight returns the transaction IDs within the block with the given ID.

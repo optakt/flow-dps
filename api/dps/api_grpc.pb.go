@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type APIClient interface {
 	GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
 	GetLast(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
+	GetSealed(ctx context.Context, in *GetSealedRequest, opts ...grpc.CallOption) (*GetSealedResponse, error)
 	GetHeightForBlock(ctx context.Context, in *GetHeightForBlockRequest, opts ...grpc.CallOption) (*GetHeightForBlockResponse, error)
 	GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
 	GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
@@ -27,6 +28,7 @@ type APIClient interface {
 	GetRegisterValues(ctx context.Context, in *GetRegisterValuesRequest, opts ...grpc.CallOption) (*GetRegisterValuesResponse, error)
 	GetCollection(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error)
 	GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
+	GetHeightForTransaction(ctx context.Context, in *GetHeightForTransactionRequest, opts ...grpc.CallOption) (*GetHeightForTransactionResponse, error)
 	ListTransactionsForHeight(ctx context.Context, in *ListTransactionsForHeightRequest, opts ...grpc.CallOption) (*ListTransactionsForHeightResponse, error)
 	GetResult(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*GetResultResponse, error)
 	GetSeal(ctx context.Context, in *GetSealRequest, opts ...grpc.CallOption) (*GetSealResponse, error)
@@ -53,6 +55,15 @@ func (c *aPIClient) GetFirst(ctx context.Context, in *GetFirstRequest, opts ...g
 func (c *aPIClient) GetLast(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error) {
 	out := new(GetLastResponse)
 	err := c.cc.Invoke(ctx, "/API/GetLast", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aPIClient) GetSealed(ctx context.Context, in *GetSealedRequest, opts ...grpc.CallOption) (*GetSealedResponse, error) {
+	out := new(GetSealedResponse)
+	err := c.cc.Invoke(ctx, "/API/GetSealed", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +133,15 @@ func (c *aPIClient) GetTransaction(ctx context.Context, in *GetTransactionReques
 	return out, nil
 }
 
+func (c *aPIClient) GetHeightForTransaction(ctx context.Context, in *GetHeightForTransactionRequest, opts ...grpc.CallOption) (*GetHeightForTransactionResponse, error) {
+	out := new(GetHeightForTransactionResponse)
+	err := c.cc.Invoke(ctx, "/API/GetHeightForTransaction", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *aPIClient) ListTransactionsForHeight(ctx context.Context, in *ListTransactionsForHeightRequest, opts ...grpc.CallOption) (*ListTransactionsForHeightResponse, error) {
 	out := new(ListTransactionsForHeightResponse)
 	err := c.cc.Invoke(ctx, "/API/ListTransactionsForHeight", in, out, opts...)
@@ -164,6 +184,7 @@ func (c *aPIClient) ListSealsForHeight(ctx context.Context, in *ListSealsForHeig
 type APIServer interface {
 	GetFirst(context.Context, *GetFirstRequest) (*GetFirstResponse, error)
 	GetLast(context.Context, *GetLastRequest) (*GetLastResponse, error)
+	GetSealed(context.Context, *GetSealedRequest) (*GetSealedResponse, error)
 	GetHeightForBlock(context.Context, *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error)
 	GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error)
 	GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error)
@@ -171,6 +192,7 @@ type APIServer interface {
 	GetRegisterValues(context.Context, *GetRegisterValuesRequest) (*GetRegisterValuesResponse, error)
 	GetCollection(context.Context, *GetCollectionRequest) (*GetCollectionResponse, error)
 	GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error)
+	GetHeightForTransaction(context.Context, *GetHeightForTransactionRequest) (*GetHeightForTransactionResponse, error)
 	ListTransactionsForHeight(context.Context, *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error)
 	GetResult(context.Context, *GetResultRequest) (*GetResultResponse, error)
 	GetSeal(context.Context, *GetSealRequest) (*GetSealResponse, error)
@@ -186,6 +208,9 @@ func (UnimplementedAPIServer) GetFirst(context.Context, *GetFirstRequest) (*GetF
 }
 func (UnimplementedAPIServer) GetLast(context.Context, *GetLastRequest) (*GetLastResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLast not implemented")
+}
+func (UnimplementedAPIServer) GetSealed(context.Context, *GetSealedRequest) (*GetSealedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSealed not implemented")
 }
 func (UnimplementedAPIServer) GetHeightForBlock(context.Context, *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetHeightForBlock not implemented")
@@ -207,6 +232,9 @@ func (UnimplementedAPIServer) GetCollection(context.Context, *GetCollectionReque
 }
 func (UnimplementedAPIServer) GetTransaction(context.Context, *GetTransactionRequest) (*GetTransactionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransaction not implemented")
+}
+func (UnimplementedAPIServer) GetHeightForTransaction(context.Context, *GetHeightForTransactionRequest) (*GetHeightForTransactionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHeightForTransaction not implemented")
 }
 func (UnimplementedAPIServer) ListTransactionsForHeight(context.Context, *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTransactionsForHeight not implemented")
@@ -264,6 +292,24 @@ func _API_GetLast_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(APIServer).GetLast(ctx, req.(*GetLastRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _API_GetSealed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSealedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetSealed(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/GetSealed",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetSealed(ctx, req.(*GetSealedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -394,6 +440,24 @@ func _API_GetTransaction_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_GetHeightForTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHeightForTransactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetHeightForTransaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/API/GetHeightForTransaction",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetHeightForTransaction(ctx, req.(*GetHeightForTransactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _API_ListTransactionsForHeight_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListTransactionsForHeightRequest)
 	if err := dec(in); err != nil {
@@ -482,6 +546,10 @@ var API_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _API_GetLast_Handler,
 		},
 		{
+			MethodName: "GetSealed",
+			Handler:    _API_GetSealed_Handler,
+		},
+		{
 			MethodName: "GetHeightForBlock",
 			Handler:    _API_GetHeightForBlock_Handler,
 		},
@@ -508,6 +576,10 @@ var API_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTransaction",
 			Handler:    _API_GetTransaction_Handler,
+		},
+		{
+			MethodName: "GetHeightForTransaction",
+			Handler:    _API_GetHeightForTransaction_Handler,
 		},
 		{
 			MethodName: "ListTransactionsForHeight",

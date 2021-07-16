@@ -75,6 +75,21 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
+// GetSealed implements the `GetSealed` method of the generated GRPC server.
+func (s *Server) GetSealed(_ context.Context, _ *GetSealedRequest) (*GetSealedResponse, error) {
+
+	height, err := s.index.Sealed()
+	if err != nil {
+		return nil, fmt.Errorf("could not get sealed height: %w", err)
+	}
+
+	res := GetSealedResponse{
+		Height: height,
+	}
+
+	return &res, nil
+}
+
 // GetHeightForBlock implements the `GetHeightForBlock` method of the generated GRPC
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
@@ -219,6 +234,23 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 	res := GetTransactionResponse{
 		TransactionID: req.TransactionID,
 		Data:          data,
+	}
+
+	return &res, nil
+}
+
+// GetHeightForTransaction implements the `GetHeightForTransaction` method of the generated GRPC
+// server.
+func (s *Server) GetHeightForTransaction(_ context.Context, req *GetHeightForTransactionRequest) (*GetHeightForTransactionResponse, error) {
+	txID := flow.HashToID(req.TransactionID)
+	height, err := s.index.HeightForTransaction(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get height for transaction: %w", err)
+	}
+
+	res := GetHeightForTransactionResponse{
+		TransactionID: req.TransactionID,
+		Height:        height,
 	}
 
 	return &res, nil

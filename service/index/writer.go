@@ -118,6 +118,10 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 			if err != nil {
 				return fmt.Errorf("could not save transaction (id: %x): %w", transaction.ID(), err)
 			}
+			err = w.db.Update(w.storage.IndexHeightForTransaction(transaction.ID(), height))
+			if err != nil {
+				return fmt.Errorf("could not save transaction height (id: %x): %w", transaction.ID(), err)
+			}
 			txIDs = append(txIDs, transaction.ID())
 		}
 
@@ -168,6 +172,7 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 // block at the given height.
 func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
 	sealIDs := make([]flow.Identifier, 0, len(seals))
+	var maxSealHeight uint64
 	return w.db.Update(func(tx *badger.Txn) error {
 		for _, seal := range seals {
 			err := w.db.Update(w.storage.SaveSeal(seal))
@@ -175,10 +180,28 @@ func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
 				return fmt.Errorf("could not save seal (id: %x): %w", seal.ID(), err)
 			}
 
+			var sealHeight uint64
+			err = w.db.View(w.storage.LookupHeightForBlock(seal.BlockID, &sealHeight))
+			if err != nil {
+				return fmt.Errorf("could not retrieve seal height (id: %x): %w", seal.ID(), err)
+			}
+			if sealHeight > maxSealHeight {
+				maxSealHeight = sealHeight
+			}
+
 			sealIDs = append(sealIDs, seal.ID())
 		}
 
 		err := w.db.Update(w.storage.IndexSealsForHeight(height, sealIDs))
+		if err != nil {
+			return fmt.Errorf("could not index seals for height: %w", err)
+		}
+
+		if maxSealHeight == 0 {
+			return nil
+		}
+
+		err = w.db.Update(w.storage.SaveSealed(maxSealHeight))
 		if err != nil {
 			return fmt.Errorf("could not index seals for height: %w", err)
 		}

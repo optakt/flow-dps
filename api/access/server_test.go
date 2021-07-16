@@ -15,7 +15,6 @@
 package access
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
@@ -263,17 +262,6 @@ func TestServer_GetTransactionResult(t *testing.T) {
 	t.Run("nominal case with status sealed", func(t *testing.T) {
 		t.Parallel()
 
-		sealIDs := mocks.GenericIdentifiers(6)
-		seals := mocks.GenericSeals(6)
-		sealMap := map[flow.Identifier]*flow.Seal{
-			sealIDs[0]: seals[0],
-			sealIDs[1]: seals[1],
-			sealIDs[2]: seals[2],
-			sealIDs[3]: seals[3],
-			sealIDs[4]: seals[4],
-			sealIDs[5]: seals[5],
-		}
-
 		tx := mocks.GenericTransaction(0)
 		result := mocks.GenericResult(0)
 
@@ -288,27 +276,15 @@ func TestServer_GetTransactionResult(t *testing.T) {
 
 			return result, nil
 		}
-		index.SealsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+		index.HeightForTransactionFunc = func(txID flow.Identifier) (uint64, error) {
+			assert.Equal(t, tx.ID(), txID)
+
+			return mocks.GenericHeight, nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
-			return sealIDs, nil
-		}
-		index.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
-			assert.Contains(t, sealIDs, sealID)
-
-			return sealMap[sealID], nil
-		}
-		height := mocks.GenericHeight
-		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
-			// By returning mocks.GenericHeight for the transaction's block while sealed blocks
-			// have heights over mocks.GenericHeight, we guarantee that the transaction status
-			// will be sealed.
-			if bytes.Equal(blockID[:], tx.ReferenceBlockID[:]) {
-				return mocks.GenericHeight, nil
-			}
-
-			height++
-			return height, nil
+			return mocks.GenericHeader, nil
 		}
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
@@ -326,7 +302,7 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, result.ErrorMessage, resp.ErrorMessage)
-		assert.Equal(t, tx.ReferenceBlockID[:], resp.BlockId)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.BlockId)
 		assert.Equal(t, entities.TransactionStatus_SEALED, resp.Status)
 		assert.Equal(t, uint32(1), resp.StatusCode)
 	})
@@ -334,19 +310,8 @@ func TestServer_GetTransactionResult(t *testing.T) {
 	t.Run("nominal case with status executed and an error message", func(t *testing.T) {
 		t.Parallel()
 
-		sealIDs := mocks.GenericIdentifiers(6)
-		seals := mocks.GenericSeals(6)
-		sealMap := map[flow.Identifier]*flow.Seal{
-			sealIDs[0]: seals[0],
-			sealIDs[1]: seals[1],
-			sealIDs[2]: seals[2],
-			sealIDs[3]: seals[3],
-			sealIDs[4]: seals[4],
-			sealIDs[5]: seals[5],
-		}
-
+		txHeight := mocks.GenericHeight + 999
 		tx := mocks.GenericTransaction(0)
-		tx.ReferenceBlockID = mocks.GenericIdentifier(999)
 		result := mocks.GenericResult(0)
 		result.ErrorMessage = "dummy error"
 
@@ -361,29 +326,18 @@ func TestServer_GetTransactionResult(t *testing.T) {
 
 			return result, nil
 		}
-		index.SealsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
-			assert.Equal(t, mocks.GenericHeight, height)
+		index.HeightForTransactionFunc = func(txID flow.Identifier) (uint64, error) {
+			assert.Equal(t, tx.ID(), txID)
 
-			return sealIDs, nil
+			return txHeight, nil
 		}
-		index.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
-			assert.Contains(t, sealIDs, sealID)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, txHeight, height)
 
-			return sealMap[sealID], nil
-		}
-		height := mocks.GenericHeight
-		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
-			// By returning a higher height than the generic one for the transaction's block, we
-			// make the result have a status of executed rather than sealed.
-			if bytes.Equal(blockID[:], tx.ReferenceBlockID[:]) {
-				return mocks.GenericHeight + 999, nil
-			}
-
-			height++
-			return height, nil
+			return mocks.GenericHeader, nil
 		}
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-			assert.Equal(t, mocks.GenericHeight+999, height)
+			assert.Equal(t, txHeight, height)
 			assert.Empty(t, types)
 
 			return mocks.GenericEvents(4), nil
@@ -398,7 +352,7 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, result.ErrorMessage, resp.ErrorMessage)
-		assert.Equal(t, tx.ReferenceBlockID[:], resp.BlockId)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.BlockId)
 		assert.Equal(t, entities.TransactionStatus_EXECUTED, resp.Status)
 		assert.Equal(t, uint32(0), resp.StatusCode)
 	})
@@ -437,11 +391,11 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles indexer error on last", func(t *testing.T) {
+	t.Run("handles indexer error on HeightForTransaction", func(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
-		index.LastFunc = func() (uint64, error) {
+		index.HeightForTransactionFunc = func(flow.Identifier) (uint64, error) {
 			return 0, mocks.GenericError
 		}
 
@@ -454,11 +408,11 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles indexer error on SealsByHeight", func(t *testing.T) {
+	t.Run("handles indexer error on Header", func(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
-		index.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+		index.HeaderFunc = func(uint64) (*flow.Header, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -471,28 +425,11 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles indexer error on seal", func(t *testing.T) {
+	t.Run("handles indexer error on sealed", func(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
-		index.SealFunc = func(flow.Identifier) (*flow.Seal, error) {
-			return nil, mocks.GenericError
-		}
-
-		s := baselineServer(t)
-		s.index = index
-
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
-		_, err := s.GetTransactionResult(context.Background(), req)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("handles indexer error on HeightForBlock", func(t *testing.T) {
-		t.Parallel()
-
-		index := mocks.BaselineReader(t)
-		index.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+		index.SealedFunc = func() (uint64, error) {
 			return 0, mocks.GenericError
 		}
 
