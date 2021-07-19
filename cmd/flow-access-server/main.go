@@ -23,6 +23,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
@@ -57,13 +58,15 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
+		flagCache uint64
 		flagChain string
-		flagLevel string
 		flagIndex string
+		flagLevel string
 		flagPort  uint16
 	)
 
 	// TODO: Replace with dynamic deduction of chain ID https://github.com/optakt/flow-dps/issues/285
+	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
 	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowMainnet.String(), "ID of the chain that this server uses as its data source")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
@@ -112,7 +115,11 @@ func run() int {
 		),
 	)
 	index := index.NewReader(db, storage)
-	server := api.NewServer(index, codec, flagChain)
+	server, err := api.NewServer(index, codec, api.WithChainID(flagChain), api.WithCacheSize(flagCache))
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize access API server")
+		return failure
+	}
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

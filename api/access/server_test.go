@@ -18,8 +18,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/onflow/flow-go/fvm"
+	"github.com/onflow/flow-go/fvm/programs"
+	"github.com/onflow/flow-go/fvm/state"
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 
@@ -28,16 +33,30 @@ import (
 )
 
 func TestNewServer(t *testing.T) {
-	index := mocks.BaselineReader(t)
-	codec := mocks.BaselineCodec(t)
+	t.Run("nominal case", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		codec := mocks.BaselineCodec(t)
 
-	s := NewServer(index, codec, dps.FlowMainnet.String())
+		s, err := NewServer(index, codec, WithChainID(dps.FlowMainnet.String()), WithCacheSize(uint64(datasize.MB)))
 
-	assert.NotNil(t, s)
-	assert.NotNil(t, s.codec)
-	assert.Equal(t, index, s.index)
-	assert.Equal(t, codec, s.codec)
-	assert.Equal(t, dps.FlowMainnet.String(), s.chainID)
+		assert.NoError(t, err)
+		assert.NotNil(t, s)
+		assert.NotNil(t, s.codec)
+		assert.Equal(t, index, s.index)
+		assert.Equal(t, codec, s.codec)
+		assert.Equal(t, dps.FlowMainnet.String(), s.chainID)
+	})
+
+	t.Run("handles invalid cache size", func(t *testing.T) {
+		t.Run("nominal case", func(t *testing.T) {
+			index := mocks.BaselineReader(t)
+			codec := mocks.BaselineCodec(t)
+
+			_, err := NewServer(index, codec, WithChainID(dps.FlowMainnet.String()), WithCacheSize(0))
+
+			assert.Error(t, err)
+		})
+	})
 }
 
 func TestServer_Ping(t *testing.T) {
@@ -500,13 +519,381 @@ func TestServer_GetCollectionByID(t *testing.T) {
 	})
 }
 
+func TestServer_GetAccount(t *testing.T) {
+	t.Run("nominal case account not cached", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.ValuesFunc = func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericLedgerValues(4), nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericHeader, nil
+		}
+
+		cache := mocks.BaselineCache(t)
+		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+			assert.Equal(t, mocks.GenericBytes, key)
+
+			return mocks.GenericBytes, false
+		}
+		cache.SetFunc = func(key, value interface{}, cost int64) bool {
+			assert.Equal(t, mocks.GenericBytes, key)
+
+			return true
+		}
+
+		vm := mocks.BaselineVirtualMachine(t)
+		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error) {
+			assert.Equal(t, mocks.GenericAccount.Address, address)
+
+			return &mocks.GenericAccount, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+		s.cache = cache
+		s.vm = vm
+
+		req := &access.GetAccountRequest{Address: mocks.GenericAccount.Address[:]}
+		resp, err := s.GetAccount(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.NotNil(t, resp.Account)
+		assert.Equal(t, mocks.GenericAccount.Address[:], resp.Account.Address)
+		assert.Equal(t, mocks.GenericAccount.Balance, resp.Account.Balance)
+	})
+
+	t.Run("nominal case account cached", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericHeader, nil
+		}
+
+		vm := mocks.BaselineVirtualMachine(t)
+		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error) {
+			assert.Equal(t, mocks.GenericAccount.Address, address)
+
+			return &mocks.GenericAccount, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+		s.vm = vm
+
+		req := &access.GetAccountRequest{Address: mocks.GenericAccount.Address[:]}
+		resp, err := s.GetAccount(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.NotNil(t, resp.Account)
+		assert.Equal(t, mocks.GenericAccount.Address[:], resp.Account.Address)
+		assert.Equal(t, mocks.GenericAccount.Balance, resp.Account.Balance)
+	})
+
+	t.Run("handles indexer failure on Last", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.LastFunc = func() (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetAccountRequest{Address: mocks.GenericAccount.Address[:]}
+		_, err := s.GetAccount(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure on Header", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(uint64) (*flow.Header, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetAccountRequest{Address: mocks.GenericAccount.Address[:]}
+		_, err := s.GetAccount(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles vm failure on GetAccount", func(t *testing.T) {
+		vm := mocks.BaselineVirtualMachine(t)
+		vm.GetAccountFunc = func(fvm.Context, flow.Address, state.View, *programs.Programs) (*flow.Account, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.vm = vm
+
+		req := &access.GetAccountRequest{Address: mocks.GenericAccount.Address[:]}
+		_, err := s.GetAccount(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestServer_GetAccountAtLatestBlock(t *testing.T) {
+	t.Run("nominal case account not cached", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.ValuesFunc = func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericLedgerValues(4), nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericHeader, nil
+		}
+
+		cache := mocks.BaselineCache(t)
+		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+			assert.Equal(t, mocks.GenericBytes, key)
+
+			return mocks.GenericBytes, false
+		}
+		cache.SetFunc = func(key, value interface{}, cost int64) bool {
+			assert.Equal(t, mocks.GenericBytes, key)
+
+			return true
+		}
+
+		vm := mocks.BaselineVirtualMachine(t)
+		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error) {
+			assert.Equal(t, mocks.GenericAccount.Address, address)
+
+			return &mocks.GenericAccount, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+		s.cache = cache
+		s.vm = vm
+
+		req := &access.GetAccountAtLatestBlockRequest{Address: mocks.GenericAccount.Address[:]}
+		resp, err := s.GetAccountAtLatestBlock(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.NotNil(t, resp.Account)
+		assert.Equal(t, mocks.GenericAccount.Address[:], resp.Account.Address)
+		assert.Equal(t, mocks.GenericAccount.Balance, resp.Account.Balance)
+	})
+
+	t.Run("nominal case account cached", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericHeader, nil
+		}
+
+		vm := mocks.BaselineVirtualMachine(t)
+		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error) {
+			assert.Equal(t, mocks.GenericAccount.Address, address)
+
+			return &mocks.GenericAccount, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+		s.vm = vm
+
+		req := &access.GetAccountAtLatestBlockRequest{Address: mocks.GenericAccount.Address[:]}
+		resp, err := s.GetAccountAtLatestBlock(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.NotNil(t, resp.Account)
+		assert.Equal(t, mocks.GenericAccount.Address[:], resp.Account.Address)
+		assert.Equal(t, mocks.GenericAccount.Balance, resp.Account.Balance)
+	})
+
+	t.Run("handles indexer failure on Last", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.LastFunc = func() (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetAccountAtLatestBlockRequest{Address: mocks.GenericAccount.Address[:]}
+		_, err := s.GetAccountAtLatestBlock(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure on Header", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(uint64) (*flow.Header, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetAccountAtLatestBlockRequest{Address: mocks.GenericAccount.Address[:]}
+		_, err := s.GetAccountAtLatestBlock(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles vm failure on GetAccount", func(t *testing.T) {
+		vm := mocks.BaselineVirtualMachine(t)
+		vm.GetAccountFunc = func(fvm.Context, flow.Address, state.View, *programs.Programs) (*flow.Account, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.vm = vm
+
+		req := &access.GetAccountAtLatestBlockRequest{Address: mocks.GenericAccount.Address[:]}
+		_, err := s.GetAccountAtLatestBlock(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestServer_GetAccountAtBlockHeight(t *testing.T) {
+	t.Run("nominal case account not cached", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.ValuesFunc = func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+			assert.Equal(t, mocks.GenericHeight+999, height)
+
+			return mocks.GenericLedgerValues(4), nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight+999, height)
+
+			return mocks.GenericHeader, nil
+		}
+
+		cache := mocks.BaselineCache(t)
+		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+			assert.Equal(t, mocks.GenericBytes, key)
+
+			return mocks.GenericBytes, false
+		}
+		cache.SetFunc = func(key, value interface{}, cost int64) bool {
+			assert.Equal(t, mocks.GenericBytes, key)
+
+			return true
+		}
+
+		vm := mocks.BaselineVirtualMachine(t)
+		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error) {
+			assert.Equal(t, mocks.GenericAccount.Address, address)
+
+			return &mocks.GenericAccount, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+		s.cache = cache
+		s.vm = vm
+
+		req := &access.GetAccountAtBlockHeightRequest{
+			BlockHeight: mocks.GenericHeight + 999,
+			Address:     mocks.GenericAccount.Address[:],
+		}
+		resp, err := s.GetAccountAtBlockHeight(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.NotNil(t, resp.Account)
+		assert.Equal(t, mocks.GenericAccount.Address[:], resp.Account.Address)
+		assert.Equal(t, mocks.GenericAccount.Balance, resp.Account.Balance)
+	})
+
+	t.Run("nominal case account cached", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight+999, height)
+
+			return mocks.GenericHeader, nil
+		}
+
+		vm := mocks.BaselineVirtualMachine(t)
+		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error) {
+			assert.Equal(t, mocks.GenericAccount.Address, address)
+
+			return &mocks.GenericAccount, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+		s.vm = vm
+
+		req := &access.GetAccountAtBlockHeightRequest{
+			BlockHeight: mocks.GenericHeight + 999,
+			Address:     mocks.GenericAccount.Address[:],
+		}
+		resp, err := s.GetAccountAtBlockHeight(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.NotNil(t, resp.Account)
+		assert.Equal(t, mocks.GenericAccount.Address[:], resp.Account.Address)
+		assert.Equal(t, mocks.GenericAccount.Balance, resp.Account.Balance)
+	})
+
+	t.Run("handles indexer failure on Header", func(t *testing.T) {
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(uint64) (*flow.Header, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetAccountAtBlockHeightRequest{
+			BlockHeight: mocks.GenericHeight,
+			Address:     mocks.GenericAccount.Address[:],
+		}
+		_, err := s.GetAccountAtBlockHeight(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles vm failure on GetAccount", func(t *testing.T) {
+		vm := mocks.BaselineVirtualMachine(t)
+		vm.GetAccountFunc = func(fvm.Context, flow.Address, state.View, *programs.Programs) (*flow.Account, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.vm = vm
+
+		req := &access.GetAccountAtBlockHeightRequest{
+			BlockHeight: mocks.GenericHeight,
+			Address:     mocks.GenericAccount.Address[:],
+		}
+		_, err := s.GetAccountAtBlockHeight(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
 func baselineServer(t *testing.T) *Server {
 	t.Helper()
 
 	s := Server{
-		index:   mocks.BaselineReader(t),
-		codec:   mocks.BaselineCodec(t),
+		cache:   mocks.BaselineCache(t),
 		chainID: dps.FlowMainnet.String(),
+		codec:   mocks.BaselineCodec(t),
+		index:   mocks.BaselineReader(t),
+		vm:      mocks.BaselineVirtualMachine(t),
 	}
 
 	return &s
