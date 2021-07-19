@@ -32,10 +32,12 @@ type Reader interface {
 	Values(height uint64, paths []ledger.Path) ([]ledger.Value, error)
 
 	Collection(cID flow.Identifier) (*flow.LightCollection, error)
+	Guarantee(cID flow.Identifier) (*flow.CollectionGuarantee, error)
 	Transaction(txID flow.Identifier) (*flow.TransactionBody, error)
 	Seal(sealID flow.Identifier) (*flow.Seal, error)
 	Result(txID flow.Identifier) (*flow.TransactionResult, error)
 
+	CollectionsByHeight(height uint64) ([]flow.Identifier, error)
 	TransactionsByHeight(height uint64) ([]flow.Identifier, error)
 	SealsByHeight(height uint64) ([]flow.Identifier, error)
 }

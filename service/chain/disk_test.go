@@ -82,6 +82,32 @@ func TestDisk_Events(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDisk_Collections(t *testing.T) {
+	db := populateDB(t)
+	defer db.Close()
+	c := chain.FromDisk(db)
+
+	tt, err := c.Collections(mocks.GenericHeight)
+	assert.NoError(t, err)
+	assert.Len(t, tt, 2)
+
+	_, err = c.Collections(math.MaxUint64)
+	assert.Error(t, err)
+}
+
+func TestDisk_Guarantees(t *testing.T) {
+	db := populateDB(t)
+	defer db.Close()
+	c := chain.FromDisk(db)
+
+	tt, err := c.Guarantees(mocks.GenericHeight)
+	assert.NoError(t, err)
+	assert.Len(t, tt, 2)
+
+	_, err = c.Guarantees(math.MaxUint64)
+	assert.Error(t, err)
+}
+
 func TestDisk_Transactions(t *testing.T) {
 	db := populateDB(t)
 	defer db.Close()
@@ -219,6 +245,25 @@ func populateDB(t *testing.T) *badger.DB {
 		}
 
 		err = operation.InsertCollection(&collection2)(tx)
+		if err != nil {
+			return err
+		}
+
+		guarantee1 := &flow.CollectionGuarantee{
+			CollectionID: collection1.ID(),
+			Signature:    mocks.GenericBytes,
+		}
+		guarantee2 := &flow.CollectionGuarantee{
+			CollectionID: collection2.ID(),
+			Signature:    mocks.GenericBytes,
+		}
+
+		err = operation.InsertGuarantee(guarantee1.CollectionID, guarantee1)(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertGuarantee(guarantee2.CollectionID, guarantee2)(tx)
 		if err != nil {
 			return err
 		}

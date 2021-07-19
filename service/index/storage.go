@@ -44,6 +44,7 @@ type ReadLibrary interface {
 	LookupSealsForHeight(height uint64, sealIDs *[]flow.Identifier) func(*badger.Txn) error
 
 	RetrieveCollection(collID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error
+	RetrieveGuarantee(collID flow.Identifier, collection *flow.CollectionGuarantee) func(*badger.Txn) error
 	RetrieveTransaction(txID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error
 	RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error
 	RetrieveSeal(sealID flow.Identifier, seal *flow.Seal) func(*badger.Txn) error
@@ -67,6 +68,7 @@ type WriteLibrary interface {
 	IndexSealsForHeight(height uint64, sealIDs []flow.Identifier) func(*badger.Txn) error
 
 	SaveCollection(collection *flow.LightCollection) func(*badger.Txn) error
+	SaveGuarantee(guarantee *flow.CollectionGuarantee) func(*badger.Txn) error
 	SaveTransaction(transaction *flow.TransactionBody) func(*badger.Txn) error
 	SaveResult(results *flow.TransactionResult) func(*badger.Txn) error
 	SaveSeal(seal *flow.Seal) func(*badger.Txn) error

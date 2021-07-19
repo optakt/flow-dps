@@ -30,6 +30,8 @@ type Reader struct {
 	EventsFunc               func(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	ValuesFunc               func(height uint64, paths []ledger.Path) ([]ledger.Value, error)
 	CollectionFunc           func(cID flow.Identifier) (*flow.LightCollection, error)
+	CollectionsByHeightFunc  func(height uint64) ([]flow.Identifier, error)
+	GuaranteeFunc            func(cID flow.Identifier) (*flow.CollectionGuarantee, error)
 	TransactionFunc          func(txID flow.Identifier) (*flow.TransactionBody, error)
 	HeightForTransactionFunc func(txID flow.Identifier) (uint64, error)
 	TransactionsByHeightFunc func(height uint64) ([]flow.Identifier, error)
@@ -65,6 +67,12 @@ func BaselineReader(t *testing.T) *Reader {
 		},
 		CollectionFunc: func(cID flow.Identifier) (*flow.LightCollection, error) {
 			return GenericCollection(0), nil
+		},
+		CollectionsByHeightFunc: func(height uint64) ([]flow.Identifier, error) {
+			return GenericIdentifiers(5), nil
+		},
+		GuaranteeFunc: func(cID flow.Identifier) (*flow.CollectionGuarantee, error) {
+			return GenericGuarantee(0), nil
 		},
 		TransactionFunc: func(txID flow.Identifier) (*flow.TransactionBody, error) {
 			return GenericTransaction(0), nil
@@ -119,6 +127,14 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 
 func (r *Reader) Collection(cID flow.Identifier) (*flow.LightCollection, error) {
 	return r.CollectionFunc(cID)
+}
+
+func (r *Reader) CollectionsByHeight(height uint64) ([]flow.Identifier, error) {
+	return r.CollectionsByHeightFunc(height)
+}
+
+func (r *Reader) Guarantee(cID flow.Identifier) (*flow.CollectionGuarantee, error) {
+	return r.GuaranteeFunc(cID)
 }
 
 func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {

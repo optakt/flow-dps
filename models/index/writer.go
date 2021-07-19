@@ -31,6 +31,7 @@ type Writer interface {
 	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
 
 	Collections(height uint64, collections []*flow.LightCollection) error
+	Guarantees(height uint64, guarantees []*flow.CollectionGuarantee) error
 	Transactions(height uint64, transactions []*flow.TransactionBody) error
 	Results(results []*flow.TransactionResult) error
 	Seals(height uint64, seals []*flow.Seal) error

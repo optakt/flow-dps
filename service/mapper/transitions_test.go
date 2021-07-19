@@ -56,6 +56,7 @@ func TestNewTransitions(t *testing.T) {
 			WithIndexHeader(true),
 			WithIndexPayloads(true),
 			WithIndexCollections(true),
+			WithIndexGuarantees(true),
 			WithIndexTransactions(true),
 			WithIndexResults(true),
 			WithIndexSeals(true),
@@ -74,6 +75,7 @@ func TestNewTransitions(t *testing.T) {
 		assert.True(t, tr.cfg.IndexHeader)
 		assert.True(t, tr.cfg.IndexPayloads)
 		assert.True(t, tr.cfg.IndexCollections)
+		assert.True(t, tr.cfg.IndexGuarantees)
 		assert.True(t, tr.cfg.IndexTransactions)
 		assert.True(t, tr.cfg.IndexResults)
 		assert.True(t, tr.cfg.IndexSeals)
@@ -499,6 +501,11 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 			return mocks.GenericCollections(2), nil
 		}
+		chain.GuaranteesFunc = func(height uint64) ([]*flow.CollectionGuarantee, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericGuarantees(2), nil
+		}
 		chain.TransactionsFunc = func(height uint64) ([]*flow.TransactionBody, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
@@ -542,6 +549,12 @@ func TestTransitions_IndexChain(t *testing.T) {
 		index.CollectionsFunc = func(height uint64, collections []*flow.LightCollection) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericCollections(2), collections)
+
+			return nil
+		}
+		index.GuaranteesFunc = func(height uint64, guarantees []*flow.CollectionGuarantee) error {
+			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericGuarantees(2), guarantees)
 
 			return nil
 		}
@@ -758,6 +771,40 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("handles chain failure to retrieve guarantees", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.GuaranteesFunc = func(height uint64) ([]*flow.CollectionGuarantee, error) {
+			return nil, mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.chain = chain
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure to write guarantees", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineWriter(t)
+		index.GuaranteesFunc = func(height uint64, guarantees []*flow.CollectionGuarantee) error {
+			return mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.index = index
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
+	// FIXME: Add tests for Guarantees
+
 	t.Run("handles chain failure to retrieve events", func(t *testing.T) {
 		t.Parallel()
 
@@ -841,6 +888,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			IndexHeader:       true,
 			IndexPayloads:     true,
 			IndexCollections:  true,
+			IndexGuarantees:   true,
 			IndexTransactions: true,
 			IndexResults:      true,
 			IndexEvents:       true,

@@ -358,6 +358,17 @@ func (t *Transitions) IndexChain(s *State) error {
 		}
 		log = log.Int("collections", len(collections))
 	}
+	if t.cfg.IndexGuarantees {
+		guarantees, err := t.chain.Guarantees(s.height)
+		if err != nil {
+			return fmt.Errorf("could not get guarantees: %w", err)
+		}
+		err = t.index.Guarantees(s.height, guarantees)
+		if err != nil {
+			return fmt.Errorf("could not index guarantees: %w", err)
+		}
+		log = log.Int("guarantees", len(guarantees))
+	}
 	if t.cfg.IndexTransactions {
 		transactions, err := t.chain.Transactions(s.height)
 		if err != nil {

@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
@@ -130,12 +131,87 @@ func (s *Server) GetLatestBlock(ctx context.Context, in *access.GetLatestBlockRe
 	return nil, errors.New("not implemented")
 }
 
-func (s *Server) GetBlockByID(ctx context.Context, in *access.GetBlockByIDRequest) (*access.BlockResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetBlockByID(_ context.Context, in *access.GetBlockByIDRequest) (*access.BlockResponse, error) {
+	blockID := flow.HashToID(in.Id)
+	height, err := s.index.HeightForBlock(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get height for block ID %x: %w", blockID, err)
+	}
+
+	header, err := s.index.Header(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get header for height %d: %w", height, err)
+	}
+
+	ss, err := s.index.SealsByHeight(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get seals for height %d: %w", height, err)
+	}
+
+	seals := make([]*entities.BlockSeal, 0, len(ss))
+	for _, sID := range ss {
+		seal, err := s.index.Seal(sID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get seal from ID %x: %w", sID, err)
+		}
+
+		// See https://github.com/onflow/flow-go/blob/v0.17.4/engine/common/rpc/convert/convert.go#L180-L188
+		blockSeal := entities.BlockSeal{
+			BlockId:                    seal.BlockID[:],
+			ExecutionReceiptId:         seal.ResultID[:],
+			ExecutionReceiptSignatures: [][]byte{}, // filling seals signature with zero
+		}
+		seals = append(seals, &blockSeal)
+	}
+
+	cc, err := s.index.CollectionsByHeight(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get collections for height %d: %w", height, err)
+	}
+
+	collections := make([]*entities.CollectionGuarantee, 0, len(cc))
+	for _, cID := range cc {
+		g, err := s.index.Guarantee(cID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get collection from ID %x: %w", cID, err)
+		}
+
+		cg := entities.CollectionGuarantee{
+			CollectionId: cID[:],
+			Signatures:   [][]byte{g.Signature},
+		}
+		collections = append(collections, &cg)
+	}
+
+	block := entities.Block{
+		Id:                   in.Id,
+		Height:               height,
+		ParentId:             header.ParentID[:],
+		Timestamp:            timestamppb.New(header.Timestamp),
+		CollectionGuarantees: collections,
+		BlockSeals:           seals,
+		Signatures:           [][]byte{header.ParentVoterSig},
+	}
+
+	resp := access.BlockResponse{
+		Block: &block,
+	}
+
+	return &resp, nil
 }
 
 func (s *Server) GetBlockByHeight(ctx context.Context, in *access.GetBlockByHeightRequest) (*access.BlockResponse, error) {
-	return nil, errors.New("not implemented")
+	header, err := s.index.Header(in.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get header for height %d: %w", in.Height, err)
+	}
+
+	blockID := header.ID()
+	req := &access.GetBlockByIDRequest{
+		Id: blockID[:],
+	}
+
+	return s.GetBlockByID(ctx, req)
 }
 
 func (s *Server) GetCollectionByID(_ context.Context, in *access.GetCollectionByIDRequest) (*access.CollectionResponse, error) {

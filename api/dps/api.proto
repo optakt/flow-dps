@@ -25,6 +25,8 @@ service API {
   rpc GetEvents (GetEventsRequest) returns (GetEventsResponse) {}
   rpc GetRegisterValues (GetRegisterValuesRequest) returns (GetRegisterValuesResponse) {}
   rpc GetCollection (GetCollectionRequest) returns (GetCollectionResponse) {}
+  rpc ListCollectionsForHeight (ListCollectionsForHeightRequest) returns (ListCollectionsForHeightResponse) {}
+  rpc GetGuarantee (GetGuaranteeRequest) returns (GetGuaranteeResponse) {}
   rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse) {}
   rpc GetHeightForTransaction (GetHeightForTransactionRequest) returns (GetHeightForTransactionResponse) {}
   rpc ListTransactionsForHeight (ListTransactionsForHeightRequest) returns (ListTransactionsForHeightResponse) {}
@@ -101,6 +103,24 @@ message GetCollectionRequest {
 }
 
 message GetCollectionResponse {
+  bytes collectionID = 1;
+  bytes data = 2;
+}
+
+message ListCollectionsForHeightRequest {
+  uint64 height = 1;
+}
+
+message ListCollectionsForHeightResponse {
+  uint64 height = 1;
+  repeated bytes collectionIDs = 2;
+}
+
+message GetGuaranteeRequest {
+  bytes collectionID = 1;
+}
+
+message GetGuaranteeResponse {
   bytes collectionID = 1;
   bytes data = 2;
 }

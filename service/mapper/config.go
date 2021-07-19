@@ -19,6 +19,7 @@ var DefaultConfig = Config{
 	IndexCommit:       false,
 	IndexHeader:       false,
 	IndexCollections:  false,
+	IndexGuarantees:   false,
 	IndexTransactions: false,
 	IndexResults:      false,
 	IndexEvents:       false,
@@ -31,6 +32,7 @@ type Config struct {
 	IndexCommit       bool
 	IndexHeader       bool
 	IndexCollections  bool
+	IndexGuarantees   bool
 	IndexTransactions bool
 	IndexResults      bool
 	IndexEvents       bool
@@ -56,6 +58,13 @@ func WithIndexHeader(b bool) func(*Config) {
 func WithIndexCollections(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexCollections = b
+	}
+}
+
+// WithIndexGuarantees sets up the mapper to build the guarantees index.
+func WithIndexGuarantees(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexGuarantees = b
 	}
 }
 

@@ -201,6 +201,51 @@ func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*G
 	return &res, nil
 }
 
+// ListCollectionsForHeight implements the `ListCollectionsForHeight` method of the generated GRPC
+// server.
+func (s *Server) ListCollectionsForHeight(_ context.Context, req *ListCollectionsForHeightRequest) (*ListCollectionsForHeightResponse, error) {
+
+	cIDs, err := s.index.CollectionsByHeight(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not list collections by height: %w", err)
+	}
+
+	collectionIDs := make([][]byte, 0, len(cIDs))
+	for _, cID := range cIDs {
+		collectionIDs = append(collectionIDs, cID[:])
+	}
+
+	res := ListCollectionsForHeightResponse{
+		Height:        req.Height,
+		CollectionIDs: collectionIDs,
+	}
+
+	return &res, nil
+}
+
+// GetGuarantee implements the `GetGuarantee` method of the generated GRPC
+// server.
+func (s *Server) GetGuarantee(_ context.Context, req *GetGuaranteeRequest) (*GetGuaranteeResponse, error) {
+	collID := flow.HashToID(req.CollectionID)
+
+	guarantee, err := s.index.Guarantee(collID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve guarantee: %w", err)
+	}
+
+	data, err := s.codec.Marshal(guarantee)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode guarantee: %w", err)
+	}
+
+	res := GetGuaranteeResponse{
+		CollectionID: req.CollectionID,
+		Data:         data,
+	}
+
+	return &res, nil
+}
+
 // GetTransaction implements the `GetTransaction` method of the generated GRPC
 // server.
 func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {

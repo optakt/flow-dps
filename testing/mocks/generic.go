@@ -52,6 +52,7 @@ var (
 	GenericHeader = &flow.Header{
 		ChainID:   dps.FlowTestnet,
 		Height:    GenericHeight,
+		ParentID:  GenericIdentifier(15),
 		Timestamp: time.Date(1972, 11, 12, 13, 14, 15, 16, time.UTC),
 	}
 
@@ -229,7 +230,9 @@ func GenericLedgerPayload(index int) *ledger.Payload {
 func GenericTransactions(number int) []*flow.TransactionBody {
 	var txs []*flow.TransactionBody
 	for i := 0; i < number; i++ {
-		txs = append(txs, &flow.TransactionBody{ReferenceBlockID: GenericIdentifier(i)})
+		txs = append(txs, &flow.TransactionBody{
+			ReferenceBlockID: GenericIdentifier(i),
+		})
 	}
 
 	return txs
@@ -414,6 +417,24 @@ func GenericCollections(number int) []*flow.LightCollection {
 
 func GenericCollection(index int) *flow.LightCollection {
 	return GenericCollections(index + 1)[index]
+}
+
+func GenericGuarantees(number int) []*flow.CollectionGuarantee {
+	var guarantees []*flow.CollectionGuarantee
+	for i := 0; i < number; i++ {
+		j := i * 2
+		guarantees = append(guarantees, &flow.CollectionGuarantee{
+			CollectionID:     GenericIdentifier(i),
+			ReferenceBlockID: GenericIdentifier(j),
+			Signature:        GenericBytes,
+		})
+	}
+
+	return guarantees
+}
+
+func GenericGuarantee(index int) *flow.CollectionGuarantee {
+	return GenericGuarantees(index + 1)[index]
 }
 
 func GenericResults(number int) []*flow.TransactionResult {

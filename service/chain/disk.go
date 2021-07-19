@@ -129,6 +129,32 @@ func (d *Disk) Collections(height uint64) ([]*flow.LightCollection, error) {
 	return collections, nil
 }
 
+func (d *Disk) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
+
+	blockID, err := d.block(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get block for height: %w", err)
+	}
+
+	var collIDs []flow.Identifier
+	err = d.db.View(operation.LookupPayloadGuarantees(blockID, &collIDs))
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup collections: %w", err)
+	}
+
+	guarantees := make([]*flow.CollectionGuarantee, 0, len(collIDs))
+	for _, collID := range collIDs {
+		var guarantee flow.CollectionGuarantee
+		err := d.db.View(operation.RetrieveGuarantee(collID, &guarantee))
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve guarantee (%x): %w", collID, err)
+		}
+		guarantees = append(guarantees, &guarantee)
+	}
+
+	return guarantees, nil
+}
+
 func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 
 	blockID, err := d.block(height)

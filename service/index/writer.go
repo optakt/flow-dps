@@ -110,6 +110,18 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 	})
 }
 
+func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) error {
+	return w.db.Update(func(tx *badger.Txn) error {
+		for _, guarantee := range guarantees {
+			err := w.storage.SaveGuarantee(guarantee)(tx)
+			if err != nil {
+				return fmt.Errorf("could not store guarantee (id: %x): %w", guarantee.ID(), err)
+			}
+		}
+		return nil
+	})
+}
+
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
 	var txIDs []flow.Identifier
 	return w.db.Update(func(tx *badger.Txn) error {

@@ -18,6 +18,7 @@ Usage of flow-dps-indexer:
   -o, --index-collections    index collections
   -m, --index-commits        index commits
   -e, --index-events         index events
+      --index-guarantees     index collection guarantees
   -h, --index-headers        index headers
   -p, --index-payloads       index payloads
       --index-results        index transaction results

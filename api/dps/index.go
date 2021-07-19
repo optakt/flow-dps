@@ -164,6 +164,45 @@ func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection,
 	return &collection, nil
 }
 
+// CollectionsByHeight returns the transaction IDs within the given block.
+func (i *Index) CollectionsByHeight(height uint64) ([]flow.Identifier, error) {
+
+	req := ListCollectionsForHeightRequest{
+		Height: height,
+	}
+	res, err := i.client.ListCollectionsForHeight(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get transactions: %w", err)
+	}
+
+	cIDs := make([]flow.Identifier, 0, len(res.CollectionIDs))
+	for _, cID := range res.CollectionIDs {
+		cIDs = append(cIDs, flow.HashToID(cID))
+	}
+
+	return cIDs, nil
+}
+
+// Guarantee returns the collection guarantee for the given collection ID.
+func (i *Index) Guarantee(collectionID flow.Identifier) (*flow.CollectionGuarantee, error) {
+
+	req := GetGuaranteeRequest{
+		CollectionID: collectionID[:],
+	}
+	res, err := i.client.GetGuarantee(context.Background(), &req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get guarantee: %w", err)
+	}
+
+	var guarantee flow.CollectionGuarantee
+	err = i.codec.Unmarshal(res.Data, &guarantee)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode guarantee: %w", err)
+	}
+
+	return &guarantee, nil
+}
+
 // Transaction returns the transaction with the given ID.
 func (i *Index) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
 

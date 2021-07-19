@@ -59,6 +59,7 @@ func run() int {
 		flagIndex             string
 		flagIndexAll          bool
 		flagIndexCollections  bool
+		flagIndexGuarantees   bool
 		flagIndexCommit       bool
 		flagIndexEvents       bool
 		flagIndexHeader       bool
@@ -76,6 +77,7 @@ func run() int {
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
 	pflag.BoolVarP(&flagIndexCollections, "index-collections", "o", false, "index collections")
+	pflag.BoolVar(&flagIndexCollections, "index-guarantees", false, "index collection guarantees")
 	pflag.BoolVarP(&flagIndexCommit, "index-commits", "m", false, "index commits")
 	pflag.BoolVarP(&flagIndexEvents, "index-events", "e", false, "index events")
 	pflag.BoolVarP(&flagIndexHeader, "index-headers", "h", false, "index headers")
@@ -169,6 +171,7 @@ func run() int {
 		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),
+		mapper.WithIndexGuarantees(flagIndexAll || flagIndexGuarantees),
 		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
 		mapper.WithIndexResults(flagIndexAll || flagIndexResults),
 		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),

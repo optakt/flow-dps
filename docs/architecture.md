@@ -21,12 +21,13 @@ the API it exposes.
         7. [Block Height Index](#block-height-index)
         8. [Transaction Records](#transaction-records)
         9. [Block Transaction Index](#block-transaction-index)
-        10. [Collection Transaction Index](#collection-transaction-index)
-        11. [Block Collection Index](#block-collection-index)
-        12. [Transaction Result Index](#transaction-result-index)
-        13. [Seals Index](#seals-index)
-        14. [Block Seals Index](#block-seals-index)
-        15. [Transaction Height Index](#transaction-height-index)
+        10. [Collection Index](#collection-index)
+        11. [Collection Guarantee Index](#collection-index)
+        12. [Block Collection Index](#block-collection-index)
+        13. [Transaction Result Index](#transaction-result-index)
+        14. [Seals Index](#seals-index)
+        15. [Block Seals Index](#block-seals-index)
+        16. [Transaction Height Index](#transaction-height-index)
 
 ## Chain
 
@@ -187,7 +188,7 @@ In this index, block IDs are mapped to the IDs of the transactions within their 
 
 The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/model/flow#Identifier)** for the transactions within the referenced block.
 
-##### Collection Transaction Index
+##### Collection Index
 
 In this record, collections are mapped by their IDs.
 
@@ -198,6 +199,18 @@ In this record, collections are mapped by their IDs.
 | **Example Value**  | `10`              | `45D66Q565F5DEDB[...]` |
 
 The value stored at that key is the **CBOR-encoded [flow.LightCollection](https://pkg.go.dev/github.com/onflow/model/flow#LightCollection)** with the referenced ID.
+
+##### Collection Guarantee Index
+
+In this record, collections guarantees are mapped by their collection IDs.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Collection ID         |
+| **Example Value**  | `10`              | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **CBOR-encoded [flow.CollectionGuarantee](https://pkg.go.dev/github.com/onflow/model/flow#CollectionGuarantee)** with the referenced ID.
 
 ##### Block Collection Index
 

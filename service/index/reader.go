@@ -121,6 +121,26 @@ func (r *Reader) Collection(cID flow.Identifier) (*flow.LightCollection, error) 
 	return &collection, err
 }
 
+// CollectionsByHeight returns the collection IDs at the given height.
+func (r *Reader) CollectionsByHeight(height uint64) ([]flow.Identifier, error) {
+	var cIDs []flow.Identifier
+	err := r.db.View(func(tx *badger.Txn) error {
+		err := r.storage.LookupCollectionsForHeight(height, &cIDs)(tx)
+		if err != nil {
+			return fmt.Errorf("could not look up collections: %w", err)
+		}
+		return nil
+	})
+	return cIDs, err
+}
+
+// Guarantee returns the guarantee with the given collection ID.
+func (r *Reader) Guarantee(cID flow.Identifier) (*flow.CollectionGuarantee, error) {
+	var collection flow.CollectionGuarantee
+	err := r.db.View(r.storage.RetrieveGuarantee(cID, &collection))
+	return &collection, err
+}
+
 // Transaction returns the transaction with the given ID.
 func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {
 	var transaction flow.TransactionBody

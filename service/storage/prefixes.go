@@ -28,6 +28,7 @@ const (
 
 	prefixTransaction = 8
 	prefixCollection  = 10
+	prefixGuarantee   = 17
 
 	prefixTransactionsForHeight     = 9
 	prefixTransactionsForCollection = 12

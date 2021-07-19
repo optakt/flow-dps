@@ -67,6 +67,10 @@ func (l *Library) SaveCollection(collection *flow.LightCollection) func(*badger.
 	return l.save(encodeKey(prefixCollection, collection.ID()), collection)
 }
 
+func (l *Library) SaveGuarantee(guarantee *flow.CollectionGuarantee) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixGuarantee, guarantee.CollectionID), guarantee)
+}
+
 func (l *Library) SaveSeal(seal *flow.Seal) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixSeal, seal.ID()), seal)
 }
@@ -180,6 +184,10 @@ func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledg
 
 func (l *Library) RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixCollection, collectionID), collection)
+}
+
+func (l *Library) RetrieveGuarantee(collectionID flow.Identifier, guarantee *flow.CollectionGuarantee) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixGuarantee, collectionID), guarantee)
 }
 
 func (l *Library) RetrieveTransaction(transactionID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error {

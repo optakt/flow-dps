@@ -1211,6 +1211,230 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 	})
 }
 
+func TestServer_GetBlockByID(t *testing.T) {
+	blockID := mocks.ByteSlice(mocks.GenericIdentifier(0))
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), blockID)
+
+			return mocks.GenericHeight, nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericHeader, nil
+		}
+		index.SealsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericIdentifiers(4), nil
+		}
+		index.CollectionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericIdentifiers(6), nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByIDRequest{Id: blockID}
+		resp, err := s.GetBlockByID(context.Background(), req)
+
+		assert.NoError(t, err)
+		assert.Equal(t, blockID, resp.Block.Id)
+		assert.Equal(t, mocks.GenericHeight, resp.Block.Height)
+		assert.Equal(t, mocks.GenericHeader.ParentID[:], resp.Block.ParentId)
+		assert.Len(t, resp.Block.BlockSeals, 4)
+		assert.Len(t, resp.Block.CollectionGuarantees, 6)
+		assert.NotZero(t, resp.Block.Timestamp)
+	})
+
+	t.Run("handles indexer failure on HeightForBlock", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByIDRequest{Id: blockID}
+		_, err := s.GetBlockByID(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure on Header", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(uint64) (*flow.Header, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByIDRequest{Id: blockID}
+		_, err := s.GetBlockByID(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure on SealsByHeight", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByIDRequest{Id: blockID}
+		_, err := s.GetBlockByID(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure on CollectionsByHeight", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.CollectionsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByIDRequest{Id: blockID}
+		_, err := s.GetBlockByID(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestServer_GetBlockByHeight(t *testing.T) {
+	wantBlockID := mocks.GenericHeader.ID()
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
+			assert.Equal(t, wantBlockID, blockID)
+
+			return mocks.GenericHeight, nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericHeader, nil
+		}
+		index.SealsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericIdentifiers(4), nil
+		}
+		index.CollectionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericIdentifiers(6), nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByHeightRequest{Height: mocks.GenericHeight}
+		resp, err := s.GetBlockByHeight(context.Background(), req)
+
+		assert.NoError(t, err)
+		assert.Equal(t, wantBlockID[:], resp.Block.Id)
+		assert.Equal(t, mocks.GenericHeight, resp.Block.Height)
+		assert.Equal(t, mocks.GenericHeader.ParentID[:], resp.Block.ParentId)
+		assert.Len(t, resp.Block.BlockSeals, 4)
+		assert.Len(t, resp.Block.CollectionGuarantees, 6)
+		assert.NotZero(t, resp.Block.Timestamp)
+	})
+
+	t.Run("handles indexer failure on HeightForBlock", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByHeightRequest{Height: mocks.GenericHeight}
+		_, err := s.GetBlockByHeight(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure on Header", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(uint64) (*flow.Header, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByHeightRequest{Height: mocks.GenericHeight}
+		_, err := s.GetBlockByHeight(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure on SealsByHeight", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByHeightRequest{Height: mocks.GenericHeight}
+		_, err := s.GetBlockByHeight(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure on CollectionsByHeight", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.CollectionsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetBlockByHeightRequest{Height: mocks.GenericHeight}
+		_, err := s.GetBlockByHeight(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
 func baselineServer(t *testing.T) *Server {
 	t.Helper()
 

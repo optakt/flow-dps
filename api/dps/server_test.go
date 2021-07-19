@@ -49,7 +49,7 @@ func TestServer_GetFirst(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			mockErr: nil,
 
@@ -105,7 +105,7 @@ func TestServer_GetLast(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			mockErr: nil,
 
@@ -162,7 +162,7 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqBlockID: mocks.GenericIdentifier(0),
 
@@ -221,7 +221,7 @@ func TestServer_GetCommit(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			mockCommit: mocks.GenericCommit(0),
 			mockErr:    nil,
@@ -288,7 +288,7 @@ func TestServer_GetHeader(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqHeight: mocks.GenericHeight,
 
@@ -371,7 +371,7 @@ func TestServer_GetEvents(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqHeight: mocks.GenericHeight,
 			reqTypes:  mocks.GenericEventTypes(2),
@@ -464,7 +464,7 @@ func TestServer_GetRegisterValues(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqHeight: mocks.GenericHeight,
 			reqPaths:  mocks.GenericLedgerPaths(6),
@@ -547,7 +547,7 @@ func TestServer_GetCollection(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqCollectionID: mocks.GenericIdentifier(0),
 
@@ -596,6 +596,69 @@ func TestServer_GetCollection(t *testing.T) {
 	}
 }
 
+func TestServer_GetGuarantee(t *testing.T) {
+	tests := []struct {
+		name string
+
+		reqCollectionID flow.Identifier
+
+		mockGuarantee *flow.CollectionGuarantee
+		mockErr       error
+
+		wantGuarantee *flow.CollectionGuarantee
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "nominal case",
+
+			reqCollectionID: mocks.GenericIdentifier(0),
+
+			mockGuarantee: mocks.GenericGuarantee(0),
+
+			wantGuarantee: mocks.GenericGuarantee(0),
+			checkErr:      assert.NoError,
+		},
+		{
+			name: "handles index failure",
+
+			reqCollectionID: mocks.GenericIdentifier(0),
+
+			mockErr: mocks.GenericError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			index := mocks.BaselineReader(t)
+			index.GuaranteeFunc = func(id flow.Identifier) (*flow.CollectionGuarantee, error) {
+				return test.mockGuarantee, test.mockErr
+			}
+
+			s := Server{
+				codec: mocks.BaselineCodec(t),
+				index: index,
+			}
+
+			req := &GetGuaranteeRequest{
+				CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			}
+			gotRes, gotErr := s.GetGuarantee(context.Background(), req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, gotRes.CollectionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
+				assert.NotEmpty(t, gotRes.Data)
+			}
+		})
+	}
+}
+
 func TestServer_GetTransaction(t *testing.T) {
 	tests := []struct {
 		name string
@@ -610,7 +673,7 @@ func TestServer_GetTransaction(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqTxID: mocks.GenericIdentifier(0),
 
@@ -672,7 +735,7 @@ func TestServer_GetHeightForTransaction(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqTxID: mocks.GenericIdentifier(0),
 
@@ -733,7 +796,7 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqHeight: mocks.GenericHeight,
 
@@ -793,7 +856,7 @@ func TestServer_GetResult(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqTxID: mocks.GenericIdentifier(0),
 
@@ -856,7 +919,7 @@ func TestServer_GetSeal(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqSealID: mocks.GenericIdentifier(0),
 
@@ -918,7 +981,7 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
-			name: "happy case",
+			name: "nominal case",
 
 			reqHeight: mocks.GenericHeight,
 

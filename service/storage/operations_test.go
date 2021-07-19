@@ -965,6 +965,63 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 	})
 }
 
+func TestSaveAndRetrieve_Guarantee(t *testing.T) {
+	testKey := encodeKey(prefixGuarantee, mocks.GenericIdentifier(0))
+
+	t.Run("save guarantee", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, &flow.CollectionGuarantee{}, v)
+			return mocks.GenericLedgerValue(0), nil
+		}
+
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.SaveGuarantee(mocks.GenericGuarantee(0)))
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("retrieve guarantee", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		err := db.Update(func(tx *badger.Txn) error {
+			return tx.Set(testKey, mocks.GenericBytes)
+		})
+		require.NoError(t, err)
+
+		decodeCallCount := 0
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericBytes, b)
+			assert.IsType(t, &flow.CollectionGuarantee{}, v)
+			decodeCallCount++
+
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
+		}
+
+		var got flow.CollectionGuarantee
+		err = db.View(l.RetrieveGuarantee(mocks.GenericIdentifier(0), &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, decodeCallCount)
+	})
+}
+
 func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 	testKey := encodeKey(prefixCollectionsForHeight, mocks.GenericHeight)
 
