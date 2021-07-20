@@ -15,11 +15,12 @@
 package rosetta
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -31,8 +32,7 @@ type PreprocessRequest struct {
 	// TODO: check if we need max fee and suggested fee multiplier
 }
 
-type PreprocessResponse struct {
-}
+type PreprocessResponse struct{}
 
 func (c *Construction) Preprocess(ctx echo.Context) error {
 
@@ -53,13 +53,27 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txInvalidOpCount))
 	}
 
-	intent, err := c.parser.CreateTransfer(req.Operations)
-	if err != nil {
-		// TODO: change error handling
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not determine transaction intent: %w", err))
+	_, err = c.parser.CreateTransfer(req.Operations)
+	var iaErr failure.InvalidAccount
+	if errors.As(err, &iaErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
+	}
+	var icErr failure.InvalidCurrency
+	if errors.As(err, &icErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidCurrency(icErr))
+	}
+	var ucErr failure.UnknownCurrency
+	if errors.As(err, &ucErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownCurrency(ucErr))
+	}
+	var inErr failure.InvalidIntent
+	if errors.As(err, &inErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidIntent(inErr))
 	}
 
-	_ = intent
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, internal(txPreprocess, err))
+	}
 
-	return nil
+	return ctx.JSON(http.StatusOK, PreprocessResponse{})
 }

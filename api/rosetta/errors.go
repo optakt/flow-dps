@@ -41,6 +41,7 @@ const (
 	oldestRetrieval   = "unable to retrieve oldest block"
 	currentRetrieval  = "unable to retrieve current block"
 	txRetrieval       = "unable to retrieve transaction"
+	txPreprocess      = "unable to process transaction operations"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
@@ -178,5 +179,14 @@ func unknownTransaction(fail failure.UnknownTransaction) Error {
 		configuration.ErrorUnknownTransaction,
 		fail.Description,
 		withDetail("hash", fail.Hash),
+	)
+}
+
+func invalidIntent(fail failure.InvalidIntent) Error {
+	return convertError(
+		configuration.ErrorInvalidTransactionSpecification,
+		fail.Description,
+		withDetail("from", fail.Sender),
+		withDetail("to", fail.Receiver),
 	)
 }

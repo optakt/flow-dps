@@ -30,4 +30,6 @@ var (
 	ErrorUnknownBlock       = meta.ErrorDefinition{Code: 9, Message: "unknown block identifier", Retriable: true}
 	ErrorUnknownCurrency    = meta.ErrorDefinition{Code: 10, Message: "unknown currency identifier", Retriable: false}
 	ErrorUnknownTransaction = meta.ErrorDefinition{Code: 11, Message: "unknown block transaction", Retriable: false}
+	// TODO: reword
+	ErrorInvalidTransactionSpecification = meta.ErrorDefinition{Code: 12, Message: "invalid transaction specification", Retriable: false}
 )

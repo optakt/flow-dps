@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
@@ -39,6 +40,7 @@ type Intent struct {
 // account IDs, amounts and type of operation.
 func (p *Parser) CreateTransfer(operations []object.Operation) (*Intent, error) {
 
+	// TODO: think about naming again - deposit/withdrawal vs sender/receiver
 	sender := operations[0]
 	receiver := operations[1]
 
@@ -64,7 +66,7 @@ func (p *Parser) CreateTransfer(operations []object.Operation) (*Intent, error) 
 	// we only support one currency, but in the future we may have multiple.
 	sender.Amount.Currency, err = p.validate.Currency(sender.Amount.Currency)
 	if err != nil {
-		return nil, fmt.Errorf("invalid sender currency")
+		return nil, fmt.Errorf("invalid sender currency: %w", err)
 	}
 	receiver.Amount.Currency, err = p.validate.Currency(receiver.Amount.Currency)
 	if err != nil {
@@ -75,23 +77,51 @@ func (p *Parser) CreateTransfer(operations []object.Operation) (*Intent, error) 
 	trimmed := strings.TrimPrefix(sender.Amount.Value, "-")
 	sv, err := strconv.ParseUint(trimmed, 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse amount: %w", err)
+		return nil, failure.InvalidIntent{
+			Sender:   sender.AccountID.Address,
+			Receiver: receiver.AccountID.Address,
+			Description: failure.NewDescription("could not parse withdrawal amount",
+				failure.WithString("withdrawal_amount", sender.Amount.Value),
+				failure.WithErr(err),
+			),
+		}
 	}
 	// Parse value specified by the receiver.
 	rv, err := strconv.ParseUint(receiver.Amount.Value, 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse amount: %w", err)
+		return nil, failure.InvalidIntent{
+			Sender:   sender.AccountID.Address,
+			Receiver: receiver.AccountID.Address,
+			Description: failure.NewDescription("could not parse deposit amount",
+				failure.WithString("deposit_amount", receiver.Amount.Value),
+				failure.WithErr(err),
+			),
+		}
 	}
 
 	// Check if the specified amounts match.
 	if sv != rv {
-		return nil, fmt.Errorf("deposit and withdrawal amounts do not match")
+		return nil, failure.InvalidIntent{
+			Sender:   sender.AccountID.Address,
+			Receiver: receiver.AccountID.Address,
+			Description: failure.NewDescription("deposit and withdrawal amounts do not match",
+				failure.WithString("deposit_amount", receiver.Amount.Value),
+				failure.WithString("withdrawal_amount", sender.Amount.Value),
+			),
+		}
 	}
 
 	if strings.ToUpper(sender.Type) != dps.OperationTransfer ||
 		strings.ToUpper(receiver.Type) != dps.OperationTransfer {
 
-		return nil, fmt.Errorf("only transfer operations are supported")
+		return nil, failure.InvalidIntent{
+			Sender:   sender.AccountID.Address,
+			Receiver: receiver.AccountID.Address,
+			Description: failure.NewDescription("only transfer operations are supported",
+				failure.WithString("deposit_type", receiver.Type),
+				failure.WithString("withdrawal_type", sender.Type),
+			),
+		}
 	}
 
 	intent := Intent{
