@@ -41,6 +41,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
+	"github.com/optakt/flow-dps/rosetta/transactions"
 	"github.com/optakt/flow-dps/rosetta/validator"
 )
 
@@ -132,19 +133,27 @@ func run() int {
 	retrieve := retriever.New(params, index, validate, generate, invoke, convert,
 		retriever.WithTransactionLimit(flagTransactions),
 	)
-	ctrl := rosetta.NewData(config, retrieve)
+	dataCtrl := rosetta.NewData(config, retrieve)
+
+	parser := transactions.NewParser(validate)
+	constructCtrl := rosetta.NewConstruction(config, parser)
 
 	server := echo.New()
 	server.HideBanner = true
 	server.HidePort = true
 	server.Logger = elog
 	server.Use(lecho.Middleware(lecho.Config{Logger: elog}))
-	server.POST("/network/list", ctrl.Networks)
-	server.POST("/network/options", ctrl.Options)
-	server.POST("/network/status", ctrl.Status)
-	server.POST("/account/balance", ctrl.Balance)
-	server.POST("/block", ctrl.Block)
-	server.POST("/block/transaction", ctrl.Transaction)
+
+	// This group contains all of the Rosetta Data API endpoints.
+	server.POST("/network/list", dataCtrl.Networks)
+	server.POST("/network/options", dataCtrl.Options)
+	server.POST("/network/status", dataCtrl.Status)
+	server.POST("/account/balance", dataCtrl.Balance)
+	server.POST("/block", dataCtrl.Block)
+	server.POST("/block/transaction", dataCtrl.Transaction)
+
+	// This group contains all of the Rosetta Construction API endpoints.
+	server.POST("/construction/preprocess", constructCtrl.Preprocess)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
