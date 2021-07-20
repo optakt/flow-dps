@@ -14,13 +14,8 @@
 
 package access
 
-import (
-	"github.com/onflow/flow-go/fvm"
-	"github.com/onflow/flow-go/fvm/programs"
-	"github.com/onflow/flow-go/fvm/state"
-	"github.com/onflow/flow-go/model/flow"
-)
+import "github.com/onflow/flow-go/model/flow"
 
-type VirtualMachine interface {
-	GetAccount(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error)
+type Invoker interface {
+	GetAccount(address flow.Address, header *flow.Header) (*flow.Account, error)
 }

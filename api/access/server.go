@@ -19,15 +19,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/c2h5oh/datasize"
-	"github.com/dgraph-io/ristretto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
-	"github.com/onflow/flow-go/engine/execution/state/delta"
-	"github.com/onflow/flow-go/fvm"
-	"github.com/onflow/flow-go/fvm/programs"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 	"github.com/onflow/flow/protobuf/go/flow/entities"
@@ -40,55 +34,25 @@ import (
 // This is generally an on-disk interface, but could be a GRPC-based index as
 // well, in which case there is a double redirection.
 type Server struct {
-	index index.Reader
-	codec index.Codec
-
-	vm    VirtualMachine
-	cache Cache
+	index   index.Reader
+	codec   index.Codec
+	invoker Invoker
 
 	chainID string
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index index.Reader, codec index.Codec, options ...func(*Config)) (*Server, error) {
-
-	// Initialize the invoker configuration with conservative default values.
-	cfg := Config{
-		CacheSize: uint64(100 * datasize.MB), // ~100 MB default size
-	}
-
-	// Apply the option parameters provided by consumer.
-	for _, option := range options {
-		option(&cfg)
-	}
-
-	rt := fvm.NewInterpreterRuntime()
-	vm := fvm.NewVirtualMachine(rt)
-
-	// Initialize the Ristretto cache with the size limit. Ristretto recommends
-	// keeping ten times as many counters as items in the cache when full.
-	// Assuming an average item size of 1 kilobyte, this is what we get.
-	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: int64(cfg.CacheSize) / 1000 * 10,
-		MaxCost:     int64(cfg.CacheSize),
-		BufferItems: 64,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize cache: %w", err)
-	}
-
+func NewServer(index index.Reader, codec index.Codec, invoker Invoker, chainID string) *Server {
 	s := Server{
-		index: index,
-		codec: codec,
+		index:   index,
+		codec:   codec,
+		invoker: invoker,
 
-		vm:    vm,
-		cache: cache,
-
-		chainID: cfg.ChainID,
+		chainID: chainID,
 	}
 
-	return &s, nil
+	return &s
 }
 
 func (s *Server) Ping(_ context.Context, _ *access.PingRequest) (*access.PingResponse, error) {
@@ -211,14 +175,24 @@ func (s *Server) GetAccount(_ context.Context, in *access.GetAccountRequest) (*a
 		return nil, fmt.Errorf("could not get height: %w", err)
 	}
 
-	account, err := s.getAccount(flow.BytesToAddress(in.Address), height)
+	header, err := s.index.Header(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get header: %w", err)
+	}
+
+	account, err := s.invoker.GetAccount(flow.BytesToAddress(in.Address), header)
 	if err != nil {
 		return nil, err
 	}
 
+	a, err := convert.AccountToMessage(account)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert account to RPC message: %w", err)
+	}
+
 	// For now, we can't just reuse `GetAccountAtLatestBlock` for this because the return types are not the same.
 	resp := access.GetAccountResponse{
-		Account: account,
+		Account: a,
 	}
 
 	return &resp, nil
@@ -240,13 +214,23 @@ func (s *Server) GetAccountAtLatestBlock(ctx context.Context, in *access.GetAcco
 }
 
 func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccountAtBlockHeightRequest) (*access.AccountResponse, error) {
-	account, err := s.getAccount(flow.BytesToAddress(in.Address), in.BlockHeight)
+	header, err := s.index.Header(in.BlockHeight)
+	if err != nil {
+		return nil, fmt.Errorf("could not get header: %w", err)
+	}
+
+	account, err := s.invoker.GetAccount(flow.BytesToAddress(in.Address), header)
 	if err != nil {
 		return nil, err
 	}
 
+	a, err := convert.AccountToMessage(account)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert account to RPC message: %w", err)
+	}
+
 	resp := access.AccountResponse{
-		Account: account,
+		Account: a,
 	}
 
 	return &resp, nil
@@ -367,35 +351,4 @@ func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkPar
 
 func (s *Server) GetLatestProtocolStateSnapshot(ctx context.Context, in *access.GetLatestProtocolStateSnapshotRequest) (*access.ProtocolStateSnapshotResponse, error) {
 	return nil, errors.New("not implemented")
-}
-
-func (s *Server) getAccount(address flow.Address, height uint64) (*entities.Account, error) {
-	header, err := s.index.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get header at height %d: %w", height, err)
-	}
-
-	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
-
-	// Initialize the read function. We use a shared cache between all heights
-	// here. It's a smart cache, which means that items that are accessed often
-	// are more likely to be kept, regardless of height. This allows us to put
-	// an upper bound on total cache size while using it for all heights.
-	read := readRegister(s.index, s.cache, height)
-
-	// Initialize the view of the execution state on top of the ledger by
-	// using the read function at a specific commit.
-	view := delta.NewView(read)
-
-	account, err := s.vm.GetAccount(ctx, address, view, programs.NewEmptyPrograms())
-	if err != nil {
-		return nil, fmt.Errorf("could not get account at height %d: %w", height, err)
-	}
-
-	a, err := convert.AccountToMessage(account)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert account to message: %w", err)
-	}
-
-	return a, nil
 }

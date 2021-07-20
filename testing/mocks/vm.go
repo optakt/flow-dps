@@ -25,6 +25,7 @@ import (
 
 type VirtualMachine struct {
 	GetAccountFunc func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error)
+	RunFunc        func(ctx fvm.Context, proc fvm.Procedure, v state.View, programs *programs.Programs) error
 }
 
 func BaselineVirtualMachine(t *testing.T) *VirtualMachine {
@@ -34,6 +35,9 @@ func BaselineVirtualMachine(t *testing.T) *VirtualMachine {
 		GetAccountFunc: func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error) {
 			return &GenericAccount, nil
 		},
+		RunFunc: func(ctx fvm.Context, proc fvm.Procedure, v state.View, programs *programs.Programs) error {
+			return nil
+		},
 	}
 
 	return &vm
@@ -41,4 +45,8 @@ func BaselineVirtualMachine(t *testing.T) *VirtualMachine {
 
 func (v *VirtualMachine) GetAccount(ctx fvm.Context, address flow.Address, view state.View, programs *programs.Programs) (*flow.Account, error) {
 	return v.GetAccountFunc(ctx, address, view, programs)
+}
+
+func (v *VirtualMachine) Run(ctx fvm.Context, proc fvm.Procedure, view state.View, programs *programs.Programs) error {
+	return v.RunFunc(ctx, proc, view, programs)
 }

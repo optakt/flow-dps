@@ -12,9 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package access
+package invoker
 
-type Cache interface {
-	Get(key interface{}) (interface{}, bool)
-	Set(key, value interface{}, cost int64) bool
+import (
+	"github.com/onflow/flow-go/fvm"
+	"github.com/onflow/flow-go/fvm/programs"
+	"github.com/onflow/flow-go/fvm/state"
+	"github.com/onflow/flow-go/model/flow"
+)
+
+type VirtualMachine interface {
+	Run(ctx fvm.Context, proc fvm.Procedure, v state.View, programs *programs.Programs) error
+	GetAccount(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error)
 }

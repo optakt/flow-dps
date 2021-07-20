@@ -12,21 +12,9 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package access
+package invoker
 
-type Config struct {
-	CacheSize uint64
-	ChainID   string
-}
-
-func WithCacheSize(size uint64) func(*Config) {
-	return func(cfg *Config) {
-		cfg.CacheSize = size
-	}
-}
-
-func WithChainID(chainID string) func(*Config) {
-	return func(cfg *Config) {
-		cfg.ChainID = chainID
-	}
+type Cache interface {
+	Get(key interface{}) (interface{}, bool)
+	Set(key, value interface{}, cost int64) bool
 }

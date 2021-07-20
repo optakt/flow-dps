@@ -36,6 +36,7 @@ import (
 	"github.com/onflow/flow/protobuf/go/flow/access"
 	api "github.com/optakt/flow-dps/api/access"
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/invoker"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/storage"
@@ -115,11 +116,14 @@ func run() int {
 		),
 	)
 	index := index.NewReader(db, storage)
-	server, err := api.NewServer(index, codec, api.WithChainID(flagChain), api.WithCacheSize(flagCache))
+
+	invoker, err := invoker.New(index, invoker.WithCacheSize(flagCache))
 	if err != nil {
-		log.Error().Err(err).Msg("could not initialize access API server")
+		log.Error().Err(err).Msg("could not initialize script invoker")
 		return failure
 	}
+
+	server := api.NewServer(index, codec, invoker, flagChain)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

@@ -28,11 +28,11 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	invoker2 "github.com/optakt/flow-dps/invoker"
 
 	"github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/convert"
-	"github.com/optakt/flow-dps/rosetta/invoker"
 )
 
 const (
@@ -130,7 +130,7 @@ func run() int {
 
 	// Execute the script using remote lookup and read.
 	client := dps.NewAPIClient(conn)
-	invoke, err := invoker.New(dps.IndexFromAPI(client, codec), invoker.WithCacheSize(flagCache))
+	invoke, err := invoker2.New(dps.IndexFromAPI(client, codec), invoker2.WithCacheSize(flagCache))
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize invoker")
 		return failure
