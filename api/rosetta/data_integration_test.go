@@ -35,10 +35,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/model/flow"
-	invoker2 "github.com/optakt/flow-dps/invoker"
 
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/invoker"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/converter"
@@ -102,7 +102,7 @@ func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	config := configuration.New(params.ChainID)
 	validate := validator.New(params, index)
 	generate := scripts.NewGenerator(params)
-	invoke, err := invoker2.New(index)
+	invoke, err := invoker.New(index)
 	require.NoError(t, err)
 	convert, err := converter.New(generate)
 	require.NoError(t, err)

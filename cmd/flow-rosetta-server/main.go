@@ -31,7 +31,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/onflow/flow-go/model/flow"
-	invoker2 "github.com/optakt/flow-dps/invoker"
+	"github.com/optakt/flow-dps/invoker"
 
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/api/rosetta"
@@ -117,7 +117,7 @@ func run() int {
 	config := configuration.New(params.ChainID)
 	validate := validator.New(params, index)
 	generate := scripts.NewGenerator(params)
-	invoke, err := invoker2.New(index, invoker2.WithCacheSize(flagCache))
+	invoke, err := invoker.New(index, invoker.WithCacheSize(flagCache))
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize invoker")
 		return failure

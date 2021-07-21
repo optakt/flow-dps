@@ -14,7 +14,9 @@
 
 package mocks
 
-import "testing"
+import (
+	"testing"
+)
 
 type Cache struct {
 	GetFunc func(key interface{}) (interface{}, bool)

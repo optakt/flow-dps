@@ -170,29 +170,13 @@ func (s *Server) GetTransactionResult(ctx context.Context, in *access.GetTransac
 }
 
 func (s *Server) GetAccount(_ context.Context, in *access.GetAccountRequest) (*access.GetAccountResponse, error) {
-	height, err := s.index.Last()
-	if err != nil {
-		return nil, fmt.Errorf("could not get height: %w", err)
-	}
-
-	header, err := s.index.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get header: %w", err)
-	}
-
-	account, err := s.invoker.GetAccount(flow.BytesToAddress(in.Address), header)
+	account, err := s.GetAccountAtLatestBlock()
 	if err != nil {
 		return nil, err
 	}
 
-	a, err := convert.AccountToMessage(account)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert account to RPC message: %w", err)
-	}
-
-	// For now, we can't just reuse `GetAccountAtLatestBlock` for this because the return types are not the same.
 	resp := access.GetAccountResponse{
-		Account: a,
+		Account:              account.Account,
 	}
 
 	return &resp, nil

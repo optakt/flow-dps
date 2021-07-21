@@ -14,7 +14,9 @@
 
 package access
 
-import "github.com/onflow/flow-go/model/flow"
+import (
+	"github.com/onflow/flow-go/model/flow"
+)
 
 type Invoker interface {
 	GetAccount(address flow.Address, header *flow.Header) (*flow.Account, error)
