@@ -75,21 +75,6 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
-// GetSealed implements the `GetSealed` method of the generated GRPC server.
-func (s *Server) GetSealed(_ context.Context, _ *GetSealedRequest) (*GetSealedResponse, error) {
-
-	height, err := s.index.Sealed()
-	if err != nil {
-		return nil, fmt.Errorf("could not get sealed height: %w", err)
-	}
-
-	res := GetSealedResponse{
-		Height: height,
-	}
-
-	return &res, nil
-}
-
 // GetHeightForBlock implements the `GetHeightForBlock` method of the generated GRPC
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {

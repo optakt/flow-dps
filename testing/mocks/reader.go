@@ -24,7 +24,6 @@ import (
 type Reader struct {
 	FirstFunc                func() (uint64, error)
 	LastFunc                 func() (uint64, error)
-	SealedFunc               func() (uint64, error)
 	HeightForBlockFunc       func(blockID flow.Identifier) (uint64, error)
 	CommitFunc               func(height uint64) (flow.StateCommitment, error)
 	HeaderFunc               func(height uint64) (*flow.Header, error)
@@ -47,9 +46,6 @@ func BaselineReader(t *testing.T) *Reader {
 			return GenericHeight, nil
 		},
 		LastFunc: func() (uint64, error) {
-			return GenericHeight, nil
-		},
-		SealedFunc: func() (uint64, error) {
 			return GenericHeight, nil
 		},
 		HeightForBlockFunc: func(blockID flow.Identifier) (uint64, error) {
@@ -99,10 +95,6 @@ func (r *Reader) First() (uint64, error) {
 
 func (r *Reader) Last() (uint64, error) {
 	return r.LastFunc()
-}
-
-func (r *Reader) Sealed() (uint64, error) {
-	return r.SealedFunc()
 }
 
 func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {

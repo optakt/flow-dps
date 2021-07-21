@@ -15,9 +15,8 @@
 package storage
 
 const (
-	prefixFirst  = 1
-	prefixLast   = 2
-	prefixSealed = 17
+	prefixFirst = 1
+	prefixLast  = 2
 
 	prefixHeightForBlock       = 7
 	prefixHeightForTransaction = 16

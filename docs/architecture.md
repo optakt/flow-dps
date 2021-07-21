@@ -26,8 +26,7 @@ the API it exposes.
         12. [Transaction Result Index](#transaction-result-index)
         13. [Seals Index](#seals-index)
         14. [Block Seals Index](#block-seals-index)
-        15. [Sealed Height](#sealed-height)
-        16. [Transaction Height Index](#transaction-height-index)
+        15. [Transaction Height Index](#transaction-height-index)
 
 ## Chain
 
@@ -255,15 +254,3 @@ In this index, keys map the transaction IDs to their height.
 | **Example Value**  | `16`              | `45D66Q565F5DEDB[...]` |
 
 The value stored at that key is the **block height** of the referenced transaction ID.
-
-##### Sealed Height
-
-The value under this key keeps track of the last sealed block.
-
-| **Length** (bytes) | `1`               |
-|:-------------------|:------------------|
-| **Type**           | byte              |
-| **Description**    | Index type prefix |
-| **Example Value**  | `17`              |
-
-The value stored (updated each indexed block) is the **height** of the last sealed block.

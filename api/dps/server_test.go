@@ -149,62 +149,6 @@ func TestServer_GetLast(t *testing.T) {
 	}
 }
 
-func TestServer_GetSealed(t *testing.T) {
-
-	tests := []struct {
-		name string
-
-		mockErr error
-
-		wantRes *GetSealedResponse
-
-		checkErr assert.ErrorAssertionFunc
-	}{
-		{
-			name: "happy case",
-
-			mockErr: nil,
-
-			wantRes: &GetSealedResponse{
-				Height: mocks.GenericHeight,
-			},
-
-			checkErr: assert.NoError,
-		},
-		{
-			name: "error case",
-
-			mockErr: mocks.GenericError,
-
-			wantRes: nil,
-
-			checkErr: assert.Error,
-		},
-	}
-
-	for _, test := range tests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			index := mocks.BaselineReader(t)
-			index.SealedFunc = func() (uint64, error) {
-				return mocks.GenericHeight, test.mockErr
-			}
-
-			s := Server{index: index}
-
-			req := &GetSealedRequest{}
-
-			gotRes, gotErr := s.GetSealed(context.Background(), req)
-			test.checkErr(t, gotErr)
-			if gotErr == nil {
-				assert.Equal(t, test.wantRes, gotRes)
-			}
-		})
-	}
-}
-
 func TestServer_GetHeightForBlock(t *testing.T) {
 	tests := []struct {
 		name string

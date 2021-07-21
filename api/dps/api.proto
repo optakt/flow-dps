@@ -19,7 +19,6 @@ option go_package = "github.com/optakt/flow-dps/api/dps";
 service API {
   rpc GetFirst (GetFirstRequest) returns (GetFirstResponse) {}
   rpc GetLast (GetLastRequest) returns (GetLastResponse) {}
-  rpc GetSealed (GetSealedRequest) returns (GetSealedResponse) {}
   rpc GetHeightForBlock (GetHeightForBlockRequest) returns (GetHeightForBlockResponse) {}
   rpc GetCommit (GetCommitRequest) returns (GetCommitResponse) {}
   rpc GetHeader (GetHeaderRequest) returns (GetHeaderResponse) {}
@@ -45,13 +44,6 @@ message GetLastRequest {
 }
 
 message GetLastResponse {
-  uint64 height = 1;
-}
-
-message GetSealedRequest {
-}
-
-message GetSealedResponse {
   uint64 height = 1;
 }
 

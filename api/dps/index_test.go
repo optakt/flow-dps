@@ -122,48 +122,6 @@ func TestIndex_Last(t *testing.T) {
 
 }
 
-func TestIndex_Sealed(t *testing.T) {
-	t.Run("nominal case", func(t *testing.T) {
-		t.Parallel()
-
-		index := Index{
-			client: &apiMock{
-				GetSealedFunc: func(_ context.Context, in *GetSealedRequest, _ ...grpc.CallOption) (*GetSealedResponse, error) {
-					assert.NotNil(t, in)
-
-					return &GetSealedResponse{
-						Height: mocks.GenericHeight,
-					}, nil
-				},
-			},
-		}
-
-		got, err := index.Sealed()
-
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericHeight, got)
-		}
-	})
-
-	t.Run("handles index failure", func(t *testing.T) {
-		t.Parallel()
-
-		index := Index{
-			client: &apiMock{
-				GetSealedFunc: func(_ context.Context, in *GetSealedRequest, _ ...grpc.CallOption) (*GetSealedResponse, error) {
-					assert.NotNil(t, in)
-
-					return nil, mocks.GenericError
-				},
-			},
-		}
-
-		_, err := index.Sealed()
-		assert.Error(t, err)
-	})
-
-}
-
 func TestIndex_Header(t *testing.T) {
 	// We need to use the proper encoding to support nanoseconds
 	// and timezones in timestamps.
@@ -762,7 +720,6 @@ func TestIndex_ListSealsForHeight(t *testing.T) {
 type apiMock struct {
 	GetFirstFunc                  func(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
 	GetLastFunc                   func(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
-	GetSealedFunc                   func(ctx context.Context, in *GetSealedRequest, opts ...grpc.CallOption) (*GetSealedResponse, error)
 	GetHeightForBlockFunc         func(ctx context.Context, in *GetHeightForBlockRequest, opts ...grpc.CallOption) (*GetHeightForBlockResponse, error)
 	GetCommitFunc                 func(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
 	GetHeaderFunc                 func(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
@@ -783,10 +740,6 @@ func (a *apiMock) GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grp
 
 func (a *apiMock) GetLast(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error) {
 	return a.GetLastFunc(ctx, in, opts...)
-}
-
-func (a *apiMock) GetSealed(ctx context.Context, in *GetSealedRequest, opts ...grpc.CallOption) (*GetSealedResponse, error) {
-	return a.GetSealedFunc(ctx, in, opts...)
 }
 
 func (a *apiMock) GetHeightForBlock(ctx context.Context, in *GetHeightForBlockRequest, opts ...grpc.CallOption) (*GetHeightForBlockResponse, error) {

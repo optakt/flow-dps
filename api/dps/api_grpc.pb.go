@@ -20,7 +20,6 @@ const _ = grpc.SupportPackageIsVersion7
 type APIClient interface {
 	GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
 	GetLast(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
-	GetSealed(ctx context.Context, in *GetSealedRequest, opts ...grpc.CallOption) (*GetSealedResponse, error)
 	GetHeightForBlock(ctx context.Context, in *GetHeightForBlockRequest, opts ...grpc.CallOption) (*GetHeightForBlockResponse, error)
 	GetCommit(ctx context.Context, in *GetCommitRequest, opts ...grpc.CallOption) (*GetCommitResponse, error)
 	GetHeader(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
@@ -55,15 +54,6 @@ func (c *aPIClient) GetFirst(ctx context.Context, in *GetFirstRequest, opts ...g
 func (c *aPIClient) GetLast(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error) {
 	out := new(GetLastResponse)
 	err := c.cc.Invoke(ctx, "/API/GetLast", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aPIClient) GetSealed(ctx context.Context, in *GetSealedRequest, opts ...grpc.CallOption) (*GetSealedResponse, error) {
-	out := new(GetSealedResponse)
-	err := c.cc.Invoke(ctx, "/API/GetSealed", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +174,6 @@ func (c *aPIClient) ListSealsForHeight(ctx context.Context, in *ListSealsForHeig
 type APIServer interface {
 	GetFirst(context.Context, *GetFirstRequest) (*GetFirstResponse, error)
 	GetLast(context.Context, *GetLastRequest) (*GetLastResponse, error)
-	GetSealed(context.Context, *GetSealedRequest) (*GetSealedResponse, error)
 	GetHeightForBlock(context.Context, *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error)
 	GetCommit(context.Context, *GetCommitRequest) (*GetCommitResponse, error)
 	GetHeader(context.Context, *GetHeaderRequest) (*GetHeaderResponse, error)
@@ -208,9 +197,6 @@ func (UnimplementedAPIServer) GetFirst(context.Context, *GetFirstRequest) (*GetF
 }
 func (UnimplementedAPIServer) GetLast(context.Context, *GetLastRequest) (*GetLastResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLast not implemented")
-}
-func (UnimplementedAPIServer) GetSealed(context.Context, *GetSealedRequest) (*GetSealedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSealed not implemented")
 }
 func (UnimplementedAPIServer) GetHeightForBlock(context.Context, *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetHeightForBlock not implemented")
@@ -292,24 +278,6 @@ func _API_GetLast_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(APIServer).GetLast(ctx, req.(*GetLastRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _API_GetSealed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSealedRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(APIServer).GetSealed(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/API/GetSealed",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetSealed(ctx, req.(*GetSealedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -544,10 +512,6 @@ var API_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetLast",
 			Handler:    _API_GetLast_Handler,
-		},
-		{
-			MethodName: "GetSealed",
-			Handler:    _API_GetSealed_Handler,
 		},
 		{
 			MethodName: "GetHeightForBlock",

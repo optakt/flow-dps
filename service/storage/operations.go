@@ -34,10 +34,6 @@ func (l *Library) SaveLast(height uint64) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixLast), height)
 }
 
-func (l *Library) SaveSealed(height uint64) func(*badger.Txn) error {
-	return l.save(encodeKey(prefixSealed), height)
-}
-
 func (l *Library) IndexHeightForBlock(blockID flow.Identifier, height uint64) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixHeightForBlock, blockID), height)
 }
@@ -101,10 +97,6 @@ func (l *Library) RetrieveFirst(height *uint64) func(*badger.Txn) error {
 
 func (l *Library) RetrieveLast(height *uint64) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixLast), height)
-}
-
-func (l *Library) RetrieveSealed(height *uint64) func(*badger.Txn) error {
-	return l.retrieve(encodeKey(prefixSealed), height)
 }
 
 func (l *Library) LookupHeightForBlock(blockID flow.Identifier, height *uint64) func(*badger.Txn) error {

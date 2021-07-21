@@ -70,18 +70,6 @@ func (i *Index) Last() (uint64, error) {
 	return res.Height, nil
 }
 
-// Sealed returns the height of the last sealed block that was indexed.
-func (i *Index) Sealed() (uint64, error) {
-
-	req := GetSealedRequest{}
-	res, err := i.client.GetSealed(context.Background(), &req)
-	if err != nil {
-		return 0, fmt.Errorf("could not get sealed height: %w", err)
-	}
-
-	return res.Height, nil
-}
-
 // HeightForBlock returns the height of the given blockID.
 func (i *Index) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 

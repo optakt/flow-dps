@@ -163,8 +163,8 @@ func (s *Server) SendTransaction(ctx context.Context, in *access.SendTransaction
 }
 
 func (s *Server) GetTransaction(_ context.Context, in *access.GetTransactionRequest) (*access.TransactionResponse, error) {
-	id := flow.HashToID(in.Id)
-	tb, err := s.index.Transaction(id)
+	txID := flow.HashToID(in.Id)
+	tb, err := s.index.Transaction(txID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
 	}
@@ -205,21 +205,14 @@ func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransacti
 		statusCode = 1
 	}
 
-	// If we do not have a result for that transaction, its status is pending. If it exists but is at a height lower than
-	// the sealed height, it is executed, and otherwise it is sealed.
 	status := entities.TransactionStatus_SEALED
-	if result == nil {
-		status = entities.TransactionStatus_PENDING
-	} else {
-		sealedHeight, err := s.index.Sealed()
-		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-			return nil, fmt.Errorf("could not retrieve sealed height: %w", err)
-		}
+	sealedHeight, err := s.index.Last()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve last height: %w", err)
+	}
 
-		// There might not be a sealed height indexed yet, since blocks can be missing seals.
-		if err == nil && height > sealedHeight {
-			status = entities.TransactionStatus_EXECUTED
-		}
+	if height > sealedHeight {
+		status = entities.TransactionStatus_EXECUTED
 	}
 
 	events, err := s.index.Events(height)

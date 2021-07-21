@@ -425,11 +425,11 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles indexer error on sealed", func(t *testing.T) {
+	t.Run("handles indexer error on last", func(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
-		index.SealedFunc = func() (uint64, error) {
+		index.LastFunc = func() (uint64, error) {
 			return 0, mocks.GenericError
 		}
 
