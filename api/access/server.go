@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 	"github.com/onflow/flow/protobuf/go/flow/entities"
 
@@ -164,13 +163,13 @@ func (s *Server) SendTransaction(ctx context.Context, in *access.SendTransaction
 
 func (s *Server) GetTransaction(_ context.Context, in *access.GetTransactionRequest) (*access.TransactionResponse, error) {
 	txID := flow.HashToID(in.Id)
-	tb, err := s.index.Transaction(txID)
+	tx, err := s.index.Transaction(txID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
 	}
 
 	resp := access.TransactionResponse{
-		Transaction: convert.TransactionToMessage(*tb),
+		Transaction: convert.TransactionToMessage(*tx),
 	}
 
 	return &resp, nil
@@ -178,18 +177,13 @@ func (s *Server) GetTransaction(_ context.Context, in *access.GetTransactionRequ
 
 func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransactionRequest) (*access.TransactionResultResponse, error) {
 	txID := flow.HashToID(in.Id)
-	tx, err := s.index.Transaction(txID)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
-	}
-
 	result, err := s.index.Result(txID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+	if err != nil {
 		return nil, fmt.Errorf("could not retrieve transaction result: %w", err)
 	}
 
 	// We also need the height of the transaction we're looking at.
-	height, err := s.index.HeightForTransaction(tx.ID())
+	height, err := s.index.HeightForTransaction(txID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve block height: %w", err)
 	}
@@ -201,7 +195,7 @@ func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransacti
 	blockID := block.ID()
 
 	statusCode := uint32(0)
-	if result != nil && result.ErrorMessage == "" {
+	if result.ErrorMessage == "" {
 		statusCode = 1
 	}
 

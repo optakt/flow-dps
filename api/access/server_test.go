@@ -266,11 +266,6 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		result := mocks.GenericResult(0)
 
 		index := mocks.BaselineReader(t)
-		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), txID)
-
-			return tx, nil
-		}
 		index.ResultFunc = func(txID flow.Identifier) (*flow.TransactionResult, error) {
 			assert.Equal(t, mocks.GenericIdentifier(0), txID)
 
@@ -316,11 +311,6 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		result.ErrorMessage = "dummy error"
 
 		index := mocks.BaselineReader(t)
-		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), txID)
-
-			return tx, nil
-		}
 		index.ResultFunc = func(txID flow.Identifier) (*flow.TransactionResult, error) {
 			assert.Equal(t, mocks.GenericIdentifier(0), txID)
 
@@ -355,23 +345,6 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.BlockId)
 		assert.Equal(t, entities.TransactionStatus_EXECUTED, resp.Status)
 		assert.Equal(t, uint32(0), resp.StatusCode)
-	})
-
-	t.Run("handles indexer error on transaction", func(t *testing.T) {
-		t.Parallel()
-
-		index := mocks.BaselineReader(t)
-		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
-			return nil, mocks.GenericError
-		}
-
-		s := baselineServer(t)
-		s.index = index
-
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
-		_, err := s.GetTransactionResult(context.Background(), req)
-
-		assert.Error(t, err)
 	})
 
 	t.Run("handles indexer error on result", func(t *testing.T) {
