@@ -34,19 +34,20 @@ import (
 // This is generally an on-disk interface, but could be a GRPC-based index as
 // well, in which case there is a double redirection.
 type Server struct {
-	index index.Reader
-	codec index.Codec
+	index   index.Reader
+	codec   index.Codec
+	invoker Invoker
 
 	chainID string
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index index.Reader, codec index.Codec, chainID string) *Server {
-
+func NewServer(index index.Reader, codec index.Codec, invoker Invoker, chainID string) *Server {
 	s := Server{
-		index: index,
-		codec: codec,
+		index:   index,
+		codec:   codec,
+		invoker: invoker,
 
 		chainID: chainID,
 	}
@@ -169,15 +170,58 @@ func (s *Server) GetTransactionResult(ctx context.Context, in *access.GetTransac
 }
 
 func (s *Server) GetAccount(ctx context.Context, in *access.GetAccountRequest) (*access.GetAccountResponse, error) {
-	return nil, errors.New("not implemented")
+	req := access.GetAccountAtLatestBlockRequest{
+		Address: in.Address,
+	}
+
+	account, err := s.GetAccountAtLatestBlock(ctx, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := access.GetAccountResponse{
+		Account: account.Account,
+	}
+
+	return &resp, nil
 }
 
 func (s *Server) GetAccountAtLatestBlock(ctx context.Context, in *access.GetAccountAtLatestBlockRequest) (*access.AccountResponse, error) {
-	return nil, errors.New("not implemented")
+	height, err := s.index.Last()
+	if err != nil {
+		return nil, fmt.Errorf("could not get height: %w", err)
+	}
+
+	// Simply call the height-specific endpoint with the latest height.
+	req := &access.GetAccountAtBlockHeightRequest{
+		Address:     in.Address,
+		BlockHeight: height,
+	}
+
+	return s.GetAccountAtBlockHeight(ctx, req)
 }
 
-func (s *Server) GetAccountAtBlockHeight(ctx context.Context, in *access.GetAccountAtBlockHeightRequest) (*access.AccountResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccountAtBlockHeightRequest) (*access.AccountResponse, error) {
+	header, err := s.index.Header(in.BlockHeight)
+	if err != nil {
+		return nil, fmt.Errorf("could not get header: %w", err)
+	}
+
+	account, err := s.invoker.GetAccount(flow.BytesToAddress(in.Address), header)
+	if err != nil {
+		return nil, err
+	}
+
+	a, err := convert.AccountToMessage(account)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert account to RPC message: %w", err)
+	}
+
+	resp := access.AccountResponse{
+		Account: a,
+	}
+
+	return &resp, nil
 }
 
 func (s *Server) ExecuteScriptAtLatestBlock(ctx context.Context, in *access.ExecuteScriptAtLatestBlockRequest) (*access.ExecuteScriptResponse, error) {

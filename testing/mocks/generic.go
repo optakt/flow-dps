@@ -115,6 +115,7 @@ var (
 	}
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),
+		Balance: 84,
 	}
 
 	GenericBlockQualifier = identifier.Block{
