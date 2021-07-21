@@ -280,7 +280,17 @@ func (s *Server) GetEventsForBlockIDs(_ context.Context, in *access.GetEventsFor
 }
 
 func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkParametersRequest) (*access.GetNetworkParametersResponse, error) {
-	return &access.GetNetworkParametersResponse{ChainId: s.chainID}, nil
+	root, err := s.index.First()
+	if err != nil {
+		return nil, fmt.Errorf("could not get first indexed height: %w", err)
+	}
+
+	header, err := s.index.Header(root)
+	if err != nil {
+		return nil, fmt.Errorf("could not get header: %w", err)
+	}
+
+	return &access.GetNetworkParametersResponse{ChainId: header.ChainID.String()}, nil
 }
 
 func (s *Server) GetLatestProtocolStateSnapshot(ctx context.Context, in *access.GetLatestProtocolStateSnapshotRequest) (*access.ProtocolStateSnapshotResponse, error) {
