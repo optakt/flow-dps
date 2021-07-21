@@ -24,6 +24,7 @@ type Reader interface {
 	Last() (uint64, error)
 
 	HeightForBlock(blockID flow.Identifier) (uint64, error)
+	HeightForTransaction(txID flow.Identifier) (uint64, error)
 
 	Commit(height uint64) (flow.StateCommitment, error)
 	Header(height uint64) (*flow.Header, error)
@@ -33,6 +34,7 @@ type Reader interface {
 	Collection(cID flow.Identifier) (*flow.LightCollection, error)
 	Transaction(txID flow.Identifier) (*flow.TransactionBody, error)
 	Seal(sealID flow.Identifier) (*flow.Seal, error)
+	Result(txID flow.Identifier) (*flow.TransactionResult, error)
 
 	TransactionsByHeight(height uint64) ([]flow.Identifier, error)
 	SealsByHeight(height uint64) ([]flow.Identifier, error)

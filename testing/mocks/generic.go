@@ -419,7 +419,9 @@ func GenericCollection(index int) *flow.LightCollection {
 func GenericResults(number int) []*flow.TransactionResult {
 	var results []*flow.TransactionResult
 	for i := 0; i < number; i++ {
-		results = append(results, &flow.TransactionResult{TransactionID: GenericIdentifier(i)})
+		results = append(results, &flow.TransactionResult{
+			TransactionID: GenericIdentifier(i),
+		})
 	}
 
 	return results

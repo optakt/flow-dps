@@ -128,6 +128,12 @@ func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error
 	return &transaction, err
 }
 
+func (r *Reader) HeightForTransaction(txID flow.Identifier) (uint64, error) {
+	var height uint64
+	err := r.db.View(r.storage.LookupHeightForTransaction(txID, &height))
+	return height, err
+}
+
 // TransactionsByHeight returns the transaction IDs within the block with the given ID.
 func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	var txIDs []flow.Identifier

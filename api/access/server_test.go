@@ -23,6 +23,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
+	"github.com/onflow/flow/protobuf/go/flow/entities"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
@@ -209,6 +210,224 @@ func TestServer_GetBlockHeaderByHeight(t *testing.T) {
 
 		req := &access.GetBlockHeaderByHeightRequest{Height: mocks.GenericHeight}
 		_, err := s.GetBlockHeaderByHeight(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestServer_GetTransaction(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		tx := mocks.GenericTransaction(0)
+
+		index := mocks.BaselineReader(t)
+		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), txID)
+
+			return tx, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		resp, err := s.GetTransaction(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.Equal(t, tx.Arguments, resp.Transaction.Arguments)
+		assert.Equal(t, tx.ReferenceBlockID[:], resp.Transaction.ReferenceBlockId)
+	})
+
+	t.Run("handles indexer error on transaction", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetTransaction(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestServer_GetTransactionResult(t *testing.T) {
+	t.Run("nominal case with status sealed", func(t *testing.T) {
+		t.Parallel()
+
+		tx := mocks.GenericTransaction(0)
+		result := mocks.GenericResult(0)
+
+		index := mocks.BaselineReader(t)
+		index.ResultFunc = func(txID flow.Identifier) (*flow.TransactionResult, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), txID)
+
+			return result, nil
+		}
+		index.HeightForTransactionFunc = func(txID flow.Identifier) (uint64, error) {
+			assert.Equal(t, tx.ID(), txID)
+
+			return mocks.GenericHeight, nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericHeader, nil
+		}
+		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Empty(t, types)
+
+			return mocks.GenericEvents(4), nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		resp, err := s.GetTransactionResult(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.Equal(t, result.ErrorMessage, resp.ErrorMessage)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.BlockId)
+		assert.Equal(t, entities.TransactionStatus_SEALED, resp.Status)
+		assert.Equal(t, uint32(1), resp.StatusCode)
+	})
+
+	t.Run("nominal case with status executed and an error message", func(t *testing.T) {
+		t.Parallel()
+
+		txHeight := mocks.GenericHeight + 999
+		tx := mocks.GenericTransaction(0)
+		result := mocks.GenericResult(0)
+		result.ErrorMessage = "dummy error"
+
+		index := mocks.BaselineReader(t)
+		index.ResultFunc = func(txID flow.Identifier) (*flow.TransactionResult, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), txID)
+
+			return result, nil
+		}
+		index.HeightForTransactionFunc = func(txID flow.Identifier) (uint64, error) {
+			assert.Equal(t, tx.ID(), txID)
+
+			return txHeight, nil
+		}
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, txHeight, height)
+
+			return mocks.GenericHeader, nil
+		}
+		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+			assert.Equal(t, txHeight, height)
+			assert.Empty(t, types)
+
+			return mocks.GenericEvents(4), nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		resp, err := s.GetTransactionResult(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.Equal(t, result.ErrorMessage, resp.ErrorMessage)
+		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.BlockId)
+		assert.Equal(t, entities.TransactionStatus_EXECUTED, resp.Status)
+		assert.Equal(t, uint32(0), resp.StatusCode)
+	})
+
+	t.Run("handles indexer error on result", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.ResultFunc = func(txID flow.Identifier) (*flow.TransactionResult, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetTransactionResult(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer error on HeightForTransaction", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeightForTransactionFunc = func(flow.Identifier) (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetTransactionResult(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer error on Header", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(uint64) (*flow.Header, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetTransactionResult(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer error on last", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.LastFunc = func() (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetTransactionResult(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer error on events", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.EventsFunc = func(uint64, ...flow.EventType) ([]flow.Event, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		_, err := s.GetTransactionResult(context.Background(), req)
 
 		assert.Error(t, err)
 	})

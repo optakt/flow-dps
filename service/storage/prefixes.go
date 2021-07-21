@@ -18,7 +18,8 @@ const (
 	prefixFirst = 1
 	prefixLast  = 2
 
-	prefixHeightForBlock = 7
+	prefixHeightForBlock       = 7
+	prefixHeightForTransaction = 16
 
 	prefixCommit  = 4
 	prefixHeader  = 3

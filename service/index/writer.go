@@ -118,6 +118,10 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 			if err != nil {
 				return fmt.Errorf("could not save transaction (id: %x): %w", transaction.ID(), err)
 			}
+			err = w.db.Update(w.storage.IndexHeightForTransaction(transaction.ID(), height))
+			if err != nil {
+				return fmt.Errorf("could not save transaction height (id: %x): %w", transaction.ID(), err)
+			}
 			txIDs = append(txIDs, transaction.ID())
 		}
 

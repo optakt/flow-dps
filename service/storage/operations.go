@@ -59,6 +59,10 @@ func (l *Library) SaveTransaction(transaction *flow.TransactionBody) func(*badge
 	return l.save(encodeKey(prefixTransaction, transaction.ID()), transaction)
 }
 
+func (l *Library) IndexHeightForTransaction(txID flow.Identifier, height uint64) func(*badger.Txn) error {
+	return l.save(encodeKey(prefixHeightForTransaction, txID), height)
+}
+
 func (l *Library) SaveCollection(collection *flow.LightCollection) func(*badger.Txn) error {
 	return l.save(encodeKey(prefixCollection, collection.ID()), collection)
 }
@@ -180,6 +184,10 @@ func (l *Library) RetrieveCollection(collectionID flow.Identifier, collection *f
 
 func (l *Library) RetrieveTransaction(transactionID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixTransaction, transactionID), transaction)
+}
+
+func (l *Library) LookupHeightForTransaction(txID flow.Identifier, height *uint64) func(*badger.Txn) error {
+	return l.retrieve(encodeKey(prefixHeightForTransaction, txID), height)
 }
 
 func (l *Library) RetrieveSeal(sealID flow.Identifier, seal *flow.Seal) func(*badger.Txn) error {

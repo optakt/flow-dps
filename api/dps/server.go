@@ -224,6 +224,23 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 	return &res, nil
 }
 
+// GetHeightForTransaction implements the `GetHeightForTransaction` method of the generated GRPC
+// server.
+func (s *Server) GetHeightForTransaction(_ context.Context, req *GetHeightForTransactionRequest) (*GetHeightForTransactionResponse, error) {
+	txID := flow.HashToID(req.TransactionID)
+	height, err := s.index.HeightForTransaction(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get height for transaction: %w", err)
+	}
+
+	res := GetHeightForTransactionResponse{
+		TransactionID: req.TransactionID,
+		Height:        height,
+	}
+
+	return &res, nil
+}
+
 // ListTransactionsForHeight implements the `ListTransactionsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error) {
@@ -241,6 +258,29 @@ func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransacti
 	res := ListTransactionsForHeightResponse{
 		Height:         req.Height,
 		TransactionIDs: transactionIDs,
+	}
+
+	return &res, nil
+}
+
+// GetResult implements the `GetResult` method of the generated GRPC
+// server.
+func (s *Server) GetResult(_ context.Context, req *GetResultRequest) (*GetResultResponse, error) {
+	txID := flow.HashToID(req.TransactionID)
+
+	result, err := s.index.Result(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction result: %w", err)
+	}
+
+	data, err := s.codec.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode transaction result: %w", err)
+	}
+
+	res := GetResultResponse{
+		TransactionID: req.TransactionID,
+		Data:          data,
 	}
 
 	return &res, nil

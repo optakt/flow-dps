@@ -600,7 +600,7 @@ func TestServer_GetTransaction(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqTransactionID flow.Identifier
+		reqTxID flow.Identifier
 
 		mockTransaction *flow.TransactionBody
 		mockErr         error
@@ -612,7 +612,7 @@ func TestServer_GetTransaction(t *testing.T) {
 		{
 			name: "happy case",
 
-			reqTransactionID: mocks.GenericIdentifier(0),
+			reqTxID: mocks.GenericIdentifier(0),
 
 			mockTransaction: mocks.GenericTransaction(0),
 
@@ -622,7 +622,7 @@ func TestServer_GetTransaction(t *testing.T) {
 		{
 			name: "handles index failure",
 
-			reqTransactionID: mocks.GenericIdentifier(0),
+			reqTxID: mocks.GenericIdentifier(0),
 
 			mockErr: mocks.GenericError,
 
@@ -654,6 +654,66 @@ func TestServer_GetTransaction(t *testing.T) {
 			if gotErr == nil {
 				assert.Equal(t, gotRes.TransactionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
 				assert.NotEmpty(t, gotRes.Data)
+			}
+		})
+	}
+}
+
+func TestServer_GetHeightForTransaction(t *testing.T) {
+	tests := []struct {
+		name string
+
+		reqTxID flow.Identifier
+
+		mockErr error
+
+		wantTxID flow.Identifier
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "happy case",
+
+			reqTxID: mocks.GenericIdentifier(0),
+
+			mockErr: nil,
+
+			wantTxID: mocks.GenericIdentifier(0),
+
+			checkErr: assert.NoError,
+		},
+		{
+			name: "error handling",
+
+			reqTxID: mocks.GenericIdentifier(0),
+
+			mockErr: mocks.GenericError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			index := mocks.BaselineReader(t)
+			index.HeightForTransactionFunc = func(blockID flow.Identifier) (uint64, error) {
+				return mocks.GenericHeight, test.mockErr
+			}
+
+			s := Server{index: index}
+
+			req := &GetHeightForTransactionRequest{
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			}
+			gotRes, gotErr := s.GetHeightForTransaction(context.Background(), req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, mocks.GenericHeight, gotRes.Height)
+				assert.Equal(t, test.wantTxID[:], gotRes.TransactionID)
 			}
 		})
 	}
@@ -714,6 +774,69 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 			if gotErr == nil {
 				assert.Equal(t, gotRes.Height, mocks.GenericHeight)
 				assert.Len(t, gotRes.TransactionIDs, 5)
+			}
+		})
+	}
+}
+
+func TestServer_GetResult(t *testing.T) {
+	tests := []struct {
+		name string
+
+		reqTxID flow.Identifier
+
+		mockResult *flow.TransactionResult
+		mockErr    error
+
+		wantResult *flow.TransactionResult
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "happy case",
+
+			reqTxID: mocks.GenericIdentifier(0),
+
+			mockResult: mocks.GenericResult(0),
+
+			wantResult: mocks.GenericResult(0),
+			checkErr:   assert.NoError,
+		},
+		{
+			name: "handles index failure",
+
+			reqTxID: mocks.GenericIdentifier(0),
+
+			mockErr: mocks.GenericError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			index := mocks.BaselineReader(t)
+			index.ResultFunc = func(transactionID flow.Identifier) (*flow.TransactionResult, error) {
+				return test.mockResult, test.mockErr
+			}
+
+			s := Server{
+				codec: mocks.BaselineCodec(t),
+				index: index,
+			}
+
+			req := &GetResultRequest{
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			}
+			gotRes, gotErr := s.GetResult(context.Background(), req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, gotRes.TransactionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
+				assert.NotEmpty(t, gotRes.Data)
 			}
 		})
 	}

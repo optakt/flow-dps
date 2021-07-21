@@ -794,6 +794,63 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 	})
 }
 
+func TestLibrary_IndexAndLookupHeightForTransaction(t *testing.T) {
+	testKey := encodeKey(prefixHeightForTransaction, mocks.GenericIdentifier(0))
+
+	t.Run("save height of transaction", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
+			assert.IsType(t, uint64(0), v)
+			return mocks.GenericLedgerValue(0), nil
+		}
+
+		l := &Library{
+			codec: codec,
+		}
+
+		err := db.Update(l.IndexHeightForTransaction(mocks.GenericIdentifier(0), mocks.GenericHeight))
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("retrieve height of transaction", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		err := db.Update(func(tx *badger.Txn) error {
+			return tx.Set(testKey, mocks.GenericBytes)
+		})
+		require.NoError(t, err)
+
+		decodeCallCount := 0
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
+			assert.Equal(t, mocks.GenericBytes, b)
+			assert.IsType(t, &mocks.GenericHeight, v)
+			decodeCallCount++
+
+			return nil
+		}
+
+		l := &Library{
+			codec: codec,
+		}
+
+		var got uint64
+		err = db.View(l.LookupHeightForTransaction(mocks.GenericIdentifier(0), &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, decodeCallCount)
+	})
+}
+
 func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
 	testKey := encodeKey(prefixTransactionsForHeight, mocks.GenericHeight)
 

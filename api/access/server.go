@@ -161,12 +161,68 @@ func (s *Server) SendTransaction(ctx context.Context, in *access.SendTransaction
 	return nil, errors.New("not implemented")
 }
 
-func (s *Server) GetTransaction(ctx context.Context, in *access.GetTransactionRequest) (*access.TransactionResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetTransaction(_ context.Context, in *access.GetTransactionRequest) (*access.TransactionResponse, error) {
+	txID := flow.HashToID(in.Id)
+	tx, err := s.index.Transaction(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
+	}
+
+	resp := access.TransactionResponse{
+		Transaction: convert.TransactionToMessage(*tx),
+	}
+
+	return &resp, nil
 }
 
-func (s *Server) GetTransactionResult(ctx context.Context, in *access.GetTransactionRequest) (*access.TransactionResultResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransactionRequest) (*access.TransactionResultResponse, error) {
+	txID := flow.HashToID(in.Id)
+	result, err := s.index.Result(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction result: %w", err)
+	}
+
+	// We also need the height of the transaction we're looking at.
+	height, err := s.index.HeightForTransaction(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve block height: %w", err)
+	}
+
+	block, err := s.index.Header(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve block header: %w", err)
+	}
+	blockID := block.ID()
+
+	statusCode := uint32(0)
+	if result.ErrorMessage == "" {
+		statusCode = 1
+	}
+
+	status := entities.TransactionStatus_SEALED
+	sealedHeight, err := s.index.Last()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve last height: %w", err)
+	}
+
+	if height > sealedHeight {
+		status = entities.TransactionStatus_EXECUTED
+	}
+
+	events, err := s.index.Events(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve events: %w", err)
+	}
+
+	resp := access.TransactionResultResponse{
+		Status:       status,
+		StatusCode:   statusCode,
+		ErrorMessage: result.ErrorMessage,
+		Events:       convert.EventsToMessages(events),
+		BlockId:      blockID[:],
+	}
+
+	return &resp, nil
 }
 
 func (s *Server) GetAccount(ctx context.Context, in *access.GetAccountRequest) (*access.GetAccountResponse, error) {
