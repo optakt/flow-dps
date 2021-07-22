@@ -19,7 +19,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
@@ -267,7 +270,7 @@ func TestServer_GetTransactionResult(t *testing.T) {
 
 		index := mocks.BaselineReader(t)
 		index.ResultFunc = func(txID flow.Identifier) (*flow.TransactionResult, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), txID)
+			assert.Equal(t, tx.ID(), txID)
 
 			return result, nil
 		}
@@ -291,7 +294,8 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		txID := tx.ID()
+		req := &access.GetTransactionRequest{Id: txID[:]}
 		resp, err := s.GetTransactionResult(context.Background(), req)
 
 		assert.NoError(t, err)
@@ -312,7 +316,7 @@ func TestServer_GetTransactionResult(t *testing.T) {
 
 		index := mocks.BaselineReader(t)
 		index.ResultFunc = func(txID flow.Identifier) (*flow.TransactionResult, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), txID)
+			assert.Equal(t, tx.ID(), txID)
 
 			return result, nil
 		}
@@ -336,7 +340,8 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		txID := tx.ID()
+		req := &access.GetTransactionRequest{Id: txID[:]}
 		resp, err := s.GetTransactionResult(context.Background(), req)
 
 		assert.NoError(t, err)
@@ -983,6 +988,224 @@ func TestServer_GetAccountAtBlockHeight(t *testing.T) {
 			Address:     mocks.GenericAccount.Address[:],
 		}
 		_, err := s.GetAccountAtBlockHeight(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestServer_ExecuteScriptAtBlockHeight(t *testing.T) {
+	cadenceValue := cadence.NewUInt64(mocks.GenericHeight)
+	cadenceValueBytes, err := json.Encode(cadenceValue)
+	require.NoError(t, err)
+
+	genericAmountBytes, err := json.Encode(mocks.GenericAmount(0))
+	require.NoError(t, err)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		invoker := mocks.BaselineInvoker(t)
+		invoker.ScriptFunc = func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericBytes, script)
+			assert.Equal(t, []cadence.Value{cadenceValue}, parameters)
+
+			return mocks.GenericAmount(0), nil
+		}
+
+		s := baselineServer(t)
+		s.invoker = invoker
+
+		req := &access.ExecuteScriptAtBlockHeightRequest{
+			BlockHeight:          mocks.GenericHeight,
+			Script:               mocks.GenericBytes,
+			Arguments:            [][]byte{cadenceValueBytes},
+		}
+		resp, err := s.ExecuteScriptAtBlockHeight(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.Equal(t, genericAmountBytes, resp.Value)
+	})
+
+	t.Run("handles invoker failure", func(t *testing.T) {
+		t.Parallel()
+
+		invoker := mocks.BaselineInvoker(t)
+		invoker.ScriptFunc = func(uint64, []byte, []cadence.Value) (cadence.Value, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.invoker = invoker
+
+		req := &access.ExecuteScriptAtBlockHeightRequest{
+			BlockHeight:          mocks.GenericHeight,
+			Script:               mocks.GenericBytes,
+			Arguments:            [][]byte{cadenceValueBytes},
+		}
+		_, err = s.ExecuteScriptAtBlockHeight(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
+	cadenceValue := cadence.NewUInt64(mocks.GenericHeight)
+	cadenceValueBytes, err := json.Encode(cadenceValue)
+	require.NoError(t, err)
+
+	genericAmountBytes, err := json.Encode(mocks.GenericAmount(0))
+	require.NoError(t, err)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		invoker := mocks.BaselineInvoker(t)
+		invoker.ScriptFunc = func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericBytes, script)
+			assert.Equal(t, []cadence.Value{cadenceValue}, parameters)
+
+			return mocks.GenericAmount(0), nil
+		}
+
+		index := mocks.BaselineReader(t)
+		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), blockID)
+
+			return mocks.GenericHeight, nil
+		}
+
+		s := baselineServer(t)
+		s.index = index
+		s.invoker = invoker
+
+		req := &access.ExecuteScriptAtBlockIDRequest{
+			BlockId:          mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			Script:               mocks.GenericBytes,
+			Arguments:            [][]byte{cadenceValueBytes},
+		}
+		resp, err := s.ExecuteScriptAtBlockID(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.Equal(t, genericAmountBytes, resp.Value)
+	})
+
+	t.Run("handles index failure", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.ExecuteScriptAtBlockIDRequest{
+			BlockId:          mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			Script:               mocks.GenericBytes,
+			Arguments:            [][]byte{cadenceValueBytes},
+		}
+		_, err = s.ExecuteScriptAtBlockID(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles invoker failure", func(t *testing.T) {
+		t.Parallel()
+
+		invoker := mocks.BaselineInvoker(t)
+		invoker.ScriptFunc = func(uint64, []byte, []cadence.Value) (cadence.Value, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.invoker = invoker
+
+		req := &access.ExecuteScriptAtBlockIDRequest{
+			BlockId:          mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			Script:               mocks.GenericBytes,
+			Arguments:            [][]byte{cadenceValueBytes},
+		}
+		_, err = s.ExecuteScriptAtBlockID(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
+	cadenceValue := cadence.NewUInt64(mocks.GenericHeight)
+	cadenceValueBytes, err := json.Encode(cadenceValue)
+	require.NoError(t, err)
+
+	genericAmountBytes, err := json.Encode(mocks.GenericAmount(0))
+	require.NoError(t, err)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		invoker := mocks.BaselineInvoker(t)
+		invoker.ScriptFunc = func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericBytes, script)
+			assert.Equal(t, []cadence.Value{cadenceValue}, parameters)
+
+			return mocks.GenericAmount(0), nil
+		}
+
+		s := baselineServer(t)
+		s.invoker = invoker
+
+		req := &access.ExecuteScriptAtLatestBlockRequest{
+			Script:               mocks.GenericBytes,
+			Arguments:            [][]byte{cadenceValueBytes},
+		}
+		resp, err := s.ExecuteScriptAtLatestBlock(context.Background(), req)
+
+		assert.NoError(t, err)
+
+		assert.Equal(t, genericAmountBytes, resp.Value)
+	})
+
+	t.Run("handles index failure", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.LastFunc = func() (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.index = index
+
+		req := &access.ExecuteScriptAtLatestBlockRequest{
+			Script:               mocks.GenericBytes,
+			Arguments:            [][]byte{cadenceValueBytes},
+		}
+		_, err = s.ExecuteScriptAtLatestBlock(context.Background(), req)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles invoker failure", func(t *testing.T) {
+		t.Parallel()
+
+		invoker := mocks.BaselineInvoker(t)
+		invoker.ScriptFunc = func(uint64, []byte, []cadence.Value) (cadence.Value, error) {
+			return nil, mocks.GenericError
+		}
+
+		s := baselineServer(t)
+		s.invoker = invoker
+
+		req := &access.ExecuteScriptAtLatestBlockRequest{
+			Script:               mocks.GenericBytes,
+			Arguments:            [][]byte{cadenceValueBytes},
+		}
+		_, err = s.ExecuteScriptAtLatestBlock(context.Background(), req)
 
 		assert.Error(t, err)
 	})
