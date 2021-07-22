@@ -10,7 +10,7 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout source code
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
@@ -19,6 +19,36 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.16
+
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # Here, we simply print the exact go version, to have it as part of the
+      # action's output, which might be convenient.
+      - name: Print Go version
+        run: go version
+
+      # The protobuf steps uses the official instructions to install the
+      # pre-compiled binary, see:
+      # https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os
+      - name: Install Protobuf compiler
+        run: |
+          PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+          curl -LO $PB_REL/download/v3.17.0/protoc-3.17.0-linux-x86_64.zip
+          unzip protoc-3.17.0-linux-x86_64.zip -d $HOME/.local
+          export PATH="$PATH:$HOME/.local/bin"
+
+      # In order to be able to generate the protocol buffer and GRPC files, we
+      # need to install the related Go modules.
+      - name: Install Protobuf dependencies
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
 
       # Install GoReleaser and print its version before running.
       - name: Install GoReleaser
