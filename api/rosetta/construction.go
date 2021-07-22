@@ -21,17 +21,20 @@ package rosetta
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html
 type Construction struct {
-	config Configuration
-	parser Parser
+	config    Configuration
+	parser    Parser
+	retriever Retriever
 }
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
-func NewConstruction(config Configuration, parser Parser) *Construction {
+// TODO: check - we only need the retriever for the single thing - get the reference block ID
+func NewConstruction(config Configuration, parser Parser, retriever Retriever) *Construction {
 
 	c := Construction{
-		config: config,
-		parser: parser,
+		config:    config,
+		parser:    parser,
+		retriever: retriever,
 	}
 
 	return &c
