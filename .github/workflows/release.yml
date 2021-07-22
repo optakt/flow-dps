@@ -42,6 +42,7 @@ jobs:
           curl -LO $PB_REL/download/v3.17.0/protoc-3.17.0-linux-x86_64.zip
           unzip protoc-3.17.0-linux-x86_64.zip -d $HOME/.local
           export PATH="$PATH:$HOME/.local/bin"
+          git clean -fd
 
       # In order to be able to generate the protocol buffer and GRPC files, we
       # need to install the related Go modules.
