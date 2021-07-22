@@ -1,0 +1,57 @@
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+# By default, builds only for darwin and linux, which works for us since FlowGo does not support
+# Windows builds. We also can only build on amd64 architectures since all others are also not
+# supported at the moment.
+builds:
+  - id: dps-client
+    binary: dps-client
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+    main: ./cmd/flow-dps-client
+
+  - id: dps-indexer
+    binary: dps-indexer
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+    main: ./cmd/flow-dps-indexer
+
+  - id: dps-server
+    binary: dps-server
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+    main: ./cmd/flow-dps-server
+
+  - id: rosetta-server
+    binary: rosetta-server
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+    main: ./cmd/flow-rosetta-server
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
