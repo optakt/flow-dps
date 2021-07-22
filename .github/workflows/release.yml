@@ -2,7 +2,7 @@ name: AutoRelease
 
 # AutoRelease will run whenever a tag is pushed.
 on:
-  pull_request:
+  push:
     tags:
       - '*'
 
