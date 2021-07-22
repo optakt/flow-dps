@@ -28,17 +28,21 @@ import (
 
 // Intent describes the intent of an array of Rosetta operations.
 type Intent struct {
-	From   flow.Address
-	To     flow.Address
-	Amount uint64
-	Payer  flow.Address // TODO: WIP - for now, we'll treat the sender as the payer to keep things simple
+	From     flow.Address
+	To       flow.Address
+	Amount   uint64
+	Payer    flow.Address // TODO: WIP - for now, we'll treat the sender as the payer and the proposer to keep things simple
+	Proposer flow.Address
+
+	ReferenceBlock            flow.Identifier
+	ProposerKeySequenceNumber uint64
 }
 
-// CreateTransfer creates a transaction Intent from two operations given as input.
+// CreateTransactionIntent creates a transaction Intent from two operations given as input.
 // Specified operations should be symmetrical, a deposit and a withdrawal from two
 // different accounts. At the moment, the only fields taken into account are the
 // account IDs, amounts and type of operation.
-func (p *Parser) CreateTransfer(operations []object.Operation) (*Intent, error) {
+func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent, error) {
 
 	// TODO: think about naming again - deposit/withdrawal vs sender/receiver
 	sender := operations[0]
@@ -125,10 +129,11 @@ func (p *Parser) CreateTransfer(operations []object.Operation) (*Intent, error) 
 	}
 
 	intent := Intent{
-		From:   flow.HexToAddress(sender.AccountID.Address),
-		To:     flow.HexToAddress(receiver.AccountID.Address),
-		Amount: sv,
-		Payer:  flow.HexToAddress(sender.AccountID.Address),
+		From:     flow.HexToAddress(sender.AccountID.Address),
+		To:       flow.HexToAddress(receiver.AccountID.Address),
+		Amount:   sv,
+		Payer:    flow.HexToAddress(sender.AccountID.Address),
+		Proposer: flow.HexToAddress(sender.AccountID.Address),
 	}
 
 	return &intent, nil

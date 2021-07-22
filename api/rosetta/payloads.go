@@ -15,7 +15,9 @@
 package rosetta
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -25,20 +27,19 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-type PreprocessRequest struct {
+type PayloadsRequest struct {
 	NetworkID  identifier.Network `json:"network_identifier"`
 	Operations []object.Operation `json:"operations"`
-
-	// TODO: check if we need max fee and suggested fee multiplier
 }
 
-type PreprocessResponse struct {
-	object.Options `json:"options,omitempty"`
+type PayloadsResponse struct {
+	Transaction string                  `json:"unsigned_transaction"`
+	Payloads    []object.SigningPayload `json:"payloads"` // TODO: temp, create a proper struct
 }
 
-func (c *Construction) Preprocess(ctx echo.Context) error {
+func (c *Construction) Payloads(ctx echo.Context) error {
 
-	var req PreprocessRequest
+	var req PayloadsRequest
 	err := ctx.Bind(&req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
@@ -77,10 +78,36 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(txPreprocess, err))
 	}
 
-	res := PreprocessResponse{
-		Options: object.Options{
-			AccountID: identifier.Account{
-				Address: intent.From.Hex(),
+	tx, err := c.parser.CreateTransaction(intent)
+	if err != nil {
+		// TODO: fix
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not create transaction: %w", err))
+	}
+
+	rosettaTx := object.TransactionPayload{
+		Script:             tx.Script,
+		Arguments:          tx.Arguments,
+		ReferenceBlockID:   tx.ReferenceBlockID,
+		GasLimit:           tx.GasLimit,
+		ProposalKey:        tx.ProposalKey,
+		Payer:              tx.Payer,
+		Authorizers:        tx.Authorizers,
+		EnvelopeSignatures: tx.EnvelopeSignatures,
+	}
+
+	// TODO: check - we could use tx.Encode() and DecodeTransaction() - this will use Ethereums rlp encoding.
+	enc, err := json.Marshal(rosettaTx)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not encode transaction: %w", err))
+	}
+
+	res := PayloadsResponse{
+		Transaction: string(enc),
+		Payloads: []object.SigningPayload{
+			{
+				AccountID:     identifier.Account{Address: intent.From.Hex()},
+				HexBytes:      string(tx.PayloadMessage()),
+				SignatureType: "",
 			},
 		},
 	}

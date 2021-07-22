@@ -12,16 +12,8 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package transactions
 
-import (
-	"github.com/onflow/flow-go-sdk"
-
-	"github.com/optakt/flow-dps/rosetta/object"
-	"github.com/optakt/flow-dps/rosetta/transactions"
-)
-
-type Parser interface {
-	CreateTransactionIntent(operations []object.Operation) (*transactions.Intent, error)
-	CreateTransaction(intent *transactions.Intent) (*flow.Transaction, error)
+type Generator interface {
+	TransferTokens(symbol string) ([]byte, error)
 }

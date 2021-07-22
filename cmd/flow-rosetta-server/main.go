@@ -135,7 +135,7 @@ func run() int {
 	)
 	dataCtrl := rosetta.NewData(config, retrieve)
 
-	parser := transactions.NewParser(validate)
+	parser := transactions.NewParser(validate, generate)
 	constructCtrl := rosetta.NewConstruction(config, parser)
 
 	server := echo.New()
@@ -154,6 +154,7 @@ func run() int {
 
 	// This group contains all of the Rosetta Construction API endpoints.
 	server.POST("/construction/preprocess", constructCtrl.Preprocess)
+	server.POST("/construction/payloads", constructCtrl.Payloads)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

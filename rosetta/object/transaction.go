@@ -15,6 +15,8 @@
 package object
 
 import (
+	"github.com/onflow/flow-go-sdk"
+
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -26,4 +28,17 @@ import (
 type Transaction struct {
 	ID         identifier.Transaction `json:"transaction_identifier"`
 	Operations []Operation            `json:"operations"`
+}
+
+// TODO: check - this is essentially a duplicate of flow.Transaction, except it has json tags
+type TransactionPayload struct {
+	Script             []byte                      `json:"script"`
+	Arguments          [][]byte                    `json:"arguments"`
+	ReferenceBlockID   flow.Identifier             `json:"reference_block_id"`
+	GasLimit           uint64                      `json:"gas_limit"`
+	ProposalKey        flow.ProposalKey            `json:"proposal_key"`
+	Payer              flow.Address                `json:"payer"`
+	Authorizers        []flow.Address              `json:"authorizers"`
+	PayloadSignatures  []flow.TransactionSignature `json:"payload_signatures"`
+	EnvelopeSignatures []flow.TransactionSignature `json:"envelope_signatures"`
 }

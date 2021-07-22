@@ -16,12 +16,14 @@ package transactions
 
 type Parser struct {
 	validate Validator
+	generate Generator
 }
 
-func NewParser(validate Validator) *Parser {
+func NewParser(validate Validator, generate Generator) *Parser {
 
 	p := Parser{
 		validate: validate,
+		generate: generate,
 	}
 
 	return &p

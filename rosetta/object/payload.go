@@ -12,16 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package object
 
 import (
-	"github.com/onflow/flow-go-sdk"
-
-	"github.com/optakt/flow-dps/rosetta/object"
-	"github.com/optakt/flow-dps/rosetta/transactions"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-type Parser interface {
-	CreateTransactionIntent(operations []object.Operation) (*transactions.Intent, error)
-	CreateTransaction(intent *transactions.Intent) (*flow.Transaction, error)
+// TODO: check signature type - we support two types, should we use this, how
+// does it work with multiple signatures, should it be left empty?
+type SigningPayload struct {
+	AccountID     identifier.Account `json:"account_identifier"`
+	HexBytes      string             `json:"hex_bytes"`
+	SignatureType string             `json:"signature_type"`
 }
