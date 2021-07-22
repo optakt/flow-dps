@@ -21,6 +21,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
@@ -281,15 +283,62 @@ func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccoun
 }
 
 func (s *Server) ExecuteScriptAtLatestBlock(ctx context.Context, in *access.ExecuteScriptAtLatestBlockRequest) (*access.ExecuteScriptResponse, error) {
-	return nil, errors.New("not implemented")
+	height, err := s.index.Last()
+	if err != nil {
+		return nil, fmt.Errorf("could not get last height: %w", err)
+	}
+
+	req := &access.ExecuteScriptAtBlockHeightRequest{
+		BlockHeight:          height,
+		Script:               in.Script,
+		Arguments:            in.Arguments,
+	}
+
+	return s.ExecuteScriptAtBlockHeight(ctx, req)
 }
 
 func (s *Server) ExecuteScriptAtBlockID(ctx context.Context, in *access.ExecuteScriptAtBlockIDRequest) (*access.ExecuteScriptResponse, error) {
-	return nil, errors.New("not implemented")
+	blockID := flow.HashToID(in.BlockId)
+	height, err := s.index.HeightForBlock(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get height for block ID %x: %w", blockID, err)
+	}
+
+	req := &access.ExecuteScriptAtBlockHeightRequest{
+		BlockHeight:          height,
+		Script:               in.Script,
+		Arguments:            in.Arguments,
+	}
+
+	return s.ExecuteScriptAtBlockHeight(ctx, req)
 }
 
-func (s *Server) ExecuteScriptAtBlockHeight(ctx context.Context, in *access.ExecuteScriptAtBlockHeightRequest) (*access.ExecuteScriptResponse, error) {
-	return nil, errors.New("not implemented")
+func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.ExecuteScriptAtBlockHeightRequest) (*access.ExecuteScriptResponse, error) {
+	var args []cadence.Value
+	for _, arg := range in.Arguments {
+		val, err := json.Decode(arg)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode script argument: %w", err)
+		}
+
+		args = append(args, val)
+	}
+
+	value, err := s.invoker.Script(in.BlockHeight, in.Script, args)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute script: %w", err)
+	}
+
+	result, err := json.Encode(value)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode script result: %w", err)
+	}
+
+	resp := access.ExecuteScriptResponse{
+		Value: result,
+	}
+
+	return &resp, nil
 }
 
 func (s *Server) GetEventsForHeightRange(_ context.Context, in *access.GetEventsForHeightRangeRequest) (*access.EventsResponse, error) {
