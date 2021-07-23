@@ -143,44 +143,44 @@ func (s *Server) GetBlockByID(_ context.Context, in *access.GetBlockByIDRequest)
 		return nil, fmt.Errorf("could not get header for height %d: %w", height, err)
 	}
 
-	ss, err := s.index.SealsByHeight(height)
+	sealIDs, err := s.index.SealsByHeight(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not get seals for height %d: %w", height, err)
 	}
 
-	seals := make([]*entities.BlockSeal, 0, len(ss))
-	for _, sID := range ss {
-		seal, err := s.index.Seal(sID)
+	seals := make([]*entities.BlockSeal, 0, len(sealIDs))
+	for _, sealID := range sealIDs {
+		seal, err := s.index.Seal(sealID)
 		if err != nil {
-			return nil, fmt.Errorf("could not get seal from ID %x: %w", sID, err)
+			return nil, fmt.Errorf("could not get seal from ID %x: %w", sealID, err)
 		}
 
 		// See https://github.com/onflow/flow-go/blob/v0.17.4/engine/common/rpc/convert/convert.go#L180-L188
-		blockSeal := entities.BlockSeal{
+		entity := entities.BlockSeal{
 			BlockId:                    seal.BlockID[:],
 			ExecutionReceiptId:         seal.ResultID[:],
 			ExecutionReceiptSignatures: [][]byte{}, // filling seals signature with zero
 		}
-		seals = append(seals, &blockSeal)
+		seals = append(seals, &entity)
 	}
 
-	cc, err := s.index.CollectionsByHeight(height)
+	collIDs, err := s.index.CollectionsByHeight(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not get collections for height %d: %w", height, err)
 	}
 
-	collections := make([]*entities.CollectionGuarantee, 0, len(cc))
-	for _, cID := range cc {
-		g, err := s.index.Guarantee(cID)
+	collections := make([]*entities.CollectionGuarantee, 0, len(collIDs))
+	for _, collID := range collIDs {
+		guarantee, err := s.index.Guarantee(collID)
 		if err != nil {
-			return nil, fmt.Errorf("could not get collection from ID %x: %w", cID, err)
+			return nil, fmt.Errorf("could not get collection from ID %x: %w", collID, err)
 		}
 
-		cg := entities.CollectionGuarantee{
-			CollectionId: cID[:],
-			Signatures:   [][]byte{g.Signature},
+		entity := entities.CollectionGuarantee{
+			CollectionId: collID[:],
+			Signatures:   [][]byte{guarantee.Signature},
 		}
-		collections = append(collections, &cg)
+		collections = append(collections, &entity)
 	}
 
 	block := entities.Block{
@@ -365,9 +365,9 @@ func (s *Server) ExecuteScriptAtLatestBlock(ctx context.Context, in *access.Exec
 	}
 
 	req := &access.ExecuteScriptAtBlockHeightRequest{
-		BlockHeight:          height,
-		Script:               in.Script,
-		Arguments:            in.Arguments,
+		BlockHeight: height,
+		Script:      in.Script,
+		Arguments:   in.Arguments,
 	}
 
 	return s.ExecuteScriptAtBlockHeight(ctx, req)
@@ -381,9 +381,9 @@ func (s *Server) ExecuteScriptAtBlockID(ctx context.Context, in *access.ExecuteS
 	}
 
 	req := &access.ExecuteScriptAtBlockHeightRequest{
-		BlockHeight:          height,
-		Script:               in.Script,
-		Arguments:            in.Arguments,
+		BlockHeight: height,
+		Script:      in.Script,
+		Arguments:   in.Arguments,
 	}
 
 	return s.ExecuteScriptAtBlockHeight(ctx, req)

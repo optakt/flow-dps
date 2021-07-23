@@ -145,10 +145,10 @@ func (i *Index) Values(height uint64, paths []ledger.Path) ([]ledger.Value, erro
 }
 
 // Collection returns the collection with the given ID.
-func (i *Index) Collection(collectionID flow.Identifier) (*flow.LightCollection, error) {
+func (i *Index) Collection(collID flow.Identifier) (*flow.LightCollection, error) {
 
 	req := GetCollectionRequest{
-		CollectionID: collectionID[:],
+		CollectionID: collID[:],
 	}
 	res, err := i.client.GetCollection(context.Background(), &req)
 	if err != nil {
@@ -175,19 +175,19 @@ func (i *Index) CollectionsByHeight(height uint64) ([]flow.Identifier, error) {
 		return nil, fmt.Errorf("could not get transactions: %w", err)
 	}
 
-	cIDs := make([]flow.Identifier, 0, len(res.CollectionIDs))
-	for _, cID := range res.CollectionIDs {
-		cIDs = append(cIDs, flow.HashToID(cID))
+	collIDs := make([]flow.Identifier, 0, len(res.CollectionIDs))
+	for _, collID := range res.CollectionIDs {
+		collIDs = append(collIDs, flow.HashToID(collID))
 	}
 
-	return cIDs, nil
+	return collIDs, nil
 }
 
 // Guarantee returns the collection guarantee for the given collection ID.
-func (i *Index) Guarantee(collectionID flow.Identifier) (*flow.CollectionGuarantee, error) {
+func (i *Index) Guarantee(collID flow.Identifier) (*flow.CollectionGuarantee, error) {
 
 	req := GetGuaranteeRequest{
-		CollectionID: collectionID[:],
+		CollectionID: collID[:],
 	}
 	res, err := i.client.GetGuarantee(context.Background(), &req)
 	if err != nil {

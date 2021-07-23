@@ -29,9 +29,9 @@ type Reader struct {
 	HeaderFunc               func(height uint64) (*flow.Header, error)
 	EventsFunc               func(height uint64, types ...flow.EventType) ([]flow.Event, error)
 	ValuesFunc               func(height uint64, paths []ledger.Path) ([]ledger.Value, error)
-	CollectionFunc           func(cID flow.Identifier) (*flow.LightCollection, error)
+	CollectionFunc           func(collID flow.Identifier) (*flow.LightCollection, error)
 	CollectionsByHeightFunc  func(height uint64) ([]flow.Identifier, error)
-	GuaranteeFunc            func(cID flow.Identifier) (*flow.CollectionGuarantee, error)
+	GuaranteeFunc            func(collID flow.Identifier) (*flow.CollectionGuarantee, error)
 	TransactionFunc          func(txID flow.Identifier) (*flow.TransactionBody, error)
 	HeightForTransactionFunc func(txID flow.Identifier) (uint64, error)
 	TransactionsByHeightFunc func(height uint64) ([]flow.Identifier, error)
@@ -65,13 +65,13 @@ func BaselineReader(t *testing.T) *Reader {
 		ValuesFunc: func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 			return GenericLedgerValues(6), nil
 		},
-		CollectionFunc: func(cID flow.Identifier) (*flow.LightCollection, error) {
+		CollectionFunc: func(collID flow.Identifier) (*flow.LightCollection, error) {
 			return GenericCollection(0), nil
 		},
 		CollectionsByHeightFunc: func(height uint64) ([]flow.Identifier, error) {
 			return GenericIdentifiers(5), nil
 		},
-		GuaranteeFunc: func(cID flow.Identifier) (*flow.CollectionGuarantee, error) {
+		GuaranteeFunc: func(collID flow.Identifier) (*flow.CollectionGuarantee, error) {
 			return GenericGuarantee(0), nil
 		},
 		TransactionFunc: func(txID flow.Identifier) (*flow.TransactionBody, error) {
@@ -125,16 +125,16 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 	return r.ValuesFunc(height, paths)
 }
 
-func (r *Reader) Collection(cID flow.Identifier) (*flow.LightCollection, error) {
-	return r.CollectionFunc(cID)
+func (r *Reader) Collection(collID flow.Identifier) (*flow.LightCollection, error) {
+	return r.CollectionFunc(collID)
 }
 
 func (r *Reader) CollectionsByHeight(height uint64) ([]flow.Identifier, error) {
 	return r.CollectionsByHeightFunc(height)
 }
 
-func (r *Reader) Guarantee(cID flow.Identifier) (*flow.CollectionGuarantee, error) {
-	return r.GuaranteeFunc(cID)
+func (r *Reader) Guarantee(collID flow.Identifier) (*flow.CollectionGuarantee, error) {
+	return r.GuaranteeFunc(collID)
 }
 
 func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error) {

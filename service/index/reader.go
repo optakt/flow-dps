@@ -115,29 +115,23 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 }
 
 // Collection returns the collection with the given ID.
-func (r *Reader) Collection(cID flow.Identifier) (*flow.LightCollection, error) {
+func (r *Reader) Collection(collID flow.Identifier) (*flow.LightCollection, error) {
 	var collection flow.LightCollection
-	err := r.db.View(r.storage.RetrieveCollection(cID, &collection))
+	err := r.db.View(r.storage.RetrieveCollection(collID, &collection))
 	return &collection, err
 }
 
 // CollectionsByHeight returns the collection IDs at the given height.
 func (r *Reader) CollectionsByHeight(height uint64) ([]flow.Identifier, error) {
-	var cIDs []flow.Identifier
-	err := r.db.View(func(tx *badger.Txn) error {
-		err := r.storage.LookupCollectionsForHeight(height, &cIDs)(tx)
-		if err != nil {
-			return fmt.Errorf("could not look up collections: %w", err)
-		}
-		return nil
-	})
-	return cIDs, err
+	var collIDs []flow.Identifier
+	err := r.db.View(r.storage.LookupCollectionsForHeight(height, &collIDs))
+	return collIDs, err
 }
 
 // Guarantee returns the guarantee with the given collection ID.
-func (r *Reader) Guarantee(cID flow.Identifier) (*flow.CollectionGuarantee, error) {
+func (r *Reader) Guarantee(collID flow.Identifier) (*flow.CollectionGuarantee, error) {
 	var collection flow.CollectionGuarantee
-	err := r.db.View(r.storage.RetrieveGuarantee(cID, &collection))
+	err := r.db.View(r.storage.RetrieveGuarantee(collID, &collection))
 	return &collection, err
 }
 
@@ -157,26 +151,14 @@ func (r *Reader) HeightForTransaction(txID flow.Identifier) (uint64, error) {
 // TransactionsByHeight returns the transaction IDs within the block with the given ID.
 func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	var txIDs []flow.Identifier
-	err := r.db.View(func(tx *badger.Txn) error {
-		err := r.storage.LookupTransactionsForHeight(height, &txIDs)(tx)
-		if err != nil {
-			return fmt.Errorf("could not look up transactions: %w", err)
-		}
-		return nil
-	})
+	err := r.db.View(r.storage.LookupTransactionsForHeight(height, &txIDs))
 	return txIDs, err
 }
 
 // Result returns the transaction result for the given transaction ID.
 func (r *Reader) Result(txID flow.Identifier) (*flow.TransactionResult, error) {
 	var results *flow.TransactionResult
-	err := r.db.View(func(tx *badger.Txn) error {
-		err := r.storage.RetrieveResult(txID, results)(tx)
-		if err != nil {
-			return fmt.Errorf("could not look up transaction results: %w", err)
-		}
-		return nil
-	})
+	err := r.db.View(r.storage.RetrieveResult(txID, results))
 	return results, err
 }
 
@@ -210,12 +192,6 @@ func (r *Reader) Seal(sealID flow.Identifier) (*flow.Seal, error) {
 // SealsByHeight returns all of the seals that were part of the finalized block at the given height.
 func (r *Reader) SealsByHeight(height uint64) ([]flow.Identifier, error) {
 	var sealIDs []flow.Identifier
-	err := r.db.View(func(tx *badger.Txn) error {
-		err := r.storage.LookupSealsForHeight(height, &sealIDs)(tx)
-		if err != nil {
-			return fmt.Errorf("could not look up seals: %w", err)
-		}
-		return nil
-	})
+	err := r.db.View(r.storage.LookupSealsForHeight(height, &sealIDs))
 	return sealIDs, err
 }

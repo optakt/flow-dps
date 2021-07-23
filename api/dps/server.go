@@ -204,20 +204,19 @@ func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*G
 // ListCollectionsForHeight implements the `ListCollectionsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListCollectionsForHeight(_ context.Context, req *ListCollectionsForHeightRequest) (*ListCollectionsForHeightResponse, error) {
-
-	cIDs, err := s.index.CollectionsByHeight(req.Height)
+	collIDs, err := s.index.CollectionsByHeight(req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("could not list collections by height: %w", err)
 	}
 
-	collectionIDs := make([][]byte, 0, len(cIDs))
-	for _, cID := range cIDs {
-		collectionIDs = append(collectionIDs, cID[:])
+	rawIDs := make([][]byte, 0, len(collIDs))
+	for _, collID := range collIDs {
+		rawIDs = append(rawIDs, collID[:])
 	}
 
 	res := ListCollectionsForHeightResponse{
 		Height:        req.Height,
-		CollectionIDs: collectionIDs,
+		CollectionIDs: rawIDs,
 	}
 
 	return &res, nil

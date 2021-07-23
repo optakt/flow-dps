@@ -435,8 +435,8 @@ func TestIndex_ListCollectionsForHeight(t *testing.T) {
 
 		testCollectionIDs := mocks.GenericIdentifiers(4)
 		testCollectionBytes := make([][]byte, 0, len(testCollectionIDs))
-		for _, cID := range testCollectionIDs {
-			testCollectionBytes = append(testCollectionBytes, mocks.ByteSlice(cID))
+		for _, collID := range testCollectionIDs {
+			testCollectionBytes = append(testCollectionBytes, mocks.ByteSlice(collID))
 		}
 
 		index := Index{

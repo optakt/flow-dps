@@ -693,8 +693,8 @@ func TestServer_GetCollectionByID(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
-		index.CollectionFunc = func(cID flow.Identifier) (*flow.LightCollection, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), cID)
+		index.CollectionFunc = func(collID flow.Identifier) (*flow.LightCollection, error) {
+			assert.Equal(t, mocks.GenericIdentifier(0), collID)
 
 			return mocks.GenericCollection(0), nil
 		}
@@ -717,7 +717,7 @@ func TestServer_GetCollectionByID(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
-		index.CollectionFunc = func(cID flow.Identifier) (*flow.LightCollection, error) {
+		index.CollectionFunc = func(collID flow.Identifier) (*flow.LightCollection, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1017,9 +1017,9 @@ func TestServer_ExecuteScriptAtBlockHeight(t *testing.T) {
 		s.invoker = invoker
 
 		req := &access.ExecuteScriptAtBlockHeightRequest{
-			BlockHeight:          mocks.GenericHeight,
-			Script:               mocks.GenericBytes,
-			Arguments:            [][]byte{cadenceValueBytes},
+			BlockHeight: mocks.GenericHeight,
+			Script:      mocks.GenericBytes,
+			Arguments:   [][]byte{cadenceValueBytes},
 		}
 		resp, err := s.ExecuteScriptAtBlockHeight(context.Background(), req)
 
@@ -1040,9 +1040,9 @@ func TestServer_ExecuteScriptAtBlockHeight(t *testing.T) {
 		s.invoker = invoker
 
 		req := &access.ExecuteScriptAtBlockHeightRequest{
-			BlockHeight:          mocks.GenericHeight,
-			Script:               mocks.GenericBytes,
-			Arguments:            [][]byte{cadenceValueBytes},
+			BlockHeight: mocks.GenericHeight,
+			Script:      mocks.GenericBytes,
+			Arguments:   [][]byte{cadenceValueBytes},
 		}
 		_, err = s.ExecuteScriptAtBlockHeight(context.Background(), req)
 
@@ -1082,9 +1082,9 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		s.invoker = invoker
 
 		req := &access.ExecuteScriptAtBlockIDRequest{
-			BlockId:          mocks.ByteSlice(mocks.GenericIdentifier(0)),
-			Script:               mocks.GenericBytes,
-			Arguments:            [][]byte{cadenceValueBytes},
+			BlockId:   mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			Script:    mocks.GenericBytes,
+			Arguments: [][]byte{cadenceValueBytes},
 		}
 		resp, err := s.ExecuteScriptAtBlockID(context.Background(), req)
 
@@ -1105,9 +1105,9 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		s.index = index
 
 		req := &access.ExecuteScriptAtBlockIDRequest{
-			BlockId:          mocks.ByteSlice(mocks.GenericIdentifier(0)),
-			Script:               mocks.GenericBytes,
-			Arguments:            [][]byte{cadenceValueBytes},
+			BlockId:   mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			Script:    mocks.GenericBytes,
+			Arguments: [][]byte{cadenceValueBytes},
 		}
 		_, err = s.ExecuteScriptAtBlockID(context.Background(), req)
 
@@ -1126,9 +1126,9 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		s.invoker = invoker
 
 		req := &access.ExecuteScriptAtBlockIDRequest{
-			BlockId:          mocks.ByteSlice(mocks.GenericIdentifier(0)),
-			Script:               mocks.GenericBytes,
-			Arguments:            [][]byte{cadenceValueBytes},
+			BlockId:   mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			Script:    mocks.GenericBytes,
+			Arguments: [][]byte{cadenceValueBytes},
 		}
 		_, err = s.ExecuteScriptAtBlockID(context.Background(), req)
 
@@ -1160,8 +1160,8 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		s.invoker = invoker
 
 		req := &access.ExecuteScriptAtLatestBlockRequest{
-			Script:               mocks.GenericBytes,
-			Arguments:            [][]byte{cadenceValueBytes},
+			Script:    mocks.GenericBytes,
+			Arguments: [][]byte{cadenceValueBytes},
 		}
 		resp, err := s.ExecuteScriptAtLatestBlock(context.Background(), req)
 
@@ -1182,8 +1182,8 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		s.index = index
 
 		req := &access.ExecuteScriptAtLatestBlockRequest{
-			Script:               mocks.GenericBytes,
-			Arguments:            [][]byte{cadenceValueBytes},
+			Script:    mocks.GenericBytes,
+			Arguments: [][]byte{cadenceValueBytes},
 		}
 		_, err = s.ExecuteScriptAtLatestBlock(context.Background(), req)
 
@@ -1202,8 +1202,8 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		s.invoker = invoker
 
 		req := &access.ExecuteScriptAtLatestBlockRequest{
-			Script:               mocks.GenericBytes,
-			Arguments:            [][]byte{cadenceValueBytes},
+			Script:    mocks.GenericBytes,
+			Arguments: [][]byte{cadenceValueBytes},
 		}
 		_, err = s.ExecuteScriptAtLatestBlock(context.Background(), req)
 
