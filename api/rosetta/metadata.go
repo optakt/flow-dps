@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
@@ -57,12 +58,23 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not retrieve last block info: %w", err))
 	}
 
+	proposer := flow.HexToAddress(req.Options.AccountID.Address)
+	sequenceNr, err := getAccountSequenceNumber(proposer)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not retrieve account sequence number: %w", err))
+	}
+
 	res := MetadataResponse{
 		Metadata: object.Metadata{
 			ReferenceBlockID: current,
-			SequenceNumber:   0, // TODO: get account key sequence number
+			SequenceNumber:   sequenceNr,
 		},
 	}
 
 	return ctx.JSON(http.StatusOK, res)
+}
+
+// TODO: implement getAccountSequenceNr()
+func getAccountSequenceNumber(address flow.Address) (uint64, error) {
+	return 0, fmt.Errorf("TBD: not implemented")
 }

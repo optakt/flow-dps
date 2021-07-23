@@ -18,7 +18,14 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-// TODO: comment
+// Options object is used in the Rosetta Construction API requests.
+// This object is returned in the `/construction/preprocess` response,
+// and is forwarded to the `/construction/metadata` endpoint unmodified.
+//
+// Specifically for Flow DPS, this object contains the account identifier
+// that is the proposer of the transaction (by default, this is the sender).
+// Account identifier is required so that we can return the sequence number
+// of the proposer's key, required for the Flow transaction.
 type Options struct {
 	AccountID identifier.Account `json:"account_identifier"`
 }

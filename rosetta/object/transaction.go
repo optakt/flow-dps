@@ -30,7 +30,7 @@ type Transaction struct {
 	Operations []Operation            `json:"operations"`
 }
 
-// TODO: check - this is essentially a duplicate of flow.Transaction, except it has json tags
+// TransactionPayload is essentially a duplicate of flow.Transaction, only with proper JSON tags.
 type TransactionPayload struct {
 	Script             []byte                      `json:"script"`
 	Arguments          [][]byte                    `json:"arguments"`

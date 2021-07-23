@@ -31,11 +31,12 @@ type Intent struct {
 	From     flow.Address
 	To       flow.Address
 	Amount   uint64
-	Payer    flow.Address // TODO: WIP - for now, we'll treat the sender as the payer and the proposer to keep things simple
+	Payer    flow.Address
 	Proposer flow.Address
 
 	ReferenceBlock            flow.Identifier
 	ProposerKeySequenceNumber uint64
+	GasLimit                  uint64
 }
 
 // CreateTransactionIntent creates a transaction Intent from two operations given as input.
@@ -44,60 +45,67 @@ type Intent struct {
 // account IDs, amounts and type of operation.
 func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent, error) {
 
-	// TODO: think about naming again - deposit/withdrawal vs sender/receiver
-	sender := operations[0]
-	receiver := operations[1]
+	send := operations[0]
+	receive := operations[1]
 
-	// The amount is the same, but for the sender the amount will have the '-' prefix.
-	// If it doesn't the sender and receiver it means that the operations should be switched.
-	if !strings.HasPrefix(sender.Amount.Value, "-") {
-		receiver = operations[0]
-		sender = operations[1]
+	// The amount is the same, but for the 'send' operation the amount will have the '-' prefix.
+	// If it doesn't it means that the operations should be switched.
+	if !strings.HasPrefix(send.Amount.Value, "-") {
+		receive = operations[0]
+		send = operations[1]
 	}
 
 	// Validate the sender and the receiver account IDs.
-	err := p.validate.Account(sender.AccountID)
+	err := p.validate.Account(send.AccountID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sender account: %w", err)
 	}
-	err = p.validate.Account(receiver.AccountID)
+	err = p.validate.Account(receive.AccountID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid receiver account: %w", err)
 	}
 
 	// Validate the currencies specified for deposit and withdrawal.
-	// TODO: check to see if the currencies are actually identical.. At the moment
-	// we only support one currency, but in the future we may have multiple.
-	sender.Amount.Currency, err = p.validate.Currency(sender.Amount.Currency)
+	send.Amount.Currency, err = p.validate.Currency(send.Amount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sender currency: %w", err)
 	}
-	receiver.Amount.Currency, err = p.validate.Currency(receiver.Amount.Currency)
+	receive.Amount.Currency, err = p.validate.Currency(receive.Amount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("invalid receiver currency: %w", err)
 	}
 
+	// Make sure that both the send and receive operations use the same currency.
+	// This is perhaps unnecessary at the moment since we only have a single currency.
+	if send.Amount.Currency != receive.Amount.Currency {
+		return nil, failure.InvalidIntent{
+			Sender:      send.AccountID.Address,
+			Receiver:    receive.AccountID.Address,
+			Description: failure.NewDescription("send and receive currencies do not match"),
+		}
+	}
+
 	// Parse value specified by the sender, after removing the negative sign prefix.
-	trimmed := strings.TrimPrefix(sender.Amount.Value, "-")
+	trimmed := strings.TrimPrefix(send.Amount.Value, "-")
 	sv, err := strconv.ParseUint(trimmed, 10, 64)
 	if err != nil {
 		return nil, failure.InvalidIntent{
-			Sender:   sender.AccountID.Address,
-			Receiver: receiver.AccountID.Address,
+			Sender:   send.AccountID.Address,
+			Receiver: receive.AccountID.Address,
 			Description: failure.NewDescription("could not parse withdrawal amount",
-				failure.WithString("withdrawal_amount", sender.Amount.Value),
+				failure.WithString("withdrawal_amount", send.Amount.Value),
 				failure.WithErr(err),
 			),
 		}
 	}
 	// Parse value specified by the receiver.
-	rv, err := strconv.ParseUint(receiver.Amount.Value, 10, 64)
+	rv, err := strconv.ParseUint(receive.Amount.Value, 10, 64)
 	if err != nil {
 		return nil, failure.InvalidIntent{
-			Sender:   sender.AccountID.Address,
-			Receiver: receiver.AccountID.Address,
+			Sender:   send.AccountID.Address,
+			Receiver: receive.AccountID.Address,
 			Description: failure.NewDescription("could not parse deposit amount",
-				failure.WithString("deposit_amount", receiver.Amount.Value),
+				failure.WithString("deposit_amount", receive.Amount.Value),
 				failure.WithErr(err),
 			),
 		}
@@ -106,34 +114,34 @@ func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent
 	// Check if the specified amounts match.
 	if sv != rv {
 		return nil, failure.InvalidIntent{
-			Sender:   sender.AccountID.Address,
-			Receiver: receiver.AccountID.Address,
+			Sender:   send.AccountID.Address,
+			Receiver: receive.AccountID.Address,
 			Description: failure.NewDescription("deposit and withdrawal amounts do not match",
-				failure.WithString("deposit_amount", receiver.Amount.Value),
-				failure.WithString("withdrawal_amount", sender.Amount.Value),
+				failure.WithString("deposit_amount", receive.Amount.Value),
+				failure.WithString("withdrawal_amount", send.Amount.Value),
 			),
 		}
 	}
 
-	if strings.ToUpper(sender.Type) != dps.OperationTransfer ||
-		strings.ToUpper(receiver.Type) != dps.OperationTransfer {
+	if strings.ToUpper(send.Type) != dps.OperationTransfer ||
+		strings.ToUpper(receive.Type) != dps.OperationTransfer {
 
 		return nil, failure.InvalidIntent{
-			Sender:   sender.AccountID.Address,
-			Receiver: receiver.AccountID.Address,
+			Sender:   send.AccountID.Address,
+			Receiver: receive.AccountID.Address,
 			Description: failure.NewDescription("only transfer operations are supported",
-				failure.WithString("deposit_type", receiver.Type),
-				failure.WithString("withdrawal_type", sender.Type),
+				failure.WithString("deposit_type", receive.Type),
+				failure.WithString("withdrawal_type", send.Type),
 			),
 		}
 	}
 
 	intent := Intent{
-		From:     flow.HexToAddress(sender.AccountID.Address),
-		To:       flow.HexToAddress(receiver.AccountID.Address),
+		From:     flow.HexToAddress(send.AccountID.Address),
+		To:       flow.HexToAddress(receive.AccountID.Address),
 		Amount:   sv,
-		Payer:    flow.HexToAddress(sender.AccountID.Address),
-		Proposer: flow.HexToAddress(sender.AccountID.Address),
+		Payer:    flow.HexToAddress(send.AccountID.Address),
+		Proposer: flow.HexToAddress(send.AccountID.Address),
 	}
 
 	return &intent, nil

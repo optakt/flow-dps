@@ -23,7 +23,7 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-// TODO: output type
+// CreateTransaction translates the transaction intent to the Flow Transaction struct.
 func (p *Parser) CreateTransaction(intent *Intent) (*flow.Transaction, error) {
 
 	script, err := p.generate.TransferTokens(dps.FlowSymbol)
@@ -31,17 +31,17 @@ func (p *Parser) CreateTransaction(intent *Intent) (*flow.Transaction, error) {
 		return nil, fmt.Errorf("could not generate transfer script: %w", err)
 	}
 
-	// TODO: gas limit
-
 	tx := flow.NewTransaction().
 		SetScript(script).
 		SetReferenceBlockID(flow.BytesToID(intent.ReferenceBlock[:])).
 		SetPayer(flow.Address(intent.Payer)).
 		SetProposalKey(flow.Address(intent.Proposer), 0, intent.ProposerKeySequenceNumber).
 		AddAuthorizer(flow.Address(intent.From)).
-		SetGasLimit(100)
+		SetGasLimit(intent.GasLimit)
 
-	amount, err := cadence.NewUFix64("")
+	// TODO: check - this feels weird, but the other way of doing it
+	// involves us already knowing the integer part and fraction.
+	amount, err := cadence.NewUFix64(fmt.Sprint(intent.Amount))
 	if err != nil {
 		return nil, fmt.Errorf("could not convert amount: %w", err)
 	}

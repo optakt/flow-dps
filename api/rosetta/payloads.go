@@ -34,7 +34,7 @@ type PayloadsRequest struct {
 
 type PayloadsResponse struct {
 	Transaction string                  `json:"unsigned_transaction"`
-	Payloads    []object.SigningPayload `json:"payloads"` // TODO: temp, create a proper struct
+	Payloads    []object.SigningPayload `json:"payloads"`
 }
 
 func (c *Construction) Payloads(ctx echo.Context) error {
@@ -80,7 +80,6 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 
 	tx, err := c.parser.CreateTransaction(intent)
 	if err != nil {
-		// TODO: fix
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not create transaction: %w", err))
 	}
 
@@ -95,7 +94,8 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		EnvelopeSignatures: tx.EnvelopeSignatures,
 	}
 
-	// TODO: check - we could use tx.Encode() and DecodeTransaction() - this will use Ethereums rlp encoding.
+	// NOTE: we could use tx.Encode() and DecodeTransaction() instead of JSON marshalling.
+	// Those methods would use Ethereums rlp encoding.
 	enc, err := json.Marshal(rosettaTx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not encode transaction: %w", err))

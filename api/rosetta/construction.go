@@ -17,6 +17,10 @@ package rosetta
 // TODO: consider separating Data and Construction API
 // TODO: when the construction API crystalizes, fix the error returns
 // TODO: as a WIP thing - treat the sender as the proposer and the payer. Consider allowing more granular control.
+// TODO: set gas limit for the transaction.
+// TODO: get account sequence number for the metadata endpoint
+// TODO: check - should we have the object.TransactionPayload struct? Only difference from the ordinary flow.Transaction
+// are the JSON tags.
 
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html
@@ -28,8 +32,12 @@ type Construction struct {
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
-// TODO: check - we only need the retriever for the single thing - get the reference block ID
 func NewConstruction(config Configuration, parser Parser, retriever Retriever) *Construction {
+
+	// The retriever has a number of capabilities, but in the context of the
+	// Rosetta Construction API, it is only used to retrieve the latest block ID.
+	// This is needed since the transactions require a reference block ID, so that
+	// their validity or expiration can be determined.
 
 	c := Construction{
 		config:    config,
