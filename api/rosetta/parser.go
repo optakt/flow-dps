@@ -17,11 +17,13 @@ package rosetta
 import (
 	"github.com/onflow/flow-go-sdk"
 
+	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 	"github.com/optakt/flow-dps/rosetta/transactions"
 )
 
 type Parser interface {
-	CreateTransactionIntent(operations []object.Operation) (*transactions.Intent, error)
-	CreateTransaction(intent *transactions.Intent) (*flow.Transaction, error)
+	CreateTransactionIntent(operations []object.Operation) (intent *transactions.Intent, err error)
+	CreateTransaction(intent *transactions.Intent) (tx *flow.Transaction, err error)
+	ParseTransaction(tx flow.Transaction) (operations []object.Operation, signers []identifier.Account, err error)
 }
