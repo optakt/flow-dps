@@ -20,7 +20,7 @@ package rosetta
 // TODO: set gas limit for the transaction.
 // TODO: get account sequence number for the metadata endpoint
 // TODO: check - should we have the object.TransactionPayload struct? Only difference from the ordinary flow.Transaction
-// are the JSON tags.
+// are the JSON tags. We could also only use the SDK's encode and decode functions..
 
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html
@@ -28,21 +28,25 @@ type Construction struct {
 	config    Configuration
 	parser    Parser
 	retriever Retriever
+	client    Client
 }
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
-func NewConstruction(config Configuration, parser Parser, retriever Retriever) *Construction {
+func NewConstruction(config Configuration, parser Parser, retriever Retriever, client Client) *Construction {
 
 	// The retriever has a number of capabilities, but in the context of the
 	// Rosetta Construction API, it is only used to retrieve the latest block ID.
 	// This is needed since the transactions require a reference block ID, so that
 	// their validity or expiration can be determined.
 
+	// Client is used to submit the constructed transaction to the Flow network.
+
 	c := Construction{
 		config:    config,
 		parser:    parser,
 		retriever: retriever,
+		client:    client,
 	}
 
 	return &c

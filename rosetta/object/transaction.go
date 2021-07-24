@@ -42,3 +42,38 @@ type TransactionPayload struct {
 	PayloadSignatures  []flow.TransactionSignature `json:"payload_signatures"`
 	EnvelopeSignatures []flow.TransactionSignature `json:"envelope_signatures"`
 }
+
+// FlowTransaction converts the TransactionPayload to the standard Flow SDK Transaction structure.
+func (t TransactionPayload) FlowTransaction() flow.Transaction {
+
+	tx := flow.Transaction{
+		Script:             t.Script,
+		Arguments:          t.Arguments,
+		ReferenceBlockID:   t.ReferenceBlockID,
+		GasLimit:           t.GasLimit,
+		ProposalKey:        t.ProposalKey,
+		Payer:              t.Payer,
+		Authorizers:        t.Authorizers,
+		PayloadSignatures:  t.PayloadSignatures,
+		EnvelopeSignatures: t.EnvelopeSignatures,
+	}
+
+	return tx
+}
+
+// CreateTransactionPayload converts the standard Flow SDK Transaction structure to the TransactionPayload.
+func CreateTransactionPayload(tx flow.Transaction) TransactionPayload {
+
+	rosettaTx := TransactionPayload{
+		Script:             tx.Script,
+		Arguments:          tx.Arguments,
+		ReferenceBlockID:   tx.ReferenceBlockID,
+		GasLimit:           tx.GasLimit,
+		ProposalKey:        tx.ProposalKey,
+		Payer:              tx.Payer,
+		Authorizers:        tx.Authorizers,
+		EnvelopeSignatures: tx.EnvelopeSignatures,
+	}
+
+	return rosettaTx
+}

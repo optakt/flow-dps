@@ -28,8 +28,6 @@ import (
 type PreprocessRequest struct {
 	NetworkID  identifier.Network `json:"network_identifier"`
 	Operations []object.Operation `json:"operations"`
-
-	// TODO: check if we need max fee and suggested fee multiplier
 }
 
 type PreprocessResponse struct {

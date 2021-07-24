@@ -18,6 +18,13 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+type Signature struct {
+	SigningPayload SigningPayload `json:"signing_payload"`
+	SignatureType  string         `json:"signature_type"`
+	HexBytes       string         `json:"hex_bytes"`
+	// TODO: check - public key?
+}
+
 // TODO: check signature type - we support two types, should we use this, how
 // does it work with multiple signatures, should it be left empty?
 type SigningPayload struct {

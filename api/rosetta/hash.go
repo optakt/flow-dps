@@ -20,29 +20,22 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-type ParseRequest struct {
-	NetworkID   identifier.Network `json:"network_identifier"`
-	Signed      bool               `json:"signed"`
-	Transaction string             `json:"transaction"`
+type HashRequest struct {
+	NetworkID         identifier.Network `json:"network_identifier"`
+	SignedTransaction string             `json:"signed_transaction"`
 }
 
-type ParseResponse struct {
-	Operations []object.Operation   `json:"operations"`
-	SignerIDs  []identifier.Account `json:"account_identifier_signers"`
-	// TODO: add metadata here
+type HashResponse struct {
+	TransactionID identifier.Transaction `json:"transaction_identifier"`
 }
 
-// TODO: literally almost each request specifies the network ID.
-// If it really is each one, create a middleware for it
+func (c *Construction) Hash(ctx echo.Context) error {
 
-func (c *Construction) Parse(ctx echo.Context) error {
-
-	var req ParseRequest
+	var req HashRequest
 	err := ctx.Bind(&req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
@@ -55,26 +48,22 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
-	if req.Transaction == "" {
+	if req.SignedTransaction == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("transaction text empty"))
 	}
 
 	var txPayload object.TransactionPayload
-	err = json.Unmarshal([]byte(req.Transaction), &txPayload)
+	err = json.Unmarshal([]byte(req.SignedTransaction), &txPayload)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not decode transaction"))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not decode tx payload"))
 	}
 
 	tx := txPayload.FlowTransaction()
 
-	operations, signers, err := c.parser.ParseTransaction(tx)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not parse transaction: %w", err))
-	}
-
-	res := ParseResponse{
-		Operations: operations,
-		SignerIDs:  signers,
+	res := HashResponse{
+		TransactionID: identifier.Transaction{
+			Hash: tx.ID().Hex(),
+		},
 	}
 
 	return ctx.JSON(http.StatusOK, res)

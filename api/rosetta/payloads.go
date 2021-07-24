@@ -30,6 +30,7 @@ import (
 type PayloadsRequest struct {
 	NetworkID  identifier.Network `json:"network_identifier"`
 	Operations []object.Operation `json:"operations"`
+	Metadata   object.Metadata    `json:"metadata"`
 }
 
 type PayloadsResponse struct {

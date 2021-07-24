@@ -30,6 +30,7 @@ import (
 	"github.com/ziflex/lecho/v2"
 	"google.golang.org/grpc"
 
+	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go/model/flow"
 
 	api "github.com/optakt/flow-dps/api/dps"
@@ -62,7 +63,8 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAPI          string
+		flagDPSAPI       string
+		flagFlowAPI      string
 		flagCache        uint64
 		flagChain        string
 		flagLevel        string
@@ -70,7 +72,8 @@ func run() int {
 		flagTransactions uint
 	)
 
-	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
+	pflag.StringVarP(&flagDPSAPI, "dps-api", "a", "127.0.0.1:5005", "host URL for DPS GRPC API endpoint")
+	pflag.StringVarP(&flagFlowAPI, "flow-api", "f", "", "host URL for Flow Access API endpoint")
 	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
 	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowTestnet.String(), "chain ID for Flow network core contracts")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
@@ -97,10 +100,10 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the API client.
-	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
+	// Initialize the DPS API client.
+	conn, err := grpc.Dial(flagDPSAPI, grpc.WithInsecure())
 	if err != nil {
-		log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
+		log.Error().Str("api", flagDPSAPI).Err(err).Msg("could not dial DPS API host")
 		return failure
 	}
 	defer conn.Close()
@@ -111,6 +114,20 @@ func run() int {
 		log.Error().Err(err).Msg("could not initialize storage codec")
 		return failure
 	}
+
+	// Initialize the SDK client.
+
+	if flagFlowAPI == "" {
+		log.Error().Msg("Flow API endpoint is missing")
+		return failure
+	}
+
+	flowClient, err := client.New(flagFlowAPI, grpc.WithInsecure())
+	if err != nil {
+		log.Error().Str("api", flagFlowAPI).Err(err).Msg("could not dial Flow API host")
+		return failure
+	}
+	defer flowClient.Close()
 
 	// Rosetta API initialization.
 	client := api.NewAPIClient(conn)
@@ -136,7 +153,7 @@ func run() int {
 	dataCtrl := rosetta.NewData(config, retrieve)
 
 	parser := transactions.NewParser(validate, generate)
-	constructCtrl := rosetta.NewConstruction(config, parser, retrieve)
+	constructCtrl := rosetta.NewConstruction(config, parser, retrieve, flowClient)
 
 	server := echo.New()
 	server.HideBanner = true
@@ -154,9 +171,12 @@ func run() int {
 
 	// This group contains all of the Rosetta Construction API endpoints.
 	server.POST("/construction/preprocess", constructCtrl.Preprocess)
-	server.POST("/construction/payloads", constructCtrl.Payloads)
 	server.POST("/construction/metadata", constructCtrl.Metadata)
+	server.POST("/construction/payloads", constructCtrl.Payloads)
 	server.POST("/construction/parse", constructCtrl.Parse)
+	server.POST("/construction/combine", constructCtrl.Combine)
+	server.POST("/construction/hash", constructCtrl.Hash)
+	server.POST("/construction/submit", constructCtrl.Submit)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
