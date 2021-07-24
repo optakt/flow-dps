@@ -37,6 +37,7 @@ func (p *Parser) ParseTransaction(tx flow.Transaction) ([]object.Operation, []id
 	}
 
 	args := tx.Arguments
+	// TODO: convert to Rosetta format
 	amount, err := json.Decode(args[0])
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not parse transaction amount: %w", err)
@@ -68,7 +69,7 @@ func (p *Parser) ParseTransaction(tx flow.Transaction) ([]object.Operation, []id
 	// create the receive operation
 	ops[1] = object.Operation{
 		AccountID: identifier.Account{
-			Address: receiver.String(), // TODO: make sure the format is correct
+			Address: receiver.String(), // TODO: make sure the format is correct (hex)
 		},
 		Type: dps.OperationTransfer,
 		Amount: object.Amount{

@@ -16,11 +16,12 @@ package transactions
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/object"
@@ -30,7 +31,7 @@ import (
 type Intent struct {
 	From     flow.Address
 	To       flow.Address
-	Amount   uint64
+	Amount   cadence.UFix64
 	Payer    flow.Address
 	Proposer flow.Address
 
@@ -87,7 +88,7 @@ func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent
 
 	// Parse value specified by the sender, after removing the negative sign prefix.
 	trimmed := strings.TrimPrefix(send.Amount.Value, "-")
-	sv, err := strconv.ParseUint(trimmed, 10, 64)
+	sv, err := convert.ParseRosettaValue(trimmed)
 	if err != nil {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
@@ -99,7 +100,7 @@ func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent
 		}
 	}
 	// Parse value specified by the receiver.
-	rv, err := strconv.ParseUint(receive.Amount.Value, 10, 64)
+	rv, err := convert.ParseRosettaValue(receive.Amount.Value)
 	if err != nil {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,

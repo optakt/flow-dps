@@ -39,20 +39,12 @@ func (p *Parser) CreateTransaction(intent *Intent) (*flow.Transaction, error) {
 		AddAuthorizer(flow.Address(intent.From)).
 		SetGasLimit(intent.GasLimit)
 
-	// TODO: check - this feels weird, but the other way of doing it
-	// involves us already knowing the integer part and fraction.
-	amount, err := cadence.NewUFix64(fmt.Sprint(intent.Amount))
-	if err != nil {
-		return nil, fmt.Errorf("could not convert amount: %w", err)
-	}
-
-	receiver := cadence.NewAddress(flow.BytesToAddress(intent.To.Bytes()))
-
-	err = tx.AddArgument(amount)
+	err = tx.AddArgument(intent.Amount)
 	if err != nil {
 		return nil, fmt.Errorf("could not add amount argument: %w", err)
 	}
 
+	receiver := cadence.NewAddress(flow.BytesToAddress(intent.To.Bytes()))
 	err = tx.AddArgument(receiver)
 	if err != nil {
 		return nil, fmt.Errorf("could not add recipient argument: %w", err)
