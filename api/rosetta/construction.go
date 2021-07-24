@@ -26,9 +26,6 @@ package rosetta
 // and the need to convert the structures back and forth, I opted for removing it and always
 // using flow.Transaction, even if the resulting JSON reads like `{ "Script": "..." }` (uppercased field name).
 
-// TODO: create helpers for converting between the rosetta amount string (which assumes 8 decimals (dps.FlowDecimals) to
-// cadence.UFix64, and back. Currently the amounts moved around are not correct
-
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html
 type Construction struct {

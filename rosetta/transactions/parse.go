@@ -16,6 +16,7 @@ package transactions
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/onflow/cadence/encoding/json"
 
@@ -38,28 +39,41 @@ func (p *Parser) ParseTransaction(tx flow.Transaction) ([]object.Operation, []id
 	}
 
 	args := tx.Arguments
-	// TODO: convert to Rosetta format
-	amount, err := json.Decode(args[0])
+	if len(args) != 2 {
+		return nil, nil, fmt.Errorf("invalid arguments count: %v", len(args))
+	}
+
+	amountArg, err := json.Decode(args[0])
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not parse transaction amount: %w", err)
 	}
 
-	// TODO: make sure the amount is correct - should account for 8 decimals
-	sendAmount := "-" + amount.String()
+	amount := amountArg.String()
+	// Format the amount in the Rosetta format - remove the decimal point and strip
+	// leading zeroes.
+	amount = strings.Replace(amount, ".", "", 1)
+	amount = strings.TrimLeft(amount, "0")
 
-	receiver, err := json.Decode(args[1])
+	receiverArg, err := json.Decode(args[1])
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not parse transaction receiver: %w", err)
 	}
 
+	receiver := flow.HexToAddress(receiverArg.String())
+
 	// create the send operation
 	ops[0] = object.Operation{
-		AccountID: identifier.Account{
-			Address: tx.Authorizers[0].Hex(),
+		ID: identifier.Operation{
+			Index: 0,
 		},
-		Type: dps.OperationTransfer,
+		RelatedIDs: []identifier.Operation{{Index: 1}},
+		AccountID: identifier.Account{
+			Address: tx.Authorizers[0].String(),
+		},
+		Type:   dps.OperationTransfer,
+		Status: dps.StatusCompleted,
 		Amount: object.Amount{
-			Value: sendAmount,
+			Value: "-" + amount,
 			Currency: identifier.Currency{
 				Symbol:   dps.FlowSymbol,
 				Decimals: dps.FlowDecimals,
@@ -69,12 +83,17 @@ func (p *Parser) ParseTransaction(tx flow.Transaction) ([]object.Operation, []id
 
 	// create the receive operation
 	ops[1] = object.Operation{
-		AccountID: identifier.Account{
-			Address: receiver.String(), // TODO: make sure the format is correct (hex)
+		ID: identifier.Operation{
+			Index: 1,
 		},
-		Type: dps.OperationTransfer,
+		RelatedIDs: []identifier.Operation{{Index: 0}},
+		AccountID: identifier.Account{
+			Address: receiver.String(),
+		},
+		Type:   dps.OperationTransfer,
+		Status: dps.StatusCompleted,
 		Amount: object.Amount{
-			Value: amount.String(),
+			Value: amount,
 			Currency: identifier.Currency{
 				Symbol:   dps.FlowSymbol,
 				Decimals: dps.FlowDecimals,

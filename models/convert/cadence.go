@@ -20,7 +20,6 @@ import (
 	"math/big"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/onflow/cadence"
 
@@ -225,13 +224,4 @@ func ParseRosettaValue(value string) (cadence.UFix64, error) {
 	}
 
 	return val, nil
-}
-
-// CadenceToRosettaValue returns the Rosetta formatting of the given number.
-// Rosetta formatting for a number is similar to the Cadence format, except
-// it does not use the decimal point.
-func CadenceToRosettaValue(val cadence.UFix64) string {
-	str := val.String()
-	str = strings.Replace(str, ".", "", 1)
-	return str
 }
