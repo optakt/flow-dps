@@ -54,6 +54,12 @@ func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent
 	if !strings.HasPrefix(send.Amount.Value, "-") {
 		receive = operations[0]
 		send = operations[1]
+
+		// Now that we have switched operations, make sure that the other operation
+		// is in fact negative.
+		if !strings.HasPrefix(send.Amount.Value, "-") {
+			return nil, fmt.Errorf("invalid amounts - deposit operation missing")
+		}
 	}
 
 	// Validate the sender and the receiver account IDs.
