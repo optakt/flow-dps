@@ -35,11 +35,8 @@ type ParseRequest struct {
 type ParseResponse struct {
 	Operations []object.Operation   `json:"operations"`
 	SignerIDs  []identifier.Account `json:"account_identifier_signers"`
-	// TODO: add metadata here
+	Metadata   object.Metadata      `json:"metadata"`
 }
-
-// TODO: literally almost each request specifies the network ID.
-// If it really is each one, create a middleware for it
 
 func (c *Construction) Parse(ctx echo.Context) error {
 
@@ -71,9 +68,17 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not parse transaction: %w", err))
 	}
 
+	metadata := object.Metadata{
+		ReferenceBlockID: identifier.Block{
+			Hash: tx.ReferenceBlockID.Hex(),
+		},
+		SequenceNumber: tx.ProposalKey.SequenceNumber,
+	}
+
 	res := ParseResponse{
 		Operations: operations,
 		SignerIDs:  signers,
+		Metadata:   metadata,
 	}
 
 	return ctx.JSON(http.StatusOK, res)
