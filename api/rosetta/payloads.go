@@ -84,20 +84,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not create transaction: %w", err))
 	}
 
-	rosettaTx := object.TransactionPayload{
-		Script:             tx.Script,
-		Arguments:          tx.Arguments,
-		ReferenceBlockID:   tx.ReferenceBlockID,
-		GasLimit:           tx.GasLimit,
-		ProposalKey:        tx.ProposalKey,
-		Payer:              tx.Payer,
-		Authorizers:        tx.Authorizers,
-		EnvelopeSignatures: tx.EnvelopeSignatures,
-	}
-
-	// NOTE: we could use tx.Encode() and DecodeTransaction() instead of JSON marshalling.
-	// Those methods would use Ethereums rlp encoding.
-	enc, err := json.Marshal(rosettaTx)
+	enc, err := json.Marshal(tx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not encode transaction: %w", err))
 	}

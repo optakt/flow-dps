@@ -59,14 +59,13 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("signatures list is empty"))
 	}
 
-	var txPayload object.TransactionPayload
+	var txPayload flow.Transaction
 	err = json.Unmarshal([]byte(req.UnsignedTransaction), &txPayload)
 	if err != nil {
 		return fmt.Errorf("could not decode transaction: %w", err)
 	}
 
-	ftx := txPayload.FlowTransaction()
-	tx := &ftx
+	tx := &txPayload
 
 	sig := req.Signatures[0]
 	var sender flow.Address
@@ -84,9 +83,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		tx = tx.AddEnvelopeSignature(signer, 0, []byte(sig.HexBytes))
 	}
 
-	txPayload = object.CreateTransactionPayload(*tx)
-
-	encoded, err := json.Marshal(txPayload)
+	encoded, err := json.Marshal(tx)
 	if err != nil {
 		return fmt.Errorf("could not encode transaction: %w", err)
 	}

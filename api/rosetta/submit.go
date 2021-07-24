@@ -22,8 +22,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/onflow/flow-go-sdk"
+
 	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 type SubmitRequest struct {
@@ -54,13 +55,11 @@ func (c *Construction) Submit(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("transaction text empty"))
 	}
 
-	var txPayload object.TransactionPayload
-	err = json.Unmarshal([]byte(req.SignedTransaction), &txPayload)
+	var tx flow.Transaction
+	err = json.Unmarshal([]byte(req.SignedTransaction), &tx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not decode transaction: %w", err))
 	}
-
-	tx := txPayload.FlowTransaction()
 
 	err = c.client.SendTransaction(context.Background(), tx)
 	if err != nil {

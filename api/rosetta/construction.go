@@ -14,13 +14,17 @@
 
 package rosetta
 
-// TODO: consider separating Data and Construction API
+// TODO: We could consider moving Data and Construction APIs to separate packages.
 // TODO: when the construction API crystalizes, make all the error returns consistent
 // TODO: as a WIP thing - treat the sender as the proposer and the payer. Consider allowing more granular control.
 // TODO: set gas limit for the transaction.
 // TODO: get account sequence number for the metadata endpoint
-// TODO: check - should we have the object.TransactionPayload struct? Only difference from the ordinary flow.Transaction
-// are the JSON tags. We could also only use the SDK's encode and decode functions..
+//
+// TODO: check - We are serialiing/deserializing the transactions a few times. Originally
+// I created a TransactionPayload structure that is identical to flow.Transaction, except
+// it had JSON tags so the outputted JSON was nicer. However, since it led to overhead
+// and the need to convert the structures back and forth, I opted for removing it and always
+// using flow.Transaction, even if the resulting JSON reads like `{ "Script": "..." }` (uppercased field name).
 
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html

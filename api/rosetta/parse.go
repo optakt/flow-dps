@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
@@ -59,13 +60,11 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("transaction text empty"))
 	}
 
-	var txPayload object.TransactionPayload
-	err = json.Unmarshal([]byte(req.Transaction), &txPayload)
+	var tx flow.Transaction
+	err = json.Unmarshal([]byte(req.Transaction), &tx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not decode transaction"))
 	}
-
-	tx := txPayload.FlowTransaction()
 
 	operations, signers, err := c.parser.ParseTransaction(tx)
 	if err != nil {
