@@ -184,7 +184,7 @@ func unknownTransaction(fail failure.UnknownTransaction) Error {
 
 func invalidIntent(fail failure.InvalidIntent) Error {
 	return convertError(
-		configuration.ErrorInvalidTransactionSpecification,
+		configuration.ErrorInvalidTransactionIntent,
 		fail.Description,
 		withDetail("from", fail.Sender),
 		withDetail("to", fail.Receiver),
