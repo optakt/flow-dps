@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+
 	"github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -62,7 +63,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 	var txPayload flow.Transaction
 	err = json.Unmarshal([]byte(req.UnsignedTransaction), &txPayload)
 	if err != nil {
-		return fmt.Errorf("could not decode transaction: %w", err)
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not decode transaction: %w", err))
 	}
 
 	tx := &txPayload
@@ -71,6 +72,10 @@ func (c *Construction) Combine(ctx echo.Context) error {
 	var sender flow.Address
 	if len(tx.Authorizers) > 0 {
 		sender = tx.Authorizers[0]
+	}
+
+	if sig.SignatureType != FlowSignatureAlgorithm {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("unsupported signature algorithm: %v", sig.SignatureType))
 	}
 
 	// Determine if the signature belongs to the sender.
@@ -85,7 +90,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 
 	encoded, err := json.Marshal(tx)
 	if err != nil {
-		return fmt.Errorf("could not encode transaction: %w", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("could not encode transaction: %w", err))
 	}
 
 	res := CombineResponse{

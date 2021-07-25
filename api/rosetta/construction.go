@@ -14,6 +14,10 @@
 
 package rosetta
 
+const (
+	FlowSignatureAlgorithm = "ecdsa"
+)
+
 // TODO: We could consider moving Data and Construction APIs to separate packages.
 // TODO: when the construction API crystalizes, make all the error returns consistent
 // TODO: as a WIP thing - treat the sender as the proposer and the payer. Consider allowing more granular control.

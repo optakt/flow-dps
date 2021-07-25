@@ -95,7 +95,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 			{
 				AccountID:     identifier.Account{Address: intent.From.Hex()},
 				HexBytes:      string(tx.PayloadMessage()),
-				SignatureType: "",
+				SignatureType: FlowSignatureAlgorithm,
 			},
 		},
 	}

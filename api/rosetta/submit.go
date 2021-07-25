@@ -63,7 +63,7 @@ func (c *Construction) Submit(ctx echo.Context) error {
 
 	err = c.client.SendTransaction(context.Background(), tx)
 	if err != nil {
-		return fmt.Errorf("could not submit transaction: %w", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("could not submit transaction: %w", err))
 	}
 
 	res := SubmitResponse{

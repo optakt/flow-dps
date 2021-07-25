@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+
 	"github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
