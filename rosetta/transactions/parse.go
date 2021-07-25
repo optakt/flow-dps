@@ -28,7 +28,6 @@ import (
 
 // ParseTransactions processes the flow transaction and translates it to a list of operations and a list of
 // signers.
-// TODO: return the list of signers.
 func (p *Parser) ParseTransaction(tx flow.Transaction) ([]object.Operation, []identifier.Account, error) {
 
 	ops := make([]object.Operation, 2)
@@ -60,7 +59,7 @@ func (p *Parser) ParseTransaction(tx flow.Transaction) ([]object.Operation, []id
 
 	receiver := flow.HexToAddress(receiverArg.String())
 
-	// create the send operation
+	// Create the send operation.
 	ops[0] = object.Operation{
 		ID: identifier.Operation{
 			Index: 0,
@@ -80,7 +79,7 @@ func (p *Parser) ParseTransaction(tx flow.Transaction) ([]object.Operation, []id
 		},
 	}
 
-	// create the receive operation
+	// Create the receive operation.
 	ops[1] = object.Operation{
 		ID: identifier.Operation{
 			Index: 1,
@@ -100,5 +99,15 @@ func (p *Parser) ParseTransaction(tx flow.Transaction) ([]object.Operation, []id
 		},
 	}
 
-	return ops, nil, nil
+	// Create the signers list.
+	signers := make([]identifier.Account, 0)
+	for _, sig := range tx.EnvelopeSignatures {
+		signer := identifier.Account{
+			Address: sig.Address.String(),
+		}
+
+		signers = append(signers, signer)
+	}
+
+	return ops, signers, nil
 }
