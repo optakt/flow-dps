@@ -64,6 +64,16 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not decode transaction"))
 	}
 
+	// If the transaction is signed, make sure that we have signatures provided.
+	if req.Signed && len(tx.EnvelopeSignatures) == 0 {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("signed transaction but no signatures provided"))
+	}
+
+	// If the transaction is unsigned, verify that no signatures are present.
+	if !req.Signed && len(tx.EnvelopeSignatures) > 0 {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("unsigned transaction but signatures found"))
+	}
+
 	operations, signers, err := c.parser.ParseTransaction(tx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not parse transaction: %w", err))

@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/encoding/json"
-
 	"github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/models/dps"

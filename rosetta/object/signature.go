@@ -25,8 +25,6 @@ type Signature struct {
 	// TODO: check - public key?
 }
 
-// TODO: check signature type - we support two types, should we use this, how
-// does it work with multiple signatures, should it be left empty?
 type SigningPayload struct {
 	AccountID     identifier.Account `json:"account_identifier"`
 	HexBytes      string             `json:"hex_bytes"`
