@@ -60,29 +60,28 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("signatures list is empty"))
 	}
 
+	sig := req.Signatures[0]
+	if sig.SignatureType != FlowSignatureAlgorithm {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("unsupported signature algorithm: %v", sig.SignatureType))
+	}
+
 	var txPayload flow.Transaction
 	err = json.Unmarshal([]byte(req.UnsignedTransaction), &txPayload)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("could not decode transaction: %w", err))
 	}
-
 	tx := &txPayload
 
-	sig := req.Signatures[0]
 	var sender flow.Address
 	if len(tx.Authorizers) > 0 {
 		sender = tx.Authorizers[0]
 	}
 
-	if sig.SignatureType != FlowSignatureAlgorithm {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Errorf("unsupported signature algorithm: %v", sig.SignatureType))
-	}
-
 	// Determine if the signature belongs to the sender.
-	// Since we're treating the sender as also the payer and the proposer,
-	// we only need to sign the transaction envelope.
 	if sig.SigningPayload.AccountID.Address == sender.Hex() {
 
+		// Since we're treating the sender as also the payer and the proposer,
+		// we only need to sign the transaction envelope.
 		// TODO: adjust the code so that we can use different (or multiple) key IDs.
 		signer := flow.HexToAddress(sig.SigningPayload.AccountID.Address)
 		tx = tx.AddEnvelopeSignature(signer, 0, []byte(sig.HexBytes))
