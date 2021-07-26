@@ -437,6 +437,8 @@ func GenericAmount(delta int) cadence.Value {
 
 func ByteSlice(v interface{}) []byte {
 	switch vv := v.(type) {
+	case ledger.Path:
+		return vv[:]
 	case flow.Identifier:
 		return vv[:]
 	case flow.StateCommitment:
