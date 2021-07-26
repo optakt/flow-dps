@@ -241,5 +241,10 @@ func (w *Writer) Close() error {
 		return fmt.Errorf("could not flush in-flight transactions: %w", w.err)
 	}
 
+	err := w.tx.Commit()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

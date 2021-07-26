@@ -1,1 +1,293 @@
-package storage
+// Copyright 2021 Optakt Labs OÜ
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not
+// use this file except in compliance with the License. You may obtain a copy of
+// the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations under
+// the License.
+
+// +build integration
+
+package storage_test
+
+import (
+	"bytes"
+	"sort"
+	"testing"
+
+	"github.com/dgraph-io/badger/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/service/storage"
+	"github.com/optakt/flow-dps/testing/helpers"
+	"github.com/optakt/flow-dps/testing/mocks"
+)
+
+func TestLibrary(t *testing.T) {
+
+	t.Run("first", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		err := db.Update(lib.SaveFirst(mocks.GenericHeight))
+		assert.NoError(t, err)
+
+		var got uint64
+		err = db.View(lib.RetrieveFirst(&got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, mocks.GenericHeight, got)
+	})
+
+	t.Run("last", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		err := db.Update(lib.SaveLast(mocks.GenericHeight))
+		assert.NoError(t, err)
+
+		var got uint64
+		err = db.View(lib.RetrieveLast(&got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, mocks.GenericHeight, got)
+	})
+
+	t.Run("height for block", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		err := db.Update(lib.IndexHeightForBlock(mocks.GenericIdentifier(0), mocks.GenericHeight))
+		assert.NoError(t, err)
+
+		var got uint64
+		err = db.View(lib.LookupHeightForBlock(mocks.GenericIdentifier(0), &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, mocks.GenericHeight, got)
+	})
+
+	t.Run("commit", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		err := db.Update(lib.SaveCommit(mocks.GenericHeight, mocks.GenericCommit(0)))
+		assert.NoError(t, err)
+
+		var got flow.StateCommitment
+		err = db.View(lib.RetrieveCommit(mocks.GenericHeight, &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, mocks.GenericCommit(0), got)
+	})
+
+	t.Run("header", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		err := db.Update(lib.SaveHeader(mocks.GenericHeight, mocks.GenericHeader))
+		assert.NoError(t, err)
+
+		var got flow.Header
+		err = db.View(lib.RetrieveHeader(mocks.GenericHeight, &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, *mocks.GenericHeader, got)
+	})
+
+	t.Run("events", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		allEvents := mocks.GenericEvents(8)
+		sort.Slice(allEvents, func(i, j int) bool {
+			return bytes.Compare(allEvents[i].TransactionID[:], allEvents[j].TransactionID[:]) > 0
+		})
+
+		events1 := allEvents[0:4]
+		events2 := allEvents[4:8]
+
+		// First 4 events are under type 0
+		err := db.Update(lib.SaveEvents(mocks.GenericHeight, mocks.GenericEventType(0), events1))
+		assert.NoError(t, err)
+
+		// Next 4 events are under type 1
+		err = db.Update(lib.SaveEvents(mocks.GenericHeight, mocks.GenericEventType(1), events2))
+		assert.NoError(t, err)
+
+		t.Run("type filter matches", func(t *testing.T) {
+			t.Parallel()
+
+			var got []flow.Event
+			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(1), &got))
+
+			assert.NoError(t, err)
+			assert.Equal(t, events1, got)
+		})
+
+		t.Run("no type filter", func(t *testing.T) {
+			t.Parallel()
+
+			var got []flow.Event
+			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{}, &got))
+
+			sort.Slice(got, func(i, j int) bool {
+				return bytes.Compare(got[i].TransactionID[:], got[j].TransactionID[:]) > 0
+			})
+
+			assert.NoError(t, err)
+			assert.Equal(t, allEvents, got)
+		})
+
+		t.Run("type filter matches multiple types", func(t *testing.T) {
+			t.Parallel()
+
+			var got []flow.Event
+			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(4), &got))
+
+			sort.Slice(got, func(i, j int) bool {
+				return bytes.Compare(got[i].TransactionID[:], got[j].TransactionID[:]) > 0
+			})
+
+			assert.NoError(t, err)
+			assert.Equal(t, allEvents, got)
+		})
+
+		t.Run("type filter does not match", func(t *testing.T) {
+			t.Parallel()
+
+			var got []flow.Event
+			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{mocks.GenericEventType(2)}, &got))
+
+			assert.NoError(t, err)
+			assert.Empty(t, got)
+		})
+	})
+
+	t.Run("payload", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		err := db.Update(lib.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0)))
+		assert.NoError(t, err)
+
+		var got ledger.Payload
+		err = db.View(lib.RetrievePayload(mocks.GenericHeight, mocks.GenericLedgerPath(0), &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, *mocks.GenericLedgerPayload(0), got)
+	})
+
+	t.Run("transaction", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		tx := mocks.GenericTransaction(0)
+
+		err := db.Update(lib.SaveTransaction(tx))
+		assert.NoError(t, err)
+
+		var got flow.TransactionBody
+		err = db.View(lib.RetrieveTransaction(tx.ID(), &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, *tx, got)
+	})
+
+	t.Run("collection", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		coll := mocks.GenericCollection(0)
+
+		err := db.Update(lib.SaveCollection(coll))
+		assert.NoError(t, err)
+
+		var got flow.LightCollection
+		err = db.View(lib.RetrieveCollection(coll.ID(), &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, *coll, got)
+	})
+
+	t.Run("transactions for height", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		txIDs := mocks.GenericIdentifiers(4)
+
+		err := db.Update(lib.IndexTransactionsForHeight(mocks.GenericHeight, txIDs))
+		assert.NoError(t, err)
+
+		var got []flow.Identifier
+		err = db.View(lib.LookupTransactionsForHeight(mocks.GenericHeight, &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, txIDs, got)
+	})
+
+	t.Run("transactions for collection", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		txIDs := mocks.GenericIdentifiers(4)
+		collID := mocks.GenericIdentifier(1)
+
+		err := db.Update(lib.IndexTransactionsForCollection(collID, txIDs))
+		assert.NoError(t, err)
+
+		var got []flow.Identifier
+		err = db.View(lib.LookupTransactionsForCollection(collID, &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, txIDs, got)
+	})
+
+	t.Run("collections for height", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		collIDs := mocks.GenericIdentifiers(4)
+
+		err := db.Update(lib.IndexCollectionsForHeight(mocks.GenericHeight, collIDs))
+		assert.NoError(t, err)
+
+		var got []flow.Identifier
+		err = db.View(lib.LookupCollectionsForHeight(mocks.GenericHeight, &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, collIDs, got)
+	})
+}
+
+func setupLibrary(t *testing.T) (*badger.DB, *storage.Library) {
+	t.Helper()
+
+	codec, err := zbor.NewCodec()
+	require.NoError(t, err)
+
+	return helpers.InMemoryDB(t), storage.New(codec)
+}
