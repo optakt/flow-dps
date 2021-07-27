@@ -44,7 +44,7 @@ type Allow struct {
 	Errors                  []meta.ErrorDefinition  `json:"errors"`
 	HistoricalBalanceLookup bool                    `json:"historical_balance_lookup"`
 	CallMethods             []string                `json:"call_methods"`       // not used
-	BalanceExemptions       []interface{}           `json:"balance_exemptions"` // not used
+	BalanceExemptions       []struct{}              `json:"balance_exemptions"` // not used
 	MempoolCoins            bool                    `json:"mempool_coins"`
 }
 
@@ -82,7 +82,7 @@ func (d *Data) Options(ctx echo.Context) error {
 		Errors:                  d.config.Errors(),
 		HistoricalBalanceLookup: true,
 		CallMethods:             []string{},
-		BalanceExemptions:       []interface{}{},
+		BalanceExemptions:       []struct{}{},
 		MempoolCoins:            false,
 	}
 
