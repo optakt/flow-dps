@@ -19,42 +19,30 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/onflow/flow-go/ledger"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestPathsToBytes(t *testing.T) {
-	path1b := []byte("aac513eb1a0457700ac3fa8d292513e1")
-	path2b := []byte("1454ae2420513f79f6a5e8396d033369")
-	path3b := []byte("e91a3eb997752b78bab0bc31e30b1e30")
+	got := PathsToBytes(mocks.GenericLedgerPaths(3))
 
-	var path1, path2, path3 ledger.Path
-	copy(path1[:], path1b)
-	copy(path2[:], path2b)
-	copy(path3[:], path3b)
-
-	paths := []ledger.Path{path1, path2, path3}
-
-	got := PathsToBytes(paths)
-
-	assert.Equal(t, [][]byte{path1b, path2b, path3b}, got)
+	assert.Equal(t, [][]byte{
+		mocks.ByteSlice(mocks.GenericLedgerPath(0)),
+		mocks.ByteSlice(mocks.GenericLedgerPath(1)),
+		mocks.ByteSlice(mocks.GenericLedgerPath(2)),
+	}, got)
 }
 
 func TestBytesToPaths(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		path1b := []byte("aac513eb1a0457700ac3fa8d292513e1")
-		path2b := []byte("1454ae2420513f79f6a5e8396d033369")
-		path3b := []byte("e91a3eb997752b78bab0bc31e30b1e30")
+		wantPaths := mocks.GenericLedgerPaths(3)
 
-		var path1, path2, path3 ledger.Path
-		copy(path1[:], path1b)
-		copy(path2[:], path2b)
-		copy(path3[:], path3b)
-
-		wantPaths := []ledger.Path{path1, path2, path3}
-
-		bb := [][]byte{path1b, path2b, path3b}
+		bb := [][]byte{
+			mocks.ByteSlice(mocks.GenericLedgerPath(0)),
+			mocks.ByteSlice(mocks.GenericLedgerPath(1)),
+			mocks.ByteSlice(mocks.GenericLedgerPath(2)),
+		}
 
 		got, err := BytesToPaths(bb)
 
@@ -65,7 +53,7 @@ func TestBytesToPaths(t *testing.T) {
 	t.Run("incorrect-length paths should fail", func(t *testing.T) {
 		t.Parallel()
 
-		invalidPath := []byte("1a0457700")
+		invalidPath := []byte{0x1a, 0x04, 0x57, 0x70, 0x00}
 
 		bb := [][]byte{invalidPath}
 		_, err := BytesToPaths(bb)
@@ -77,17 +65,6 @@ func TestBytesToPaths(t *testing.T) {
 		t.Parallel()
 
 		invalidPath := []byte("")
-
-		bb := [][]byte{invalidPath}
-		_, err := BytesToPaths(bb)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("non-hex path should fail", func(t *testing.T) {
-		t.Parallel()
-
-		invalidPath := []byte("not even hex")
 
 		bb := [][]byte{invalidPath}
 		_, err := BytesToPaths(bb)
