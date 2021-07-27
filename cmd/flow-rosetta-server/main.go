@@ -30,8 +30,6 @@ import (
 	"github.com/ziflex/lecho/v2"
 	"google.golang.org/grpc"
 
-	"github.com/onflow/flow-go/model/flow"
-
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/codec/zbor"
@@ -63,7 +61,6 @@ func run() int {
 	var (
 		flagAPI          string
 		flagCache        uint64
-		flagChain        string
 		flagLevel        string
 		flagPort         uint16
 		flagTransactions uint
@@ -71,7 +68,6 @@ func run() int {
 
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
 	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
-	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowTestnet.String(), "chain ID for Flow network core contracts")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
 	pflag.UintVarP(&flagTransactions, "transaction-limit", "t", 200, "maximum amount of transactions to include in a block response")
@@ -89,21 +85,6 @@ func run() int {
 	log = log.Level(level)
 	elog := lecho.From(log)
 
-	// Check if the configured chain ID is valid.
-	params, ok := dps.FlowParams[flow.ChainID(flagChain)]
-	if !ok {
-		log.Error().Str("chain", flagChain).Msg("invalid chain ID for params")
-		return failure
-	}
-
-	// Initialize the API client.
-	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
-	if err != nil {
-		log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
-		return failure
-	}
-	defer conn.Close()
-
 	// Initialize storage library.
 	codec, err := zbor.NewCodec()
 	if err != nil {
@@ -111,9 +92,34 @@ func run() int {
 		return failure
 	}
 
-	// Rosetta API initialization.
+	// Initialize the DPS API client and wrap it for easy usage.
+	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
+	if err != nil {
+		log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
+		return failure
+	}
+	defer conn.Close()
 	client := api.NewAPIClient(conn)
 	index := api.IndexFromAPI(client, codec)
+
+	// Deduce chain ID from DPS API to configure parameters for script exec.
+	first, err := index.First()
+	if err != nil {
+		log.Error().Err(err).Msg("could not get first height from DPS API")
+		return failure
+	}
+	root, err := index.Header(first)
+	if err != nil {
+		log.Error().Uint64("first", first).Err(err).Msg("could not get root header from DPS API")
+		return failure
+	}
+	params, ok := dps.FlowParams[root.ChainID]
+	if !ok {
+		log.Error().Str("chain", root.ChainID.String()).Msg("invalid chain ID for params")
+		return failure
+	}
+
+	// Rosetta API initialization.
 	config := configuration.New(params.ChainID)
 	validate := validator.New(params, index)
 	generate := scripts.NewGenerator(params)
