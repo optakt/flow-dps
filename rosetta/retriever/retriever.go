@@ -104,7 +104,7 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 	return block, header.Timestamp, nil
 }
 
-func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccount identifier.Account, rosCurrencies []identifier.Currency) (identifier.Block, []object.Amount, error) {
+func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifier.Account, rosCurrencies []identifier.Currency) (identifier.Block, []object.Amount, error) {
 
 	// Run validation on the block qualifier. This also fills in missing fields, where possible.
 	completed, err := r.validate.Block(rosBlockID)
@@ -114,7 +114,7 @@ func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccount identifier.
 
 	// Run validation on the account qualifier. This uses the chain ID to check the
 	// address validation.
-	err = r.validate.Account(rosAccount)
+	err = r.validate.Account(rosAccountID)
 	if err != nil {
 		return identifier.Block{}, nil, fmt.Errorf("could not validate account: %w", err)
 	}
@@ -131,7 +131,7 @@ func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccount identifier.
 
 	// Get the Cadence value that is the result of the script execution.
 	amounts := make([]object.Amount, 0, len(rosCurrencies))
-	address := cadence.NewAddress(flow.HexToAddress(rosAccount.Address))
+	address := cadence.NewAddress(flow.HexToAddress(rosAccountID.Address))
 	for _, currency := range rosCurrencies {
 		getBalance, err := r.generator.GetBalance(currency.Symbol)
 		if err != nil {
