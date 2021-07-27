@@ -21,7 +21,7 @@ import (
 )
 
 type Validator struct {
-	AccountFunc     func(rosAddress identifier.Account) error
+	AccountFunc     func(rosAccountID identifier.Account) error
 	BlockFunc       func(rosBlockID identifier.Block) (identifier.Block, error)
 	TransactionFunc func(rosTxID identifier.Transaction) error
 	CurrencyFunc    func(rosCurrencies identifier.Currency) (identifier.Currency, error)
@@ -31,7 +31,7 @@ func BaselineValidator(t *testing.T) *Validator {
 	t.Helper()
 
 	v := Validator{
-		AccountFunc: func(rosAddress identifier.Account) error {
+		AccountFunc: func(rosAccountID identifier.Account) error {
 			return nil
 		},
 		BlockFunc: func(rosBlockID identifier.Block) (identifier.Block, error) {
@@ -48,8 +48,8 @@ func BaselineValidator(t *testing.T) *Validator {
 	return &v
 }
 
-func (v *Validator) Account(rosAddress identifier.Account) error {
-	return v.AccountFunc(rosAddress)
+func (v *Validator) Account(rosAccountID identifier.Account) error {
+	return v.AccountFunc(rosAccountID)
 }
 
 func (v *Validator) Block(rosBlockID identifier.Block) (identifier.Block, error) {

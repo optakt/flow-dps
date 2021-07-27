@@ -44,11 +44,11 @@ func TestAPI_Networks(t *testing.T) {
 	err = api.Networks(ctx)
 	assert.NoError(t, err)
 
-	var network rosetta.NetworksResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &network))
+	var res rosetta.NetworksResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
 
-	if assert.Len(t, network.NetworkIDs, 1) {
-		assert.Equal(t, network.NetworkIDs[0].Blockchain, dps.FlowBlockchain)
-		assert.Equal(t, network.NetworkIDs[0].Network, dps.FlowTestnet.String())
+	if assert.Len(t, res.NetworkIDs, 1) {
+		assert.Equal(t, res.NetworkIDs[0].Blockchain, dps.FlowBlockchain)
+		assert.Equal(t, res.NetworkIDs[0].Network, dps.FlowTestnet.String())
 	}
 }

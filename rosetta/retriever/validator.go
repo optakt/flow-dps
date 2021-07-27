@@ -19,7 +19,7 @@ import (
 )
 
 type Validator interface {
-	Account(rosAddress identifier.Account) error
+	Account(rosAccountID identifier.Account) error
 	Block(rosBlockID identifier.Block) (identifier.Block, error)
 	Transaction(rosTxID identifier.Transaction) error
 	Currency(rosCurrency identifier.Currency) (identifier.Currency, error)
