@@ -23,16 +23,17 @@ import (
 const (
 	invalidJSON = "request does not contain valid JSON-encoded body"
 
-	blockchainEmpty = "blockchain identifier has empty blockchain field"
-	networkEmpty    = "blockchain identifier has empty network field"
-	blockEmpty      = "block identifier has empty index and hash fields"
-	blockLength     = "block identifier has invalid hash field length"
-	addressEmpty    = "account identifier has empty address field"
-	addressLength   = "account identifier has invalid address field length"
-	currenciesEmpty = "currency identifier list is empty"
-	symbolEmpty     = "currency identifier has empty symbol field"
-	txEmpty         = "transaction identifier has empty hash field"
-	txLength        = "transaction identifier has invalid hash filed length"
+	blockchainEmpty  = "blockchain identifier has empty blockchain field"
+	networkEmpty     = "blockchain identifier has empty network field"
+	blockEmpty       = "block identifier has empty index and hash fields"
+	blockLength      = "block identifier has invalid hash field length"
+	addressEmpty     = "account identifier has empty address field"
+	addressLength    = "account identifier has invalid address field length"
+	currenciesEmpty  = "currency identifier list is empty"
+	symbolEmpty      = "currency identifier has empty symbol field"
+	txEmpty          = "transaction identifier has empty hash field"
+	txLength         = "transaction identifier has invalid hash filed length"
+	txInvalidOpCount = "transaction operations list has an invalid number of operations"
 
 	networkCheck      = "unable to check network"
 	blockRetrieval    = "unable to retrieve block"
@@ -40,6 +41,7 @@ const (
 	oldestRetrieval   = "unable to retrieve oldest block"
 	currentRetrieval  = "unable to retrieve current block"
 	txRetrieval       = "unable to retrieve transaction"
+	intentCreate      = "unable to determine transaction intent"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
@@ -175,5 +177,14 @@ func unknownTransaction(fail failure.UnknownTransaction) Error {
 		configuration.ErrorUnknownTransaction,
 		fail.Description,
 		withDetail("hash", fail.Hash),
+	)
+}
+
+func invalidIntent(fail failure.InvalidIntent) Error {
+	return convertError(
+		configuration.ErrorInvalidTransactionIntent,
+		fail.Description,
+		withDetail("from", fail.Sender),
+		withDetail("to", fail.Receiver),
 	)
 }
