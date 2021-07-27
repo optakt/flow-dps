@@ -183,9 +183,9 @@ func TestRetriever_Balances(t *testing.T) {
 			assert.Equal(t, mocks.GenericAccountID(0), address)
 			return nil
 		}
-		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockQualifier, block)
-			return block, nil
+		validator.BlockFunc = func(rosBlockID identifier.Block) (identifier.Block, error) {
+			assert.Equal(t, mocks.GenericBlockQualifier, rosBlockID)
+			return rosBlockID, nil
 		}
 		validator.CurrencyFunc = func(currency identifier.Currency) (identifier.Currency, error) {
 			assert.Equal(t, mocks.GenericCurrency, currency)
@@ -235,8 +235,8 @@ func TestRetriever_Balances(t *testing.T) {
 		t.Parallel()
 
 		validator := mocks.BaselineValidator(t)
-		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockQualifier, block)
+		validator.BlockFunc = func(rosBlockID identifier.Block) (identifier.Block, error) {
+			assert.Equal(t, mocks.GenericBlockQualifier, rosBlockID)
 			return identifier.Block{}, mocks.GenericError
 		}
 
@@ -357,9 +357,9 @@ func TestRetriever_Block(t *testing.T) {
 		}
 
 		validator := mocks.BaselineValidator(t)
-		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockQualifier, block)
-			return block, nil
+		validator.BlockFunc = func(rosBlockID identifier.Block) (identifier.Block, error) {
+			assert.Equal(t, mocks.GenericBlockQualifier, rosBlockID)
+			return rosBlockID, nil
 		}
 
 		generator := mocks.BaselineGenerator(t)
@@ -424,9 +424,9 @@ func TestRetriever_Block(t *testing.T) {
 		}
 
 		validator := mocks.BaselineValidator(t)
-		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockQualifier, block)
-			return block, nil
+		validator.BlockFunc = func(rosBlockID identifier.Block) (identifier.Block, error) {
+			assert.Equal(t, mocks.GenericBlockQualifier, rosBlockID)
+			return rosBlockID, nil
 		}
 
 		generator := mocks.BaselineGenerator(t)
@@ -491,9 +491,9 @@ func TestRetriever_Block(t *testing.T) {
 			return mocks.GenericEvents(4), nil
 		}
 		validator := mocks.BaselineValidator(t)
-		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockQualifier, block)
-			return block, nil
+		validator.BlockFunc = func(rosBlockID identifier.Block) (identifier.Block, error) {
+			assert.Equal(t, mocks.GenericBlockQualifier, rosBlockID)
+			return rosBlockID, nil
 		}
 		generator := mocks.BaselineGenerator(t)
 		generator.TokensDepositedFunc = func(symbol string) (string, error) {
@@ -582,7 +582,7 @@ func TestRetriever_Block(t *testing.T) {
 		t.Parallel()
 
 		validator := mocks.BaselineValidator(t)
-		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
+		validator.BlockFunc = func(identifier.Block) (identifier.Block, error) {
 			return identifier.Block{}, mocks.GenericError
 		}
 
@@ -691,9 +691,9 @@ func TestRetriever_Transaction(t *testing.T) {
 		t.Parallel()
 
 		validator := mocks.BaselineValidator(t)
-		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
-			assert.Equal(t, mocks.GenericBlockQualifier, block)
-			return block, nil
+		validator.BlockFunc = func(rosBlockID identifier.Block) (identifier.Block, error) {
+			assert.Equal(t, mocks.GenericBlockQualifier, rosBlockID)
+			return rosBlockID, nil
 		}
 		validator.TransactionFunc = func(transaction identifier.Transaction) error {
 			assert.Equal(t, mocks.GenericTransactionQualifier(0), transaction)
@@ -786,7 +786,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		t.Parallel()
 
 		validator := mocks.BaselineValidator(t)
-		validator.BlockFunc = func(block identifier.Block) (identifier.Block, error) {
+		validator.BlockFunc = func(identifier.Block) (identifier.Block, error) {
 			return identifier.Block{}, mocks.GenericError
 		}
 

@@ -75,7 +75,7 @@ func (d *Data) Block(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(networkCheck, err))
 	}
 
-	block, other, err := d.retrieve.Block(req.BlockID)
+	block, extraTxIDs, err := d.retrieve.Block(req.BlockID)
 
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {
@@ -92,7 +92,7 @@ func (d *Data) Block(ctx echo.Context) error {
 
 	res := BlockResponse{
 		Block:             block,
-		OtherTransactions: other,
+		OtherTransactions: extraTxIDs,
 	}
 
 	return ctx.JSON(http.StatusOK, res)

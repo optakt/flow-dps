@@ -104,35 +104,35 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 	return block, header.Timestamp, nil
 }
 
-func (r *Retriever) Balances(block identifier.Block, account identifier.Account, currencies []identifier.Currency) (identifier.Block, []object.Amount, error) {
+func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifier.Account, rosCurrencies []identifier.Currency) (identifier.Block, []object.Amount, error) {
 
-	// Run validation on the block identifier. This also fills in missing fields, where possible.
-	completed, err := r.validate.Block(block)
+	// Run validation on the block qualifier. This also fills in missing fields, where possible.
+	completed, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return identifier.Block{}, nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
-	// Run validation on the account ID. This uses the chain ID to check the
+	// Run validation on the account qualifier. This uses the chain ID to check the
 	// address validation.
-	err = r.validate.Account(account)
+	err = r.validate.Account(rosAccountID)
 	if err != nil {
 		return identifier.Block{}, nil, fmt.Errorf("could not validate account: %w", err)
 	}
 
-	// Run validation on the currencies. This checks basically if we know the
+	// Run validation on the currency qualifiers. This checks basically if we know the
 	// currency and if it has the correct decimals set, if they are set.
-	for idx, currency := range currencies {
+	for idx, currency := range rosCurrencies {
 		completeCurrency, err := r.validate.Currency(currency)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not validate currency: %w", err)
 		}
-		currencies[idx] = completeCurrency
+		rosCurrencies[idx] = completeCurrency
 	}
 
 	// Get the Cadence value that is the result of the script execution.
-	amounts := make([]object.Amount, 0, len(currencies))
-	address := cadence.NewAddress(flow.HexToAddress(account.Address))
-	for _, currency := range currencies {
+	amounts := make([]object.Amount, 0, len(rosCurrencies))
+	address := cadence.NewAddress(flow.HexToAddress(rosAccountID.Address))
+	for _, currency := range rosCurrencies {
 		getBalance, err := r.generator.GetBalance(currency.Symbol)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not generate script: %w", err)
@@ -155,10 +155,10 @@ func (r *Retriever) Balances(block identifier.Block, account identifier.Account,
 	return completed, amounts, nil
 }
 
-func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Transaction, error) {
+func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identifier.Transaction, error) {
 
 	// Run validation on the block ID. This also fills in missing information.
-	completed, err := r.validate.Block(id)
+	completed, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not validate block: %w", err)
 	}
@@ -260,17 +260,17 @@ func (r *Retriever) Block(id identifier.Block) (*object.Block, []identifier.Tran
 	return &block, extraTransactions, nil
 }
 
-func (r *Retriever) Transaction(block identifier.Block, id identifier.Transaction) (*object.Transaction, error) {
+func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.Transaction) (*object.Transaction, error) {
 
-	// Run validation on the block ID. This also fills in missing information.
-	completed, err := r.validate.Block(block)
+	// Run validation on the block qualifier. This also fills in missing information.
+	completed, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
-	// Run validation on the transaction ID. This should never fail, as we
+	// Run validation on the transaction qualifier. This should never fail, as we
 	// already check the length, but let's run it anyway.
-	err = r.validate.Transaction(id)
+	err = r.validate.Transaction(rosTxID)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate transaction: %w", err)
 	}
@@ -281,14 +281,14 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 	var found bool
 	for _, txID := range txIDs {
-		if txID.String() == id.Hash {
+		if txID.String() == rosTxID.Hash {
 			found = true
 			break
 		}
 	}
 	if !found {
 		return nil, failure.UnknownTransaction{
-			Hash: id.Hash,
+			Hash: rosTxID.Hash,
 			Description: failure.NewDescription("transaction not found in given block",
 				failure.WithUint64("block_index", *completed.Index),
 				failure.WithString("block_hash", completed.Hash),
@@ -316,7 +316,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	var ops []object.Operation
 	for _, event := range events {
 		// Ignore events that are related to other transactions.
-		if event.TransactionID.String() != id.Hash {
+		if event.TransactionID.String() != rosTxID.Hash {
 			continue
 		}
 
@@ -344,7 +344,7 @@ func (r *Retriever) Transaction(block identifier.Block, id identifier.Transactio
 	}
 
 	transaction := object.Transaction{
-		ID:         id,
+		ID:         rosTxID,
 		Operations: ops,
 	}
 
