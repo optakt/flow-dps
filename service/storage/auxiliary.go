@@ -58,14 +58,14 @@ func (l *Library) retrieve(key []byte, value interface{}) func(tx *badger.Txn) e
 	return func(tx *badger.Txn) error {
 		item, err := tx.Get(key)
 		if err != nil {
-			return fmt.Errorf("could not retrieve value: %w", err)
+			return fmt.Errorf("could not retrieve value at %x: %w", key, err)
 		}
 
 		err = item.Value(func(b []byte) error {
 			return l.codec.Unmarshal(b, value)
 		})
 		if err != nil {
-			return fmt.Errorf("could not retrieve value: %w", err)
+			return fmt.Errorf("could not retrieve value at %x: %w", key, err)
 		}
 
 		return nil
@@ -76,7 +76,7 @@ func (l *Library) save(key []byte, value interface{}) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
 		b, err := l.codec.Marshal(value)
 		if err != nil {
-			return fmt.Errorf("could not encode value: %w", err)
+			return fmt.Errorf("could not encode value at %x: %w", key, err)
 		}
 
 		return tx.Set(key, b)
