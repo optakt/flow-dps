@@ -25,11 +25,12 @@ import (
 
 	"github.com/c2h5oh/datasize"
 	"github.com/labstack/echo/v4"
-	"github.com/onflow/flow-go-sdk/client"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"github.com/ziflex/lecho/v2"
 	"google.golang.org/grpc"
+
+	"github.com/onflow/flow-go-sdk/client"
 
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/api/rosetta"
