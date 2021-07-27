@@ -43,6 +43,9 @@ type Allow struct {
 	OperationTypes          []string                `json:"operation_types"`
 	Errors                  []meta.ErrorDefinition  `json:"errors"`
 	HistoricalBalanceLookup bool                    `json:"historical_balance_lookup"`
+	CallMethods             []string                `json:"call_methods"`       // not used
+	BalanceExemptions       []interface{}           `json:"balance_exemptions"` // not used
+	MempoolCoins            bool                    `json:"mempool_coins"`
 }
 
 // Options implements the /network/options endpoint of the Rosetta Data API.
@@ -78,6 +81,9 @@ func (d *Data) Options(ctx echo.Context) error {
 		OperationTypes:          d.config.Operations(),
 		Errors:                  d.config.Errors(),
 		HistoricalBalanceLookup: true,
+		CallMethods:             []string{},
+		BalanceExemptions:       []interface{}{},
+		MempoolCoins:            false,
 	}
 
 	res := OptionsResponse{
