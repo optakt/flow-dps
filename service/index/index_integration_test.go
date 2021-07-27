@@ -17,8 +17,6 @@
 package index_test
 
 import (
-	"sort"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -127,7 +125,7 @@ func TestIndex(t *testing.T) {
 		got, err := reader.Values(mocks.GenericHeight, paths)
 
 		assert.NoError(t, err)
-		assert.Equal(t, mocks.GenericLedgerValues(4), got)
+		assert.ElementsMatch(t, mocks.GenericLedgerValues(4), got)
 	})
 
 	t.Run("collections", func(t *testing.T) {
@@ -162,7 +160,7 @@ func TestIndex(t *testing.T) {
 		gotTxIDs, err := reader.TransactionsByHeight(mocks.GenericHeight)
 
 		assert.NoError(t, err)
-		assert.Equal(t, txIDs, gotTxIDs)
+		assert.ElementsMatch(t, txIDs, gotTxIDs)
 
 		gotTx, err := reader.Transaction(transactions[0].ID())
 
@@ -177,10 +175,6 @@ func TestIndex(t *testing.T) {
 
 		events := mocks.GenericEvents(4)
 
-		sort.Slice(events, func(i, j int) bool {
-			return strings.Compare(events[i].ID().String(), events[j].ID().String()) > 0
-		})
-
 		assert.NoError(t, writer.First(mocks.GenericHeight))
 		assert.NoError(t, writer.Last(mocks.GenericHeight))
 		assert.NoError(t, writer.Events(mocks.GenericHeight, events))
@@ -190,29 +184,17 @@ func TestIndex(t *testing.T) {
 		t.Run("no types specified", func(t *testing.T) {
 			got, err := reader.Events(mocks.GenericHeight)
 
-			sort.Slice(got, func(i, j int) bool {
-				return strings.Compare(got[i].ID().String(), got[j].ID().String()) > 0
-			})
-
 			assert.NoError(t, err)
-			assert.Equal(t, events, got)
+			assert.ElementsMatch(t, events, got)
 		})
 
 		t.Run("type specified", func(t *testing.T) {
 			got1, err := reader.Events(mocks.GenericHeight, mocks.GenericEventType(0))
 
-			sort.Slice(got1, func(i, j int) bool {
-				return strings.Compare(got1[i].ID().String(), got1[j].ID().String()) > 0
-			})
-
 			assert.NoError(t, err)
 			assert.Len(t, got1, 2)
 
 			got2, err := reader.Events(mocks.GenericHeight, mocks.GenericEventType(1))
-
-			sort.Slice(got2, func(i, j int) bool {
-				return strings.Compare(got2[i].ID().String(), got2[j].ID().String()) > 0
-			})
 
 			assert.NoError(t, err)
 			assert.Len(t, got1, 2)

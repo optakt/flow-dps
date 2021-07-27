@@ -17,8 +17,6 @@
 package storage_test
 
 import (
-	"bytes"
-	"sort"
 	"testing"
 
 	"github.com/dgraph-io/badger/v2"
@@ -117,9 +115,6 @@ func TestLibrary(t *testing.T) {
 		db, lib := setupLibrary(t)
 
 		allEvents := mocks.GenericEvents(8)
-		sort.Slice(allEvents, func(i, j int) bool {
-			return bytes.Compare(allEvents[i].TransactionID[:], allEvents[j].TransactionID[:]) > 0
-		})
 
 		events1 := allEvents[0:4]
 		events2 := allEvents[4:8]
@@ -139,7 +134,7 @@ func TestLibrary(t *testing.T) {
 			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(1), &got))
 
 			assert.NoError(t, err)
-			assert.Equal(t, events1, got)
+			assert.ElementsMatch(t, events1, got)
 		})
 
 		t.Run("no type filter", func(t *testing.T) {
@@ -148,12 +143,8 @@ func TestLibrary(t *testing.T) {
 			var got []flow.Event
 			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{}, &got))
 
-			sort.Slice(got, func(i, j int) bool {
-				return bytes.Compare(got[i].TransactionID[:], got[j].TransactionID[:]) > 0
-			})
-
 			assert.NoError(t, err)
-			assert.Equal(t, allEvents, got)
+			assert.ElementsMatch(t, allEvents, got)
 		})
 
 		t.Run("type filter matches multiple types", func(t *testing.T) {
@@ -162,12 +153,8 @@ func TestLibrary(t *testing.T) {
 			var got []flow.Event
 			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(4), &got))
 
-			sort.Slice(got, func(i, j int) bool {
-				return bytes.Compare(got[i].TransactionID[:], got[j].TransactionID[:]) > 0
-			})
-
 			assert.NoError(t, err)
-			assert.Equal(t, allEvents, got)
+			assert.ElementsMatch(t, allEvents, got)
 		})
 
 		t.Run("type filter does not match", func(t *testing.T) {
@@ -262,7 +249,7 @@ func TestLibrary(t *testing.T) {
 		err = db.View(lib.LookupTransactionsForCollection(collID, &got))
 
 		assert.NoError(t, err)
-		assert.Equal(t, txIDs, got)
+		assert.ElementsMatch(t, txIDs, got)
 	})
 
 	t.Run("collections for height", func(t *testing.T) {
@@ -279,7 +266,7 @@ func TestLibrary(t *testing.T) {
 		err = db.View(lib.LookupCollectionsForHeight(mocks.GenericHeight, &got))
 
 		assert.NoError(t, err)
-		assert.Equal(t, collIDs, got)
+		assert.ElementsMatch(t, collIDs, got)
 	})
 }
 
