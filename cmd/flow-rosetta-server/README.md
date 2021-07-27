@@ -12,11 +12,10 @@ This allows the Rosetta API to access state remotely, or locally by running the 
 ```sh
 Usage of flow-rosetta-server:
   -a, --api string              host URL for GRPC API endpoint (default "127.0.0.1:5005")
-  -e, --cache uint              maximum cache size for register reads in bytes (default 1000000000)
-  -c, --chain string            chain ID for Flow network core contracts (default "flow-testnet")
+  -e, --cache uint              maximum cache size for register reads in bytes (default 1073741824)
   -l, --level string            log output level (default "info")
   -p, --port uint16             port to host Rosetta API on (default 8080)
-  -t, --transaction-limit int   maximum amount of transactions to include in a block response (default 10)
+  -t, --transaction-limit int   maximum amount of transactions to include in a block response (default 200)
 ```
 
 ## Example
@@ -25,5 +24,5 @@ The following command line starts the Flow DPS Rosetta server for a main network
 It uses a local instance of the Flow DPS Server for access to the execution state.
 
 ```sh
-./flow-dps-rosetta -a "127.0.0.1:5005" -c "flow-mainnet" -p 8080
+./flow-dps-rosetta -a "127.0.0.1:5005" -p 8080
 ```
