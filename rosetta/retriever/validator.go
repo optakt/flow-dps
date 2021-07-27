@@ -19,8 +19,8 @@ import (
 )
 
 type Validator interface {
-	Account(address identifier.Account) error
-	Block(block identifier.Block) (identifier.Block, error)
-	Transaction(transaction identifier.Transaction) error
-	Currency(currency identifier.Currency) (identifier.Currency, error)
+	Account(addressQualifier identifier.Account) error
+	Block(blockQualifier identifier.Block) (identifier.Block, error)
+	Transaction(transactionQualifier identifier.Transaction) error
+	Currency(currencyQualifier identifier.Currency) (identifier.Currency, error)
 }
