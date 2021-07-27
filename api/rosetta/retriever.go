@@ -24,7 +24,7 @@ import (
 type Retriever interface {
 	Oldest() (identifier.Block, time.Time, error)
 	Current() (identifier.Block, time.Time, error)
-	Block(blockQualifier identifier.Block) (*object.Block, []identifier.Transaction, error)
-	Transaction(blockQualifier identifier.Block, transactionQualifier identifier.Transaction) (*object.Transaction, error)
-	Balances(blockQualifier identifier.Block, accountQualifier identifier.Account, currencyQualifiers []identifier.Currency) (identifier.Block, []object.Amount, error)
+	Block(rosBlockID identifier.Block) (*object.Block, []identifier.Transaction, error)
+	Transaction(rosBlockID identifier.Block, rosTxID identifier.Transaction) (*object.Transaction, error)
+	Balances(rosBlockID identifier.Block, rosAccount identifier.Account, rosCurrencies []identifier.Currency) (identifier.Block, []object.Amount, error)
 }

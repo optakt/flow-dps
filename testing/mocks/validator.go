@@ -21,26 +21,26 @@ import (
 )
 
 type Validator struct {
-	AccountFunc     func(addressQualifier identifier.Account) error
-	BlockFunc       func(blockQualifier identifier.Block) (identifier.Block, error)
-	TransactionFunc func(transactionQualifier identifier.Transaction) error
-	CurrencyFunc    func(currencyQualifiers identifier.Currency) (identifier.Currency, error)
+	AccountFunc     func(rosAddress identifier.Account) error
+	BlockFunc       func(rosBlockID identifier.Block) (identifier.Block, error)
+	TransactionFunc func(rosTxID identifier.Transaction) error
+	CurrencyFunc    func(rosCurrencies identifier.Currency) (identifier.Currency, error)
 }
 
 func BaselineValidator(t *testing.T) *Validator {
 	t.Helper()
 
 	v := Validator{
-		AccountFunc: func(addressQualifier identifier.Account) error {
+		AccountFunc: func(rosAddress identifier.Account) error {
 			return nil
 		},
-		BlockFunc: func(blockQualifier identifier.Block) (identifier.Block, error) {
+		BlockFunc: func(rosBlockID identifier.Block) (identifier.Block, error) {
 			return GenericBlockQualifier, nil
 		},
-		TransactionFunc: func(transactionQualifier identifier.Transaction) error {
+		TransactionFunc: func(rosTxID identifier.Transaction) error {
 			return nil
 		},
-		CurrencyFunc: func(currencyQualifier identifier.Currency) (identifier.Currency, error) {
+		CurrencyFunc: func(rosCurrency identifier.Currency) (identifier.Currency, error) {
 			return GenericCurrency, nil
 		},
 	}
@@ -48,18 +48,18 @@ func BaselineValidator(t *testing.T) *Validator {
 	return &v
 }
 
-func (v *Validator) Account(addressQualifier identifier.Account) error {
-	return v.AccountFunc(addressQualifier)
+func (v *Validator) Account(rosAddress identifier.Account) error {
+	return v.AccountFunc(rosAddress)
 }
 
-func (v *Validator) Block(blockQualifier identifier.Block) (identifier.Block, error) {
-	return v.BlockFunc(blockQualifier)
+func (v *Validator) Block(rosBlockID identifier.Block) (identifier.Block, error) {
+	return v.BlockFunc(rosBlockID)
 }
 
-func (v *Validator) Transaction(transactionQualifier identifier.Transaction) error {
-	return v.TransactionFunc(transactionQualifier)
+func (v *Validator) Transaction(rosTxID identifier.Transaction) error {
+	return v.TransactionFunc(rosTxID)
 }
 
-func (v *Validator) Currency(currencyQualifier identifier.Currency) (identifier.Currency, error) {
-	return v.CurrencyFunc(currencyQualifier)
+func (v *Validator) Currency(rosCurrency identifier.Currency) (identifier.Currency, error) {
+	return v.CurrencyFunc(rosCurrency)
 }

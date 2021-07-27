@@ -184,11 +184,11 @@ func defaultCurrency() []identifier.Currency {
 func validateBlock(t *testing.T, height uint64, hash string) validateBlockFunc {
 	t.Helper()
 
-	return func(blockQualifier identifier.Block) {
-		if assert.NotNil(t, blockQualifier.Index) {
-			assert.Equal(t, height, *blockQualifier.Index)
+	return func(rosBlockID identifier.Block) {
+		if assert.NotNil(t, rosBlockID.Index) {
+			assert.Equal(t, height, *rosBlockID.Index)
 		}
-		assert.Equal(t, hash, blockQualifier.Hash)
+		assert.Equal(t, hash, rosBlockID.Hash)
 	}
 }
 
