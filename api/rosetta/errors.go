@@ -35,13 +35,15 @@ const (
 	txLength         = "transaction identifier has invalid hash filed length"
 	txInvalidOpCount = "transaction operations list has an invalid number of operations"
 
-	networkCheck      = "unable to check network"
-	blockRetrieval    = "unable to retrieve block"
-	balancesRetrieval = "unable to retrieve balances"
-	oldestRetrieval   = "unable to retrieve oldest block"
-	currentRetrieval  = "unable to retrieve current block"
-	txRetrieval       = "unable to retrieve transaction"
-	intentDetermine   = "unable to determine transaction intent"
+	networkCheck              = "unable to check network"
+	blockRetrieval            = "unable to retrieve block"
+	balancesRetrieval         = "unable to retrieve balances"
+	oldestRetrieval           = "unable to retrieve oldest block"
+	currentRetrieval          = "unable to retrieve current block"
+	txRetrieval               = "unable to retrieve transaction"
+	intentDetermine           = "unable to determine transaction intent"
+	txReferenceRetrieval      = "unable to retrieve transaction reference block"
+	txSequenceNumberRetrieval = "unable to retrieve account key sequence number"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
