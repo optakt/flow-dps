@@ -32,13 +32,13 @@ func encodeKey(prefix uint8, segments ...interface{}) []byte {
 			binary.BigEndian.PutUint64(val, s)
 		case flow.Identifier:
 			val = make([]byte, 32)
-			val = s[:]
+			copy(val, s[:])
 		case ledger.Path:
 			val = make([]byte, 32)
-			val = s[:]
+			copy(val, s[:])
 		case flow.StateCommitment:
 			val = make([]byte, 32)
-			val = s[:]
+			copy(val, s[:])
 		default:
 			panic(fmt.Sprintf("unknown type (%T)", segment))
 		}
