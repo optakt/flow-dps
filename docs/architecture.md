@@ -9,7 +9,7 @@ the API it exposes.
     1. [Disk Chain](#disk-chain)
 2. [Feeder](#feeder)
     1. [Disk Feeder](#disk-feeder)
-3. [Mapper](#mapper)
+3. [Mapping State Machine](#mapping-state-machine)
 4. [Index](#index)
     1. [Database Schema](#database-schema)
         1. [First Height](#first-height)
@@ -28,7 +28,7 @@ the API it exposes.
 
 The Chain component is responsible for reconstructing a view of the sequence of blocks, along with their metadata.
 It allows the consumer to step from the root block to the last sealed block, while providing data related to each height along the sequence of blocks, such as block identifier, state commitment and events.
-It is used by the [Mapper](#mapper) to map a set of deltas from the [Feeder](#feeder) to each block height.
+It is used by the [Mapper](#mapping-state-machine) to map a set of deltas from the [Feeder](#feeder) to each block height.
 
 [Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/service/chain)
 
@@ -38,8 +38,8 @@ The [Disk Chain](https://pkg.go.dev/github.com/optakt/flow-dps/service/chain#Dis
 
 ## Feeder
 
-The Feeder component is responsible for streaming trie updates to the [Mapper](#mapper).
-It outputs a state delta for each requested state commitment, so that the [Mapper](#mapper) can follow the sequence of changes to the state trie and attribute each change to a block height.
+The Feeder component is responsible for streaming trie updates to the [Mapper](#mapping-state-machine).
+It outputs a state delta for each requested state commitment, so that the [Mapper](#mapping-state-machine) can follow the sequence of changes to the state trie and attribute each change to a block height.
 
 [Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/service/feeder)
 
@@ -47,12 +47,23 @@ It outputs a state delta for each requested state commitment, so that the [Mappe
 
 The [Disk Feeder](https://pkg.go.dev/github.com/optakt/flow-dps/service/feeder#Disk) reads trie updates directly from an on-disk write-ahead log of the execution node.
 
-## Mapper
+## Mapping State Machine
 
-The Mapper component is at the core of the DPS. It is responsible for mapping incoming state trie updates to blocks.
+The Mapping FSM component is at the core of the DPS. It is responsible for mapping incoming state trie updates to blocks.
 In order to do that, it depends on the [Feeder](#feeder) and [Chain](#chain) components to get state trie updates and block information, as well as on the [Index](#index) component for indexing.
-Generally, trie updates come in by chunk, so each block height corresponds to an arbitrary number of trie updates, from zero to many.
-Once a block height is mapped to its respective trie updates, the mapper uses the indexer to persist the information.
+
+Here is a reference of the state transitions it supports:
+
+| Initial State | Transition       | New State | Description                                                                                                                                                         |
+|---------------|------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Empty         | Bootstrap        | Forwarded | Creates an empty trie, loads the checkpoint and saves the paths and first height from the checkpoint.                                                               |
+| Forwarded     | IndexChain       | Updating  | Fetches indexable data from the Chain component and stores it using the Index Writer component. Sets the next block's state commitment in the state.                |
+| Updating      | UpdateTree       | Updating  | Fetches the next trie update from the Feeder component. The next block's state commitment does not match, so the status remains the same.                           |
+| Updating      | UpdateTree       | Matched   | Fetches the next trie update from the Feeder component. The state commitment matches with the next block, so the status is set to Matched and the transition stops. |
+| Matched       | CollectRegisters | Indexed   | Does nothing if payload indexing is disabled. In that case it directly sets the state to Indexed and stops.                                                         |
+| Matched       | CollectRegisters | Collected | Goes through each saved trie from the forest and stores a map of all the registers for the current block in its state.                                              |
+| Collected     | IndexRegisters   | Indexed   | Goes through the map of registers from the state and indexes them.                                                                                                  |
+| Indexed       | ForwardHeight    | Forwarded | Indexes the current indexed block height in the Last index and increments the height.                                                                               |
 
 [Package documentation](https://pkg.go.dev/github.com/optakt/flow-dps/service/mapper)
 
