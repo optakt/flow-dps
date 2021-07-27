@@ -220,13 +220,25 @@ func (w *Writer) done(err error) {
 
 func (w *Writer) Close() error {
 
+	// The first transaction we created did not claim a slot on the semaphore.
+	// This makes sense, because we only want to limit in-flight (committing)
+	// transactions. The currently building transaction is not in-progress.
+	// However, we still need to make sure that the currently building
+	// transaction is properly committed. We assume that we are no longer
+	// appyling new operations when we call `Close`, so we can explicitly do so
+	// here, without using the callback.
+	err := w.tx.Commit()
+	if err != nil {
+		return fmt.Errorf("could not commit final transaction: %w", err)
+	}
+
 	// When closing the writer, we should no longer be applying operations. This
 	// means we only have to wait for all inflight transactions to commit. This
 	// is guaranteed if we are able to acquire all of the resources on the
 	// semaphore, which we do here.
 	_ = w.sema.Acquire(context.Background(), int64(w.cfg.ConcurrentTransactions))
 	if w.err != nil {
-		return fmt.Errorf("could not flush transactions: %w", w.err)
+		return fmt.Errorf("could not flush in-flight transactions: %w", w.err)
 	}
 
 	return nil
