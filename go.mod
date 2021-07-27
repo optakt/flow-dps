@@ -16,7 +16,7 @@ require (
 	github.com/klauspost/compress v1.12.2
 	github.com/labstack/echo/v4 v4.3.0
 	github.com/onflow/cadence v0.16.1
-	github.com/onflow/flow-go v0.17.4
+	github.com/onflow/flow-go v0.17.6
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/rs/zerolog v1.22.0
@@ -24,7 +24,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/ziflex/lecho/v2 v2.3.1
 	golang.org/x/mod v0.3.0
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.37.1
 	google.golang.org/protobuf v1.26.0
 )
