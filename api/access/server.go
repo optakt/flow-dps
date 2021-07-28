@@ -124,7 +124,7 @@ func (s *Server) GetBlockByID(ctx context.Context, in *access.GetBlockByIDReques
 	}
 
 	req := access.GetBlockByHeightRequest{
-		Height:               height,
+		Height: height,
 	}
 
 	return s.GetBlockByHeight(ctx, &req)
