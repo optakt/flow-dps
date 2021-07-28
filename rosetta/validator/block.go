@@ -71,7 +71,6 @@ func (v *Validator) Block(rosBlockID identifier.Block) (identifier.Block, error)
 				Index: *rosBlockID.Index,
 				Hash:  rosBlockID.Hash,
 				Description: failure.NewDescription("block index is above last indexed height",
-					failure.WithUint64("block_index", *rosBlockID.Index),
 					failure.WithUint64("last_index", last),
 				),
 			}
