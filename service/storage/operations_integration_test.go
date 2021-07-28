@@ -268,6 +268,74 @@ func TestLibrary(t *testing.T) {
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, collIDs, got)
 	})
+
+	t.Run("result", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		result := mocks.GenericResult(0)
+
+		err := db.Update(lib.SaveResult(result))
+		assert.NoError(t, err)
+
+		var got flow.TransactionResult
+		err = db.View(lib.RetrieveResult(result.TransactionID, &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, *result, got)
+	})
+
+	t.Run("guarantee", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		guarantee := mocks.GenericGuarantee(0)
+
+		err := db.Update(lib.SaveGuarantee(guarantee))
+		assert.NoError(t, err)
+
+		var got flow.CollectionGuarantee
+		err = db.View(lib.RetrieveGuarantee(guarantee.CollectionID, &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, *guarantee, got)
+	})
+
+	t.Run("seal", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		seal := mocks.GenericSeal(0)
+
+		err := db.Update(lib.SaveSeal(seal))
+		assert.NoError(t, err)
+
+		var got flow.Seal
+		err = db.View(lib.RetrieveSeal(seal.ID(), &got))
+
+		assert.NoError(t, err)
+		assert.Equal(t, *seal, got)
+	})
+
+	t.Run("seals by height", func(t *testing.T) {
+		t.Parallel()
+
+		db, lib := setupLibrary(t)
+
+		sealIDs := mocks.GenericIdentifiers(4)
+
+		err := db.Update(lib.IndexSealsForHeight(mocks.GenericHeight, sealIDs))
+		assert.NoError(t, err)
+
+		var got []flow.Identifier
+		err = db.View(lib.LookupSealsForHeight(mocks.GenericHeight, &got))
+
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, sealIDs, got)
+	})
 }
 
 func setupLibrary(t *testing.T) (*badger.DB, *storage.Library) {
