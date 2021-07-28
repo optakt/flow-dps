@@ -37,14 +37,13 @@ func TestNewServer(t *testing.T) {
 	codec := mocks.BaselineCodec(t)
 	invoker := mocks.BaselineInvoker(t)
 
-	s := NewServer(index, codec, invoker, dps.FlowMainnet.String())
+	s := NewServer(index, codec, invoker)
 
 	assert.NotNil(t, s)
 	assert.NotNil(t, s.codec)
 	assert.Equal(t, index, s.index)
 	assert.Equal(t, codec, s.codec)
 	assert.Equal(t, invoker, s.invoker)
-	assert.Equal(t, dps.FlowMainnet.String(), s.chainID)
 }
 
 func TestServer_Ping(t *testing.T) {
@@ -459,7 +458,7 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 		}
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 			assert.InDelta(t, mocks.GenericHeight, height, float64(len(blocks)))
-			assert.Empty(t, types)
+			assert.Equal(t, mocks.GenericEventTypes(1), types)
 
 			return events, nil
 		}
@@ -476,7 +475,10 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 		for _, id := range blockIDs {
 			ids = append(ids, id[:])
 		}
-		req := &access.GetEventsForBlockIDsRequest{BlockIds: ids}
+		req := &access.GetEventsForBlockIDsRequest{
+			Type:     string(mocks.GenericEventType(0)),
+			BlockIds: ids,
+		}
 		resp, err := s.GetEventsForBlockIDs(context.Background(), req)
 
 		assert.NoError(t, err)
@@ -502,7 +504,10 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 		for _, id := range mocks.GenericIdentifiers(4) {
 			ids = append(ids, id[:])
 		}
-		req := &access.GetEventsForBlockIDsRequest{BlockIds: ids}
+		req := &access.GetEventsForBlockIDsRequest{
+			BlockIds: ids,
+			Type:     string(mocks.GenericEventType(0)),
+		}
 		_, err := s.GetEventsForBlockIDs(context.Background(), req)
 
 		assert.Error(t, err)
@@ -523,7 +528,10 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 		for _, id := range mocks.GenericIdentifiers(4) {
 			ids = append(ids, id[:])
 		}
-		req := &access.GetEventsForBlockIDsRequest{BlockIds: ids}
+		req := &access.GetEventsForBlockIDsRequest{
+			BlockIds: ids,
+			Type:     string(mocks.GenericEventType(0)),
+		}
 		_, err := s.GetEventsForBlockIDs(context.Background(), req)
 
 		assert.Error(t, err)
@@ -544,7 +552,10 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 		for _, id := range mocks.GenericIdentifiers(4) {
 			ids = append(ids, id[:])
 		}
-		req := &access.GetEventsForBlockIDsRequest{BlockIds: ids}
+		req := &access.GetEventsForBlockIDsRequest{
+			BlockIds: ids,
+			Type:     string(mocks.GenericEventType(0)),
+		}
 		_, err := s.GetEventsForBlockIDs(context.Background(), req)
 
 		assert.Error(t, err)
@@ -562,7 +573,7 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 			// Expect height to be between GenericHeight and GenericHeight + 3 since there are four
 			// given blockIDs.
 			assert.InDelta(t, mocks.GenericHeight, h, 3)
-			assert.Empty(t, types)
+			assert.Equal(t, mocks.GenericEventTypes(1), types)
 
 			return events, nil
 		}
@@ -580,6 +591,7 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 		req := &access.GetEventsForHeightRangeRequest{
 			StartHeight: mocks.GenericHeight,
 			EndHeight:   mocks.GenericHeight + 3,
+			Type:        string(mocks.GenericEventType(0)),
 		}
 		resp, err := s.GetEventsForHeightRange(context.Background(), req)
 
@@ -605,6 +617,7 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 		req := &access.GetEventsForHeightRangeRequest{
 			StartHeight: mocks.GenericHeight,
 			EndHeight:   mocks.GenericHeight + 3,
+			Type:        string(mocks.GenericEventType(0)),
 		}
 		_, err := s.GetEventsForHeightRange(context.Background(), req)
 
@@ -625,6 +638,7 @@ func TestServer_GetEventsForHeightRange(t *testing.T) {
 		req := &access.GetEventsForHeightRangeRequest{
 			StartHeight: mocks.GenericHeight,
 			EndHeight:   mocks.GenericHeight + 3,
+			Type:        string(mocks.GenericEventType(0)),
 		}
 		_, err := s.GetEventsForHeightRange(context.Background(), req)
 
@@ -1324,14 +1338,14 @@ func TestServer_GetLatestBlock(t *testing.T) {
 }
 
 func TestServer_GetBlockByID(t *testing.T) {
-	blockID := mocks.ByteSlice(mocks.GenericIdentifier(0))
+	wantBlockID := mocks.ByteSlice(mocks.GenericHeader.ID())
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
 		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), blockID)
+			assert.Equal(t, wantBlockID, blockID[:])
 
 			return mocks.GenericHeight, nil
 		}
@@ -1354,11 +1368,11 @@ func TestServer_GetBlockByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockByIDRequest{Id: blockID}
+		req := &access.GetBlockByIDRequest{Id: wantBlockID}
 		resp, err := s.GetBlockByID(context.Background(), req)
 
 		assert.NoError(t, err)
-		assert.Equal(t, blockID, resp.Block.Id)
+		assert.Equal(t, wantBlockID, resp.Block.Id)
 		assert.Equal(t, mocks.GenericHeight, resp.Block.Height)
 		assert.Equal(t, mocks.GenericHeader.ParentID[:], resp.Block.ParentId)
 		assert.Len(t, resp.Block.BlockSeals, 4)
@@ -1377,7 +1391,7 @@ func TestServer_GetBlockByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockByIDRequest{Id: blockID}
+		req := &access.GetBlockByIDRequest{Id: wantBlockID}
 		_, err := s.GetBlockByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -1394,7 +1408,7 @@ func TestServer_GetBlockByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockByIDRequest{Id: blockID}
+		req := &access.GetBlockByIDRequest{Id: wantBlockID}
 		_, err := s.GetBlockByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -1411,7 +1425,7 @@ func TestServer_GetBlockByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockByIDRequest{Id: blockID}
+		req := &access.GetBlockByIDRequest{Id: wantBlockID}
 		_, err := s.GetBlockByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -1428,7 +1442,7 @@ func TestServer_GetBlockByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockByIDRequest{Id: blockID}
+		req := &access.GetBlockByIDRequest{Id: wantBlockID}
 		_, err := s.GetBlockByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -1445,7 +1459,7 @@ func TestServer_GetBlockByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockByIDRequest{Id: blockID}
+		req := &access.GetBlockByIDRequest{Id: wantBlockID}
 		_, err := s.GetBlockByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -1462,7 +1476,7 @@ func TestServer_GetBlockByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockByIDRequest{Id: blockID}
+		req := &access.GetBlockByIDRequest{Id: wantBlockID}
 		_, err := s.GetBlockByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -1510,23 +1524,6 @@ func TestServer_GetBlockByHeight(t *testing.T) {
 		assert.Len(t, resp.Block.BlockSeals, 4)
 		assert.Len(t, resp.Block.CollectionGuarantees, 6)
 		assert.NotZero(t, resp.Block.Timestamp)
-	})
-
-	t.Run("handles indexer failure on HeightForBlock", func(t *testing.T) {
-		t.Parallel()
-
-		index := mocks.BaselineReader(t)
-		index.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
-			return 0, mocks.GenericError
-		}
-
-		s := baselineServer(t)
-		s.index = index
-
-		req := &access.GetBlockByHeightRequest{Height: mocks.GenericHeight}
-		_, err := s.GetBlockByHeight(context.Background(), req)
-
-		assert.Error(t, err)
 	})
 
 	t.Run("handles indexer failure on Header", func(t *testing.T) {
@@ -1585,7 +1582,6 @@ func baselineServer(t *testing.T) *Server {
 	t.Helper()
 
 	s := Server{
-		chainID: dps.FlowMainnet.String(),
 		codec:   mocks.BaselineCodec(t),
 		index:   mocks.BaselineReader(t),
 		invoker: mocks.BaselineInvoker(t),

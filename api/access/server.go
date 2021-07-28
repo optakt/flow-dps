@@ -40,19 +40,15 @@ type Server struct {
 	index   dps.Reader
 	codec   dps.Codec
 	invoker Invoker
-
-	chainID string
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index dps.Reader, codec dps.Codec, invoker Invoker, chainID string) *Server {
+func NewServer(index dps.Reader, codec dps.Codec, invoker Invoker) *Server {
 	s := Server{
 		index:   index,
 		codec:   codec,
 		invoker: invoker,
-
-		chainID: chainID,
 	}
 
 	return &s
@@ -62,51 +58,31 @@ func (s *Server) Ping(_ context.Context, _ *access.PingRequest) (*access.PingRes
 	return &access.PingResponse{}, nil
 }
 
-func (s *Server) GetLatestBlockHeader(_ context.Context, _ *access.GetLatestBlockHeaderRequest) (*access.BlockHeaderResponse, error) {
+func (s *Server) GetLatestBlockHeader(ctx context.Context, _ *access.GetLatestBlockHeaderRequest) (*access.BlockHeaderResponse, error) {
 	height, err := s.index.Last()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve last block height: %w", err)
 	}
 
-	header, err := s.index.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve last block header: %w", err)
+	req := access.GetBlockHeaderByHeightRequest{
+		Height: height,
 	}
 
-	block, err := convert.BlockHeaderToMessage(header)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert block header to RPC entity: %w", err)
-	}
-
-	resp := access.BlockHeaderResponse{
-		Block: block,
-	}
-
-	return &resp, err
+	return s.GetBlockHeaderByHeight(ctx, &req)
 }
 
-func (s *Server) GetBlockHeaderByID(_ context.Context, in *access.GetBlockHeaderByIDRequest) (*access.BlockHeaderResponse, error) {
+func (s *Server) GetBlockHeaderByID(ctx context.Context, in *access.GetBlockHeaderByIDRequest) (*access.BlockHeaderResponse, error) {
 	blockID := flow.HashToID(in.Id)
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve last block height: %w", err)
 	}
 
-	header, err := s.index.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve last block header: %w", err)
+	req := access.GetBlockHeaderByHeightRequest{
+		Height: height,
 	}
 
-	block, err := convert.BlockHeaderToMessage(header)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert block header to RPC entity: %w", err)
-	}
-
-	resp := access.BlockHeaderResponse{
-		Block: block,
-	}
-
-	return &resp, err
+	return s.GetBlockHeaderByHeight(ctx, &req)
 }
 
 func (s *Server) GetBlockHeaderByHeight(_ context.Context, in *access.GetBlockHeaderByHeightRequest) (*access.BlockHeaderResponse, error) {
@@ -115,13 +91,13 @@ func (s *Server) GetBlockHeaderByHeight(_ context.Context, in *access.GetBlockHe
 		return nil, fmt.Errorf("could not retrieve last block header: %w", err)
 	}
 
-	block, err := convert.BlockHeaderToMessage(header)
+	blockMsg, err := convert.BlockHeaderToMessage(header)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert block header to RPC entity: %w", err)
 	}
 
 	resp := access.BlockHeaderResponse{
-		Block: block,
+		Block: blockMsg,
 	}
 
 	return &resp, err
@@ -140,21 +116,29 @@ func (s *Server) GetLatestBlock(ctx context.Context, in *access.GetLatestBlockRe
 	return s.GetBlockByHeight(ctx, req)
 }
 
-func (s *Server) GetBlockByID(_ context.Context, in *access.GetBlockByIDRequest) (*access.BlockResponse, error) {
+func (s *Server) GetBlockByID(ctx context.Context, in *access.GetBlockByIDRequest) (*access.BlockResponse, error) {
 	blockID := flow.HashToID(in.Id)
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
-		return nil, fmt.Errorf("could not get height for block ID %x: %w", blockID, err)
+		return nil, fmt.Errorf("could not get height for block %x: %w", blockID, err)
 	}
 
-	header, err := s.index.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get header for height %d: %w", height, err)
+	req := access.GetBlockByHeightRequest{
+		Height:               height,
 	}
 
-	sealIDs, err := s.index.SealsByHeight(height)
+	return s.GetBlockByHeight(ctx, &req)
+}
+
+func (s *Server) GetBlockByHeight(_ context.Context, in *access.GetBlockByHeightRequest) (*access.BlockResponse, error) {
+	header, err := s.index.Header(in.Height)
 	if err != nil {
-		return nil, fmt.Errorf("could not get seals for height %d: %w", height, err)
+		return nil, fmt.Errorf("could not get header for height %d: %w", in.Height, err)
+	}
+
+	sealIDs, err := s.index.SealsByHeight(in.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get seals for height %d: %w", in.Height, err)
 	}
 
 	seals := make([]*entities.BlockSeal, 0, len(sealIDs))
@@ -173,9 +157,9 @@ func (s *Server) GetBlockByID(_ context.Context, in *access.GetBlockByIDRequest)
 		seals = append(seals, &entity)
 	}
 
-	collIDs, err := s.index.CollectionsByHeight(height)
+	collIDs, err := s.index.CollectionsByHeight(in.Height)
 	if err != nil {
-		return nil, fmt.Errorf("could not get collections for height %d: %w", height, err)
+		return nil, fmt.Errorf("could not get collections for height %d: %w", in.Height, err)
 	}
 
 	collections := make([]*entities.CollectionGuarantee, 0, len(collIDs))
@@ -192,9 +176,10 @@ func (s *Server) GetBlockByID(_ context.Context, in *access.GetBlockByIDRequest)
 		collections = append(collections, &entity)
 	}
 
+	blockID := header.ID()
 	block := entities.Block{
-		Id:                   in.Id,
-		Height:               height,
+		Id:                   blockID[:],
+		Height:               in.Height,
 		ParentId:             header.ParentID[:],
 		Timestamp:            timestamppb.New(header.Timestamp),
 		CollectionGuarantees: collections,
@@ -207,20 +192,6 @@ func (s *Server) GetBlockByID(_ context.Context, in *access.GetBlockByIDRequest)
 	}
 
 	return &resp, nil
-}
-
-func (s *Server) GetBlockByHeight(ctx context.Context, in *access.GetBlockByHeightRequest) (*access.BlockResponse, error) {
-	header, err := s.index.Header(in.Height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get header for height %d: %w", in.Height, err)
-	}
-
-	blockID := header.ID()
-	req := &access.GetBlockByIDRequest{
-		Id: blockID[:],
-	}
-
-	return s.GetBlockByID(ctx, req)
 }
 
 func (s *Server) GetCollectionByID(_ context.Context, in *access.GetCollectionByIDRequest) (*access.CollectionResponse, error) {
@@ -266,6 +237,9 @@ func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransacti
 	}
 
 	// We also need the height of the transaction we're looking at.
+	// TODO: See if it wouldn't make more sense to remove this index and just
+	//		 always return the status as sealed.
+	//		 https://github.com/optakt/flow-dps/issues/317
 	height, err := s.index.HeightForTransaction(txID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve block height: %w", err)
@@ -351,13 +325,13 @@ func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccoun
 		return nil, err
 	}
 
-	a, err := convert.AccountToMessage(account)
+	accountMsg, err := convert.AccountToMessage(account)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert account to RPC message: %w", err)
 	}
 
 	resp := access.AccountResponse{
-		Account: a,
+		Account: accountMsg,
 	}
 
 	return &resp, nil
@@ -425,7 +399,7 @@ func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.Execut
 func (s *Server) GetEventsForHeightRange(_ context.Context, in *access.GetEventsForHeightRangeRequest) (*access.EventsResponse, error) {
 	var events []*access.EventsResponse_Result
 	for height := in.StartHeight; height <= in.EndHeight; height++ {
-		ee, err := s.index.Events(height)
+		ee, err := s.index.Events(height, flow.EventType(in.Type))
 		if err != nil {
 			return nil, fmt.Errorf("could not get events at height %d: %w", height, err)
 		}
@@ -472,7 +446,7 @@ func (s *Server) GetEventsForBlockIDs(_ context.Context, in *access.GetEventsFor
 			return nil, fmt.Errorf("could not get height of block with ID %x: %w", id, err)
 		}
 
-		ee, err := s.index.Events(height)
+		ee, err := s.index.Events(height, flow.EventType(in.Type))
 		if err != nil {
 			return nil, fmt.Errorf("could not get events at height %d: %w", height, err)
 		}
@@ -524,9 +498,9 @@ func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkPar
 }
 
 func (s *Server) SendTransaction(ctx context.Context, in *access.SendTransactionRequest) (*access.SendTransactionResponse, error) {
-	return nil, errors.New("not implemented")
+	return nil, errors.New("SendTransaction is not implemented by the Flow DPS API; please use the Flow Access API on a Flow access node directly")
 }
 
 func (s *Server) GetLatestProtocolStateSnapshot(ctx context.Context, in *access.GetLatestProtocolStateSnapshotRequest) (*access.ProtocolStateSnapshotResponse, error) {
-	return nil, errors.New("not implemented")
+	return nil, errors.New("GetLatestProtocolSnapshot is not implemented by the Flow DPS API; please use the Flow Access API on a Flow access node directly")
 }

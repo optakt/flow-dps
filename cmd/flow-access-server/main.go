@@ -34,6 +34,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
 
 	"github.com/onflow/flow/protobuf/go/flow/access"
+
 	accessApi "github.com/optakt/flow-dps/api/access"
 	dpsApi "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
@@ -60,7 +61,6 @@ func run() int {
 	var (
 		flagAPI   string
 		flagCache uint64
-		flagChain string
 		flagIndex string
 		flagLevel string
 		flagPort  uint16
@@ -68,7 +68,6 @@ func run() int {
 
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
 	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
-	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowMainnet.String(), "ID of the chain that this server uses as its data source")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 5006, "port to serve Access API on")
@@ -132,7 +131,7 @@ func run() int {
 		return failure
 	}
 
-	server := accessApi.NewServer(index, codec, invoker, flagChain)
+	server := accessApi.NewServer(index, codec, invoker)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
