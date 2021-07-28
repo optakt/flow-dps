@@ -20,10 +20,8 @@ import (
 
 type InvalidBlock struct {
 	Description Description
-	Index       uint64
-	Hash        string
 }
 
 func (i InvalidBlock) Error() string {
-	return fmt.Sprintf("invalid block (index: %d, hash: %s): %s", i.Index, i.Hash, i.Description)
+	return fmt.Sprintf("invalid block: %s", i.Description)
 }
