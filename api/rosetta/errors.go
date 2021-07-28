@@ -141,8 +141,6 @@ func invalidBlock(fail failure.InvalidBlock) Error {
 	return convertError(
 		configuration.ErrorInvalidBlock,
 		fail.Description,
-		withDetail("index", fail.Index),
-		withDetail("hash", fail.Hash),
 	)
 }
 

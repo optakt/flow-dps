@@ -29,10 +29,11 @@ import (
 // valid, so we will have at least a height or a hash.
 func (v *Validator) Block(rosBlockID identifier.Block) (identifier.Block, error) {
 
-	// We currently only support retrieval by height, until we start indexing
-	// the block IDs as part of the DPS index.
-	if rosBlockID.Index == nil {
-		return identifier.Block{}, fmt.Errorf("block retrieval by hash only is currently not supported")
+	// If both the index and the hash are missing, the block identifier is invalid.
+	if rosBlockID.Index == nil && rosBlockID.Hash == "" {
+		return identifier.Block{}, failure.InvalidBlock{
+			Description: failure.NewDescription("block needs either a valid index or a valid hash"),
+		}
 	}
 
 	// If a block hash is present, it should be a valid block ID for Flow.
@@ -40,41 +41,50 @@ func (v *Validator) Block(rosBlockID identifier.Block) (identifier.Block, error)
 		_, err := flow.HexStringToIdentifier(rosBlockID.Hash)
 		if err != nil {
 			return identifier.Block{}, failure.InvalidBlock{
-				Index:       *rosBlockID.Index,
-				Hash:        rosBlockID.Hash,
-				Description: failure.NewDescription("block hash is not a valid hex-encoded string"),
+				Description: failure.NewDescription("block hash is not a valid hex-encoded string",
+					failure.WithString("block_hash", rosBlockID.Hash),
+				),
 			}
 		}
 	}
 
-	// The block index can't be below the first indexed height.
-	first, err := v.index.First()
-	if err != nil {
-		return identifier.Block{}, fmt.Errorf("could not get first: %w", err)
-	}
-	if *rosBlockID.Index < first {
-		return identifier.Block{}, failure.InvalidBlock{
-			Index: *rosBlockID.Index,
-			Hash:  rosBlockID.Hash,
-			Description: failure.NewDescription("block index is below first indexed height",
-				failure.WithUint64("first_index", first),
-			),
+	// If a block index is present, it should be a valid height for the DPS.
+	if rosBlockID.Index != nil {
+		first, err := v.index.First()
+		if err != nil {
+			return identifier.Block{}, fmt.Errorf("could not get first: %w", err)
+		}
+		if *rosBlockID.Index < first {
+			return identifier.Block{}, failure.InvalidBlock{
+				Description: failure.NewDescription("block index is below first indexed height",
+					failure.WithUint64("block_index", *rosBlockID.Index),
+					failure.WithUint64("first_index", first),
+				),
+			}
+		}
+		last, err := v.index.Last()
+		if err != nil {
+			return identifier.Block{}, fmt.Errorf("could not get last: %w", err)
+		}
+		if *rosBlockID.Index > last {
+			return identifier.Block{}, failure.UnknownBlock{
+				Index: *rosBlockID.Index,
+				Hash:  rosBlockID.Hash,
+				Description: failure.NewDescription("block index is above last indexed height",
+					failure.WithUint64("last_index", last),
+				),
+			}
 		}
 	}
 
-	// The block index can't be above the last indexed height.
-	last, err := v.index.Last()
-	if err != nil {
-		return identifier.Block{}, fmt.Errorf("could not get last: %w", err)
-	}
-	if *rosBlockID.Index > last {
-		return identifier.Block{}, failure.UnknownBlock{
-			Index: *rosBlockID.Index,
-			Hash:  rosBlockID.Hash,
-			Description: failure.NewDescription("block index is above last indexed height",
-				failure.WithUint64("last_index", last),
-			),
+	// If we don't have a height, fill it in now.
+	if rosBlockID.Index == nil {
+		blockID, _ := flow.HexStringToIdentifier(rosBlockID.Hash)
+		height, err := v.index.HeightForBlock(blockID)
+		if err != nil {
+			return identifier.Block{}, fmt.Errorf("could not get height for block: %w", err)
 		}
+		rosBlockID.Index = &height
 	}
 
 	// The given block ID should match the block ID at the given height.
@@ -84,9 +94,9 @@ func (v *Validator) Block(rosBlockID identifier.Block) (identifier.Block, error)
 	}
 	if rosBlockID.Hash != "" && rosBlockID.Hash != header.ID().String() {
 		return identifier.Block{}, failure.InvalidBlock{
-			Index: *rosBlockID.Index,
-			Hash:  rosBlockID.Hash,
 			Description: failure.NewDescription("block hash mismatches with authoritative hash for index",
+				failure.WithUint64("block_index", *rosBlockID.Index),
+				failure.WithString("block_hash", rosBlockID.Hash),
 				failure.WithString("want_hash", header.ID().String()),
 			),
 		}
