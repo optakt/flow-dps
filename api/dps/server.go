@@ -78,8 +78,11 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 // GetHeightForBlock implements the `GetHeightForBlock` method of the generated GRPC
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
-
+	if len(req.BlockID) != 32 {
+		return nil, fmt.Errorf("expecting %d bytes but got %d bytes", len(flow.Identifier{}), len(req.BlockID))
+	}
 	blockID := flow.HashToID(req.BlockID)
+
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get height for block: %w", err)
@@ -246,6 +249,9 @@ func (s *Server) GetGuarantee(_ context.Context, req *GetGuaranteeRequest) (*Get
 // GetTransaction implements the `GetTransaction` method of the generated GRPC
 // server.
 func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
+	if len(req.TransactionID) != 32 {
+		return nil, fmt.Errorf("expecting %d bytes but got %d bytes", len(flow.Identifier{}), len(req.TransactionID))
+	}
 	txID := flow.HashToID(req.TransactionID)
 
 	transaction, err := s.index.Transaction(txID)

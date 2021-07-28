@@ -154,7 +154,7 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqBlockID flow.Identifier
+		reqBlockID []byte
 
 		mockErr error
 
@@ -165,7 +165,7 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 		{
 			name: "nominal case",
 
-			reqBlockID: mocks.GenericIdentifier(0),
+			reqBlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
 
 			mockErr: nil,
 
@@ -174,9 +174,16 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
-			name: "error handling",
+			name: "handles invalid identifier size",
 
-			reqBlockID: mocks.GenericIdentifier(0),
+			reqBlockID: []byte{0x2a, 0x2a, 0x2a, 0x2a},
+
+			checkErr: assert.Error,
+		},
+		{
+			name: "handles indexer error on HeightForBlock",
+
+			reqBlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
 
 			mockErr: mocks.GenericError,
 
@@ -197,7 +204,7 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 			s := Server{index: index}
 
 			req := &GetHeightForBlockRequest{
-				BlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				BlockID: test.reqBlockID,
 			}
 			gotRes, gotErr := s.GetHeightForBlock(context.Background(), req)
 
@@ -453,7 +460,7 @@ func TestServer_GetRegisterValues(t *testing.T) {
 		name string
 
 		reqHeight uint64
-		reqPaths  []ledger.Path
+		reqPaths  [][]byte
 
 		mockValues []ledger.Value
 		mockErr    error
@@ -468,7 +475,7 @@ func TestServer_GetRegisterValues(t *testing.T) {
 			name: "nominal case",
 
 			reqHeight: mocks.GenericHeight,
-			reqPaths:  mocks.GenericLedgerPaths(6),
+			reqPaths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
 
 			mockValues: mocks.GenericLedgerValues(6),
 			mockErr:    nil,
@@ -484,10 +491,22 @@ func TestServer_GetRegisterValues(t *testing.T) {
 			checkErr: assert.NoError,
 		},
 		{
-			name: "error case",
+			name: "handles invalid path length",
 
 			reqHeight: mocks.GenericHeight,
-			reqPaths:  mocks.GenericLedgerPaths(6),
+			reqPaths:  [][]byte{{0x2a, 0x2a, 0x2a, 0x2a}},
+
+			mockValues: mocks.GenericLedgerValues(6),
+			mockErr:    mocks.GenericError,
+
+			wantRes:  nil,
+			checkErr: assert.Error,
+		},
+		{
+			name: "handles indexer failure on values",
+
+			reqHeight: mocks.GenericHeight,
+			reqPaths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
 
 			mockValues: mocks.GenericLedgerValues(6),
 			mockErr:    mocks.GenericError,
@@ -518,12 +537,12 @@ func TestServer_GetRegisterValues(t *testing.T) {
 
 			req := &GetRegisterValuesRequest{
 				Height: test.reqHeight,
-				Paths:  convert.PathsToBytes(test.reqPaths),
+				Paths:  test.reqPaths,
 			}
 			gotRes, gotErr := s.GetRegisterValues(context.Background(), req)
 
 			test.checkErr(t, gotErr)
-			assert.Equal(t, mocks.GenericHeight, gotHeight)
+			assert.Equal(t, test.wantHeight, gotHeight)
 			assert.Equal(t, test.wantPaths, gotPaths)
 			if gotErr == nil {
 				assert.Equal(t, test.wantRes.Height, gotRes.Height)
@@ -725,7 +744,7 @@ func TestServer_GetTransaction(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqTxID flow.Identifier
+		reqTxID []byte
 
 		mockTransaction *flow.TransactionBody
 		mockErr         error
@@ -737,7 +756,7 @@ func TestServer_GetTransaction(t *testing.T) {
 		{
 			name: "nominal case",
 
-			reqTxID: mocks.GenericIdentifier(0),
+			reqTxID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
 
 			mockTransaction: mocks.GenericTransaction(0),
 
@@ -745,9 +764,19 @@ func TestServer_GetTransaction(t *testing.T) {
 			checkErr:        assert.NoError,
 		},
 		{
-			name: "handles index failure",
+			name: "handles invalid identifier size",
 
-			reqTxID: mocks.GenericIdentifier(0),
+			reqTxID: []byte{0x2a, 0x2a, 0x2a, 0x2a},
+
+			mockTransaction: mocks.GenericTransaction(0),
+
+			wantTransaction: mocks.GenericTransaction(0),
+			checkErr:        assert.Error,
+		},
+		{
+			name: "handles index failure on Transaction",
+
+			reqTxID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
 
 			mockErr: mocks.GenericError,
 
@@ -771,7 +800,7 @@ func TestServer_GetTransaction(t *testing.T) {
 			}
 
 			req := &GetTransactionRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				TransactionID: test.reqTxID,
 			}
 			gotRes, gotErr := s.GetTransaction(context.Background(), req)
 
@@ -896,8 +925,8 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 			if gotErr == nil {
 				assert.Equal(t, gotRes.Height, mocks.GenericHeight)
 				assert.Len(t, gotRes.TransactionIDs, len(test.mockTransactions))
-				for _, want := range test.mockTransactions {
-					assert.Contains(t, gotRes.TransactionIDs, want[:])
+				for _, wantTxID := range test.mockTransactions {
+					assert.Contains(t, gotRes.TransactionIDs, wantTxID[:])
 				}
 			}
 		})
