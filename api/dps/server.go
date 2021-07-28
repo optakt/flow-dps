@@ -214,6 +214,7 @@ func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransacti
 
 	transactionIDs := make([][]byte, 0, len(txIDs))
 	for _, txID := range txIDs {
+		txID := txID
 		transactionIDs = append(transactionIDs, txID[:])
 	}
 
