@@ -70,7 +70,7 @@ func main() {
 
 	fmt.Println("Found node version", nodeVersion)
 
-	fmt.Println("Found middleware version", middlewareVersion)
+	fmt.Println("Using middleware version", middlewareVersion)
 
 	tmpl := template.Must(template.New("version.go").Parse(versionFileTemplate))
 

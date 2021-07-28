@@ -17,5 +17,5 @@ package configuration
 const (
 	RosettaVersion    = "1.4.10"
 	NodeVersion       = "0.17.6"
-	MiddlewareVersion = "0.0.0"
+	MiddlewareVersion = "1.0.0"
 )
