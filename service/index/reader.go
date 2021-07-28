@@ -159,9 +159,9 @@ func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) 
 
 // Result returns the transaction result for the given transaction ID.
 func (r *Reader) Result(txID flow.Identifier) (*flow.TransactionResult, error) {
-	var results flow.TransactionResult
-	err := r.db.View(r.lib.RetrieveResult(txID, &results))
-	return &results, err
+	var result flow.TransactionResult
+	err := r.db.View(r.lib.RetrieveResult(txID, &result))
+	return &result, err
 }
 
 // Events returns the events of all transactions that were part of the
