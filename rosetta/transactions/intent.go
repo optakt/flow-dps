@@ -46,9 +46,11 @@ type Intent struct {
 // account IDs, amounts and type of operation.
 func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent, error) {
 
+	firstOpNegative := strings.HasPrefix(operations[0].Amount.Value, "-")
+	secondOpNegative := strings.HasPrefix(operations[1].Amount.Value, "-")
+
 	// Operations are invalid if both operations have negative amounts.
-	if strings.HasPrefix(operations[0].Amount.Value, "-") &&
-		strings.HasPrefix(operations[1].Amount.Value, "-") {
+	if firstOpNegative && secondOpNegative {
 
 		return nil, failure.InvalidIntent{
 			Description: failure.NewDescription("invalid operations - two deposits specified"),
@@ -58,8 +60,7 @@ func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent
 	}
 
 	// Operations are also invalid if both operations have positive amounts.
-	if !strings.HasPrefix(operations[0].Amount.Value, "-") &&
-		!strings.HasPrefix(operations[1].Amount.Value, "-") {
+	if !firstOpNegative && !secondOpNegative {
 
 		return nil, failure.InvalidIntent{
 			Description: failure.NewDescription("invalid operations - two withdrawals specified"),
@@ -68,10 +69,11 @@ func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent
 		}
 	}
 
+	// Assume the first operation is the one with the negative amount.
 	send := operations[0]
 	receive := operations[1]
 
-	// If the send operation doesn't have the negative value, we should switch the operations.
+	// If that was not the case, switch the send and receive operations.
 	if !strings.HasPrefix(send.Amount.Value, "-") {
 		receive = operations[0]
 		send = operations[1]
@@ -165,6 +167,7 @@ func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent
 		Amount:   sv,
 		Payer:    flow.HexToAddress(send.AccountID.Address),
 		Proposer: flow.HexToAddress(send.AccountID.Address),
+		GasLimit: flow.DefaultMaxTransactionGasLimit,
 	}
 
 	return &intent, nil

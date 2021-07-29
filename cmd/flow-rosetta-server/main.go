@@ -71,7 +71,7 @@ func run() int {
 	)
 
 	pflag.StringVarP(&flagDPSAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
-	pflag.StringVarP(&flagFlowAPI, "flow-api", "f", "", "host URL for Flow Access API endpoint")
+	pflag.StringVarP(&flagFlowAPI, "flow-api", "f", "", "host URL for Flow network's Access API endpoint")
 	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")

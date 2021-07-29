@@ -84,7 +84,7 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidIntent(inErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, internal(intentCreate, err))
+		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermine, err))
 	}
 
 	res := PreprocessResponse{

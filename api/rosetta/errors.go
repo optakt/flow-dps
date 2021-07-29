@@ -41,7 +41,7 @@ const (
 	oldestRetrieval   = "unable to retrieve oldest block"
 	currentRetrieval  = "unable to retrieve current block"
 	txRetrieval       = "unable to retrieve transaction"
-	intentCreate      = "unable to determine transaction intent"
+	intentDetermine   = "unable to determine transaction intent"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It

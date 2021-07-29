@@ -197,14 +197,16 @@ func ParseRosettaValue(value string) (cadence.UFix64, error) {
 	// If the number is shorter, it means that the whole string is the fraction.
 	if len(value) > dps.FlowDecimals {
 
+		decimalsIndex := len(value) - dps.FlowDecimals
+
 		// Get all characters except the last 8 and convert that string to an integer.
-		decimal, err = strconv.ParseInt(value[:len(value)-dps.FlowDecimals], 10, 32)
+		decimal, err = strconv.ParseInt(value[:decimalsIndex], 10, 32)
 		if err != nil {
 			return 0, fmt.Errorf("could not parse decimal part: %w", err)
 		}
 
 		// Get the last 8 characters and convert them to an uint.
-		fraction, err = strconv.ParseUint(value[len(value)-dps.FlowDecimals:], 10, 32)
+		fraction, err = strconv.ParseUint(value[decimalsIndex:], 10, 32)
 		if err != nil {
 			return 0, fmt.Errorf("could not parse fraction part: %w", err)
 		}
