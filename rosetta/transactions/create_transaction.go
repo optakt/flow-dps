@@ -17,10 +17,38 @@ package transactions
 import (
 	"fmt"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 // CreateTransaction translates the transaction intent to the Flow Transaction struct.
 func (p *Parser) CreateTransaction(intent *Intent) (*flow.Transaction, error) {
-	return nil, fmt.Errorf("TBD - not implemented")
+
+	script, err := p.generate.TransferTokens(dps.FlowSymbol)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate transfer script: %w", err)
+	}
+
+	tx := flow.NewTransaction().
+		SetScript(script).
+		SetReferenceBlockID(flow.BytesToID(intent.ReferenceBlock[:])).
+		SetPayer(flow.Address(intent.Payer)).
+		SetProposalKey(flow.Address(intent.Proposer), 0, intent.ProposerKeySequenceNumber).
+		AddAuthorizer(flow.Address(intent.From)).
+		SetGasLimit(intent.GasLimit)
+
+	err = tx.AddArgument(intent.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("could not add amount argument: %w", err)
+	}
+
+	receiver := cadence.NewAddress(flow.BytesToAddress(intent.To.Bytes()))
+	err = tx.AddArgument(receiver)
+	if err != nil {
+		return nil, fmt.Errorf("could not add recipient argument: %w", err)
+	}
+
+	return tx, nil
 }
