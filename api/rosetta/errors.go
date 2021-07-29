@@ -32,7 +32,7 @@ const (
 	currenciesEmpty = "currency identifier list is empty"
 	symbolEmpty     = "currency identifier has empty symbol field"
 	txEmpty         = "transaction identifier has empty hash field"
-	txLength        = "transaction identifier has invalid hash filed length"
+	txLength        = "transaction identifier has invalid hash field length"
 
 	networkCheck      = "unable to check network"
 	blockRetrieval    = "unable to retrieve block"
