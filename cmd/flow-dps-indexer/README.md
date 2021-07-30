@@ -15,15 +15,15 @@ Usage of flow-dps-indexer:
   -f, --force                overwrite existing index database
   -i, --index string         database directory for state index (default "index")
   -a, --index-all            index everything
-  -o, --index-collections    index collections
-  -m, --index-commits        index commits
-  -e, --index-events         index events
+      --index-collections    index collections
+      --index-commits        index commits
+      --index-events         index events
       --index-guarantees     index collection guarantees
-  -h, --index-headers        index headers
-  -p, --index-payloads       index payloads
+      --index-headers        index headers
+      --index-payloads       index payloads
       --index-results        index transaction results
       --index-seals          index seals
-  -x, --index-transactions   index transactions
+      --index-transactions   index transactions
   -l, --level string         log output level (default "info")
   -m, --metrics                     enable metrics collection and output
       --metrics-interval duration   defines the interval of metrics output to log (default 5m0s)

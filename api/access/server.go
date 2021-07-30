@@ -75,7 +75,7 @@ func (s *Server) GetBlockHeaderByID(ctx context.Context, in *access.GetBlockHead
 	blockID := flow.HashToID(in.Id)
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve last block height: %w", err)
+		return nil, fmt.Errorf("could not get height for block %x: %w", blockID, err)
 	}
 
 	req := access.GetBlockHeaderByHeightRequest{
@@ -88,7 +88,7 @@ func (s *Server) GetBlockHeaderByID(ctx context.Context, in *access.GetBlockHead
 func (s *Server) GetBlockHeaderByHeight(_ context.Context, in *access.GetBlockHeaderByHeightRequest) (*access.BlockHeaderResponse, error) {
 	header, err := s.index.Header(in.Height)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve last block header: %w", err)
+		return nil, fmt.Errorf("could not retrieve block header at height %d: %w", in.Height, err)
 	}
 
 	blockMsg, err := convert.BlockHeaderToMessage(header)
@@ -145,13 +145,16 @@ func (s *Server) GetBlockByHeight(_ context.Context, in *access.GetBlockByHeight
 	for _, sealID := range sealIDs {
 		seal, err := s.index.Seal(sealID)
 		if err != nil {
-			return nil, fmt.Errorf("could not get seal from ID %x: %w", sealID, err)
+			return nil, fmt.Errorf("could not get seal with ID %x: %w", sealID, err)
 		}
+
+		blockID := seal.BlockID
+		resultID := seal.ResultID
 
 		// See https://github.com/onflow/flow-go/blob/v0.17.4/engine/common/rpc/convert/convert.go#L180-L188
 		entity := entities.BlockSeal{
-			BlockId:                    seal.BlockID[:],
-			ExecutionReceiptId:         seal.ResultID[:],
+			BlockId:                    blockID[:],
+			ExecutionReceiptId:         resultID[:],
 			ExecutionReceiptSignatures: [][]byte{}, // filling seals signature with zero
 		}
 		seals = append(seals, &entity)
@@ -166,9 +169,10 @@ func (s *Server) GetBlockByHeight(_ context.Context, in *access.GetBlockByHeight
 	for _, collID := range collIDs {
 		guarantee, err := s.index.Guarantee(collID)
 		if err != nil {
-			return nil, fmt.Errorf("could not get collection from ID %x: %w", collID, err)
+			return nil, fmt.Errorf("could not get collection with ID %x: %w", collID, err)
 		}
 
+		collID := collID
 		entity := entities.CollectionGuarantee{
 			CollectionId: collID[:],
 			Signatures:   [][]byte{guarantee.Signature},
@@ -322,7 +326,7 @@ func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccoun
 
 	account, err := s.invoker.GetAccount(flow.BytesToAddress(in.Address), header)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get account: %w", err)
 	}
 
 	accountMsg, err := convert.AccountToMessage(account)
@@ -397,9 +401,14 @@ func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.Execut
 }
 
 func (s *Server) GetEventsForHeightRange(_ context.Context, in *access.GetEventsForHeightRangeRequest) (*access.EventsResponse, error) {
+	var types []flow.EventType
+	if in.Type != "" {
+		types = append(types, flow.EventType(in.Type))
+	}
+
 	var events []*access.EventsResponse_Result
 	for height := in.StartHeight; height <= in.EndHeight; height++ {
-		ee, err := s.index.Events(height, flow.EventType(in.Type))
+		ee, err := s.index.Events(height, types...)
 		if err != nil {
 			return nil, fmt.Errorf("could not get events at height %d: %w", height, err)
 		}
@@ -438,6 +447,11 @@ func (s *Server) GetEventsForHeightRange(_ context.Context, in *access.GetEvents
 }
 
 func (s *Server) GetEventsForBlockIDs(_ context.Context, in *access.GetEventsForBlockIDsRequest) (*access.EventsResponse, error) {
+	var types []flow.EventType
+	if in.Type != "" {
+		types = append(types, flow.EventType(in.Type))
+	}
+
 	var events []*access.EventsResponse_Result
 	for _, id := range in.BlockIds {
 		blockID := flow.HashToID(id)
@@ -446,7 +460,7 @@ func (s *Server) GetEventsForBlockIDs(_ context.Context, in *access.GetEventsFor
 			return nil, fmt.Errorf("could not get height of block with ID %x: %w", id, err)
 		}
 
-		ee, err := s.index.Events(height, flow.EventType(in.Type))
+		ee, err := s.index.Events(height, types...)
 		if err != nil {
 			return nil, fmt.Errorf("could not get events at height %d: %w", height, err)
 		}

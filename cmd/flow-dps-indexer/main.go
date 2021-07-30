@@ -84,7 +84,7 @@ func run() int {
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
 	pflag.BoolVar(&flagIndexCollections, "index-collections", false, "index collections")
-	pflag.BoolVar(&flagIndexCollections, "index-guarantees", false, "index collection guarantees")
+	pflag.BoolVar(&flagIndexGuarantees, "index-guarantees", false, "index collection guarantees")
 	pflag.BoolVar(&flagIndexCommit, "index-commits", false, "index commits")
 	pflag.BoolVar(&flagIndexEvents, "index-events", false, "index events")
 	pflag.BoolVar(&flagIndexHeader, "index-headers", false, "index headers")
@@ -116,7 +116,7 @@ func run() int {
 
 	// Ensure that at least one index is specified.
 	if !flagIndexAll && !flagIndexCommit && !flagIndexHeader && !flagIndexPayloads && !flagIndexCollections &&
-		!flagIndexTransactions && !flagIndexResults && !flagIndexEvents && !flagIndexSeals {
+		!flagIndexGuarantees && !flagIndexTransactions && !flagIndexResults && !flagIndexEvents && !flagIndexSeals {
 		log.Error().Str("level", flagLevel).Msg("no indexing option specified, use -a/--all to build all indexes")
 		pflag.Usage()
 		return failure
@@ -124,7 +124,7 @@ func run() int {
 
 	// Fail if IndexAll is specified along with other index flags, as this would most likely mean that the user does
 	// not understand what they are doing.
-	if flagIndexAll && (flagIndexCommit || flagIndexHeader || flagIndexPayloads ||
+	if flagIndexAll && (flagIndexCommit || flagIndexHeader || flagIndexPayloads || flagIndexGuarantees ||
 		flagIndexCollections || flagIndexTransactions || flagIndexResults || flagIndexEvents || flagIndexSeals) {
 		log.Error().Str("level", flagLevel).Msg("-a/--all is mutually exclusive with specific indexing flags")
 		pflag.Usage()

@@ -189,6 +189,7 @@ func (d *Disk) Results(height uint64) ([]*flow.TransactionResult, error) {
 	// Convert to pointer slice for consistency.
 	var converted []*flow.TransactionResult
 	for _, result := range results {
+		result := result
 		converted = append(converted, &result)
 	}
 

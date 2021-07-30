@@ -211,6 +211,7 @@ func (s *Server) ListCollectionsForHeight(_ context.Context, req *ListCollection
 
 	rawIDs := make([][]byte, 0, len(collIDs))
 	for _, collID := range collIDs {
+		collID := collID
 		rawIDs = append(rawIDs, collID[:])
 	}
 
@@ -364,6 +365,7 @@ func (s *Server) ListSealsForHeight(_ context.Context, req *ListSealsForHeightRe
 
 	sIDs := make([][]byte, 0, len(sealIDs))
 	for _, sealID := range sealIDs {
+		sealID := sealID
 		sIDs = append(sIDs, sealID[:])
 	}
 

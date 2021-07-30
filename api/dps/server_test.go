@@ -534,6 +534,8 @@ func TestServer_GetRegisterValues(t *testing.T) {
 }
 
 func TestServer_GetCollection(t *testing.T) {
+	coll := mocks.GenericCollection(0)
+
 	tests := []struct {
 		name string
 
@@ -542,26 +544,24 @@ func TestServer_GetCollection(t *testing.T) {
 		mockCollection *flow.LightCollection
 		mockErr        error
 
-		wantCollection *flow.LightCollection
-
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
-			reqCollectionID: mocks.GenericIdentifier(0),
+			reqCollectionID: coll.ID(),
 
-			mockCollection: mocks.GenericCollection(0),
+			mockCollection: coll,
 
-			wantCollection: mocks.GenericCollection(0),
-			checkErr:       assert.NoError,
+			checkErr: assert.NoError,
 		},
 		{
 			name: "handles index failure",
 
-			reqCollectionID: mocks.GenericIdentifier(0),
+			reqCollectionID: coll.ID(),
 
-			mockErr: mocks.GenericError,
+			mockCollection: coll,
+			mockErr:        mocks.GenericError,
 
 			checkErr: assert.Error,
 		},
@@ -582,15 +582,76 @@ func TestServer_GetCollection(t *testing.T) {
 				index: index,
 			}
 
+			wantID := test.mockCollection.ID()
 			req := &GetCollectionRequest{
-				CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				CollectionID: wantID[:],
 			}
 			gotRes, gotErr := s.GetCollection(context.Background(), req)
 
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
-				assert.Equal(t, gotRes.CollectionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
+				assert.Equal(t, gotRes.CollectionID, wantID[:])
 				assert.NotEmpty(t, gotRes.Data)
+			}
+		})
+	}
+}
+
+func TestServer_ListCollectionsForHeight(t *testing.T) {
+	tests := []struct {
+		name string
+
+		reqHeight uint64
+
+		mockCollections []flow.Identifier
+		mockErr         error
+
+		checkErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "nominal case",
+
+			reqHeight: mocks.GenericHeight,
+
+			mockCollections: mocks.GenericIdentifiers(5),
+
+			checkErr: assert.NoError,
+		},
+		{
+			name: "handles index failure",
+
+			reqHeight: mocks.GenericHeight,
+
+			mockErr: mocks.GenericError,
+
+			checkErr: assert.Error,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			index := mocks.BaselineReader(t)
+			index.CollectionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+				return test.mockCollections, test.mockErr
+			}
+
+			s := Server{index: index}
+
+			req := &ListCollectionsForHeightRequest{
+				Height: mocks.GenericHeight,
+			}
+			gotRes, gotErr := s.ListCollectionsForHeight(context.Background(), req)
+
+			test.checkErr(t, gotErr)
+			if gotErr == nil {
+				assert.Equal(t, gotRes.Height, mocks.GenericHeight)
+				assert.Len(t, gotRes.CollectionIDs, len(test.mockCollections))
+				for _, want := range test.mockCollections {
+					assert.Contains(t, gotRes.CollectionIDs, want[:])
+				}
 			}
 		})
 	}
@@ -791,8 +852,6 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 		mockTransactions []flow.Identifier
 		mockErr          error
 
-		wantTransactions []flow.Identifier
-
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
@@ -802,8 +861,7 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 
 			mockTransactions: mocks.GenericIdentifiers(5),
 
-			wantTransactions: mocks.GenericIdentifiers(5),
-			checkErr:         assert.NoError,
+			checkErr: assert.NoError,
 		},
 		{
 			name: "handles index failure",
@@ -836,7 +894,10 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
 				assert.Equal(t, gotRes.Height, mocks.GenericHeight)
-				assert.Len(t, gotRes.TransactionIDs, 5)
+				assert.Len(t, gotRes.TransactionIDs, len(test.mockTransactions))
+				for _, want := range test.mockTransactions {
+					assert.Contains(t, gotRes.TransactionIDs, want[:])
+				}
 			}
 		})
 	}
@@ -987,8 +1048,7 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 
 			mockSeals: mocks.GenericIdentifiers(5),
 
-			wantSeals: mocks.GenericIdentifiers(5),
-			checkErr:  assert.NoError,
+			checkErr: assert.NoError,
 		},
 		{
 			name: "handles index failure",
@@ -1025,7 +1085,10 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
 				assert.Equal(t, gotRes.Height, test.reqHeight)
-				assert.Len(t, gotRes.SealIDs, 5)
+				assert.Len(t, gotRes.SealIDs, len(test.mockSeals))
+				for _, want := range test.mockSeals {
+					assert.Contains(t, gotRes.SealIDs, want[:])
+				}
 			}
 		})
 	}
