@@ -1,5 +1,9 @@
 /cmd/check-duplicate-transactions/check-duplicate-transactions
 /cmd/create-index-snapshot/create-index-snapshot
+/cmd/restore-index-snapshot/restore-index-snapshot
+/cmd/extract-block-events/extract-block-events
+/cmd/extract-block-headers/extract-block-headers
+/cmd/extract-ledger-payloads/extract-ledger-payloads
 /cmd/flow-dps-client/flow-dps-client
 /cmd/flow-dps-indexer/flow-dps-indexer
 /cmd/flow-rosetta-server/flow-rosetta-server
