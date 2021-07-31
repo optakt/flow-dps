@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/flow/protobuf/go/flow/access"
 	"github.com/onflow/flow/protobuf/go/flow/entities"
 
+	conv "github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -172,9 +173,8 @@ func (s *Server) GetBlockByHeight(_ context.Context, in *access.GetBlockByHeight
 			return nil, fmt.Errorf("could not get collection with ID %x: %w", collID, err)
 		}
 
-		collID := collID
 		entity := entities.CollectionGuarantee{
-			CollectionId: collID[:],
+			CollectionId: conv.IDToHash(collID),
 			Signatures:   [][]byte{guarantee.Signature},
 		}
 		collections = append(collections, &entity)
@@ -209,7 +209,7 @@ func (s *Server) GetCollectionByID(_ context.Context, in *access.GetCollectionBy
 		Id: in.Id,
 	}
 	for _, txID := range collection.Transactions {
-		collEntity.TransactionIds = append(collEntity.TransactionIds, txID[:])
+		collEntity.TransactionIds = append(collEntity.TransactionIds, conv.IDToHash(txID))
 	}
 
 	resp := access.CollectionResponse{

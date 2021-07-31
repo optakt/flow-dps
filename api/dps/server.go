@@ -79,9 +79,7 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
 
-	var blockID flow.Identifier
-	copy(blockID[:], req.BlockID)
-
+	blockID := flow.HashToID(req.BlockID)
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get height for block: %w", err)
@@ -181,8 +179,8 @@ func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequ
 // GetCollection implements the `GetCollection` method of the generated GRPC
 // server.
 func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*GetCollectionResponse, error) {
-	collID := flow.HashToID(req.CollectionID)
 
+	collID := flow.HashToID(req.CollectionID)
 	collection, err := s.index.Collection(collID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve collection: %w", err)
@@ -211,8 +209,7 @@ func (s *Server) ListCollectionsForHeight(_ context.Context, req *ListCollection
 
 	rawIDs := make([][]byte, 0, len(collIDs))
 	for _, collID := range collIDs {
-		collID := collID
-		rawIDs = append(rawIDs, collID[:])
+		rawIDs = append(rawIDs, convert.IDToHash(collID))
 	}
 
 	res := ListCollectionsForHeightResponse{
@@ -297,8 +294,7 @@ func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransacti
 
 	transactionIDs := make([][]byte, 0, len(txIDs))
 	for _, txID := range txIDs {
-		txID := txID
-		transactionIDs = append(transactionIDs, txID[:])
+		transactionIDs = append(transactionIDs, convert.IDToHash(txID))
 	}
 
 	res := ListTransactionsForHeightResponse{
@@ -312,8 +308,8 @@ func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransacti
 // GetResult implements the `GetResult` method of the generated GRPC
 // server.
 func (s *Server) GetResult(_ context.Context, req *GetResultRequest) (*GetResultResponse, error) {
-	txID := flow.HashToID(req.TransactionID)
 
+	txID := flow.HashToID(req.TransactionID)
 	result, err := s.index.Result(txID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve transaction result: %w", err)
@@ -335,8 +331,8 @@ func (s *Server) GetResult(_ context.Context, req *GetResultRequest) (*GetResult
 // GetSeal implements the `GetSeal` method of the generated GRPC
 // server.
 func (s *Server) GetSeal(_ context.Context, req *GetSealRequest) (*GetSealResponse, error) {
-	sealID := flow.HashToID(req.SealID)
 
+	sealID := flow.HashToID(req.SealID)
 	seal, err := s.index.Seal(sealID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve seal: %w", err)
@@ -365,8 +361,7 @@ func (s *Server) ListSealsForHeight(_ context.Context, req *ListSealsForHeightRe
 
 	sIDs := make([][]byte, 0, len(sealIDs))
 	for _, sealID := range sealIDs {
-		sealID := sealID
-		sIDs = append(sIDs, sealID[:])
+		sIDs = append(sIDs, convert.IDToHash(sealID))
 	}
 
 	res := ListSealsForHeightResponse{
