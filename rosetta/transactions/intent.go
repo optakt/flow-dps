@@ -122,6 +122,7 @@ func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent
 			),
 		}
 	}
+
 	// Parse value specified by the receiver.
 	rv, err := convert.ParseRosettaValue(receive.Amount.Value)
 	if err != nil {

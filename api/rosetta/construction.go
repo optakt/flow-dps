@@ -34,22 +34,21 @@ const (
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html
 type Construction struct {
-	config    Configuration
-	parser    Parser
+	config Configuration
+	parser Parser
+
+	// Retriever is used to retrieve the latest block ID. This is needed
+	// since the transactions require a reference block ID, so that
+	// their validity or expiration can be determined.
 	retriever Retriever
-	client    Client
+
+	// Client is used to submit the constructed transaction to the Flow network.
+	client Client
 }
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
 func NewConstruction(config Configuration, parser Parser, retriever Retriever, client Client) *Construction {
-
-	// The retriever has a number of capabilities, but in the context of the
-	// Rosetta Construction API, it is only used to retrieve the latest block ID.
-	// This is needed since the transactions require a reference block ID, so that
-	// their validity or expiration can be determined.
-
-	// Client is used to submit the constructed transaction to the Flow network.
 
 	c := Construction{
 		config:    config,
