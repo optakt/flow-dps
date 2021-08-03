@@ -165,13 +165,37 @@ func TestInvoker_GetAccount(t *testing.T) {
 			return &mocks.GenericAccount, nil
 		}
 
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericHeader, nil
+		}
+
 		invoker := baselineInvoker(t)
 		invoker.vm = vm
+		invoker.index = index
 
-		account, err := invoker.GetAccount(mocks.GenericAccount.Address, mocks.GenericHeader)
+		account, err := invoker.GetAccount(mocks.GenericAccount.Address, mocks.GenericHeight)
 
 		assert.NoError(t, err)
 		assert.Equal(t, &mocks.GenericAccount, account)
+	})
+
+	t.Run("handles index failure on Header", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			return nil, mocks.GenericError
+		}
+
+		invoker := baselineInvoker(t)
+		invoker.index = index
+
+		_, err := invoker.GetAccount(mocks.GenericAccount.Address, mocks.GenericHeight)
+
+		assert.Error(t, err)
 	})
 
 	t.Run("handles vm failure on GetAccount", func(t *testing.T) {
@@ -185,7 +209,7 @@ func TestInvoker_GetAccount(t *testing.T) {
 		invoker := baselineInvoker(t)
 		invoker.vm = vm
 
-		_, err := invoker.GetAccount(mocks.GenericAccount.Address, mocks.GenericHeader)
+		_, err := invoker.GetAccount(mocks.GenericAccount.Address, mocks.GenericHeight)
 
 		assert.Error(t, err)
 	})

@@ -853,9 +853,9 @@ func TestServer_GetAccount(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(address flow.Address, header *flow.Header) (*flow.Account, error) {
+		invoker.GetAccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericAccount.Address, address)
-			assert.Equal(t, mocks.GenericHeader, header)
+			assert.Equal(t, mocks.GenericHeight, height)
 
 			return &mocks.GenericAccount, nil
 		}
@@ -891,28 +891,11 @@ func TestServer_GetAccount(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles indexer failure on Header", func(t *testing.T) {
-		t.Parallel()
-
-		index := mocks.BaselineReader(t)
-		index.HeaderFunc = func(uint64) (*flow.Header, error) {
-			return nil, mocks.GenericError
-		}
-
-		s := baselineServer(t)
-		s.index = index
-
-		req := &access.GetAccountRequest{Address: mocks.GenericAccount.Address[:]}
-		_, err := s.GetAccount(context.Background(), req)
-
-		assert.Error(t, err)
-	})
-
 	t.Run("handles invoker failure on GetAccount", func(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(flow.Address, *flow.Header) (*flow.Account, error) {
+		invoker.GetAccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -936,16 +919,11 @@ func TestServer_GetAccountAtLatestBlock(t *testing.T) {
 
 			return mocks.GenericLedgerValues(4), nil
 		}
-		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
-			assert.Equal(t, mocks.GenericHeight, height)
-
-			return mocks.GenericHeader, nil
-		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(address flow.Address, header *flow.Header) (*flow.Account, error) {
+		invoker.GetAccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericAccount.Address, address)
-			assert.Equal(t, mocks.GenericHeader, header)
+			assert.Equal(t, mocks.GenericHeight, height)
 
 			return &mocks.GenericAccount, nil
 		}
@@ -981,28 +959,11 @@ func TestServer_GetAccountAtLatestBlock(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles indexer failure on Header", func(t *testing.T) {
-		t.Parallel()
-
-		index := mocks.BaselineReader(t)
-		index.HeaderFunc = func(uint64) (*flow.Header, error) {
-			return nil, mocks.GenericError
-		}
-
-		s := baselineServer(t)
-		s.index = index
-
-		req := &access.GetAccountAtLatestBlockRequest{Address: mocks.GenericAccount.Address[:]}
-		_, err := s.GetAccountAtLatestBlock(context.Background(), req)
-
-		assert.Error(t, err)
-	})
-
 	t.Run("handles invoker failure on GetAccount", func(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(flow.Address, *flow.Header) (*flow.Account, error) {
+		invoker.GetAccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1026,16 +987,11 @@ func TestServer_GetAccountAtBlockHeight(t *testing.T) {
 
 			return mocks.GenericLedgerValues(4), nil
 		}
-		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
-			assert.Equal(t, mocks.GenericHeight+999, height)
-
-			return mocks.GenericHeader, nil
-		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(address flow.Address, header *flow.Header) (*flow.Account, error) {
+		invoker.GetAccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericAccount.Address, address)
-			assert.Equal(t, mocks.GenericHeader, header)
+			assert.Equal(t, mocks.GenericHeight+999, height)
 
 			return &mocks.GenericAccount, nil
 		}
@@ -1057,31 +1013,11 @@ func TestServer_GetAccountAtBlockHeight(t *testing.T) {
 		assert.Equal(t, mocks.GenericAccount.Balance, resp.Account.Balance)
 	})
 
-	t.Run("handles indexer failure on Header", func(t *testing.T) {
-		t.Parallel()
-
-		index := mocks.BaselineReader(t)
-		index.HeaderFunc = func(uint64) (*flow.Header, error) {
-			return nil, mocks.GenericError
-		}
-
-		s := baselineServer(t)
-		s.index = index
-
-		req := &access.GetAccountAtBlockHeightRequest{
-			BlockHeight: mocks.GenericHeight,
-			Address:     mocks.GenericAccount.Address[:],
-		}
-		_, err := s.GetAccountAtBlockHeight(context.Background(), req)
-
-		assert.Error(t, err)
-	})
-
 	t.Run("handles invoker failure on GetAccount", func(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(flow.Address, *flow.Header) (*flow.Account, error) {
+		invoker.GetAccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 

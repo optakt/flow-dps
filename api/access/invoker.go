@@ -20,6 +20,6 @@ import (
 )
 
 type Invoker interface {
-	GetAccount(address flow.Address, header *flow.Header) (*flow.Account, error)
+	GetAccount(address flow.Address, height uint64) (*flow.Account, error)
 	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
 }
