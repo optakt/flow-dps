@@ -12,29 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package storage
+package invoker
 
-const (
-	prefixFirst = 1
-	prefixLast  = 2
-
-	prefixHeightForBlock       = 7
-	prefixHeightForTransaction = 16
-
-	prefixCommit  = 4
-	prefixHeader  = 3
-	prefixEvents  = 5
-	prefixPayload = 6
-
-	prefixTransaction = 8
-	prefixCollection  = 10
-	prefixGuarantee   = 17
-
-	prefixTransactionsForHeight     = 9
-	prefixTransactionsForCollection = 12
-	prefixCollectionsForHeight      = 11
-	prefixResults                   = 13
-
-	prefixSeal           = 14
-	prefixSealsForHeight = 15
+import (
+	"github.com/onflow/flow-go/fvm"
+	"github.com/onflow/flow-go/fvm/programs"
+	"github.com/onflow/flow-go/fvm/state"
+	"github.com/onflow/flow-go/model/flow"
 )
+
+type VirtualMachine interface {
+	Run(ctx fvm.Context, proc fvm.Procedure, v state.View, programs *programs.Programs) error
+	GetAccount(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error)
+}

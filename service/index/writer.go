@@ -130,6 +130,18 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 	})
 }
 
+func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) error {
+	return w.db.Update(func(tx *badger.Txn) error {
+		for _, guarantee := range guarantees {
+			err := w.lib.SaveGuarantee(guarantee)(tx)
+			if err != nil {
+				return fmt.Errorf("could not store guarantee (id: %x): %w", guarantee.ID(), err)
+			}
+		}
+		return nil
+	})
+}
+
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
 	var txIDs []flow.Identifier
 	return w.apply(func(tx *badger.Txn) error {
@@ -138,11 +150,29 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 			if err != nil {
 				return fmt.Errorf("could not save transaction (id: %x): %w", transaction.ID(), err)
 			}
+			err = w.db.Update(w.lib.IndexHeightForTransaction(transaction.ID(), height))
+			if err != nil {
+				return fmt.Errorf("could not save transaction height (id: %x): %w", transaction.ID(), err)
+			}
 			txIDs = append(txIDs, transaction.ID())
 		}
+
 		err := w.lib.IndexTransactionsForHeight(height, txIDs)(tx)
 		if err != nil {
 			return fmt.Errorf("could not index transactions for height: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (w *Writer) Results(results []*flow.TransactionResult) error {
+	return w.db.Update(func(tx *badger.Txn) error {
+		for _, result := range results {
+			err := w.db.Update(w.lib.SaveResult(result))
+			if err != nil {
+				return fmt.Errorf("could not index transaction results: %w", err)
+			}
 		}
 		return nil
 	})
@@ -168,6 +198,29 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 		return fmt.Errorf("could not index events: %w", err)
 	}
 	return nil
+}
+
+// Seals indexes the seals, which should represent all seals in the finalized
+// block at the given height.
+func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
+	sealIDs := make([]flow.Identifier, 0, len(seals))
+	return w.db.Update(func(tx *badger.Txn) error {
+		for _, seal := range seals {
+			err := w.db.Update(w.lib.SaveSeal(seal))
+			if err != nil {
+				return fmt.Errorf("could not save seal (id: %x): %w", seal.ID(), err)
+			}
+
+			sealIDs = append(sealIDs, seal.ID())
+		}
+
+		err := w.db.Update(w.lib.IndexSealsForHeight(height, sealIDs))
+		if err != nil {
+			return fmt.Errorf("could not index seals for height: %w", err)
+		}
+
+		return nil
+	})
 }
 
 func (w *Writer) apply(op func(*badger.Txn) error) error {

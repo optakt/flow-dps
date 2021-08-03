@@ -12,29 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package storage
+package convert
 
-const (
-	prefixFirst = 1
-	prefixLast  = 2
+import (
+	"testing"
 
-	prefixHeightForBlock       = 7
-	prefixHeightForTransaction = 16
+	"github.com/stretchr/testify/assert"
 
-	prefixCommit  = 4
-	prefixHeader  = 3
-	prefixEvents  = 5
-	prefixPayload = 6
-
-	prefixTransaction = 8
-	prefixCollection  = 10
-	prefixGuarantee   = 17
-
-	prefixTransactionsForHeight     = 9
-	prefixTransactionsForCollection = 12
-	prefixCollectionsForHeight      = 11
-	prefixResults                   = 13
-
-	prefixSeal           = 14
-	prefixSealsForHeight = 15
+	"github.com/optakt/flow-dps/testing/mocks"
 )
+
+func TestIDToHash(t *testing.T) {
+	got := IDToHash(mocks.GenericIdentifier(0))
+	assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), got)
+}
+
+func TestCommitToHash(t *testing.T) {
+	got := CommitToHash(mocks.GenericCommit(0))
+	assert.Equal(t, mocks.ByteSlice(mocks.GenericCommit(0)), got)
+}

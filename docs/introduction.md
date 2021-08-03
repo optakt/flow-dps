@@ -437,6 +437,7 @@ It is however safe to run the indexer and any command that uses the database in 
 * [DPS Architecture](./architecture.md)
 * APIs
     * [Rosetta API](./rosetta-api.md)
+    * [Access API](./access-api.md)
     * [DPS API](./dps-api.md)
 
 ### External

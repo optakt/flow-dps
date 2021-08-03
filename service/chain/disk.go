@@ -113,6 +113,32 @@ func (d *Disk) Collections(height uint64) ([]*flow.LightCollection, error) {
 	return collections, nil
 }
 
+func (d *Disk) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
+
+	blockID, err := d.block(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get block for height: %w", err)
+	}
+
+	var collIDs []flow.Identifier
+	err = d.db.View(operation.LookupPayloadGuarantees(blockID, &collIDs))
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup collections: %w", err)
+	}
+
+	guarantees := make([]*flow.CollectionGuarantee, 0, len(collIDs))
+	for _, collID := range collIDs {
+		var guarantee flow.CollectionGuarantee
+		err := d.db.View(operation.RetrieveGuarantee(collID, &guarantee))
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve guarantee (%x): %w", collID, err)
+		}
+		guarantees = append(guarantees, &guarantee)
+	}
+
+	return guarantees, nil
+}
+
 func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 
 	blockID, err := d.block(height)
@@ -146,6 +172,61 @@ func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	}
 
 	return transactions, nil
+}
+
+func (d *Disk) Results(height uint64) ([]*flow.TransactionResult, error) {
+	blockID, err := d.block(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get block for height: %w", err)
+	}
+
+	var results []flow.TransactionResult
+	err = d.db.View(operation.LookupTransactionResultsByBlockID(blockID, &results))
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup transaction results: %w", err)
+	}
+
+	// Convert to pointer slice for consistency.
+	var converted []*flow.TransactionResult
+	for _, result := range results {
+		result := result
+		converted = append(converted, &result)
+	}
+
+	return converted, nil
+}
+
+func (d *Disk) Seals(height uint64) ([]*flow.Seal, error) {
+
+	blockID, err := d.block(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get block for height: %w", err)
+	}
+
+	// LookupPayloadSeals() returns the IDs of all the seals in the specified block.
+	// It should not be confused with LookupBlockSeal(), which returns the ID of the
+	// *last* payload seal found in the block.
+	var sealIDs []flow.Identifier
+	err = d.db.View(operation.LookupPayloadSeals(blockID, &sealIDs))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve seal IDs: %w", err)
+	}
+
+	if len(sealIDs) == 0 {
+		return nil, nil
+	}
+
+	seals := make([]*flow.Seal, 0, len(sealIDs))
+	for _, s := range sealIDs {
+		var seal flow.Seal
+		err = d.db.View(operation.RetrieveSeal(s, &seal))
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve seal: %w", err)
+		}
+		seals = append(seals, &seal)
+	}
+
+	return seals, nil
 }
 
 func (d *Disk) Events(height uint64) ([]flow.Event, error) {

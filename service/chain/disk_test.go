@@ -82,6 +82,32 @@ func TestDisk_Events(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDisk_Collections(t *testing.T) {
+	db := populateDB(t)
+	defer db.Close()
+	c := chain.FromDisk(db)
+
+	tt, err := c.Collections(mocks.GenericHeight)
+	assert.NoError(t, err)
+	assert.Len(t, tt, 2)
+
+	_, err = c.Collections(math.MaxUint64)
+	assert.Error(t, err)
+}
+
+func TestDisk_Guarantees(t *testing.T) {
+	db := populateDB(t)
+	defer db.Close()
+	c := chain.FromDisk(db)
+
+	tt, err := c.Guarantees(mocks.GenericHeight)
+	assert.NoError(t, err)
+	assert.Len(t, tt, 2)
+
+	_, err = c.Guarantees(math.MaxUint64)
+	assert.Error(t, err)
+}
+
 func TestDisk_Transactions(t *testing.T) {
 	db := populateDB(t)
 	defer db.Close()
@@ -92,6 +118,33 @@ func TestDisk_Transactions(t *testing.T) {
 	assert.Len(t, tt, 4)
 
 	_, err = c.Transactions(math.MaxUint64)
+	assert.Error(t, err)
+}
+
+func TestDisk_TransactionResults(t *testing.T) {
+	db := populateDB(t)
+	defer db.Close()
+	c := chain.FromDisk(db)
+
+	tr, err := c.Results(mocks.GenericHeight)
+	assert.NoError(t, err)
+	assert.Len(t, tr, 4)
+
+	_, err = c.Results(math.MaxUint64)
+	assert.Error(t, err)
+}
+
+func TestDisk_Seals(t *testing.T) {
+	db := populateDB(t)
+	defer db.Close()
+
+	c := chain.FromDisk(db)
+
+	seals, err := c.Seals(mocks.GenericHeight)
+	assert.NoError(t, err)
+	assert.Len(t, seals, 4)
+
+	_, err = c.Seals(math.MaxUint64)
 	assert.Error(t, err)
 }
 
@@ -196,7 +249,62 @@ func populateDB(t *testing.T) *badger.DB {
 			return err
 		}
 
+		guarantee1 := &flow.CollectionGuarantee{
+			CollectionID: collection1.ID(),
+			Signature:    mocks.GenericBytes,
+		}
+		guarantee2 := &flow.CollectionGuarantee{
+			CollectionID: collection2.ID(),
+			Signature:    mocks.GenericBytes,
+		}
+
+		err = operation.InsertGuarantee(guarantee1.CollectionID, guarantee1)(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertGuarantee(guarantee2.CollectionID, guarantee2)(tx)
+		if err != nil {
+			return err
+		}
+
 		err = operation.IndexPayloadGuarantees(mocks.GenericIdentifier(0), []flow.Identifier{collection1.ID(), collection2.ID()})(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb1.ID()})(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb2.ID()})(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb3.ID()})(tx)
+		if err != nil {
+			return err
+		}
+
+		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb4.ID()})(tx)
+		if err != nil {
+			return err
+		}
+
+		seals := mocks.GenericSeals(4)
+		var sealIDs []flow.Identifier
+		for _, seal := range seals {
+			err = operation.InsertSeal(seal.ID(), seal)(tx)
+			if err != nil {
+				return err
+			}
+
+			sealIDs = append(sealIDs, seal.ID())
+		}
+
+		err = operation.IndexPayloadSeals(mocks.GenericIdentifier(0), sealIDs)(tx)
 		if err != nil {
 			return err
 		}

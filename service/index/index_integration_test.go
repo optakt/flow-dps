@@ -131,13 +131,54 @@ func TestIndex(t *testing.T) {
 	t.Run("collections", func(t *testing.T) {
 		t.Parallel()
 
-		_, writer := setupIndex(t)
+		collections := mocks.GenericCollections(4)
 
-		assert.NoError(t, writer.Collections(mocks.GenericHeight, mocks.GenericCollections(4)))
+		reader, writer := setupIndex(t)
+
+		assert.NoError(t, writer.Collections(mocks.GenericHeight, collections))
 		// Close the writer to make it commit its transactions.
 		assert.NoError(t, writer.Close())
 
-		// TODO: Once https://github.com/optakt/flow-dps/pull/301 is merged
+		t.Run("retrieve collection by ID", func(t *testing.T) {
+			t.Parallel()
+
+			got, err := reader.Collection(collections[0].ID())
+
+			assert.NoError(t, err)
+			assert.Equal(t, collections[0], got)
+		})
+
+		t.Run("retrieve collections by height", func(t *testing.T) {
+			t.Parallel()
+
+			got, err := reader.CollectionsByHeight(mocks.GenericHeight)
+
+			assert.NoError(t, err)
+			assert.Len(t, got, 4)
+			assert.Contains(t, got, collections[0].ID())
+			assert.Contains(t, got, collections[1].ID())
+			assert.Contains(t, got, collections[2].ID())
+			assert.Contains(t, got, collections[3].ID())
+		})
+
+		t.Run("retrieve transactions from collection", func(t *testing.T) {
+			// For now this index is not used.
+		})
+	})
+
+	t.Run("guarantees", func(t *testing.T) {
+		t.Parallel()
+
+		reader, writer := setupIndex(t)
+
+		assert.NoError(t, writer.Guarantees(mocks.GenericHeight, mocks.GenericGuarantees(4)))
+		// Close the writer to make it commit its transactions.
+		assert.NoError(t, writer.Close())
+
+		got, err := reader.Guarantee(mocks.GenericIdentifier(0))
+
+		assert.NoError(t, err)
+		assert.Equal(t, mocks.GenericGuarantee(0), got)
 	})
 
 	t.Run("transactions", func(t *testing.T) {
@@ -157,15 +198,49 @@ func TestIndex(t *testing.T) {
 		// Close the writer to make it commit its transactions.
 		assert.NoError(t, writer.Close())
 
-		gotTxIDs, err := reader.TransactionsByHeight(mocks.GenericHeight)
+		t.Run("retrieve transactions by height", func(t *testing.T) {
+			t.Parallel()
+
+			gotTxIDs, err := reader.TransactionsByHeight(mocks.GenericHeight)
+
+			assert.NoError(t, err)
+			assert.ElementsMatch(t, txIDs, gotTxIDs)
+		})
+
+		t.Run("retrieve transaction by ID", func(t *testing.T) {
+			t.Parallel()
+
+			gotTx, err := reader.Transaction(transactions[0].ID())
+
+			assert.NoError(t, err)
+			assert.Equal(t, transactions[0], gotTx)
+		})
+
+		t.Run("retrieve height for transaction", func(t *testing.T) {
+			t.Parallel()
+
+			gotTx, err := reader.HeightForTransaction(transactions[0].ID())
+
+			assert.NoError(t, err)
+			assert.Equal(t, mocks.GenericHeight, gotTx)
+		})
+	})
+
+	t.Run("results", func(t *testing.T) {
+		t.Parallel()
+
+		reader, writer := setupIndex(t)
+
+		results := mocks.GenericResults(4)
+
+		assert.NoError(t, writer.Results(results))
+		// Close the writer to make it commit its transactions.
+		assert.NoError(t, writer.Close())
+
+		got, err := reader.Result(results[0].TransactionID)
 
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, txIDs, gotTxIDs)
-
-		gotTx, err := reader.Transaction(transactions[0].ID())
-
-		assert.NoError(t, err)
-		assert.Equal(t, transactions[0], gotTx)
+		assert.Equal(t, results[0], got)
 	})
 
 	t.Run("events", func(t *testing.T) {
@@ -182,6 +257,8 @@ func TestIndex(t *testing.T) {
 		assert.NoError(t, writer.Close())
 
 		t.Run("no types specified", func(t *testing.T) {
+			t.Parallel()
+
 			got, err := reader.Events(mocks.GenericHeight)
 
 			assert.NoError(t, err)
@@ -189,6 +266,8 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("type specified", func(t *testing.T) {
+			t.Parallel()
+
 			got1, err := reader.Events(mocks.GenericHeight, mocks.GenericEventType(0))
 
 			assert.NoError(t, err)
@@ -200,6 +279,40 @@ func TestIndex(t *testing.T) {
 			assert.Len(t, got1, 2)
 
 			assert.NotEqual(t, got1, got2)
+		})
+	})
+
+	t.Run("seals", func(t *testing.T) {
+		t.Parallel()
+
+		reader, writer := setupIndex(t)
+
+		seals := mocks.GenericSeals(4)
+
+		assert.NoError(t, writer.Seals(mocks.GenericHeight, seals))
+		// Close the writer to make it commit its transactions.
+		assert.NoError(t, writer.Close())
+
+		t.Run("retrieve seal by ID", func(t *testing.T) {
+			t.Parallel()
+
+			got, err := reader.Seal(seals[0].ID())
+
+			assert.NoError(t, err)
+			assert.Equal(t, seals[0], got)
+		})
+
+		t.Run("retrieve seals by height", func(t *testing.T) {
+			t.Parallel()
+
+			got, err := reader.SealsByHeight(mocks.GenericHeight)
+
+			assert.NoError(t, err)
+			assert.Len(t, got, 4)
+			assert.Contains(t, got, seals[0].ID())
+			assert.Contains(t, got, seals[1].ID())
+			assert.Contains(t, got, seals[2].ID())
+			assert.Contains(t, got, seals[3].ID())
 		})
 	})
 }

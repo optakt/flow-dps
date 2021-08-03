@@ -19,9 +19,12 @@ var DefaultConfig = Config{
 	IndexCommit:       false,
 	IndexHeader:       false,
 	IndexCollections:  false,
+	IndexGuarantees:   false,
 	IndexTransactions: false,
+	IndexResults:      false,
 	IndexEvents:       false,
 	IndexPayloads:     false,
+	IndexSeals:        false,
 	SkipBootstrap:     false,
 }
 
@@ -30,9 +33,12 @@ type Config struct {
 	IndexCommit       bool
 	IndexHeader       bool
 	IndexCollections  bool
+	IndexGuarantees   bool
 	IndexTransactions bool
+	IndexResults      bool
 	IndexEvents       bool
 	IndexPayloads     bool
+	IndexSeals        bool
 	SkipBootstrap     bool
 }
 
@@ -57,10 +63,24 @@ func WithIndexCollections(b bool) func(*Config) {
 	}
 }
 
+// WithIndexGuarantees sets up the mapper to build the guarantees index.
+func WithIndexGuarantees(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexGuarantees = b
+	}
+}
+
 // WithIndexTransactions sets up the mapper to build the transactions index.
 func WithIndexTransactions(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexTransactions = b
+	}
+}
+
+// WithIndexResults sets up the mapper to build the transaction results index.
+func WithIndexResults(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexResults = b
 	}
 }
 
@@ -75,6 +95,13 @@ func WithIndexEvents(b bool) func(*Config) {
 func WithIndexPayloads(b bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.IndexPayloads = b
+	}
+}
+
+// WithIndexSeals sets up the mapper to build the seals index.
+func WithIndexSeals(b bool) func(*Config) {
+	return func(cfg *Config) {
+		cfg.IndexSeals = b
 	}
 }
 

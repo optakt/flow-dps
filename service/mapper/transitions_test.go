@@ -56,7 +56,10 @@ func TestNewTransitions(t *testing.T) {
 			WithIndexHeader(true),
 			WithIndexPayloads(true),
 			WithIndexCollections(true),
+			WithIndexGuarantees(true),
 			WithIndexTransactions(true),
+			WithIndexResults(true),
+			WithIndexSeals(true),
 		)
 
 		assert.NotNil(t, tr)
@@ -72,7 +75,10 @@ func TestNewTransitions(t *testing.T) {
 		assert.True(t, tr.cfg.IndexHeader)
 		assert.True(t, tr.cfg.IndexPayloads)
 		assert.True(t, tr.cfg.IndexCollections)
+		assert.True(t, tr.cfg.IndexGuarantees)
 		assert.True(t, tr.cfg.IndexTransactions)
+		assert.True(t, tr.cfg.IndexResults)
+		assert.True(t, tr.cfg.IndexSeals)
 	})
 }
 
@@ -495,15 +501,30 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 			return mocks.GenericCollections(2), nil
 		}
+		chain.GuaranteesFunc = func(height uint64) ([]*flow.CollectionGuarantee, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericGuarantees(2), nil
+		}
 		chain.TransactionsFunc = func(height uint64) ([]*flow.TransactionBody, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
 			return mocks.GenericTransactions(4), nil
 		}
+		chain.ResultsFunc = func(height uint64) ([]*flow.TransactionResult, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericResults(4), nil
+		}
 		chain.EventsFunc = func(height uint64) ([]flow.Event, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
 			return mocks.GenericEvents(8), nil
+		}
+		chain.SealsFunc = func(height uint64) ([]*flow.Seal, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			return mocks.GenericSeals(4), nil
 		}
 
 		index := mocks.BaselineWriter(t)
@@ -531,15 +552,32 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 			return nil
 		}
+		index.GuaranteesFunc = func(height uint64, guarantees []*flow.CollectionGuarantee) error {
+			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericGuarantees(2), guarantees)
+
+			return nil
+		}
 		index.TransactionsFunc = func(height uint64, transactions []*flow.TransactionBody) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericTransactions(4), transactions)
 
 			return nil
 		}
+		index.ResultsFunc = func(results []*flow.TransactionResult) error {
+			assert.Equal(t, mocks.GenericResults(4), results)
+
+			return nil
+		}
 		index.EventsFunc = func(height uint64, events []flow.Event) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericEvents(8), events)
+
+			return nil
+		}
+		index.SealsFunc = func(height uint64, seals []*flow.Seal) error {
+			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericSeals(4), seals)
 
 			return nil
 		}
@@ -571,6 +609,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		tr.cfg.IndexTransactions = false
 		tr.cfg.IndexCollections = false
 		tr.cfg.IndexEvents = false
+		tr.cfg.IndexSeals = false
 
 		err := tr.IndexChain(st)
 
@@ -668,6 +707,38 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("handles chain failure to retrieve transaction results", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.ResultsFunc = func(height uint64) ([]*flow.TransactionResult, error) {
+			return nil, mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.chain = chain
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure to write transactions", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineWriter(t)
+		index.ResultsFunc = func(results []*flow.TransactionResult) error {
+			return mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.index = index
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
 	t.Run("handles chain failure to retrieve collections", func(t *testing.T) {
 		t.Parallel()
 
@@ -700,6 +771,40 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("handles chain failure to retrieve guarantees", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.GuaranteesFunc = func(height uint64) ([]*flow.CollectionGuarantee, error) {
+			return nil, mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.chain = chain
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure to write guarantees", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineWriter(t)
+		index.GuaranteesFunc = func(height uint64, guarantees []*flow.CollectionGuarantee) error {
+			return mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.index = index
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
+	// FIXME: Add tests for Guarantees
+
 	t.Run("handles chain failure to retrieve events", func(t *testing.T) {
 		t.Parallel()
 
@@ -731,6 +836,38 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 		assert.Error(t, err)
 	})
+
+	t.Run("handles chain failure to retrieve seals", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.SealsFunc = func(height uint64) ([]*flow.Seal, error) {
+			return nil, mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.chain = chain
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure to write seals", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineWriter(t)
+		index.SealsFunc = func(height uint64, seals []*flow.Seal) error {
+			return mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForwarded)
+		tr.index = index
+
+		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
 }
 
 func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
@@ -751,8 +888,11 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			IndexHeader:       true,
 			IndexPayloads:     true,
 			IndexCollections:  true,
+			IndexGuarantees:   true,
 			IndexTransactions: true,
+			IndexResults:      true,
 			IndexEvents:       true,
+			IndexSeals:        true,
 		},
 		log:   mocks.NoopLogger,
 		load:  load,

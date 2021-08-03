@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fxamacker/cbor/v2"
-
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
@@ -77,13 +75,11 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 	return &res, nil
 }
 
-// GetHeight implements the `GetHeight` method of the generated GRPC
+// GetHeightForBlock implements the `GetHeightForBlock` method of the generated GRPC
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
 
-	var blockID flow.Identifier
-	copy(blockID[:], req.BlockID)
-
+	blockID := flow.HashToID(req.BlockID)
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get height for block: %w", err)
@@ -180,6 +176,73 @@ func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequ
 	return &res, nil
 }
 
+// GetCollection implements the `GetCollection` method of the generated GRPC
+// server.
+func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*GetCollectionResponse, error) {
+
+	collID := flow.HashToID(req.CollectionID)
+	collection, err := s.index.Collection(collID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve collection: %w", err)
+	}
+
+	data, err := s.codec.Marshal(collection)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode collection: %w", err)
+	}
+
+	res := GetCollectionResponse{
+		CollectionID: req.CollectionID,
+		Data:         data,
+	}
+
+	return &res, nil
+}
+
+// ListCollectionsForHeight implements the `ListCollectionsForHeight` method of the generated GRPC
+// server.
+func (s *Server) ListCollectionsForHeight(_ context.Context, req *ListCollectionsForHeightRequest) (*ListCollectionsForHeightResponse, error) {
+	collIDs, err := s.index.CollectionsByHeight(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not list collections by height: %w", err)
+	}
+
+	rawIDs := make([][]byte, 0, len(collIDs))
+	for _, collID := range collIDs {
+		rawIDs = append(rawIDs, convert.IDToHash(collID))
+	}
+
+	res := ListCollectionsForHeightResponse{
+		Height:        req.Height,
+		CollectionIDs: rawIDs,
+	}
+
+	return &res, nil
+}
+
+// GetGuarantee implements the `GetGuarantee` method of the generated GRPC
+// server.
+func (s *Server) GetGuarantee(_ context.Context, req *GetGuaranteeRequest) (*GetGuaranteeResponse, error) {
+	collID := flow.HashToID(req.CollectionID)
+
+	guarantee, err := s.index.Guarantee(collID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve guarantee: %w", err)
+	}
+
+	data, err := s.codec.Marshal(guarantee)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode guarantee: %w", err)
+	}
+
+	res := GetGuaranteeResponse{
+		CollectionID: req.CollectionID,
+		Data:         data,
+	}
+
+	return &res, nil
+}
+
 // GetTransaction implements the `GetTransaction` method of the generated GRPC
 // server.
 func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
@@ -190,7 +253,7 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 		return nil, fmt.Errorf("could not retrieve transaction: %w", err)
 	}
 
-	data, err := cbor.Marshal(transaction)
+	data, err := s.codec.Marshal(transaction)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode transaction: %w", err)
 	}
@@ -198,6 +261,23 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 	res := GetTransactionResponse{
 		TransactionID: req.TransactionID,
 		Data:          data,
+	}
+
+	return &res, nil
+}
+
+// GetHeightForTransaction implements the `GetHeightForTransaction` method of the generated GRPC
+// server.
+func (s *Server) GetHeightForTransaction(_ context.Context, req *GetHeightForTransactionRequest) (*GetHeightForTransactionResponse, error) {
+	txID := flow.HashToID(req.TransactionID)
+	height, err := s.index.HeightForTransaction(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get height for transaction: %w", err)
+	}
+
+	res := GetHeightForTransactionResponse{
+		TransactionID: req.TransactionID,
+		Height:        height,
 	}
 
 	return &res, nil
@@ -214,13 +294,79 @@ func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransacti
 
 	transactionIDs := make([][]byte, 0, len(txIDs))
 	for _, txID := range txIDs {
-		txID := txID
-		transactionIDs = append(transactionIDs, txID[:])
+		transactionIDs = append(transactionIDs, convert.IDToHash(txID))
 	}
 
 	res := ListTransactionsForHeightResponse{
 		Height:         req.Height,
 		TransactionIDs: transactionIDs,
+	}
+
+	return &res, nil
+}
+
+// GetResult implements the `GetResult` method of the generated GRPC
+// server.
+func (s *Server) GetResult(_ context.Context, req *GetResultRequest) (*GetResultResponse, error) {
+
+	txID := flow.HashToID(req.TransactionID)
+	result, err := s.index.Result(txID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve transaction result: %w", err)
+	}
+
+	data, err := s.codec.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode transaction result: %w", err)
+	}
+
+	res := GetResultResponse{
+		TransactionID: req.TransactionID,
+		Data:          data,
+	}
+
+	return &res, nil
+}
+
+// GetSeal implements the `GetSeal` method of the generated GRPC
+// server.
+func (s *Server) GetSeal(_ context.Context, req *GetSealRequest) (*GetSealResponse, error) {
+
+	sealID := flow.HashToID(req.SealID)
+	seal, err := s.index.Seal(sealID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve seal: %w", err)
+	}
+
+	data, err := s.codec.Marshal(seal)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode seal: %w", err)
+	}
+
+	res := GetSealResponse{
+		SealID: req.SealID,
+		Data:   data,
+	}
+
+	return &res, nil
+}
+
+// ListSealsForHeight implements the `ListSealsForHeight` method of the generated GRPC
+// server.
+func (s *Server) ListSealsForHeight(_ context.Context, req *ListSealsForHeightRequest) (*ListSealsForHeightResponse, error) {
+	sealIDs, err := s.index.SealsByHeight(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not list seals by height: %w", err)
+	}
+
+	sIDs := make([][]byte, 0, len(sealIDs))
+	for _, sealID := range sealIDs {
+		sIDs = append(sIDs, convert.IDToHash(sealID))
+	}
+
+	res := ListSealsForHeightResponse{
+		Height:  req.Height,
+		SealIDs: sIDs,
 	}
 
 	return &res, nil

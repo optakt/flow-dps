@@ -367,6 +367,17 @@ func (t *Transitions) IndexChain(s *State) error {
 		}
 		log = log.Int("collections", len(collections))
 	}
+	if t.cfg.IndexGuarantees {
+		guarantees, err := t.chain.Guarantees(s.height)
+		if err != nil {
+			return fmt.Errorf("could not get guarantees: %w", err)
+		}
+		err = t.index.Guarantees(s.height, guarantees)
+		if err != nil {
+			return fmt.Errorf("could not index guarantees: %w", err)
+		}
+		log = log.Int("guarantees", len(guarantees))
+	}
 	if t.cfg.IndexTransactions {
 		transactions, err := t.chain.Transactions(s.height)
 		if err != nil {
@@ -378,6 +389,17 @@ func (t *Transitions) IndexChain(s *State) error {
 		}
 		log = log.Int("transactions", len(transactions))
 	}
+	if t.cfg.IndexResults {
+		results, err := t.chain.Results(s.height)
+		if err != nil {
+			return fmt.Errorf("could not get transaction results: %w", err)
+		}
+		err = t.index.Results(results)
+		if err != nil {
+			return fmt.Errorf("could not index transaction results: %w", err)
+		}
+		log = log.Int("transaction_results", len(results))
+	}
 	if t.cfg.IndexEvents {
 		events, err := t.chain.Events(s.height)
 		if err != nil {
@@ -388,6 +410,17 @@ func (t *Transitions) IndexChain(s *State) error {
 			return fmt.Errorf("could not index events: %w", err)
 		}
 		log = log.Int("events", len(events))
+	}
+	if t.cfg.IndexSeals {
+		seals, err := t.chain.Seals(s.height)
+		if err != nil {
+			return fmt.Errorf("could not get seals: %w", err)
+		}
+		err = t.index.Seals(s.height, seals)
+		if err != nil {
+			return fmt.Errorf("could not index seals: %w", err)
+		}
+		log = log.Int("seals", len(seals))
 	}
 
 	log.Msg("indexed blockchain data for finalized block")

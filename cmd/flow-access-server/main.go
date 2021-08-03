@@ -15,31 +15,31 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/c2h5oh/datasize"
-	"github.com/labstack/echo/v4"
+	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
-	"github.com/ziflex/lecho/v2"
 	"google.golang.org/grpc"
 
-	api "github.com/optakt/flow-dps/api/dps"
-	"github.com/optakt/flow-dps/api/rosetta"
+	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
+
+	"github.com/onflow/flow/protobuf/go/flow/access"
+
+	accessApi "github.com/optakt/flow-dps/api/access"
+	dpsApi "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/invoker"
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/rosetta/configuration"
-	"github.com/optakt/flow-dps/rosetta/converter"
-	"github.com/optakt/flow-dps/rosetta/retriever"
-	"github.com/optakt/flow-dps/rosetta/scripts"
-	"github.com/optakt/flow-dps/rosetta/validator"
 )
 
 const (
@@ -59,18 +59,18 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAPI          string
-		flagCache        uint64
-		flagLevel        string
-		flagPort         uint16
-		flagTransactions uint
+		flagAPI   string
+		flagCache uint64
+		flagIndex string
+		flagLevel string
+		flagPort  uint16
 	)
 
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
 	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
-	pflag.UintVarP(&flagTransactions, "transaction-limit", "t", 200, "maximum amount of transactions to include in a block response")
+	pflag.Uint16VarP(&flagPort, "port", "p", 5006, "port to serve Access API on")
 
 	pflag.Parse()
 
@@ -83,7 +83,14 @@ func run() int {
 		return failure
 	}
 	log = log.Level(level)
-	elog := lecho.From(log)
+
+	// Initialize the index core state and open database in read-only mode.
+	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true).WithBypassLockGuard(true))
+	if err != nil {
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		return failure
+	}
+	defer db.Close()
 
 	// Initialize storage library.
 	codec, err := zbor.NewCodec()
@@ -92,90 +99,70 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the DPS API client and wrap it for easy usage.
+	// GRPC API initialization.
+	opts := []logging.Option{
+		logging.WithLevels(logging.DefaultServerCodeToLevel),
+	}
+	gsvr := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			tags.UnaryServerInterceptor(),
+			logging.UnaryServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+		),
+		grpc.ChainStreamInterceptor(
+			tags.StreamServerInterceptor(),
+			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+		),
+	)
+
+	// Initialize the API client.
 	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
 	if err != nil {
 		log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
 		return failure
 	}
 	defer conn.Close()
-	client := api.NewAPIClient(conn)
-	index := api.IndexFromAPI(client, codec)
 
-	// Deduce chain ID from DPS API to configure parameters for script exec.
-	first, err := index.First()
+	client := dpsApi.NewAPIClient(conn)
+	index := dpsApi.IndexFromAPI(client, codec)
+
+	invoker, err := invoker.New(index, invoker.WithCacheSize(flagCache))
 	if err != nil {
-		log.Error().Err(err).Msg("could not get first height from DPS API")
-		return failure
-	}
-	root, err := index.Header(first)
-	if err != nil {
-		log.Error().Uint64("first", first).Err(err).Msg("could not get root header from DPS API")
-		return failure
-	}
-	params, ok := dps.FlowParams[root.ChainID]
-	if !ok {
-		log.Error().Str("chain", root.ChainID.String()).Msg("invalid chain ID for params")
+		log.Error().Err(err).Msg("could not initialize script invoker")
 		return failure
 	}
 
-	// Rosetta API initialization.
-	config := configuration.New(params.ChainID)
-	validate := validator.New(params, index)
-	generate := scripts.NewGenerator(params)
-	invoke, err := invoker.New(index, invoker.WithCacheSize(flagCache))
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize invoker")
-		return failure
-	}
-
-	convert, err := converter.New(generate)
-	if err != nil {
-		log.Error().Err(err).Msg("could not generate transaction event types")
-		return failure
-	}
-
-	retrieve := retriever.New(params, index, validate, generate, invoke, convert,
-		retriever.WithTransactionLimit(flagTransactions),
-	)
-	ctrl := rosetta.NewData(config, retrieve)
-
-	server := echo.New()
-	server.HideBanner = true
-	server.HidePort = true
-	server.Logger = elog
-	server.Use(lecho.Middleware(lecho.Config{Logger: elog}))
-	server.POST("/network/list", ctrl.Networks)
-	server.POST("/network/options", ctrl.Options)
-	server.POST("/network/status", ctrl.Status)
-	server.POST("/account/balance", ctrl.Balance)
-	server.POST("/block", ctrl.Block)
-	server.POST("/block/transaction", ctrl.Transaction)
+	server := accessApi.NewServer(index, codec, invoker)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
+	listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
+	if err != nil {
+		log.Error().Uint16("port", flagPort).Err(err).Msg("could not listen")
+		return failure
+	}
 	done := make(chan struct{})
 	failed := make(chan struct{})
 	go func() {
-		log.Info().Msg("Flow Rosetta Server starting")
-		err := server.Start(fmt.Sprint(":", flagPort))
+		log.Info().Msg("Flow Access API Server starting")
+		access.RegisterAccessAPIServer(gsvr, server)
+		err = gsvr.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Warn().Err(err).Msg("Flow Rosetta Server failed")
+			log.Warn().Err(err).Msg("Flow Access API Server failed")
 			close(failed)
 		} else {
 			close(done)
 		}
-		log.Info().Msg("Flow Rosetta Server stopped")
+		log.Info().Msg("Flow Access API Server stopped")
 	}()
 
 	select {
 	case <-sig:
-		log.Info().Msg("Flow Rosetta Server stopping")
+		log.Info().Msg("Flow Access API Server stopping")
 	case <-done:
-		log.Info().Msg("Flow Rosetta Server done")
+		log.Info().Msg("Flow Access API Server done")
 	case <-failed:
-		log.Warn().Msg("Flow Rosetta Server aborted")
+		log.Warn().Msg("Flow Access API Server aborted")
 		return failure
 	}
 	go func() {
@@ -188,13 +175,7 @@ func run() int {
 	// sure that the main executing components are shutting down within the
 	// allocated shutdown time. Otherwise, we will force the shutdown and log
 	// an error. We then wait for shutdown on each component to complete.
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	err = server.Shutdown(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("could not shut down Rosetta API")
-		return failure
-	}
+	gsvr.GracefulStop()
 
 	return success
 }

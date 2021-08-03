@@ -12,29 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package storage
+package convert
 
-const (
-	prefixFirst = 1
-	prefixLast  = 2
-
-	prefixHeightForBlock       = 7
-	prefixHeightForTransaction = 16
-
-	prefixCommit  = 4
-	prefixHeader  = 3
-	prefixEvents  = 5
-	prefixPayload = 6
-
-	prefixTransaction = 8
-	prefixCollection  = 10
-	prefixGuarantee   = 17
-
-	prefixTransactionsForHeight     = 9
-	prefixTransactionsForCollection = 12
-	prefixCollectionsForHeight      = 11
-	prefixResults                   = 13
-
-	prefixSeal           = 14
-	prefixSealsForHeight = 15
+import (
+	"github.com/onflow/flow-go/model/flow"
 )
+
+func IDToHash(id flow.Identifier) []byte {
+	hash := make([]byte, 32)
+	copy(hash, id[:])
+
+	return hash
+}
+
+func CommitToHash(commit flow.StateCommitment) []byte {
+	hash := make([]byte, 32)
+	copy(hash, commit[:])
+
+	return hash
+}

@@ -375,6 +375,163 @@ func TestIndex_Height(t *testing.T) {
 	})
 }
 
+func TestIndex_Collection(t *testing.T) {
+	testCollectionBytes, err := cbor.Marshal(mocks.GenericCollection(0))
+	require.NoError(t, err)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = cbor.Unmarshal
+
+		index := Index{
+			codec: codec,
+			client: &apiMock{
+				GetCollectionFunc: func(_ context.Context, in *GetCollectionRequest, _ ...grpc.CallOption) (*GetCollectionResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.CollectionID)
+
+					return &GetCollectionResponse{
+						CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+						Data:         testCollectionBytes,
+					}, nil
+				},
+			},
+		}
+
+		got, err := index.Collection(mocks.GenericIdentifier(0))
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, mocks.GenericCollection(0), got)
+		}
+	})
+
+	t.Run("handles index failure on GetCollection", func(t *testing.T) {
+		t.Parallel()
+
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = cbor.Unmarshal
+
+		index := Index{
+			codec: codec,
+			client: &apiMock{
+				GetCollectionFunc: func(_ context.Context, in *GetCollectionRequest, _ ...grpc.CallOption) (*GetCollectionResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.CollectionID)
+
+					return nil, mocks.GenericError
+				},
+			},
+		}
+
+		_, err := index.Collection(mocks.GenericIdentifier(0))
+
+		assert.Error(t, err)
+	})
+}
+
+func TestIndex_ListCollectionsForHeight(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		testCollectionIDs := mocks.GenericIdentifiers(4)
+		testCollectionBytes := make([][]byte, 0, len(testCollectionIDs))
+		for _, collID := range testCollectionIDs {
+			testCollectionBytes = append(testCollectionBytes, mocks.ByteSlice(collID))
+		}
+
+		index := Index{
+			codec: mocks.BaselineCodec(t),
+			client: &apiMock{
+				ListCollectionsForHeightFunc: func(_ context.Context, in *ListCollectionsForHeightRequest, _ ...grpc.CallOption) (*ListCollectionsForHeightResponse, error) {
+					assert.Equal(t, mocks.GenericHeight, in.Height)
+
+					return &ListCollectionsForHeightResponse{
+						Height:        in.Height,
+						CollectionIDs: testCollectionBytes,
+					}, nil
+				},
+			},
+		}
+
+		got, err := index.CollectionsByHeight(mocks.GenericHeight)
+		if assert.NoError(t, err) {
+			assert.Equal(t, mocks.GenericIdentifiers(4), got)
+		}
+	})
+
+	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
+		index := Index{
+			codec: mocks.BaselineCodec(t),
+			client: &apiMock{
+				ListCollectionsForHeightFunc: func(_ context.Context, in *ListCollectionsForHeightRequest, _ ...grpc.CallOption) (*ListCollectionsForHeightResponse, error) {
+					assert.Equal(t, mocks.GenericHeight, in.Height)
+
+					return nil, mocks.GenericError
+				},
+			},
+		}
+
+		_, err := index.CollectionsByHeight(mocks.GenericHeight)
+		assert.Error(t, err)
+	})
+}
+
+func TestIndex_Guarantee(t *testing.T) {
+	testGuaranteeBytes, err := cbor.Marshal(mocks.GenericGuarantee(0))
+	require.NoError(t, err)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = cbor.Unmarshal
+
+		index := Index{
+			codec: codec,
+			client: &apiMock{
+				GetGuaranteeFunc: func(_ context.Context, in *GetGuaranteeRequest, _ ...grpc.CallOption) (*GetGuaranteeResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.CollectionID)
+
+					return &GetGuaranteeResponse{
+						CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+						Data:         testGuaranteeBytes,
+					}, nil
+				},
+			},
+		}
+
+		got, err := index.Guarantee(mocks.GenericIdentifier(0))
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, mocks.GenericGuarantee(0), got)
+		}
+	})
+
+	t.Run("handles index failure on GetGuarantee", func(t *testing.T) {
+		t.Parallel()
+
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = cbor.Unmarshal
+
+		index := Index{
+			codec: codec,
+			client: &apiMock{
+				GetGuaranteeFunc: func(_ context.Context, in *GetGuaranteeRequest, _ ...grpc.CallOption) (*GetGuaranteeResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.CollectionID)
+
+					return nil, mocks.GenericError
+				},
+			},
+		}
+
+		_, err := index.Guarantee(mocks.GenericIdentifier(0))
+
+		assert.Error(t, err)
+	})
+}
+
 func TestIndex_Transaction(t *testing.T) {
 	testTransactionBytes, err := cbor.Marshal(mocks.GenericTransaction(0))
 	require.NoError(t, err)
@@ -406,13 +563,14 @@ func TestIndex_Transaction(t *testing.T) {
 		}
 	})
 
-	codec := mocks.BaselineCodec(t)
-	codec.UnmarshalFunc = cbor.Unmarshal
-
 	t.Run("handles index failures", func(t *testing.T) {
 		t.Parallel()
 
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = cbor.Unmarshal
+
 		index := Index{
+			codec: codec,
 			client: &apiMock{
 				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
 					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.TransactionID)
@@ -423,6 +581,59 @@ func TestIndex_Transaction(t *testing.T) {
 		}
 
 		_, err := index.Transaction(mocks.GenericIdentifier(0))
+
+		assert.Error(t, err)
+	})
+}
+
+func TestIndex_Result(t *testing.T) {
+	testResultBytes, err := cbor.Marshal(mocks.GenericResult(0))
+	require.NoError(t, err)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = cbor.Unmarshal
+
+		index := Index{
+			codec: codec,
+			client: &apiMock{
+				GetResultFunc: func(_ context.Context, in *GetResultRequest, _ ...grpc.CallOption) (*GetResultResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.TransactionID)
+
+					return &GetResultResponse{
+						TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+						Data:          testResultBytes,
+					}, nil
+				},
+			},
+		}
+
+		got, err := index.Result(mocks.GenericIdentifier(0))
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, mocks.GenericResult(0), got)
+		}
+	})
+
+	codec := mocks.BaselineCodec(t)
+	codec.UnmarshalFunc = cbor.Unmarshal
+
+	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
+		index := Index{
+			client: &apiMock{
+				GetResultFunc: func(_ context.Context, in *GetResultRequest, _ ...grpc.CallOption) (*GetResultResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.TransactionID)
+
+					return nil, mocks.GenericError
+				},
+			},
+		}
+
+		_, err := index.Result(mocks.GenericIdentifier(0))
 
 		assert.Error(t, err)
 	})
@@ -511,6 +722,104 @@ func TestIndex_Events(t *testing.T) {
 	})
 }
 
+func TestIndex_Seals(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		testSealBytes, err := cbor.Marshal(mocks.GenericSeal(0))
+		require.NoError(t, err)
+
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = cbor.Unmarshal
+
+		index := Index{
+			codec: codec,
+			client: &apiMock{
+				GetSealFunc: func(_ context.Context, in *GetSealRequest, _ ...grpc.CallOption) (*GetSealResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.SealID)
+
+					return &GetSealResponse{
+						SealID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+						Data:   testSealBytes,
+					}, nil
+				},
+			},
+		}
+
+		got, err := index.Seal(mocks.GenericIdentifier(0))
+		if assert.NoError(t, err) {
+			assert.Equal(t, mocks.GenericSeal(0), got)
+		}
+	})
+
+	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
+		index := Index{
+			codec: mocks.BaselineCodec(t),
+			client: &apiMock{
+				GetSealFunc: func(_ context.Context, in *GetSealRequest, _ ...grpc.CallOption) (*GetSealResponse, error) {
+					assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), in.SealID)
+
+					return nil, mocks.GenericError
+				},
+			},
+		}
+
+		_, err := index.Seal(mocks.GenericIdentifier(0))
+		assert.Error(t, err)
+	})
+}
+
+func TestIndex_ListSealsForHeight(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		testSealIDs := mocks.GenericIdentifiers(4)
+		testSealBytes := make([][]byte, 0, len(testSealIDs))
+		for _, sealID := range testSealIDs {
+			testSealBytes = append(testSealBytes, mocks.ByteSlice(sealID))
+		}
+
+		index := Index{
+			codec: mocks.BaselineCodec(t),
+			client: &apiMock{
+				ListSealsForHeightFunc: func(_ context.Context, in *ListSealsForHeightRequest, _ ...grpc.CallOption) (*ListSealsForHeightResponse, error) {
+					assert.Equal(t, mocks.GenericHeight, in.Height)
+
+					return &ListSealsForHeightResponse{
+						Height:  in.Height,
+						SealIDs: testSealBytes,
+					}, nil
+				},
+			},
+		}
+
+		got, err := index.SealsByHeight(mocks.GenericHeight)
+		if assert.NoError(t, err) {
+			assert.Equal(t, mocks.GenericIdentifiers(4), got)
+		}
+	})
+
+	t.Run("handles index failures", func(t *testing.T) {
+		t.Parallel()
+
+		index := Index{
+			codec: mocks.BaselineCodec(t),
+			client: &apiMock{
+				ListSealsForHeightFunc: func(_ context.Context, in *ListSealsForHeightRequest, _ ...grpc.CallOption) (*ListSealsForHeightResponse, error) {
+					assert.Equal(t, mocks.GenericHeight, in.Height)
+
+					return nil, mocks.GenericError
+				},
+			},
+		}
+
+		_, err := index.SealsByHeight(mocks.GenericHeight)
+		assert.Error(t, err)
+	})
+}
+
 type apiMock struct {
 	GetFirstFunc                  func(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error)
 	GetLastFunc                   func(ctx context.Context, in *GetLastRequest, opts ...grpc.CallOption) (*GetLastResponse, error)
@@ -519,8 +828,15 @@ type apiMock struct {
 	GetHeaderFunc                 func(ctx context.Context, in *GetHeaderRequest, opts ...grpc.CallOption) (*GetHeaderResponse, error)
 	GetEventsFunc                 func(ctx context.Context, in *GetEventsRequest, opts ...grpc.CallOption) (*GetEventsResponse, error)
 	GetRegisterValuesFunc         func(ctx context.Context, in *GetRegisterValuesRequest, opts ...grpc.CallOption) (*GetRegisterValuesResponse, error)
+	GetCollectionFunc             func(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error)
+	ListCollectionsForHeightFunc  func(ctx context.Context, in *ListCollectionsForHeightRequest, opts ...grpc.CallOption) (*ListCollectionsForHeightResponse, error)
+	GetGuaranteeFunc              func(ctx context.Context, in *GetGuaranteeRequest, opts ...grpc.CallOption) (*GetGuaranteeResponse, error)
 	GetTransactionFunc            func(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error)
+	GetHeightForTransactionFunc   func(ctx context.Context, in *GetHeightForTransactionRequest, opts ...grpc.CallOption) (*GetHeightForTransactionResponse, error)
 	ListTransactionsForHeightFunc func(ctx context.Context, in *ListTransactionsForHeightRequest, opts ...grpc.CallOption) (*ListTransactionsForHeightResponse, error)
+	GetResultFunc                 func(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*GetResultResponse, error)
+	GetSealFunc                   func(ctx context.Context, in *GetSealRequest, opts ...grpc.CallOption) (*GetSealResponse, error)
+	ListSealsForHeightFunc        func(ctx context.Context, in *ListSealsForHeightRequest, opts ...grpc.CallOption) (*ListSealsForHeightResponse, error)
 }
 
 func (a *apiMock) GetFirst(ctx context.Context, in *GetFirstRequest, opts ...grpc.CallOption) (*GetFirstResponse, error) {
@@ -551,10 +867,38 @@ func (a *apiMock) GetRegisterValues(ctx context.Context, in *GetRegisterValuesRe
 	return a.GetRegisterValuesFunc(ctx, in, opts...)
 }
 
+func (a *apiMock) GetCollection(ctx context.Context, in *GetCollectionRequest, opts ...grpc.CallOption) (*GetCollectionResponse, error) {
+	return a.GetCollectionFunc(ctx, in, opts...)
+}
+
+func (a *apiMock) ListCollectionsForHeight(ctx context.Context, in *ListCollectionsForHeightRequest, opts ...grpc.CallOption) (*ListCollectionsForHeightResponse, error) {
+	return a.ListCollectionsForHeightFunc(ctx, in, opts...)
+}
+
+func (a *apiMock) GetGuarantee(ctx context.Context, in *GetGuaranteeRequest, opts ...grpc.CallOption) (*GetGuaranteeResponse, error) {
+	return a.GetGuaranteeFunc(ctx, in, opts...)
+}
+
 func (a *apiMock) GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*GetTransactionResponse, error) {
 	return a.GetTransactionFunc(ctx, in, opts...)
 }
 
+func (a *apiMock) GetHeightForTransaction(ctx context.Context, in *GetHeightForTransactionRequest, opts ...grpc.CallOption) (*GetHeightForTransactionResponse, error) {
+	return a.GetHeightForTransactionFunc(ctx, in, opts...)
+}
+
 func (a *apiMock) ListTransactionsForHeight(ctx context.Context, in *ListTransactionsForHeightRequest, opts ...grpc.CallOption) (*ListTransactionsForHeightResponse, error) {
 	return a.ListTransactionsForHeightFunc(ctx, in, opts...)
+}
+
+func (a *apiMock) GetResult(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*GetResultResponse, error) {
+	return a.GetResultFunc(ctx, in, opts...)
+}
+
+func (a *apiMock) GetSeal(ctx context.Context, in *GetSealRequest, opts ...grpc.CallOption) (*GetSealResponse, error) {
+	return a.GetSealFunc(ctx, in, opts...)
+}
+
+func (a *apiMock) ListSealsForHeight(ctx context.Context, in *ListSealsForHeightRequest, opts ...grpc.CallOption) (*ListSealsForHeightResponse, error) {
+	return a.ListSealsForHeightFunc(ctx, in, opts...)
 }

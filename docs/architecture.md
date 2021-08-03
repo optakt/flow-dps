@@ -18,11 +18,16 @@ the API it exposes.
         4. [Commit Index](#commit-index)
         5. [Events Index](#events-index)
         6. [Path Deltas Index](#path-deltas-index)
-        7. [Height Index](#height-index)
+        7. [Block Height Index](#block-height-index)
         8. [Transaction Records](#transaction-records)
         9. [Block Transaction Index](#block-transaction-index)
-        10. [Collection Transaction Index](#collection-transaction-index)
-        11. [Block Collection Index](#block-collection-index)
+        10. [Collection Index](#collection-index)
+        11. [Collection Guarantee Index](#collection-index)
+        12. [Block Collection Index](#block-collection-index)
+        13. [Transaction Result Index](#transaction-result-index)
+        14. [Seals Index](#seals-index)
+        15. [Block Seals Index](#block-seals-index)
+        16. [Transaction Height Index](#transaction-height-index)
 
 ## Chain
 
@@ -158,7 +163,7 @@ This index maps a block ID to all the paths that are changed within its state up
 The value stored at that key is **the compressed payload of the payload at the given height and given path**.
 It is compressed using [CBOR compression](https://en.wikipedia.org/wiki/CBOR).
 
-##### Height Index
+##### Block Height Index
 
 In this index, keys map the block IDs to their height.
 
@@ -194,7 +199,7 @@ In this index, block IDs are mapped to the IDs of the transactions within their 
 
 The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/model/flow#Identifier)** for the transactions within the referenced block.
 
-##### Collection Transaction Index
+##### Collection Index
 
 In this record, collections are mapped by their IDs.
 
@@ -205,6 +210,18 @@ In this record, collections are mapped by their IDs.
 | **Example Value**  | `10`              | `45D66Q565F5DEDB[...]` |
 
 The value stored at that key is the **CBOR-encoded [flow.LightCollection](https://pkg.go.dev/github.com/onflow/model/flow#LightCollection)** with the referenced ID.
+
+##### Collection Guarantee Index
+
+In this record, collections guarantees are mapped by their collection IDs.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Collection ID         |
+| **Example Value**  | `10`              | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **CBOR-encoded [flow.CollectionGuarantee](https://pkg.go.dev/github.com/onflow/model/flow#CollectionGuarantee)** with the referenced ID.
 
 ##### Block Collection Index
 
@@ -217,3 +234,47 @@ In this index, block IDs are mapped to the IDs of the collections within their b
 | **Example Value**  | `11`              | `45D66Q565F5DEDB[...]` |
 
 The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/model/flow#Identifier)** for the collections within the referenced block.
+
+##### Transaction Result Index
+
+In this index, transaction IDs are mapped to their results.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Transaction ID         |
+| **Example Value**  | `12`              | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **CBOR-encoded [flow.TransactionResult](https://pkg.go.dev/github.com/onflow/model/flow#TransactionResult)** for the referenced transaction.
+
+##### Seals Index
+
+In this index, seals are mapped by their IDs.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Seal ID                |
+| **Example Value**  | `14`              | `45D66Q565F5DEDB[...]` |
+
+##### Block Seals Index
+
+In this index, block IDs are mapped to the IDs of the seals within that block.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Block ID               |
+| **Example Value**  | `15`              | `45D66Q565F5DEDB[...]` |
+
+##### Transaction Height Index
+
+In this index, keys map the transaction IDs to their height.
+
+| **Length** (bytes) | `1`               | `64`                   |
+|:-------------------|:------------------|:-----------------------|
+| **Type**           | byte              | flow.Identifier        |
+| **Description**    | Index type prefix | Transaction ID         |
+| **Example Value**  | `16`              | `45D66Q565F5DEDB[...]` |
+
+The value stored at that key is the **block height** of the referenced transaction ID.

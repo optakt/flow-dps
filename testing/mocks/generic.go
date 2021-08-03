@@ -52,6 +52,7 @@ var (
 	GenericHeader = &flow.Header{
 		ChainID:   dps.FlowTestnet,
 		Height:    GenericHeight,
+		ParentID:  GenericIdentifier(15),
 		Timestamp: time.Date(1972, 11, 12, 13, 14, 15, 16, time.UTC),
 	}
 
@@ -115,6 +116,7 @@ var (
 	}
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),
+		Balance: 84,
 	}
 
 	GenericBlockQualifier = identifier.Block{
@@ -228,7 +230,9 @@ func GenericLedgerPayload(index int) *ledger.Payload {
 func GenericTransactions(number int) []*flow.TransactionBody {
 	var txs []*flow.TransactionBody
 	for i := 0; i < number; i++ {
-		txs = append(txs, &flow.TransactionBody{ReferenceBlockID: GenericIdentifier(i)})
+		txs = append(txs, &flow.TransactionBody{
+			ReferenceBlockID: GenericIdentifier(i),
+		})
 	}
 
 	return txs
@@ -415,10 +419,30 @@ func GenericCollection(index int) *flow.LightCollection {
 	return GenericCollections(index + 1)[index]
 }
 
+func GenericGuarantees(number int) []*flow.CollectionGuarantee {
+	var guarantees []*flow.CollectionGuarantee
+	for i := 0; i < number; i++ {
+		j := i * 2
+		guarantees = append(guarantees, &flow.CollectionGuarantee{
+			CollectionID:     GenericIdentifier(i),
+			ReferenceBlockID: GenericIdentifier(j),
+			Signature:        GenericBytes,
+		})
+	}
+
+	return guarantees
+}
+
+func GenericGuarantee(index int) *flow.CollectionGuarantee {
+	return GenericGuarantees(index + 1)[index]
+}
+
 func GenericResults(number int) []*flow.TransactionResult {
 	var results []*flow.TransactionResult
 	for i := 0; i < number; i++ {
-		results = append(results, &flow.TransactionResult{TransactionID: GenericIdentifier(i)})
+		results = append(results, &flow.TransactionResult{
+			TransactionID: GenericIdentifier(i),
+		})
 	}
 
 	return results
@@ -433,6 +457,33 @@ func GenericAmount(delta int) cadence.Value {
 	random := rand.New(rand.NewSource(int64(delta)))
 
 	return cadence.NewUInt64(random.Uint64())
+}
+
+func GenericSeals(number int) []*flow.Seal {
+	var seals []*flow.Seal
+	for i := 0; i < number; i++ {
+
+		// Since we need two identifiers per seal (for BlockID and ResultID),
+		// we'll use a secondary index.
+		j := 2 * i
+
+		seal := flow.Seal{
+			BlockID:    GenericIdentifier(j),
+			ResultID:   GenericIdentifier(j + 1),
+			FinalState: GenericCommit(i),
+
+			AggregatedApprovalSigs: nil,
+			ServiceEvents:          nil,
+		}
+
+		seals = append(seals, &seal)
+	}
+
+	return seals
+}
+
+func GenericSeal(index int) *flow.Seal {
+	return GenericSeals(index + 1)[index]
 }
 
 func ByteSlice(v interface{}) []byte {

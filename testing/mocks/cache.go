@@ -12,20 +12,36 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package dps
+package mocks
 
 import (
-	"github.com/onflow/flow-go/model/flow"
+	"testing"
 )
 
-type Chain interface {
-	Root() (uint64, error)
-	Header(height uint64) (*flow.Header, error)
-	Commit(height uint64) (flow.StateCommitment, error)
-	Events(height uint64) ([]flow.Event, error)
-	Collections(height uint64) ([]*flow.LightCollection, error)
-	Guarantees(height uint64) ([]*flow.CollectionGuarantee, error)
-	Transactions(height uint64) ([]*flow.TransactionBody, error)
-	Results(height uint64) ([]*flow.TransactionResult, error)
-	Seals(height uint64) ([]*flow.Seal, error)
+type Cache struct {
+	GetFunc func(key interface{}) (interface{}, bool)
+	SetFunc func(key, value interface{}, cost int64) bool
+}
+
+func BaselineCache(t *testing.T) *Cache {
+	t.Helper()
+
+	c := Cache{
+		GetFunc: func(interface{}) (interface{}, bool) {
+			return GenericBytes, true
+		},
+		SetFunc: func(interface{}, interface{}, int64) bool {
+			return true
+		},
+	}
+
+	return &c
+}
+
+func (c *Cache) Get(key interface{}) (interface{}, bool) {
+	return c.GetFunc(key)
+}
+
+func (c *Cache) Set(key, value interface{}, cost int64) bool {
+	return c.SetFunc(key, value, cost)
 }
