@@ -2,10 +2,10 @@
 
 ## Description
 
-This utility binary can be used to restore index from a previously created snapshot.
+This utility binary restores indexes from previously created snapshots.
 The `input` argument for the utility should point to the `gzip` archive created by the `create-index-snapshot` tool.
 This utility will create a new index, and use the badger API to restore the database.
-Utility will log any metadata written by the backup tool (such as time of backup).
+It also logs any metadata written by the backup tool (such as the time of backup).
 
 ## Usage
 

@@ -153,12 +153,10 @@ func getArchivePath(out string) (string, error) {
 	}
 
 	// If not a full path, the output path should be a directory.
-
 	info, err := os.Stat(out)
 	if err != nil {
 		return "", fmt.Errorf("could not stat path: %w", err)
 	}
-
 	if !info.IsDir() {
 		return "", fmt.Errorf("output must be a directory or a full file path")
 	}

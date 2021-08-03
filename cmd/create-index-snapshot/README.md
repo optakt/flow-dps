@@ -2,9 +2,9 @@
 
 ## Description
 
-This utility binary can be used to create a snapshot of an existing index.
+This utility binary creates snapshots of an existing indexes.
 When a path to the index (badger database) is specified, the badger API is used to create a backup. 
-This backup is written to standard output or to a `gzip` archive if the `output` option is specified.
+This backup is written to the standard output or to a `gzip` archive if the `output` option is specified.
 This backup is compressed with Zstandard compression.
 
 Output argument can either be a directory, or a full path to the `.gz` file that will be created.
@@ -24,19 +24,22 @@ Usage of create-index-snapshot:
 
 ## Examples
 
-### Tool Usage
+### Usage
 
 Backup index to a hex-encoded string:
+
 ```console
 $ create-index-snapshot -i index > snapshot.hex
 ```
 
 Backup index to a file named `dps-backup.gz` in the `/tmp` directory:
+
 ```console
 $ create-index-snapshot -i index --output /tmp/dps-backup.gz
 ```
 
 Backup index to a `/var/tmp` directory, where a timestamped file will be created:
+
 ```console
 $ create-index-snapshot -i index --output /var/tmp
 $ ls /var/tmp
