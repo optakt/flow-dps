@@ -2,7 +2,7 @@
 
 ## Description
 
-This utility binary creates snapshots of an existing indexes.
+This utility binary creates snapshots of existing indexes.
 When a path to the index (badger database) is specified, the badger API is used to create a backup. 
 This backup is written to the standard output or to a `gzip` archive if the `output` option is specified.
 This backup is compressed with Zstandard compression.
