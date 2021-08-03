@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/OneOfOne/xxhash v1.2.8
+	github.com/aws/aws-sdk-go v1.27.0
 	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/dgraph-io/ristretto v0.0.3-0.20200630154024-f66de99634de
