@@ -12,10 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package configuration
+package feeder
 
-const (
-	RosettaVersion    = "1.4.10"
-	NodeVersion       = "0.19.0-rc2.0.20210821041734-ac090a188c97"
-	MiddlewareVersion = "1.0.0"
-)
+type WALReader interface {
+	Next() bool
+	Err() error
+	Record() []byte
+}

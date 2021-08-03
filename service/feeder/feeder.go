@@ -17,30 +17,27 @@ package feeder
 import (
 	"fmt"
 
-	pwal "github.com/prometheus/tsdb/wal"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-type Disk struct {
-	reader *pwal.Reader
+type Feeder struct {
+	reader WALReader
 }
 
-// FromDisk creates a trie update feeder that sources state deltas
-// directly from an execution node's trie directory.
-func FromDisk(reader *pwal.Reader) (*Disk, error) {
+// FromReader creates a trie update feeder that sources state deltas from a WAL reader.
+func FromReader(reader WALReader) *Feeder {
 
-	l := Disk{
+	l := Feeder{
 		reader: reader,
 	}
 
-	return &l, nil
+	return &l
 }
 
-func (d *Disk) Update() (*ledger.TrieUpdate, error) {
+func (d *Feeder) Update() (*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip

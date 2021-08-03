@@ -12,10 +12,18 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package configuration
+package execution
 
-const (
-	RosettaVersion    = "1.4.10"
-	NodeVersion       = "0.19.0-rc2.0.20210821041734-ac090a188c97"
-	MiddlewareVersion = "1.0.0"
+import (
+	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/module/mempool/entity"
 )
+
+type BlockData struct {
+	Block       *flow.Block
+	Collections []*entity.CompleteCollection
+	TxResults   []*flow.TransactionResult
+	Events      []*flow.Event
+	TrieUpdates []*ledger.TrieUpdate
+}

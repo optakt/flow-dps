@@ -85,14 +85,14 @@ func ParseCadenceArgument(param string) (cadence.Value, error) {
 		if !ok {
 			return nil, fmt.Errorf("could not parse big integer (%s)", val)
 		}
-		return cadence.NewInt128FromBig(v), nil
+		return cadence.NewInt128FromBig(v)
 
 	case "Int256":
 		v, ok := big.NewInt(0).SetString(val, 10)
 		if !ok {
 			return nil, fmt.Errorf("could not parse big integer (%s)", val)
 		}
-		return cadence.NewInt256FromBig(v), nil
+		return cadence.NewInt256FromBig(v)
 
 	case "UInt":
 		v, err := strconv.ParseUint(val, 10, 0)
@@ -134,14 +134,14 @@ func ParseCadenceArgument(param string) (cadence.Value, error) {
 		if !ok {
 			return nil, fmt.Errorf("could not parse big integer (%s)", val)
 		}
-		return cadence.NewUInt128FromBig(v), nil
+		return cadence.NewUInt128FromBig(v)
 
 	case "UInt256":
 		v, ok := big.NewInt(0).SetString(val, 10)
 		if !ok {
 			return nil, fmt.Errorf("could not parse big integer (%s)", val)
 		}
-		return cadence.NewUInt256FromBig(v), nil
+		return cadence.NewUInt256FromBig(v)
 
 	case "UFix64":
 		v, err := cadence.NewUFix64(val)
@@ -172,7 +172,7 @@ func ParseCadenceArgument(param string) (cadence.Value, error) {
 		return cadence.NewBytes(bytes), nil
 
 	case "String":
-		return cadence.NewString(val), nil
+		return cadence.NewString(val)
 
 	default:
 		return nil, fmt.Errorf("unknown type for Cadence conversion (%s)", typ)

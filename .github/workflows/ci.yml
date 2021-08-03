@@ -15,6 +15,15 @@ jobs:
       - name: Check out source code
         uses: actions/checkout@v2
 
+      - name: Check out FlowGo
+        uses: actions/checkout@v2
+        with:
+          repository: onflow/flow-go
+          path: flow-go
+
+      - name: Move FlowGo to proper path
+        run: mv flow-go ../
+
       - name: Install Go
         uses: actions/setup-go@v2
         with:
@@ -52,6 +61,15 @@ jobs:
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
           go install github.com/srikrsna/protoc-gen-gotag@v0.6.1
 
+      # In order to be able to build with flow-go and the relic tag, we need to
+      # run its go generate target.
+      - name: Install Flow Go's crypto
+        run: |
+          cd ../flow-go/crypto
+          git fetch
+          git checkout ac090a188c979fbcd1b1711271f5b7d1281f76d9
+          go generate .
+
       # This check makes sure that the `go.mod` and `go.sum` files for Go
       # modules are always up-to-date.
       - name: Verify Go modules
@@ -70,7 +88,7 @@ jobs:
       # This check makes sure that we can compile the binary as a pure Go binary
       # without CGO support.
       - name: Verify compilation
-        run: CGO_ENABLED=0 go build ./...
+        run: go build -tags relic ./...
 
       # This check runs all unit tests with verbose output and ensures that all
       # of the tests pass successfully.

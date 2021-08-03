@@ -16,22 +16,38 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"time"
 
+	gcs "cloud.google.com/go/storage"
 	"github.com/dgraph-io/badger/v2"
-	"github.com/prometheus/tsdb/wal"
+	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
+	"google.golang.org/grpc"
 
+	"github.com/onflow/flow-go-sdk/crypto"
+	"github.com/onflow/flow-go/follower"
+	"github.com/onflow/flow-go/model/flow"
+	api "github.com/optakt/flow-dps/api/dps"
+	"github.com/optakt/flow-dps/bucket"
+	"github.com/optakt/flow-dps/bucket/gcp"
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/follower/consensus"
+	"github.com/optakt/flow-dps/follower/execution"
 	"github.com/optakt/flow-dps/metrics/output"
 	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
-	"github.com/optakt/flow-dps/service/feeder"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
@@ -57,29 +73,38 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
+		flagBindAddr          string
+		flagBucket            string
 		flagCheckpoint        string
 		flagData              string
+		flagDownloadDir       string
 		flagForce             bool
 		flagIndex             string
 		flagIndexAll          bool
 		flagIndexCollections  bool
-		flagIndexGuarantees   bool
 		flagIndexCommit       bool
 		flagIndexEvents       bool
+		flagIndexGuarantees   bool
 		flagIndexHeader       bool
 		flagIndexPayloads     bool
 		flagIndexResults      bool
-		flagIndexTransactions bool
 		flagIndexSeals        bool
+		flagIndexTransactions bool
 		flagLevel             string
 		flagMetrics           bool
 		flagMetricsInterval   time.Duration
+		flagNodeID            string
+		flagPeerAddr          string
+		flagPeerKey           string
+		flagPort              uint16
 		flagSkipBootstrap     bool
-		flagTrie              string
 	)
 
-	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
+	pflag.StringVarP(&flagBucket, "bucket", "b", "", "name of the S3 bucket which contains the state ledger")
+	pflag.StringVar(&flagBindAddr, "bind-addr", "127.0.0.1:FIXME", "address on which to bind the FIXME")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
+	pflag.StringVar(&flagDownloadDir, "download-directory", "", "directory where to download ledger WAL checkpoints")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
@@ -95,8 +120,11 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.BoolVarP(&flagMetrics, "metrics", "m", false, "enable metrics collection and output")
 	pflag.DurationVar(&flagMetricsInterval, "metrics-interval", 5*time.Minute, "defines the interval of metrics output to log")
+	pflag.StringVarP(&flagNodeID, "node-id", "n", "", "node id to use for the DPS")
+	pflag.StringVar(&flagPeerAddr, "access-address", "", "address (host:port) of the peer to connect to")
+	pflag.StringVar(&flagPeerKey, "access-key", "", "network public key of the peer to connect to")
+	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
 	pflag.BoolVar(&flagSkipBootstrap, "skip-bootstrap", false, "enable skipping checkpoint register payloads indexing")
-	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
 	pflag.Parse()
 
@@ -176,32 +204,76 @@ func run() int {
 		loader.WithCheckpointPath(flagCheckpoint),
 	)
 
-	// The chain is responsible for reading blockchain data from the protocol state.
-	var disk dps.Chain
-	disk = chain.FromDisk(data)
-	if flagMetrics {
-		time := rcrowley.NewTime("read")
-		mout.Register(time)
-		disk = metrics.NewChain(disk, time)
-	}
-
-	// Feeder is responsible for reading the write-ahead log of the execution state.
-	segments, err := wal.NewSegmentsReader(flagTrie)
+	nodeID, err := flow.HexStringToIdentifier(flagNodeID)
 	if err != nil {
-		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
+		log.Error().Err(err).Msg("invalid node ID")
 		return failure
 	}
-	feed := feeder.FromReader(wal.NewReader(segments))
+
+	client, err := gcs.NewClient(context.Background())
+	if err != nil {
+		log.Error().Err(err).Msg("could not connect to Google Cloud Platform")
+		return failure
+	}
+
+	bkt := client.Bucket(flagBucket)
+	downloader := bucket.NewDownloader(gcp.NewReader(bkt))
+
+	host, portStr, err := net.SplitHostPort(flagPeerAddr)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("peer_address", flagPeerAddr).
+			Msg("invalid peer address format")
+		return failure
+	}
+	port, err := strconv.ParseUint(portStr, 10, 16)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("peer_address", flagPeerAddr).
+			Msg("invalid peer port")
+		return failure
+	}
+	key, err := crypto.DecodePublicKeyHex(crypto.ECDSA_P256, flagPeerKey)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("peer_key", flagPeerKey).
+			Msg("invalid peer public key")
+		return failure
+	}
+	// FIXME: Get public keys from transit stuff.
+	bootstrapIdentities := []follower.BootstrapNodeInfo{{
+		Host:             host,
+		Port:             uint(port),
+		NetworkPublicKey: key,
+	}}
+	follower, err := follower.NewConsensusFollower(nodeID, bootstrapIdentities, flagBindAddr, follower.WithDataDir(flagData))
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("bucket", flagBucket).
+			Msg("could not create consensus follower")
+		return failure
+	}
+
+	execution := execution.New(log, downloader, codec, data)
+	chain := chain.FromFollower(log, execution, data)
+
+	// FIXME: Is the consensus needed anywhere besides existing to make it index things
+	//  and call the exec follower's callback.
+	_ = consensus.New(log, execution, follower, data)
 
 	// Writer is responsible for writing the index data to the index database.
-	index := index.NewWriter(db, storage)
+	writer := index.NewWriter(db, storage)
 	defer func() {
-		err := index.Close()
+		err := writer.Close()
 		if err != nil {
 			log.Error().Err(err).Msg("could not close index")
 		}
 	}()
-	write := dps.Writer(index)
+	write := dps.Writer(writer)
 	if flagMetrics {
 		time := rcrowley.NewTime("write")
 		mout.Register(time)
@@ -209,7 +281,7 @@ func run() int {
 	}
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	transitions := mapper.NewTransitions(log, load, disk, feed, write,
+	transitions := mapper.NewTransitions(log, load, chain, execution, write,
 		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),
@@ -232,17 +304,39 @@ func run() int {
 		mapper.WithTransition(mapper.StatusForwarded, transitions.IndexChain),
 	)
 
+	// GRPC API initialization.
+	opts := []logging.Option{
+		logging.WithLevels(logging.DefaultServerCodeToLevel),
+	}
+	gsvr := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			tags.UnaryServerInterceptor(),
+			logging.UnaryServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+		),
+		grpc.ChainStreamInterceptor(
+			tags.StreamServerInterceptor(),
+			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+		),
+	)
+	reader := index.NewReader(db, storage)
+	server := api.NewServer(reader, codec)
+
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
+	listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
+	if err != nil {
+		log.Error().Uint16("port", flagPort).Err(err).Msg("could not listen")
+		return failure
+	}
 	done := make(chan struct{})
 	failed := make(chan struct{})
 	go func() {
 		start := time.Now()
-		log.Info().Time("start", start).Msg("Flow DPS Indexer starting")
+		log.Info().Time("start", start).Msg("Flow DPS Live Indexer starting")
 		err := fsm.Run()
 		if err != nil {
-			log.Warn().Err(err).Msg("Flow DPS Indexer failed")
+			log.Warn().Err(err).Msg("Flow DPS Live Indexer failed")
 			close(failed)
 		} else {
 			close(done)
@@ -250,6 +344,24 @@ func run() int {
 		finish := time.Now()
 		duration := finish.Sub(start)
 		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
+	}()
+	go func() {
+		log.Info().Msg("Flow DPS Live Server starting")
+		api.RegisterAPIServer(gsvr, server)
+		err = gsvr.Serve(listener)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Warn().Err(err).Msg("Flow DPS Server failed")
+			close(failed)
+		} else {
+			close(done)
+		}
+		log.Info().Msg("Flow DPS Live Server stopped")
+	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		log.Info().Msg("Consensus follower starting")
+		follower.Run(ctx)
+		log.Info().Msg("Consensus follower stopped")
 	}()
 
 	// Start metrics output.
@@ -264,6 +376,7 @@ func run() int {
 		log.Info().Msg("Flow DPS Indexer done")
 	case <-failed:
 		log.Warn().Msg("Flow DPS Indexer aborted")
+		cancel()
 		return failure
 	}
 	go func() {
@@ -277,11 +390,16 @@ func run() int {
 		mout.Stop()
 	}
 
+	// Stop consensus follower.
+	cancel()
+
+	gsvr.GracefulStop()
+
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the
 	// allocated shutdown time. Otherwise, we will force the shutdown and log
 	// an error. We then wait for shutdown on each component to complete.
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	err = fsm.Stop(ctx)
 	if err != nil {

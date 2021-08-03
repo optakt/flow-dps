@@ -12,10 +12,27 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package configuration
+package bucket
 
-const (
-	RosettaVersion    = "1.4.10"
-	NodeVersion       = "0.19.0-rc2.0.20210821041734-ac090a188c97"
-	MiddlewareVersion = "1.0.0"
+import (
+	"github.com/onflow/flow-go/model/flow"
 )
+
+type blockReader interface {
+	Read(blockID flow.Identifier) ([]byte, error)
+}
+
+type Downloader struct {
+	blockReader blockReader
+}
+
+func NewDownloader(blockReader blockReader) *Downloader {
+	d := Downloader{
+		blockReader: blockReader,
+	}
+	return &d
+}
+
+func (d *Downloader) Read(blockID flow.Identifier) ([]byte, error) {
+	return d.blockReader.Read(blockID)
+}
