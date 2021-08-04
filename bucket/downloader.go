@@ -39,8 +39,11 @@ type Downloader struct {
 	// downloader is used to download bucket items into the filesystem.
 	downloader *s3manager.Downloader
 
+	// buffer stores the bytes of the current segment until it is read, at which point it gets reset.
 	buffer *aws.WriteAtBuffer
-	index  int
+
+	// the index of the next segment to retrieve.
+	index int
 
 	wg     sync.WaitGroup
 	readCh chan struct{}
@@ -52,6 +55,7 @@ func NewDownloader(logger zerolog.Logger, region, bucket string) (*Downloader, e
 		Region: aws.String(region),
 	}
 
+	// Create the S3 session used to list bucket items and download them.
 	sess, err := session.NewSession(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize AWS session: %w", err)
@@ -125,10 +129,12 @@ func (d *Downloader) Run() {
 		// Look at each bucket item to check whether or not it has already been downloaded. If not, download it.
 		var totalDownloadedBytes int64
 		for _, item := range resp.Contents {
+			// Skip any item that does not match the index we are looking for.
 			if *item.Key != wantKey {
 				continue
 			}
 
+			// Download the segment into the buffer.
 			req := &s3.GetObjectInput{
 				Bucket: aws.String(d.bucket),
 				Key:    aws.String(*item.Key),
