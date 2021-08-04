@@ -167,6 +167,8 @@ func run() int {
 	server.HidePort = true
 	server.Logger = elog
 	server.Use(lecho.Middleware(lecho.Config{Logger: elog}))
+
+	// This group contains all of the Rosetta Data API endpoints.
 	server.POST("/network/list", dataCtrl.Networks)
 	server.POST("/network/options", dataCtrl.Options)
 	server.POST("/network/status", dataCtrl.Status)
@@ -176,6 +178,7 @@ func run() int {
 
 	// This group contains all of the Rosetta Construction API endpoints.
 	server.POST("/construction/preprocess", constructCtrl.Preprocess)
+	server.POST("/construction/metadata", constructCtrl.Metadata)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
