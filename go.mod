@@ -20,6 +20,7 @@ require (
 	github.com/onflow/cadence v0.16.1
 	github.com/onflow/flow-go v0.17.6
 	github.com/onflow/flow/protobuf/go/flow v0.2.0
+	github.com/onflow/flow-go-sdk v0.20.0-alpha.1 // indirect
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/rs/zerolog v1.22.0
