@@ -67,7 +67,7 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	}
 
 	if req.TransactionID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txHashEmpty))
 	}
 	if len(req.TransactionID.Hash) != hexIDSize {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txLength,
