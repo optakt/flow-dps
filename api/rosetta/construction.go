@@ -19,17 +19,16 @@ const (
 	FlowSignatureAlgorithm = "ecdsa"
 )
 
-// TODO: We could consider moving Data and Construction APIs to separate packages.
-// TODO: when the construction API crystalizes, make all the error returns consistent
-// TODO: as a WIP thing - treat the sender as the proposer and the payer. Consider allowing more granular control.
-// TODO: set gas limit for the transaction.
-// TODO: get account sequence number for the metadata endpoint
-//
-// TODO: check - We are serialiing/deserializing the transactions a few times. Originally
-// I created a TransactionPayload structure that is identical to flow.Transaction, except
-// it had JSON tags so the outputted JSON was nicer. However, since it led to overhead
-// and the need to convert the structures back and forth, I opted for removing it and always
-// using flow.Transaction, even if the resulting JSON reads like `{ "Script": "..." }` (uppercased field name).
+// TODO: Separate Data and Construction APIs to separate packages.
+// => https://github.com/optakt/flow-dps/issues/330
+
+// TODO: Sender is also the proposer and the payer. Consider allowing more granular control.
+// => https://github.com/optakt/flow-dps/issues/331
+
+// TODO: Specify Gas limit for the transaction.
+// => https://github.com/optakt/flow-dps/issues/332
+
+// FIXME: get account sequence number for the metadata endpoint (uses Access API)
 
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html
