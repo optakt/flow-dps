@@ -17,51 +17,36 @@ package feeder
 import (
 	"fmt"
 
-	pwal "github.com/prometheus/tsdb/wal"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
-
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/bucket"
 )
 
-type Disk struct {
-	reader *pwal.Reader
+type Bucket struct {
+	downloader *bucket.Downloader
 }
 
 // FromDownloader creates a trie update feeder that sources state deltas
 // directly from an execution node's trie directory.
-func FromDisk(reader *pwal.Reader) (*Disk, error) {
+func FromDownloader(downloader *bucket.Downloader) (*Bucket, error) {
 
-	l := Disk{
-		reader: reader,
+	l := Bucket{
+		downloader: downloader,
 	}
 
 	return &l, nil
 }
 
-func (d *Disk) Update() (*ledger.TrieUpdate, error) {
+func (d *Bucket) Update() (*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip
 	// them until we find a trie update.
 	for {
-
-		// This part reads the next entry from the WAL, makes sure we didn't
-		// encounter an error when reading or decoding and ensures that it's a
-		// trie update.
-		next := d.reader.Next()
-		err := d.reader.Err()
-		if !next && err != nil {
-			return nil, fmt.Errorf("could not read next record: %w", err)
-		}
-		if !next {
-			return nil, dps.ErrUnavailable
-		}
-		record := d.reader.Record()
-		operation, _, update, err := wal.Decode(record)
+		segment := d.downloader.Next()
+		operation, _, update, err := wal.Decode(segment)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode record: %w", err)
+			return nil, fmt.Errorf("could not decode segment: %w", err)
 		}
 		if operation != wal.WALUpdate {
 			continue

@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/prometheus/tsdb/wal"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
@@ -181,7 +180,7 @@ func run() int {
 	// FIXME: Temporary.
 	chain := mocks.BaselineChain(&testing.T{})
 
-	downloader, err := bucket.NewDownloader(log, flagRegion, flagBucket, flagDownloadDir)
+	downloader, err := bucket.NewDownloader(log, flagRegion, flagBucket)
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -192,14 +191,9 @@ func run() int {
 	}
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
-	segments, err := wal.NewSegmentsReader(flagDownloadDir)
+	feed, err := feeder.FromDownloader(downloader)
 	if err != nil {
-		log.Error().Str("directory", flagDownloadDir).Err(err).Msg("could not open segments reader")
-		return failure
-	}
-	feed, err := feeder.FromDisk(wal.NewReader(segments))
-	if err != nil {
-		log.Error().Str("directory", flagDownloadDir).Err(err).Msg("could not initialize feeder")
+		log.Error().Err(err).Msg("could not initialize feeder")
 		return failure
 	}
 
