@@ -60,9 +60,8 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 	}
 
 	if len(req.Operations) != 2 {
-		return echo.NewHTTPError(http.StatusBadRequest,
-			invalidFormat(txInvalidOpCount,
-				withDetail("have_operations", len(req.Operations))),
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txInvalidOpCount,
+			withDetail("have_operations", len(req.Operations))),
 		)
 	}
 

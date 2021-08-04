@@ -41,19 +41,19 @@ type Construction struct {
 	// their validity or expiration can be determined.
 	retriever Retriever
 
-	// Client is used to submit the constructed transaction to the Flow network.
-	client Client
+	// Submitter is used to submit the constructed transaction to the Flow network.
+	submitter Submitter
 }
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
-func NewConstruction(config Configuration, parser Parser, retriever Retriever, client Client) *Construction {
+func NewConstruction(config Configuration, parser Parser, retriever Retriever, submitter Submitter) *Construction {
 
 	c := Construction{
 		config:    config,
 		parser:    parser,
 		retriever: retriever,
-		client:    client,
+		submitter: submitter,
 	}
 
 	return &c

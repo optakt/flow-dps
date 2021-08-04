@@ -67,7 +67,7 @@ func (c *Construction) Submit(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyInvalid, withError(err)))
 	}
 
-	err = c.client.SendTransaction(context.Background(), tx)
+	err = c.submitter.SendTransaction(context.Background(), tx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txSubmission, err))
 	}
