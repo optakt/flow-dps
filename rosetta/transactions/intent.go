@@ -54,20 +54,7 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 		}
 	}
 
-	firstNegative := strings.HasPrefix(operations[0].Amount.Value, "-")
-	secondNegative := strings.HasPrefix(operations[1].Amount.Value, "-")
-
-	// Operations are invalid if both operations have the same sign.
-	if firstNegative == secondNegative {
-
-		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("invalid operations - values have the same sign"),
-			Sender:      operations[0].AccountID.Address,
-			Receiver:    operations[1].AccountID.Address,
-		}
-	}
-
-	// Sort the operations so that the send operation (the one that has negative value) is first.
+	// Sort the operations so that the send operation (negative amount) comes first.
 	sort.Slice(operations, func(i, j int) bool {
 		return operations[i].Amount.Value < operations[j].Amount.Value
 	})
@@ -75,16 +62,20 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	send := operations[0]
 	receive := operations[1]
 
-	// Validate the sender and the receiver account IDs.
-	err := p.validate.Account(send.AccountID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid sender account: %w", err)
-	}
-	err = p.validate.Account(receive.AccountID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid receiver account: %w", err)
+	// Verify send and receive values - send operation should be negative, receive operation should be positive.
+	if !strings.HasPrefix(send.Amount.Value, "-") ||
+		strings.HasPrefix(receive.Amount.Value, "-") {
+		return nil, failure.InvalidIntent{
+			Description: failure.NewDescription("invalid amounts for transfer",
+				failure.WithString("deposit_amount", send.Amount.Value),
+				failure.WithString("withdrawal_amount", receive.Amount.Value),
+			),
+			Sender:   send.AccountID.Address,
+			Receiver: receive.AccountID.Address,
+		}
 	}
 
+	var err error
 	// Validate the currencies specified for deposit and withdrawal.
 	send.Amount.Currency, err = p.validate.Currency(send.Amount.Currency)
 	if err != nil {
@@ -144,10 +135,18 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 		}
 	}
 
-	// Validate that the specified operations are transfers.
-	if strings.ToUpper(send.Type) != dps.OperationTransfer ||
-		strings.ToUpper(receive.Type) != dps.OperationTransfer {
+	// Validate the sender and the receiver account IDs.
+	err = p.validate.Account(send.AccountID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid sender account: %w", err)
+	}
+	err = p.validate.Account(receive.AccountID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid receiver account: %w", err)
+	}
 
+	// Validate that the specified operations are transfers.
+	if send.Type != dps.OperationTransfer || receive.Type != dps.OperationTransfer {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
 			Receiver: receive.AccountID.Address,
