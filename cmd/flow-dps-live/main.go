@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
+	pwal "github.com/prometheus/tsdb/wal"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
@@ -175,8 +176,7 @@ func run() int {
 		loader.WithCheckpointPath(flagCheckpoint),
 	)
 
-	// TODO: Implement follower engine stuff here.
-
+	// TODO: Implement follower engine stuff here instead of the mock chain.
 	// FIXME: Temporary.
 	chain := mocks.BaselineChain(&testing.T{})
 
@@ -190,8 +190,11 @@ func run() int {
 		return failure
 	}
 
+	// FIXME: Will panic if it tries to log with the nil logger we're giving it.
+	walReader := pwal.NewLiveReader(nil, downloader)
+
 	// Feeder is responsible for reading the write-ahead log of the execution state.
-	feed, err := feeder.FromDownloader(downloader)
+	feed, err := feeder.FromReader(walReader)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize feeder")
 		return failure

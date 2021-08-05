@@ -17,21 +17,24 @@ package feeder
 import (
 	"fmt"
 
-	pwal "github.com/prometheus/tsdb/wal"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-type Disk struct {
-	reader *pwal.Reader
+type WALReader interface {
+	Next() bool
+	Err() error
+	Record() []byte
 }
 
-// FromDownloader creates a trie update feeder that sources state deltas
-// directly from an execution node's trie directory.
-func FromDisk(reader *pwal.Reader) (*Disk, error) {
+type Disk struct {
+	reader WALReader
+}
+
+// FromReader creates a trie update feeder that sources state deltas from a WAL reader.
+func FromReader(reader WALReader) (*Disk, error) {
 
 	l := Disk{
 		reader: reader,

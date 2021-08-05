@@ -195,7 +195,7 @@ func run() int {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
 		return failure
 	}
-	feed, err := feeder.FromDisk(wal.NewReader(segments))
+	feed, err := feeder.FromReader(wal.NewReader(segments))
 	if err != nil {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
 		return failure

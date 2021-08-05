@@ -42,6 +42,9 @@ type Downloader struct {
 	// buffer stores the bytes of the current segment until it is read, at which point it gets reset.
 	buffer *aws.WriteAtBuffer
 
+	// segment holds a copy of the bytes from buffer, but gets dynamically truncated as it is read.
+	segment []byte
+
 	// the index of the next segment to retrieve.
 	index int
 
@@ -50,6 +53,7 @@ type Downloader struct {
 	stopCh chan struct{}
 }
 
+// NewDownloader creates a new AWS S3 session for downloading and returns a Downloader instance that uses it.
 func NewDownloader(logger zerolog.Logger, region, bucket string) (*Downloader, error) {
 	cfg := &aws.Config{
 		Region: aws.String(region),
@@ -74,20 +78,41 @@ func NewDownloader(logger zerolog.Logger, region, bucket string) (*Downloader, e
 	return &d, nil
 }
 
-func (d *Downloader) Next() []byte {
-	// Wait until a segment is available.
-	var segment []byte
-	for {
-		segment = d.buffer.Bytes()
-		if len(segment) != 0 {
-			break
+// Read reads into the given byte slice as long as it has available bytes to read from the segments that have been
+// downloaded.
+func (d *Downloader) Read(p []byte) (int, error) {
+	// If we don't have a segment yet, wait until one is available.
+	for len(d.segment) == 0 {
+		// Check if we should stop.
+		select {
+		case <-d.stopCh:
+			return 0, nil
+		default:
 		}
 
 		time.Sleep(1 * time.Second)
+		d.segment = d.buffer.Bytes()
 	}
 
-	// Reset buffer.
-	d.buffer = &aws.WriteAtBuffer{}
+	// If the requested bytes to read is greater than the available number of bytes,
+	// only read what is available for now.
+	// TODO: Could be improved by appending the next segment instead of resetting the buffer whenever we reach the end,
+	//		 but this is not necessary since the LiveReader handles incomplete reads with its `permissive` attribute and
+	//		 could also be problematic depending on how the S3 SDK writes on the buffer with WriteAt. We might confuse its
+	//       index my dynamically truncating the buffer it's writing in.
+	//       See https://github.com/prometheus/prometheus/blob/main/tsdb/wal/live_reader.go#L59-L61
+	n := min(len(p), len(d.segment))
+
+	// Pick only the requested length of bytes.
+	readBytes := d.segment[:n]
+
+	// Remove those bytes from the buffer.
+	d.segment = d.segment[n:]
+
+	// Reset the buffer if it has been read completely.
+	if len(d.segment) == 0 {
+		d.buffer = &aws.WriteAtBuffer{}
+	}
 
 	// Increase index to make the `Run` routine retrieve the next segment.
 	d.index++
@@ -96,15 +121,18 @@ func (d *Downloader) Next() []byte {
 	// and thus we should just return asap.
 	_, ok := <-d.readCh
 	if !ok {
-		return nil
+		return 0, nil
 	}
 
 	// Notify the `Run` routine that it can retrieve the next segment now.
 	d.readCh <- struct{}{}
 
-	return segment
+	copy(p, readBytes)
+
+	return n, nil
 }
 
+// Run is designed to run in the background and download the next segment whenever one has been fully read.
 func (d *Downloader) Run() {
 	d.wg.Add(1)
 	for {
@@ -173,9 +201,18 @@ func (d *Downloader) Run() {
 	}
 }
 
+// Stop makes the Run and Read methods stop gracefully.
 func (d *Downloader) Stop(ctx context.Context) error {
 	close(d.stopCh)
 	close(d.readCh)
 	d.wg.Wait()
 	return nil
+}
+
+// TODO: Remove this once generics are there and math.Min handles integers generically.
+func min(i, j int) int {
+	if i < j {
+		return i
+	}
+	return j
 }
