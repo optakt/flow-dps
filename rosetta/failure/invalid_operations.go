@@ -12,19 +12,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package failure
 
 import (
 	"fmt"
-
-	"github.com/onflow/flow-go-sdk"
-
-	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-// ParseTransactions processes the flow transaction and translates it to a list of operations and a list of
-// signers.
-func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []identifier.Account, error) {
-	return nil, nil, fmt.Errorf("TBD: not implemented")
+type InvalidOperations struct {
+	Description Description
+	Count       int
+}
+
+func (i InvalidOperations) Error() string {
+	return fmt.Sprintf("invalid operations (count: %d): %s", i.Count, i.Description)
 }

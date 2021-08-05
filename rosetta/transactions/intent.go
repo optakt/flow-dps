@@ -46,6 +46,13 @@ type Intent struct {
 // account IDs, amounts and type of operation.
 func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 
+	if len(operations) != 2 {
+		return nil, failure.InvalidOperations{
+			Description: failure.NewDescription("invalid number of operations"),
+			Count:       len(operations),
+		}
+	}
+
 	firstNegative := strings.HasPrefix(operations[0].Amount.Value, "-")
 	secondNegative := strings.HasPrefix(operations[1].Amount.Value, "-")
 
