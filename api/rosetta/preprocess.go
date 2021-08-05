@@ -65,7 +65,7 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 		)
 	}
 
-	intent, err := c.parser.CreateTransactionIntent(req.Operations)
+	intent, err := c.parser.DeriveIntent(req.Operations)
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
@@ -83,7 +83,7 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidIntent(inErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermine, err))
+		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermination, err))
 	}
 
 	res := PreprocessResponse{

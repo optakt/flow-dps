@@ -44,7 +44,7 @@ const (
 	currentRetrieval          = "unable to retrieve current block"
 	txSubmission              = "unable to submit transaction"
 	txRetrieval               = "unable to retrieve transaction"
-	intentDetermine           = "unable to determine transaction intent"
+	intentDetermination       = "unable to determine transaction intent"
 	txReferenceRetrieval      = "unable to retrieve transaction reference block"
 	txSequenceNumberRetrieval = "unable to retrieve account key sequence number"
 )

@@ -35,35 +35,25 @@ type Intent struct {
 	Payer    flow.Address
 	Proposer flow.Address
 
-	ReferenceBlock            flow.Identifier
-	ProposerKeySequenceNumber uint64
-	GasLimit                  uint64
+	ReferenceBlock flow.Identifier
+	SequenceNumber uint64
+	GasLimit       uint64
 }
 
-// CreateTransactionIntent creates a transaction Intent from two operations given as input.
+// DeriveIntent derives a transaction Intent from two operations given as input.
 // Specified operations should be symmetrical, a deposit and a withdrawal from two
 // different accounts. At the moment, the only fields taken into account are the
 // account IDs, amounts and type of operation.
-func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent, error) {
+func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 
-	firstOpNegative := strings.HasPrefix(operations[0].Amount.Value, "-")
-	secondOpNegative := strings.HasPrefix(operations[1].Amount.Value, "-")
+	firstNegative := strings.HasPrefix(operations[0].Amount.Value, "-")
+	secondNegative := strings.HasPrefix(operations[1].Amount.Value, "-")
 
-	// Operations are invalid if both operations have negative amounts.
-	if firstOpNegative && secondOpNegative {
-
-		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("invalid operations - two deposits specified"),
-			Sender:      operations[0].AccountID.Address,
-			Receiver:    operations[1].AccountID.Address,
-		}
-	}
-
-	// Operations are also invalid if both operations have positive amounts.
-	if !firstOpNegative && !secondOpNegative {
+	// Operations are invalid if both operations have the same sign.
+	if firstNegative == secondNegative {
 
 		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("invalid operations - two withdrawals specified"),
+			Description: failure.NewDescription("invalid operations - values have the same sign"),
 			Sender:      operations[0].AccountID.Address,
 			Receiver:    operations[1].AccountID.Address,
 		}
