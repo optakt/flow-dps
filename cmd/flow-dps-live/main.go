@@ -194,11 +194,7 @@ func run() int {
 	walReader := pwal.NewLiveReader(nil, downloader)
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
-	feed, err := feeder.FromReader(walReader)
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize feeder")
-		return failure
-	}
+	feed := feeder.FromReader(walReader)
 
 	// Writer is responsible for writing the index data to the index database.
 	index := index.NewWriter(db, storage)

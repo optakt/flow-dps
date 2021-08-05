@@ -195,11 +195,7 @@ func run() int {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
 		return failure
 	}
-	feed, err := feeder.FromReader(wal.NewReader(segments))
-	if err != nil {
-		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
-		return failure
-	}
+	feed := feeder.FromReader(wal.NewReader(segments))
 
 	// Writer is responsible for writing the index data to the index database.
 	index := index.NewWriter(db, storage)

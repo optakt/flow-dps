@@ -80,6 +80,8 @@ func NewDownloader(logger zerolog.Logger, region, bucket string) (*Downloader, e
 
 // Read reads into the given byte slice as long as it has available bytes to read from the segments that have been
 // downloaded.
+// FIXME: Make this non-blocking and timeout after a while, returning an io.EOF error for the LiveReader. That might
+// 		  trigger a corruption error on the Prometheus Live Reader side, which would not be great. Need to look into it.
 func (d *Downloader) Read(p []byte) (int, error) {
 	// If we don't have a segment yet, wait until one is available.
 	for len(d.segment) == 0 {
