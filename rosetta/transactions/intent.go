@@ -16,6 +16,7 @@ package transactions
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/onflow/cadence"
@@ -66,15 +67,13 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 		}
 	}
 
-	// Assume the first operation is the one with the negative amount.
+	// Sort the operations so that the send operation (the one that has negative value) is first.
+	sort.Slice(operations, func(i, j int) bool {
+		return operations[i].Amount.Value < operations[j].Amount.Value
+	})
+
 	send := operations[0]
 	receive := operations[1]
-
-	// If that was not the case, switch the send and receive operations.
-	if !strings.HasPrefix(send.Amount.Value, "-") {
-		receive = operations[0]
-		send = operations[1]
-	}
 
 	// Validate the sender and the receiver account IDs.
 	err := p.validate.Account(send.AccountID)
