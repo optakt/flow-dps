@@ -67,8 +67,8 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 		strings.HasPrefix(receive.Amount.Value, "-") {
 		return nil, failure.InvalidIntent{
 			Description: failure.NewDescription("invalid amounts for transfer",
-				failure.WithString("deposit_amount", send.Amount.Value),
-				failure.WithString("withdrawal_amount", receive.Amount.Value),
+				failure.WithString("withdrawal_amount", send.Amount.Value),
+				failure.WithString("deposit_amount", receive.Amount.Value),
 			),
 			Sender:   send.AccountID.Address,
 			Receiver: receive.AccountID.Address,
@@ -88,11 +88,13 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 
 	// Make sure that both the send and receive operations use the same currency.
 	// This is perhaps unnecessary at the moment since we only have a single currency.
-	if send.Amount.Currency != receive.Amount.Currency {
+	if send.Amount.Currency.Symbol != receive.Amount.Currency.Symbol {
 		return nil, failure.InvalidIntent{
-			Sender:      send.AccountID.Address,
-			Receiver:    receive.AccountID.Address,
-			Description: failure.NewDescription("send and receive currencies do not match"),
+			Sender:   send.AccountID.Address,
+			Receiver: receive.AccountID.Address,
+			Description: failure.NewDescription("send and receive currencies do not match",
+				failure.WithString("withdrawal_currency", send.Amount.Currency.Symbol),
+				failure.WithString("deposit_currency", receive.Amount.Currency.Symbol)),
 		}
 	}
 
@@ -129,8 +131,8 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 			Sender:   send.AccountID.Address,
 			Receiver: receive.AccountID.Address,
 			Description: failure.NewDescription("deposit and withdrawal amounts do not match",
-				failure.WithString("deposit_amount", receive.Amount.Value),
 				failure.WithString("withdrawal_amount", send.Amount.Value),
+				failure.WithString("deposit_amount", receive.Amount.Value),
 			),
 		}
 	}
@@ -151,8 +153,8 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 			Sender:   send.AccountID.Address,
 			Receiver: receive.AccountID.Address,
 			Description: failure.NewDescription("only transfer operations are supported",
-				failure.WithString("deposit_type", receive.Type),
 				failure.WithString("withdrawal_type", send.Type),
+				failure.WithString("deposit_type", receive.Type),
 			),
 		}
 	}
