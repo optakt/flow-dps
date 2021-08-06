@@ -22,6 +22,7 @@ import (
 	"strconv"
 
 	"github.com/onflow/cadence"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 func ParseCadenceArgument(param string) (cadence.Value, error) {
@@ -180,48 +181,53 @@ func ParseCadenceArgument(param string) (cadence.Value, error) {
 }
 
 // ParseRosettaValue parses the input string, which should be the Rosetta value, and
-// produces the Cadence UFix64 number. The Rosetta value does not use a decimal point,
-// so the value is deduced from the string and the `fractionLen` argument,
-// which specifies the number of digits after the decimal point.
+// produces the Cadence UFix64 number. The function verifies that the input string
+// has dps.FlowDecimals decimal places.
 func ParseRosettaValue(value string, fractionLen uint) (cadence.UFix64, error) {
 
-	if value == "" {
-		return 0, fmt.Errorf("invalid value")
+	if fractionLen != dps.FlowDecimals {
+		return 0, fmt.Errorf("invalid number of decimals")
 	}
 
-	// The number cannot be shorter than the specified number of digits
-	// after the decimal point.
-	if uint(len(value)) < fractionLen {
-		return 0, fmt.Errorf("value too short")
-	}
+	var decimal int64
+	var fraction uint64
+	var err error
 
-	// decimalValue will have the input `value` properly formatted by
-	// adding the decimal point in the correct place, specified by
-	// `fractionLen`
-	var decimalValue string
+	// If the number is longer than dps.FlowDecimals (8) characters, it means
+	// that we will have both the decimal and the fractional part.
+	// The last 8 characters will represent the fraction, while anything before
+	// that is the decimal part.
+	// If the number is shorter, it means that the whole string is the fraction.
+	if uint(len(value)) > fractionLen {
 
-	if fractionLen > 0 {
-		// If the number is longer than fractionLen characters, it means
-		// that we will have both the decimal and the fractional part.
-		// The last fractionLen characters will represent the fraction, while anything before
-		// that is the decimal part.
-		// If the number is shorter, it means that the whole string is the fraction.
-		if uint(len(value)) > fractionLen {
-			// Determine where we need to split the original number.
-			decimalsIndex := uint(len(value)) - fractionLen
-			decimalValue = fmt.Sprintf("%v.%v", value[:decimalsIndex], value[decimalsIndex:])
-		} else {
-			// Parse the whole input string as the fraction.
-			decimalValue = fmt.Sprintf("0.%0.*s", fractionLen, value)
+		decimalsIndex := uint(len(value)) - fractionLen
+
+		// Get all characters except the last 8 and convert that string to an integer.
+		decimal, err = strconv.ParseInt(value[:decimalsIndex], 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("could not parse decimal part: %w", err)
+		}
+
+		if decimal < 0 {
+			return 0, fmt.Errorf("invalid value")
+		}
+
+		// Get the last 8 characters and convert them to an uint.
+		fraction, err = strconv.ParseUint(value[decimalsIndex:], 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("could not parse fraction part: %w", err)
 		}
 
 	} else {
-		// Cadence parser requires a decimal point and fractional part.
-		decimalValue = value + ".0"
+		// Parse the whole input string as the fraction.
+		fraction, err = strconv.ParseUint(value, 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("could not parse fraction part: %w", err)
+		}
 	}
 
 	// Create UFix64 number from parsed parts.
-	val, err := cadence.NewUFix64(decimalValue)
+	val, err := cadence.NewUFix64FromParts(int(decimal), uint(fraction))
 	if err != nil {
 		return 0, fmt.Errorf("could not create cadence UFix64 number: %w", err)
 	}
