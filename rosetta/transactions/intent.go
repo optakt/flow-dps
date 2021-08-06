@@ -98,7 +98,7 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 
 	// Parse value specified by the sender, after removing the negative sign prefix.
 	trimmed := strings.TrimPrefix(send.Amount.Value, "-")
-	sv, err := convert.ParseRosettaValue(trimmed)
+	sv, err := convert.ParseRosettaValue(trimmed, send.Amount.Currency.Decimals)
 	if err != nil {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
@@ -111,7 +111,7 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	}
 
 	// Parse value specified by the receiver.
-	rv, err := convert.ParseRosettaValue(receive.Amount.Value)
+	rv, err := convert.ParseRosettaValue(receive.Amount.Value, receive.Amount.Currency.Decimals)
 	if err != nil {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
