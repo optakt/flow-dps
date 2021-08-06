@@ -37,16 +37,16 @@ const (
 	txBodyEmpty     = "transaction text is empty"
 	txBodyInvalid   = "transaction text is invalid"
 
-	networkCheck              = "unable to check network"
-	blockRetrieval            = "unable to retrieve block"
-	balancesRetrieval         = "unable to retrieve balances"
-	oldestRetrieval           = "unable to retrieve oldest block"
-	currentRetrieval          = "unable to retrieve current block"
-	txSubmission              = "unable to submit transaction"
-	txRetrieval               = "unable to retrieve transaction"
-	intentDetermination       = "unable to determine transaction intent"
-	txReferenceRetrieval      = "unable to retrieve transaction reference block"
-	txSequenceNumberRetrieval = "unable to retrieve account key sequence number"
+	networkCheck            = "unable to check network"
+	blockRetrieval          = "unable to retrieve block"
+	balancesRetrieval       = "unable to retrieve balances"
+	oldestRetrieval         = "unable to retrieve oldest block"
+	currentRetrieval        = "unable to retrieve current block"
+	txSubmission            = "unable to submit transaction"
+	txRetrieval             = "unable to retrieve transaction"
+	intentDetermination     = "unable to determine transaction intent"
+	referenceBlockRetrieval = "unable to retrieve transaction reference block"
+	sequenceNumberRetrieval = "unable to retrieve account key sequence number"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It

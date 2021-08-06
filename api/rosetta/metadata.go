@@ -75,13 +75,13 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 
 	current, _, err := c.retriever.Current()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txReferenceRetrieval, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(referenceBlockRetrieval, err))
 	}
 
 	proposer := flow.HexToAddress(req.Options.AccountID.Address)
 	sequenceNr, err := getAccountSequenceNumber(proposer)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txSequenceNumberRetrieval, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(sequenceNumberRetrieval, err))
 	}
 
 	res := MetadataResponse{
