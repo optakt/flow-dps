@@ -23,20 +23,20 @@ import (
 
 // Submitter uses the Flow Access API to submit specified transaction for execution.
 type Submitter struct {
-	sender sender
+	api API
 }
 
-// New creates a new Submitter that uses the specified sender, which is typically a Flow SDK client.
-func New(sender sender) *Submitter {
+// New creates a new Submitter that uses the specified API, typically a Flow SDK client.
+func New(api API) *Submitter {
 	s := &Submitter{
-		sender: sender,
+		api: api,
 	}
 	return s
 }
 
 // Transaction will submit the specified transaction to the Flow Access API.
 func (s *Submitter) Transaction(tx *flow.Transaction) error {
-	err := s.sender.SendTransaction(context.Background(), *tx)
+	err := s.api.SendTransaction(context.Background(), *tx)
 	if err != nil {
 		return fmt.Errorf("could not submit transaction: %w", err)
 	}

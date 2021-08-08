@@ -22,6 +22,6 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
-type sender interface {
+type API interface {
 	SendTransaction(ctx context.Context, tx flow.Transaction, opts ...grpc.CallOption) error
 }
