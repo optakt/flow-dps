@@ -130,7 +130,7 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
 			Receiver: receive.AccountID.Address,
-			Description: failure.NewDescription("send and receive currencies do not match",
+			Description: failure.NewDescription("invalid currencies found",
 				failure.WithString("withdrawal_currency", send.Amount.Currency.Symbol),
 				failure.WithString("deposit_currency", receive.Amount.Currency.Symbol)),
 		}
