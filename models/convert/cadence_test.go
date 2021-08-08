@@ -18,10 +18,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/onflow/cadence"
-	"github.com/optakt/flow-dps/models/dps"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 func TestParseCadenceArgument(t *testing.T) {

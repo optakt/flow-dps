@@ -105,8 +105,8 @@ func run() int {
 		return failure
 	}
 	defer conn.Close()
-	dpsClient := api.NewAPIClient(conn)
-	index := api.IndexFromAPI(dpsClient, codec)
+	dpsAPI := api.NewAPIClient(conn)
+	index := api.IndexFromAPI(dpsAPI, codec)
 
 	// Deduce chain ID from DPS API to configure parameters for script exec.
 	first, err := index.First()
@@ -132,12 +132,12 @@ func run() int {
 		return failure
 	}
 
-	flowClient, err := client.New(flagAccessAPI, grpc.WithInsecure())
+	accessAPI, err := client.New(flagAccessAPI, grpc.WithInsecure())
 	if err != nil {
 		log.Error().Str("api", flagAccessAPI).Err(err).Msg("could not dial Flow Access API host")
 		return failure
 	}
-	defer flowClient.Close()
+	defer accessAPI.Close()
 
 	// Rosetta API initialization.
 	config := configuration.New(params.ChainID)
@@ -161,7 +161,7 @@ func run() int {
 	dataCtrl := rosetta.NewData(config, retrieve)
 
 	parse := transactions.NewParser(validate, generate)
-	submit := submitter.New(flowClient)
+	submit := submitter.New(accessAPI)
 	constructCtrl := rosetta.NewConstruction(config, parse, retrieve, submit)
 
 	server := echo.New()

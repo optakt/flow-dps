@@ -86,9 +86,9 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 		return nil, fmt.Errorf("invalid receiver currency: %w", err)
 	}
 
-	// Make sure that both the send and receive operations use the same currency.
-	// This is perhaps unnecessary at the moment since we only have a single currency.
-	if send.Amount.Currency.Symbol != receive.Amount.Currency.Symbol {
+	// Make sure that both the send and receive operations are for FLOW tokens.
+	if send.Amount.Currency.Symbol != dps.FlowSymbol || receive.Amount.Currency.Symbol != dps.FlowSymbol {
+
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
 			Receiver: receive.AccountID.Address,
