@@ -62,39 +62,16 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	send := operations[0]
 	receive := operations[1]
 
-	// Verify send and receive values - send operation should be negative, receive operation should be positive.
-	if !strings.HasPrefix(send.Amount.Value, "-") ||
-		strings.HasPrefix(receive.Amount.Value, "-") {
+	// Verify that the send operation is negative.
+	// We don't need to check the receive amount since it will be parsed as an uint64
+	// which will err on inapropriate input.
+	if !strings.HasPrefix(send.Amount.Value, "-") {
 		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("invalid amounts for transfer",
+			Description: failure.NewDescription("invalid amount for transfer",
 				failure.WithString("withdrawal_amount", send.Amount.Value),
-				failure.WithString("deposit_amount", receive.Amount.Value),
 			),
 			Sender:   send.AccountID.Address,
 			Receiver: receive.AccountID.Address,
-		}
-	}
-
-	var err error
-	// Validate the currencies specified for deposit and withdrawal.
-	send.Amount.Currency, err = p.validate.Currency(send.Amount.Currency)
-	if err != nil {
-		return nil, fmt.Errorf("invalid sender currency: %w", err)
-	}
-	receive.Amount.Currency, err = p.validate.Currency(receive.Amount.Currency)
-	if err != nil {
-		return nil, fmt.Errorf("invalid receiver currency: %w", err)
-	}
-
-	// Make sure that both the send and receive operations are for FLOW tokens.
-	if send.Amount.Currency.Symbol != dps.FlowSymbol || receive.Amount.Currency.Symbol != dps.FlowSymbol {
-
-		return nil, failure.InvalidIntent{
-			Sender:   send.AccountID.Address,
-			Receiver: receive.AccountID.Address,
-			Description: failure.NewDescription("send and receive currencies do not match",
-				failure.WithString("withdrawal_currency", send.Amount.Currency.Symbol),
-				failure.WithString("deposit_currency", receive.Amount.Currency.Symbol)),
 		}
 	}
 
@@ -134,6 +111,28 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 				failure.WithString("withdrawal_amount", send.Amount.Value),
 				failure.WithString("deposit_amount", receive.Amount.Value),
 			),
+		}
+	}
+
+	// Validate the currencies specified for deposit and withdrawal.
+	send.Amount.Currency, err = p.validate.Currency(send.Amount.Currency)
+	if err != nil {
+		return nil, fmt.Errorf("invalid sender currency: %w", err)
+	}
+	receive.Amount.Currency, err = p.validate.Currency(receive.Amount.Currency)
+	if err != nil {
+		return nil, fmt.Errorf("invalid receiver currency: %w", err)
+	}
+
+	// Make sure that both the send and receive operations are for FLOW tokens.
+	if send.Amount.Currency.Symbol != dps.FlowSymbol || receive.Amount.Currency.Symbol != dps.FlowSymbol {
+
+		return nil, failure.InvalidIntent{
+			Sender:   send.AccountID.Address,
+			Receiver: receive.AccountID.Address,
+			Description: failure.NewDescription("send and receive currencies do not match",
+				failure.WithString("withdrawal_currency", send.Amount.Currency.Symbol),
+				failure.WithString("deposit_currency", receive.Amount.Currency.Symbol)),
 		}
 	}
 
