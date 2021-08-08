@@ -35,14 +35,12 @@ const (
 type Construction struct {
 	config Configuration
 	parser Parser
+	submit Submitter
 
-	// Retriever is used to retrieve the latest block ID. This is needed
-	// since the transactions require a reference block ID, so that
-	// their validity or expiration can be determined.
-	retriever Retriever
-
-	// Submitter is used to submit the constructed transaction to the Flow network.
-	submitter Submitter
+	// Retrieve is used to get the latest block ID. This is needed since
+	// transactions require a reference block ID, so that their validity
+	// or expiration can be determined.
+	retrieve Retriever
 }
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
@@ -50,10 +48,10 @@ type Construction struct {
 func NewConstruction(config Configuration, parser Parser, retriever Retriever, submitter Submitter) *Construction {
 
 	c := Construction{
-		config:    config,
-		parser:    parser,
-		retriever: retriever,
-		submitter: submitter,
+		config:   config,
+		parser:   parser,
+		retrieve: retriever,
+		submit:   submitter,
 	}
 
 	return &c

@@ -41,6 +41,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/invoker"
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
+	"github.com/optakt/flow-dps/rosetta/submitter"
 	"github.com/optakt/flow-dps/rosetta/transactions"
 	"github.com/optakt/flow-dps/rosetta/validator"
 )
@@ -159,8 +160,9 @@ func run() int {
 	)
 	dataCtrl := rosetta.NewData(config, retrieve)
 
-	parser := transactions.NewParser(validate, generate)
-	constructCtrl := rosetta.NewConstruction(config, parser, retrieve, flowClient)
+	parse := transactions.NewParser(validate, generate)
+	submit := submitter.New(flowClient)
+	constructCtrl := rosetta.NewConstruction(config, parse, retrieve, submit)
 
 	server := echo.New()
 	server.HideBanner = true

@@ -12,13 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package submitter
 
 import (
+	"context"
+
+	"google.golang.org/grpc"
+
 	"github.com/onflow/flow-go-sdk"
 )
 
-// Submitter is used to submit the constructed transaction for execution in a Flow network.
-type Submitter interface {
-	Transaction(tx *flow.Transaction) error
+type sender interface {
+	SendTransaction(ctx context.Context, tx flow.Transaction, opts ...grpc.CallOption) error
 }

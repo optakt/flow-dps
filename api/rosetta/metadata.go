@@ -73,7 +73,7 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		))
 	}
 
-	current, _, err := c.retriever.Current()
+	current, _, err := c.retrieve.Current()
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(referenceBlockRetrieval, err))
 	}

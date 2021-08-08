@@ -15,7 +15,6 @@
 package rosetta
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -67,7 +66,7 @@ func (c *Construction) Submit(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyInvalid, withError(err)))
 	}
 
-	err = c.submitter.SendTransaction(context.Background(), tx)
+	err = c.submit.Transaction(&tx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txSubmission, err))
 	}
