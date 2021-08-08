@@ -22,7 +22,6 @@ import (
 	"strconv"
 
 	"github.com/onflow/cadence"
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 func ParseCadenceArgument(param string) (cadence.Value, error) {
@@ -178,59 +177,4 @@ func ParseCadenceArgument(param string) (cadence.Value, error) {
 	default:
 		return nil, fmt.Errorf("unknown type for Cadence conversion (%s)", typ)
 	}
-}
-
-// ParseRosettaValue parses the input string, which should be the Rosetta value, and
-// produces the Cadence UFix64 number. The function verifies that the input string
-// has dps.FlowDecimals decimal places.
-func ParseRosettaValue(value string, fractionLen uint) (cadence.UFix64, error) {
-
-	if fractionLen != dps.FlowDecimals {
-		return 0, fmt.Errorf("invalid number of decimals")
-	}
-
-	var decimal int64
-	var fraction uint64
-	var err error
-
-	// If the number is longer than dps.FlowDecimals (8) characters, it means
-	// that we will have both the decimal and the fractional part.
-	// The last 8 characters will represent the fraction, while anything before
-	// that is the decimal part.
-	// If the number is shorter, it means that the whole string is the fraction.
-	if uint(len(value)) > fractionLen {
-
-		decimalsIndex := uint(len(value)) - fractionLen
-
-		// Get all characters except the last 8 and convert that string to an integer.
-		decimal, err = strconv.ParseInt(value[:decimalsIndex], 10, 32)
-		if err != nil {
-			return 0, fmt.Errorf("could not parse decimal part: %w", err)
-		}
-
-		if decimal < 0 {
-			return 0, fmt.Errorf("invalid value")
-		}
-
-		// Get the last 8 characters and convert them to an uint.
-		fraction, err = strconv.ParseUint(value[decimalsIndex:], 10, 32)
-		if err != nil {
-			return 0, fmt.Errorf("could not parse fraction part: %w", err)
-		}
-
-	} else {
-		// Parse the whole input string as the fraction.
-		fraction, err = strconv.ParseUint(value, 10, 32)
-		if err != nil {
-			return 0, fmt.Errorf("could not parse fraction part: %w", err)
-		}
-	}
-
-	// Create UFix64 number from parsed parts.
-	val, err := cadence.NewUFix64FromParts(int(decimal), uint(fraction))
-	if err != nil {
-		return 0, fmt.Errorf("could not create cadence UFix64 number: %w", err)
-	}
-
-	return val, nil
 }

@@ -21,8 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence"
-
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 func TestParseCadenceArgument(t *testing.T) {
@@ -128,109 +126,6 @@ func TestParseCadenceArgument(t *testing.T) {
 			if err == nil {
 				assert.Equal(t, test.wantArg, gotArg)
 			}
-		})
-	}
-}
-
-func TestParseRosettaValue(t *testing.T) {
-
-	tests := []struct {
-		name        string
-		value       string
-		fractionLen uint
-		wantValue   cadence.UFix64
-		checkErr    assert.ErrorAssertionFunc
-	}{
-		{
-			name:        "parse 1.0",
-			value:       "100000000",
-			fractionLen: dps.FlowDecimals,
-			wantValue:   100000000,
-			checkErr:    assert.NoError,
-		},
-		{
-			name:        "parse 12.34",
-			value:       "1234000000",
-			fractionLen: dps.FlowDecimals,
-			wantValue:   1234000000,
-			checkErr:    assert.NoError,
-		},
-		{
-			name:        "parse 0.123456789",
-			value:       "0123456789",
-			fractionLen: dps.FlowDecimals,
-			wantValue:   123456789,
-			checkErr:    assert.NoError,
-		},
-		{
-			name:        "parse 98",
-			value:       "9800000000",
-			fractionLen: dps.FlowDecimals,
-			wantValue:   9800000000,
-			checkErr:    assert.NoError,
-		},
-		{
-			name:        "parse 0.00000001",
-			value:       "000000001",
-			fractionLen: dps.FlowDecimals,
-			wantValue:   1,
-			checkErr:    assert.NoError,
-		},
-		{
-			name:        "parse 0.00000012",
-			value:       "000000012",
-			fractionLen: dps.FlowDecimals,
-			wantValue:   12,
-			checkErr:    assert.NoError,
-		},
-		{
-			name:        "parse 1.000001",
-			value:       "100000001",
-			fractionLen: dps.FlowDecimals,
-			wantValue:   100000001,
-			checkErr:    assert.NoError,
-		},
-		{
-			name:        "parse short value",
-			value:       "1",
-			fractionLen: dps.FlowDecimals,
-			wantValue:   1,
-			checkErr:    assert.NoError,
-		},
-		{
-			name:        "parse value with invalid leading character",
-			value:       "a123456789",
-			fractionLen: dps.FlowDecimals,
-			checkErr:    assert.Error,
-		},
-		{
-			name:        "parse value with invalid trailing character",
-			value:       "123456789a",
-			fractionLen: dps.FlowDecimals,
-			checkErr:    assert.Error,
-		},
-		{
-			name:        "invalid number of decimals",
-			value:       "123456789",
-			fractionLen: 7,
-			checkErr:    assert.Error,
-		},
-		{
-			name:        "parse negative value",
-			value:       "-123456789",
-			fractionLen: dps.FlowDecimals,
-			checkErr:    assert.Error,
-		},
-	}
-
-	for _, test := range tests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			v, err := ParseRosettaValue(test.value, test.fractionLen)
-			test.checkErr(t, err)
-			assert.Equal(t, test.wantValue, v)
 		})
 	}
 }

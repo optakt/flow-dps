@@ -17,12 +17,12 @@ package transactions
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/object"
@@ -100,7 +100,7 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 
 	// Parse value specified by the sender, after removing the negative sign prefix.
 	trimmed := strings.TrimPrefix(send.Amount.Value, "-")
-	sv, err := convert.ParseRosettaValue(trimmed, send.Amount.Currency.Decimals)
+	sv, err := strconv.ParseUint(trimmed, 10, 64)
 	if err != nil {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
@@ -113,7 +113,7 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	}
 
 	// Parse value specified by the receiver.
-	rv, err := convert.ParseRosettaValue(receive.Amount.Value, receive.Amount.Currency.Decimals)
+	rv, err := strconv.ParseUint(receive.Amount.Value, 10, 64)
 	if err != nil {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
@@ -162,7 +162,7 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	intent := Intent{
 		From:     flow.HexToAddress(send.AccountID.Address),
 		To:       flow.HexToAddress(receive.AccountID.Address),
-		Amount:   sv,
+		Amount:   cadence.UFix64(sv),
 		Payer:    flow.HexToAddress(send.AccountID.Address),
 		Proposer: flow.HexToAddress(send.AccountID.Address),
 		GasLimit: flow.DefaultMaxTransactionGasLimit,
