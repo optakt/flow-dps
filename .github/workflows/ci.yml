@@ -49,6 +49,7 @@ jobs:
         run: |
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
+          go install github.com/envoyproxy/protoc-gen-validate@v0.6.1
 
       # This check makes sure that the `go.mod` and `go.sum` files for Go
       # modules are always up-to-date.
