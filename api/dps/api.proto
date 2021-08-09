@@ -16,6 +16,8 @@ syntax = "proto3";
 
 option go_package = "github.com/optakt/flow-dps/api/dps";
 
+import "validate/validate.proto";
+
 service API {
   rpc GetFirst (GetFirstRequest) returns (GetFirstResponse) {}
   rpc GetLast (GetLastRequest) returns (GetLastResponse) {}
@@ -50,7 +52,7 @@ message GetLastResponse {
 }
 
 message GetHeightForBlockRequest {
-  bytes blockID = 1;
+  bytes blockID = 1 [(validate.rules).bytes.len = 32];
 }
 
 message GetHeightForBlockResponse {
@@ -89,7 +91,7 @@ message GetEventsResponse {
 
 message GetRegisterValuesRequest {
   uint64 height = 1;
-  repeated bytes paths = 2;
+  repeated bytes paths = 2 [(validate.rules).repeated.items.bytes.len = 32];
 }
 
 message GetRegisterValuesResponse {
@@ -99,7 +101,7 @@ message GetRegisterValuesResponse {
 }
 
 message GetCollectionRequest {
-  bytes collectionID = 1;
+  bytes collectionID = 1 [(validate.rules).bytes.len = 32];
 }
 
 message GetCollectionResponse {
@@ -117,7 +119,7 @@ message ListCollectionsForHeightResponse {
 }
 
 message GetGuaranteeRequest {
-  bytes collectionID = 1;
+  bytes collectionID = 1 [(validate.rules).bytes.len = 32];
 }
 
 message GetGuaranteeResponse {
@@ -126,7 +128,7 @@ message GetGuaranteeResponse {
 }
 
 message GetTransactionRequest {
-  bytes transactionID = 1;
+  bytes transactionID = 1 [(validate.rules).bytes.len = 32];
 }
 
 message GetTransactionResponse {
@@ -135,7 +137,7 @@ message GetTransactionResponse {
 }
 
 message GetHeightForTransactionRequest {
-  bytes transactionID = 1;
+  bytes transactionID = 1 [(validate.rules).bytes.len = 32];
 }
 
 message GetHeightForTransactionResponse {
@@ -153,7 +155,7 @@ message ListTransactionsForHeightResponse {
 }
 
 message GetResultRequest {
-  bytes transactionID = 1;
+  bytes transactionID = 1 [(validate.rules).bytes.len = 32];
 }
 
 message GetResultResponse {
@@ -162,7 +164,7 @@ message GetResultResponse {
 }
 
 message GetSealRequest {
-  bytes sealID = 1;
+  bytes sealID = 1 [(validate.rules).bytes.len = 32];
 }
 
 message GetSealResponse {
