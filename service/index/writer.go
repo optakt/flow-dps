@@ -144,14 +144,24 @@ func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) er
 
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
 
-	// It's possible that a block contains one or more transactions more than once, if
-	// there are two collections from different clusters that share some of their content.
-	// We should deduplicate the transaction IDs in order to avoid returning them more
-	// than once when looking up transactions by height.
+	// It seems there is an edge case where the same transaction is included more than
+	// once in the same block. This means that we should deduplicate them here. We do
+	// so before the transaction to keep the core code clean.
 	skip := make(map[flow.Identifier]struct{})
+	txSet := make([]*flow.TransactionBody, 0, len(transactions))
+	for _, tx := range transactions {
+		txID := tx.ID()
+		_, ok := skip[txID]
+		if ok {
+			continue
+		}
+		txSet = append(txSet, tx)
+		skip[txID] = struct{}{}
+	}
+
 	var txIDs []flow.Identifier
 	return w.apply(func(tx *badger.Txn) error {
-		for _, transaction := range transactions {
+		for _, transaction := range txSet {
 			txID := transaction.ID()
 			_, ok := skip[txID]
 			if ok {
@@ -179,6 +189,39 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 }
 
 func (w *Writer) Results(results []*flow.TransactionResult) error {
+
+	// If we have duplicate transactions, we might also have duplicate results.
+	// However, unfortunately, we might need to keep the duplicate if that one
+	// was successful and the other one wasn't. This makes the logic more
+	// complex here.
+	resultSet := make([]*flow.TransactionResult, 0, len(results))
+	olds := make(map[flow.Identifier]*flow.TransactionResult)
+	indices := make(map[flow.Identifier]int)
+	for _, result := range results {
+
+		txID := result.TransactionID
+		old, ok := olds[txID]
+
+		// If we don't have a result for the same transaction yet, append it. We
+		// also keep track of the result's index in the result set, and of the
+		// full result.
+		if !ok {
+			indices[txID] = len(resultSet)
+			resultSet = append(resultSet, result)
+			olds[txID] = result
+			continue
+		}
+
+		// If we already have a result for the same transaction, we only want to
+		// replace it if the result previously included in the result set has an
+		// error, while the one we check now doesn't.
+		if old.ErrorMessage != "" && result.ErrorMessage == "" {
+			index := indices[txID]
+			resultSet[index] = old
+			continue
+		}
+	}
+
 	return w.apply(func(tx *badger.Txn) error {
 		for _, result := range results {
 			err := w.lib.SaveResult(result)(tx)
