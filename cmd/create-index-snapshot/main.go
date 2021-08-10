@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
@@ -50,14 +48,12 @@ func run() int {
 	var (
 		flagIndex  string
 		flagLevel  string
-		flagRaw    bool
-		flagOutput string
+		flagFormat string
 	)
 
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.BoolVarP(&flagRaw, "raw", "r", false, "use raw binary output instead of hexadecimal when using stdout")
-	pflag.StringVar(&flagOutput, "output", "", "output archive for snapshot")
+	pflag.StringVarP(&flagFormat, "format", "f", "hex", "output format (hex, gzip or raw)")
 
 	pflag.Parse()
 
@@ -71,6 +67,15 @@ func run() int {
 	}
 	log = log.Level(level)
 
+	// Validate output format.
+	switch flagFormat {
+	case "hex", "gzip", "raw":
+		// Valid output formats.
+	default:
+		log.Error().Str("format", flagFormat).Msg("invalid format specified")
+		return failure
+	}
+
 	// Open the index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true).WithBypassLockGuard(true))
 	if err != nil {
@@ -81,29 +86,15 @@ func run() int {
 
 	// Create output writer.
 	var writer io.Writer
+	writer = os.Stdout
+	if flagFormat == "hex" {
+		writer = hex.NewEncoder(writer)
 
-	// If we're backing up to a file, prepare for writing gzip archive.
-	if flagOutput != "" {
-
-		target, err := getArchivePath(flagOutput)
-		if err != nil {
-			log.Error().Err(err).Str("output", flagOutput).Msg("invalid output path")
-			return failure
-		}
-
-		log.Info().Str("target_file", target).Msg("output archive path")
-
-		// Create the .gz output archive.
-		file, err := os.Create(target)
-		if err != nil {
-			log.Error().Err(err).Str("output", target).Msg("could not create snapshot archive")
-			return failure
-		}
-		defer file.Close()
+	} else if flagFormat == "gzip" {
 
 		// Create a gzip writer. Data is written without compression
 		// since we'll take care of compression ourselves.
-		gzw, err := gzip.NewWriterLevel(file, gzip.NoCompression)
+		gzw, err := gzip.NewWriterLevel(writer, gzip.NoCompression)
 		if err != nil {
 			log.Error().Err(err).Msg("could not create gzip writer")
 			return failure
@@ -114,14 +105,6 @@ func run() int {
 		gzw.ModTime = time.Now().UTC()
 
 		writer = gzw
-
-	} else {
-
-		// Write to stdout and wrap the writer into a hex encoder if output is set to be hexadecimal.
-		writer = os.Stdout
-		if !flagRaw {
-			writer = hex.NewEncoder(writer)
-		}
 	}
 
 	// Create a compressor to make sure only compressed bytes are piped into the writer.
@@ -143,27 +126,4 @@ func run() int {
 	}
 
 	return success
-}
-
-func getArchivePath(out string) (string, error) {
-
-	// If we were gven the full path to the archive, use that
-	if strings.HasSuffix(out, ".gz") {
-		return out, nil
-	}
-
-	// If not a full path, the output path should be a directory.
-	info, err := os.Stat(out)
-	if err != nil {
-		return "", fmt.Errorf("could not stat path: %w", err)
-	}
-	if !info.IsDir() {
-		return "", fmt.Errorf("output must be a directory or a full file path")
-	}
-
-	// Output file will be a timestamped file in the specified directory.
-	fileName := fmt.Sprintf("flow-dps-snapshot-%v.gz", time.Now().Format(timeLayout))
-	targetFile := filepath.Join(out, fileName)
-
-	return targetFile, nil
 }
