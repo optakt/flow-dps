@@ -131,7 +131,7 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 }
 
 func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) error {
-	return w.db.Update(func(tx *badger.Txn) error {
+	return w.apply(func(tx *badger.Txn) error {
 		for _, guarantee := range guarantees {
 			err := w.lib.SaveGuarantee(guarantee)(tx)
 			if err != nil {
@@ -143,18 +143,30 @@ func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) er
 }
 
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
+
+	// It's possible that a block contains one or more transactions more than once, if
+	// there are two collections from different clusters that share some of their content.
+	// We should deduplicate the transaction IDs in order to avoid returning them more
+	// than once when looking up transactions by height.
+	skip := make(map[flow.Identifier]struct{})
 	var txIDs []flow.Identifier
 	return w.apply(func(tx *badger.Txn) error {
 		for _, transaction := range transactions {
+			txID := transaction.ID()
+			_, ok := skip[txID]
+			if ok {
+				continue
+			}
 			err := w.lib.SaveTransaction(transaction)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save transaction (id: %x): %w", transaction.ID(), err)
+				return fmt.Errorf("could not save transaction (id: %x): %w", txID, err)
 			}
-			err = w.db.Update(w.lib.IndexHeightForTransaction(transaction.ID(), height))
+			err = w.lib.IndexHeightForTransaction(txID, height)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save transaction height (id: %x): %w", transaction.ID(), err)
+				return fmt.Errorf("could not save transaction height (id: %x): %w", txID, err)
 			}
-			txIDs = append(txIDs, transaction.ID())
+			txIDs = append(txIDs, txID)
+			skip[txID] = struct{}{}
 		}
 
 		err := w.lib.IndexTransactionsForHeight(height, txIDs)(tx)
@@ -167,9 +179,9 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 }
 
 func (w *Writer) Results(results []*flow.TransactionResult) error {
-	return w.db.Update(func(tx *badger.Txn) error {
+	return w.apply(func(tx *badger.Txn) error {
 		for _, result := range results {
-			err := w.db.Update(w.lib.SaveResult(result))
+			err := w.lib.SaveResult(result)(tx)
 			if err != nil {
 				return fmt.Errorf("could not index transaction results: %w", err)
 			}
@@ -204,9 +216,9 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 // block at the given height.
 func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
 	sealIDs := make([]flow.Identifier, 0, len(seals))
-	return w.db.Update(func(tx *badger.Txn) error {
+	return w.apply(func(tx *badger.Txn) error {
 		for _, seal := range seals {
-			err := w.db.Update(w.lib.SaveSeal(seal))
+			err := w.lib.SaveSeal(seal)(tx)
 			if err != nil {
 				return fmt.Errorf("could not save seal (id: %x): %w", seal.ID(), err)
 			}
@@ -214,7 +226,7 @@ func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
 			sealIDs = append(sealIDs, seal.ID())
 		}
 
-		err := w.db.Update(w.lib.IndexSealsForHeight(height, sealIDs))
+		err := w.lib.IndexSealsForHeight(height, sealIDs)(tx)
 		if err != nil {
 			return fmt.Errorf("could not index seals for height: %w", err)
 		}
