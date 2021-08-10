@@ -25,5 +25,5 @@ import (
 // "lockTime".
 type Transaction struct {
 	ID         identifier.Transaction `json:"transaction_identifier"`
-	Operations []Operation            `json:"operations"`
+	Operations []*Operation           `json:"operations"`
 }

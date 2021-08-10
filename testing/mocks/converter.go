@@ -23,14 +23,14 @@ import (
 )
 
 type Converter struct {
-	EventToOperationFunc func(flow.Event) (*object.Operation, error)
+	EventToOperationFunc func(index uint, event flow.Event) (*object.Operation, error)
 }
 
 func BaselineConverter(t *testing.T) *Converter {
 	t.Helper()
 
 	c := Converter{
-		EventToOperationFunc: func(event flow.Event) (*object.Operation, error) {
+		EventToOperationFunc: func(index uint, event flow.Event) (*object.Operation, error) {
 			op := GenericOperation(0)
 			return &op, nil
 		},
@@ -39,6 +39,6 @@ func BaselineConverter(t *testing.T) *Converter {
 	return &c
 }
 
-func (c *Converter) EventToOperation(event flow.Event) (transaction *object.Operation, err error) {
-	return c.EventToOperationFunc(event)
+func (c *Converter) EventToOperation(index uint, event flow.Event) (transaction *object.Operation, err error) {
+	return c.EventToOperationFunc(index, event)
 }

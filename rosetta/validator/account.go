@@ -23,13 +23,13 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-func (v *Validator) Account(account identifier.Account) error {
+func (v *Validator) Account(account identifier.Account) (flow.Address, error) {
 
 	// Parse the address; the length was already validated, but it's still
 	// possible that the characters are not valid hex encoding.
 	bytes, err := hex.DecodeString(account.Address)
 	if err != nil {
-		return failure.InvalidAccount{
+		return flow.EmptyAddress, failure.InvalidAccount{
 			Address:     account.Address,
 			Description: failure.NewDescription("account address is not a valid hex-encoded string"),
 		}
@@ -41,7 +41,7 @@ func (v *Validator) Account(account identifier.Account) error {
 	copy(address[:], bytes)
 	ok := v.params.ChainID.Chain().IsValid(address)
 	if !ok {
-		return failure.InvalidAccount{
+		return flow.EmptyAddress, failure.InvalidAccount{
 			Address: account.Address,
 			Description: failure.NewDescription("account address is not valid for configured chain",
 				failure.WithString("active_chain", v.params.ChainID.String()),
@@ -49,5 +49,5 @@ func (v *Validator) Account(account identifier.Account) error {
 		}
 	}
 
-	return nil
+	return address, nil
 }

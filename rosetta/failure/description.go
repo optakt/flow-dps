@@ -16,7 +16,10 @@ package failure
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+
+	"github.com/onflow/flow-go/model/flow"
 )
 
 type Description struct {
@@ -75,12 +78,19 @@ func WithErr(err error) FieldFunc {
 
 func WithInt(key string, val int) FieldFunc {
 	return func(f *Fields) {
-		field := Field{Key: key, Val: val}
+		field := Field{Key: key, Val: strconv.FormatInt(int64(val), 10)}
 		*f = append(*f, field)
 	}
 }
 
 func WithUint64(key string, val uint64) FieldFunc {
+	return func(f *Fields) {
+		field := Field{Key: key, Val: strconv.FormatUint(val, 10)}
+		*f = append(*f, field)
+	}
+}
+
+func WithID(key string, val flow.Identifier) FieldFunc {
 	return func(f *Fields) {
 		field := Field{Key: key, Val: val}
 		*f = append(*f, field)

@@ -17,9 +17,25 @@ package retriever
 import (
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-type Converter interface {
-	EventToOperation(index uint, event flow.Event) (operation *object.Operation, err error)
+func rosettaTxID(txID flow.Identifier) identifier.Transaction {
+	return identifier.Transaction{
+		Hash: txID.String(),
+	}
+}
+
+func rosettaBlockID(height uint64, blockID flow.Identifier) identifier.Block {
+	return identifier.Block{
+		Index: &height,
+		Hash:  blockID.String(),
+	}
+}
+
+func rosettaCurrency(symbol string, decimals uint) identifier.Currency {
+	return identifier.Currency{
+		Symbol:   symbol,
+		Decimals: decimals,
+	}
 }

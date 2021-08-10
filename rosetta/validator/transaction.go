@@ -21,15 +21,15 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-func (v *Validator) Transaction(transaction identifier.Transaction) error {
+func (v *Validator) Transaction(transaction identifier.Transaction) (flow.Identifier, error) {
 
-	_, err := flow.HexStringToIdentifier(transaction.Hash)
+	txID, err := flow.HexStringToIdentifier(transaction.Hash)
 	if err != nil {
-		return failure.InvalidTransaction{
+		return flow.ZeroID, failure.InvalidTransaction{
 			Hash:        transaction.Hash,
 			Description: failure.NewDescription("transaction hash is not a valid hex-encoded string"),
 		}
 	}
 
-	return nil
+	return txID, nil
 }
