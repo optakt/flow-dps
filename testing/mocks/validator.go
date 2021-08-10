@@ -17,49 +17,51 @@ package mocks
 import (
 	"testing"
 
+	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 type Validator struct {
-	AccountFunc     func(rosAccountID identifier.Account) error
-	BlockFunc       func(rosBlockID identifier.Block) (identifier.Block, error)
-	TransactionFunc func(rosTxID identifier.Transaction) error
-	CurrencyFunc    func(rosCurrencies identifier.Currency) (identifier.Currency, error)
+	AccountFunc     func(rosAccountID identifier.Account) (flow.Address, error)
+	BlockFunc       func(rosBlockID identifier.Block) (uint64, flow.Identifier, error)
+	TransactionFunc func(rosTxID identifier.Transaction) (flow.Identifier, error)
+	CurrencyFunc    func(rosCurrencies identifier.Currency) (string, uint, error)
 }
 
 func BaselineValidator(t *testing.T) *Validator {
 	t.Helper()
 
 	v := Validator{
-		AccountFunc: func(rosAccountID identifier.Account) error {
-			return nil
+		AccountFunc: func(rosAccountID identifier.Account) (flow.Address, error) {
+			return GenericAddress(0), nil
 		},
-		BlockFunc: func(rosBlockID identifier.Block) (identifier.Block, error) {
-			return GenericBlockQualifier, nil
+		BlockFunc: func(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
+			return GenericHeader.Height, GenericHeader.ID(), nil
 		},
-		TransactionFunc: func(rosTxID identifier.Transaction) error {
-			return nil
+		TransactionFunc: func(rosTxID identifier.Transaction) (flow.Identifier, error) {
+			return GenericTransaction(0).ID(), nil
 		},
-		CurrencyFunc: func(rosCurrency identifier.Currency) (identifier.Currency, error) {
-			return GenericCurrency, nil
+		CurrencyFunc: func(rosCurrency identifier.Currency) (string, uint, error) {
+			return GenericCurrency.Symbol, GenericCurrency.Decimals, nil
 		},
 	}
 
 	return &v
 }
 
-func (v *Validator) Account(rosAccountID identifier.Account) error {
+func (v *Validator) Account(rosAccountID identifier.Account) (flow.Address, error) {
 	return v.AccountFunc(rosAccountID)
 }
 
-func (v *Validator) Block(rosBlockID identifier.Block) (identifier.Block, error) {
+func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
 	return v.BlockFunc(rosBlockID)
 }
 
-func (v *Validator) Transaction(rosTxID identifier.Transaction) error {
+func (v *Validator) Transaction(rosTxID identifier.Transaction) (flow.Identifier, error) {
 	return v.TransactionFunc(rosTxID)
 }
 
-func (v *Validator) Currency(rosCurrency identifier.Currency) (identifier.Currency, error) {
+func (v *Validator) Currency(rosCurrency identifier.Currency) (string, uint, error) {
 	return v.CurrencyFunc(rosCurrency)
 }

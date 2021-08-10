@@ -120,7 +120,7 @@ func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifie
 
 	// Run validation on the currency qualifiers. This checks basically if we know the
 	// currency and if it has the correct decimals set, if they are set.
-	symbols := make([]string, len(rosCurrencies))
+	symbols := make([]string, 0, len(rosCurrencies))
 	decimals := make(map[string]uint, len(rosCurrencies))
 	for _, currency := range rosCurrencies {
 		symbol, decimal, err := r.validate.Currency(currency)
