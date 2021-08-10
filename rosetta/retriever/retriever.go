@@ -106,58 +106,61 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifier.Account, rosCurrencies []identifier.Currency) (identifier.Block, []object.Amount, error) {
 
 	// Run validation on the block qualifier. This also fills in missing fields, where possible.
-	completed, err := r.validate.Block(rosBlockID)
+	height, blockID, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return identifier.Block{}, nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
 	// Run validation on the account qualifier. This uses the chain ID to check the
 	// address validation.
-	err = r.validate.Account(rosAccountID)
+	address, err := r.validate.Account(rosAccountID)
 	if err != nil {
 		return identifier.Block{}, nil, fmt.Errorf("could not validate account: %w", err)
 	}
 
 	// Run validation on the currency qualifiers. This checks basically if we know the
 	// currency and if it has the correct decimals set, if they are set.
-	for idx, currency := range rosCurrencies {
-		completeCurrency, err := r.validate.Currency(currency)
+	symbols := make([]string, len(rosCurrencies))
+	decimals := make(map[string]uint, len(rosCurrencies))
+	for _, currency := range rosCurrencies {
+		symbol, decimal, err := r.validate.Currency(currency)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not validate currency: %w", err)
 		}
-		rosCurrencies[idx] = completeCurrency
+		symbols = append(symbols, symbol)
+		decimals[symbol] = decimal
 	}
 
 	// Get the Cadence value that is the result of the script execution.
-	amounts := make([]object.Amount, 0, len(rosCurrencies))
-	address := cadence.NewAddress(flow.HexToAddress(rosAccountID.Address))
-	for _, currency := range rosCurrencies {
-		getBalance, err := r.generator.GetBalance(currency.Symbol)
+	amounts := make([]object.Amount, 0, len(symbols))
+	for _, symbol := range symbols {
+		script, err := r.generator.GetBalance(symbol)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not generate script: %w", err)
 		}
-		value, err := r.invoke.Script(*completed.Index, getBalance, []cadence.Value{address})
+		params := []cadence.Value{cadence.NewAddress(address)}
+		result, err := r.invoke.Script(height, script, params)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not invoke script: %w", err)
 		}
-		balance, ok := value.ToGoValue().(uint64)
+		balance, ok := result.ToGoValue().(uint64)
 		if !ok {
-			return identifier.Block{}, nil, fmt.Errorf("could not convert balance (type: %T)", value.ToGoValue())
+			return identifier.Block{}, nil, fmt.Errorf("could not convert balance (type: %T)", result.ToGoValue())
 		}
 		amount := object.Amount{
-			Currency: currency,
+			Currency: rosettaCurrency(symbol, decimals[symbol]),
 			Value:    strconv.FormatUint(balance, 10),
 		}
 		amounts = append(amounts, amount)
 	}
 
-	return completed, amounts, nil
+	return rosettaBlockID(height, blockID), amounts, nil
 }
 
 func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identifier.Transaction, error) {
 
 	// Run validation on the block ID. This also fills in missing information.
-	completed, err := r.validate.Block(rosBlockID)
+	height, blockID, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not validate block: %w", err)
 	}
@@ -173,19 +176,19 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 	}
 
 	// Then, get the header; it contains the block ID, parent ID and timestamp.
-	header, err := r.index.Header(*completed.Index)
+	header, err := r.index.Header(height)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get header: %w", err)
 	}
 
 	// Next, we get all the events for the block to extract deposit and withdrawal events.
-	events, err := r.index.Events(*completed.Index, flow.EventType(deposit), flow.EventType(withdrawal))
+	events, err := r.index.Events(height, flow.EventType(deposit), flow.EventType(withdrawal))
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get events: %w", err)
 	}
 
 	// Get all transaction IDs for this height.
-	txIDs, err := r.index.TransactionsByHeight(*completed.Index)
+	txIDs, err := r.index.TransactionsByHeight(height)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get transaction by height: %w", err)
 	}
@@ -221,19 +224,14 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 		return nil, nil, fmt.Errorf("could not get first block index: %w", err)
 	}
 	if header.Height == first {
-		parent = completed
+		parent = rosettaBlockID(height, blockID)
 	} else {
-		height := *completed.Index - 1
-		parent.Index = &height
-		parent.Hash = header.ParentID.String()
+		parent = rosettaBlockID(height-1, header.ParentID)
 	}
 
 	// Now we just need to build the block.
 	block := object.Block{
-		ID: identifier.Block{
-			Index: &header.Height,
-			Hash:  header.ID().String(),
-		},
+		ID:           rosettaBlockID(height, blockID),
 		ParentID:     parent,
 		Timestamp:    header.Timestamp.UnixNano() / 1_000_000,
 		Transactions: blockTransactions,
@@ -245,25 +243,25 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.Transaction) (*object.Transaction, error) {
 
 	// Run validation on the block qualifier. This also fills in missing information.
-	completed, err := r.validate.Block(rosBlockID)
+	height, blockID, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
 	// Run validation on the transaction qualifier. This should never fail, as we
 	// already check the length, but let's run it anyway.
-	err = r.validate.Transaction(rosTxID)
+	txID, err := r.validate.Transaction(rosTxID)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate transaction: %w", err)
 	}
 
-	txIDs, err := r.index.TransactionsByHeight(*completed.Index)
+	txIDs, err := r.index.TransactionsByHeight(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not list block transactions: %w", err)
 	}
 	var found bool
-	for _, txID := range txIDs {
-		if txID.String() == rosTxID.Hash {
+	for _, checkID := range txIDs {
+		if checkID == txID {
 			found = true
 			break
 		}
@@ -272,8 +270,8 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 		return nil, failure.UnknownTransaction{
 			Hash: rosTxID.Hash,
 			Description: failure.NewDescription("transaction not found in given block",
-				failure.WithUint64("block_index", *completed.Index),
-				failure.WithString("block_hash", completed.Hash),
+				failure.WithUint64("block_index", height),
+				failure.WithID("block_hash", blockID),
 			),
 		}
 	}
@@ -289,23 +287,19 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	}
 
 	// Retrieve the deposit and withdrawal events for the block (yes, all of them).
-	events, err := r.index.Events(*completed.Index, flow.EventType(deposit), flow.EventType(withdrawal))
+	events, err := r.index.Events(height, flow.EventType(deposit), flow.EventType(withdrawal))
 	if err != nil {
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
 	// Convert events to operations and group them by transaction ID.
-	txID, err := flow.HexStringToIdentifier(rosTxID.Hash)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert Rosetta transaction hash to Flow identifier: %w", err)
-	}
 	ops, err := r.operations(txID, events)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert events to operations: %w", err)
 	}
 
 	transaction := object.Transaction{
-		ID:         rosTxID,
+		ID:         rosettaTxID(txID),
 		Operations: ops,
 	}
 

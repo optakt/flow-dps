@@ -17,6 +17,8 @@ package failure
 import (
 	"fmt"
 	"strings"
+
+	"github.com/onflow/flow-go/model/flow"
 )
 
 type Description struct {
@@ -81,6 +83,13 @@ func WithInt(key string, val int) FieldFunc {
 }
 
 func WithUint64(key string, val uint64) FieldFunc {
+	return func(f *Fields) {
+		field := Field{Key: key, Val: val}
+		*f = append(*f, field)
+	}
+}
+
+func WithID(key string, val flow.Identifier) FieldFunc {
 	return func(f *Fields) {
 		field := Field{Key: key, Val: val}
 		*f = append(*f, field)

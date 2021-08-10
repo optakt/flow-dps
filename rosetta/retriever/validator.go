@@ -15,12 +15,13 @@
 package retriever
 
 import (
+	"github.com/onflow/flow-go/model/flow"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 type Validator interface {
-	Account(rosAccountID identifier.Account) error
-	Block(rosBlockID identifier.Block) (identifier.Block, error)
-	Transaction(rosTxID identifier.Transaction) error
-	Currency(rosCurrency identifier.Currency) (identifier.Currency, error)
+	Account(rosAccountID identifier.Account) (address flow.Address, err error)
+	Block(rosBlockID identifier.Block) (height uint64, blockID flow.Identifier, err error)
+	Transaction(rosTxID identifier.Transaction) (txID flow.Identifier, err error)
+	Currency(rosCurrency identifier.Currency) (symbol string, decimals uint, err error)
 }

@@ -12,24 +12,30 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package validator
+package retriever
 
 import (
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-func (v *Validator) Transaction(transaction identifier.Transaction) (flow.Identifier, error) {
-
-	txID, err := flow.HexStringToIdentifier(transaction.Hash)
-	if err != nil {
-		return flow.ZeroID, failure.InvalidTransaction{
-			Hash:        transaction.Hash,
-			Description: failure.NewDescription("transaction hash is not a valid hex-encoded string"),
-		}
+func rosettaTxID(txID flow.Identifier) identifier.Transaction {
+	return identifier.Transaction{
+		Hash: txID.String(),
 	}
+}
 
-	return txID, nil
+func rosettaBlockID(height uint64, blockID flow.Identifier) identifier.Block {
+	return identifier.Block{
+		Index: &height,
+		Hash:  blockID.String(),
+	}
+}
+
+func rosettaCurrency(symbol string, decimals uint) identifier.Currency {
+	return identifier.Currency{
+		Symbol:   symbol,
+		Decimals: decimals,
+	}
 }
