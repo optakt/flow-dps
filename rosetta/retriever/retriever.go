@@ -198,7 +198,7 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 	var blockTransactions []*object.Transaction
 	var extraTransactions []identifier.Transaction
 	for index, txID := range txIDs {
-		if index > int(r.cfg.TransactionLimit) {
+		if index >= int(r.cfg.TransactionLimit) {
 			extraTransactions = append(extraTransactions, identifier.Transaction{Hash: txID.String()})
 			continue
 		}

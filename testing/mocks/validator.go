@@ -40,7 +40,7 @@ func BaselineValidator(t *testing.T) *Validator {
 			return GenericHeader.Height, GenericHeader.ID(), nil
 		},
 		TransactionFunc: func(rosTxID identifier.Transaction) (flow.Identifier, error) {
-			return GenericTransaction(0).ID(), nil
+			return GenericIdentifier(0), nil
 		},
 		CurrencyFunc: func(rosCurrency identifier.Currency) (string, uint, error) {
 			return GenericCurrency.Symbol, GenericCurrency.Decimals, nil

@@ -339,7 +339,7 @@ func TestRetriever_Balances(t *testing.T) {
 }
 
 func TestRetriever_Block(t *testing.T) {
-	t.Run("nominal case without limit", func(t *testing.T) {
+	t.Run("nominal case with limit not reached", func(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
@@ -347,13 +347,9 @@ func TestRetriever_Block(t *testing.T) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			return mocks.GenericHeader, nil
 		}
-		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			if assert.Len(t, types, 2) {
-				assert.Equal(t, mocks.GenericEventType(0), types[0])
-				assert.Equal(t, mocks.GenericEventType(1), types[1])
-			}
-			return mocks.GenericEvents(4), nil
+			return mocks.GenericIdentifiers(5), nil
 		}
 
 		validator := mocks.BaselineValidator(t)
@@ -395,12 +391,13 @@ func TestRetriever_Block(t *testing.T) {
 		ret.validate = validator
 		ret.generator = generator
 		ret.convert = convert
+		ret.cfg.TransactionLimit = 6
 
 		block, extra, err := ret.Block(mocks.GenericBlockQualifier)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
-			assert.Len(t, block.Transactions, 2)
+			assert.Len(t, block.Transactions, 5)
 
 			assert.Empty(t, extra)
 		}
@@ -414,13 +411,9 @@ func TestRetriever_Block(t *testing.T) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			return mocks.GenericHeader, nil
 		}
-		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			if assert.Len(t, types, 2) {
-				assert.Equal(t, mocks.GenericEventType(0), types[0])
-				assert.Equal(t, mocks.GenericEventType(1), types[1])
-			}
-			return mocks.GenericEvents(4), nil
+			return mocks.GenericIdentifiers(5), nil
 		}
 
 		validator := mocks.BaselineValidator(t)
@@ -462,12 +455,12 @@ func TestRetriever_Block(t *testing.T) {
 		ret.validate = validator
 		ret.generator = generator
 		ret.convert = convert
-		ret.cfg.TransactionLimit = 2
+		ret.cfg.TransactionLimit = 5
 
 		block, extra, err := ret.Block(mocks.GenericBlockQualifier)
 
 		if assert.NoError(t, err) {
-			assert.Len(t, block.Transactions, 2)
+			assert.Len(t, block.Transactions, 5)
 			assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
 
 			assert.Empty(t, extra)
@@ -482,13 +475,9 @@ func TestRetriever_Block(t *testing.T) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			return mocks.GenericHeader, nil
 		}
-		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			if assert.Len(t, types, 2) {
-				assert.Equal(t, mocks.GenericEventType(0), types[0])
-				assert.Equal(t, mocks.GenericEventType(1), types[1])
-			}
-			return mocks.GenericEvents(4), nil
+			return mocks.GenericIdentifiers(6), nil
 		}
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
@@ -527,13 +516,13 @@ func TestRetriever_Block(t *testing.T) {
 		ret.validate = validator
 		ret.generator = generator
 		ret.convert = convert
-		ret.cfg.TransactionLimit = 1
+		ret.cfg.TransactionLimit = 5
 
 		block, extra, err := ret.Block(mocks.GenericBlockQualifier)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
-			assert.Len(t, block.Transactions, 1)
+			assert.Len(t, block.Transactions, 5)
 
 			assert.Len(t, extra, 1)
 		}
@@ -543,8 +532,8 @@ func TestRetriever_Block(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
-		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-			return []flow.Event{}, nil
+		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+			return []flow.Identifier{}, nil
 		}
 
 		ret, err := baselineRetriever(t)
@@ -553,9 +542,8 @@ func TestRetriever_Block(t *testing.T) {
 		ret.index = index
 
 		got, _, err := ret.Block(mocks.GenericBlockQualifier)
-		if assert.NoError(t, err) {
-			assert.Empty(t, got.Transactions)
-		}
+		require.NoError(t, err)
+		assert.Empty(t, got.Transactions)
 	})
 
 	t.Run("handles block without relevant events", func(t *testing.T) {
@@ -572,9 +560,10 @@ func TestRetriever_Block(t *testing.T) {
 		ret.index = index
 
 		got, _, err := ret.Block(mocks.GenericBlockQualifier)
-
-		if assert.NoError(t, err) {
-			assert.Empty(t, got.Transactions)
+		require.NoError(t, err)
+		require.NotEmpty(t, got.Transactions)
+		for _, tx := range got.Transactions {
+			assert.Empty(t, tx.Operations)
 		}
 	})
 
@@ -697,7 +686,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		}
 		validator.TransactionFunc = func(transaction identifier.Transaction) (flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericTransactionQualifier(0), transaction)
-			return mocks.GenericTransaction(0).ID(), nil
+			return mocks.GenericIdentifier(0), nil
 		}
 
 		generator := mocks.BaselineGenerator(t)
