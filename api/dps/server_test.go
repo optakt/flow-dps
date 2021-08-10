@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
@@ -47,7 +48,7 @@ func TestServer_GetFirst(t *testing.T) {
 
 		wantRes *GetFirstResponse
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
@@ -58,7 +59,7 @@ func TestServer_GetFirst(t *testing.T) {
 				Height: mocks.GenericHeight,
 			},
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
 		},
 		{
 			name: "error case",
@@ -67,7 +68,7 @@ func TestServer_GetFirst(t *testing.T) {
 
 			wantRes: nil,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -103,7 +104,7 @@ func TestServer_GetLast(t *testing.T) {
 
 		wantRes *GetLastResponse
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
@@ -114,7 +115,7 @@ func TestServer_GetLast(t *testing.T) {
 				Height: mocks.GenericHeight,
 			},
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
 		},
 		{
 			name: "error case",
@@ -123,7 +124,7 @@ func TestServer_GetLast(t *testing.T) {
 
 			wantRes: nil,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -154,33 +155,44 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqBlockID flow.Identifier
+		req *GetHeightForBlockRequest
 
 		mockErr error
 
 		wantBlockID flow.Identifier
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
-			reqBlockID: mocks.GenericIdentifier(0),
+			req: &GetHeightForBlockRequest{
+				BlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			mockErr: nil,
 
 			wantBlockID: mocks.GenericIdentifier(0),
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
+		},
+		{
+			name: "handles missing block ID",
+
+			req: &GetHeightForBlockRequest{},
+
+			checkErr: require.Error,
 		},
 		{
 			name: "error handling",
 
-			reqBlockID: mocks.GenericIdentifier(0),
+			req: &GetHeightForBlockRequest{
+				BlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			mockErr: mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -196,10 +208,7 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 
 			s := Server{index: index}
 
-			req := &GetHeightForBlockRequest{
-				BlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
-			}
-			gotRes, gotErr := s.GetHeightForBlock(context.Background(), req)
+			gotRes, gotErr := s.GetHeightForBlock(context.Background(), test.req)
 
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
@@ -214,15 +223,21 @@ func TestServer_GetCommit(t *testing.T) {
 	tests := []struct {
 		name string
 
+		req *GetCommitRequest
+
 		mockCommit flow.StateCommitment
 		mockErr    error
 
 		wantRes *GetCommitResponse
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
+
+			req: &GetCommitRequest{
+				Height: mocks.GenericHeight,
+			},
 
 			mockCommit: mocks.GenericCommit(0),
 			mockErr:    nil,
@@ -232,17 +247,21 @@ func TestServer_GetCommit(t *testing.T) {
 				Commit: mocks.ByteSlice(mocks.GenericCommit(0)),
 			},
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
 		},
 		{
 			name: "error case",
+
+			req: &GetCommitRequest{
+				Height: mocks.GenericHeight,
+			},
 
 			mockCommit: flow.StateCommitment{},
 			mockErr:    mocks.GenericError,
 
 			wantRes: nil,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -260,10 +279,7 @@ func TestServer_GetCommit(t *testing.T) {
 
 			s := Server{index: index}
 
-			req := &GetCommitRequest{
-				Height: mocks.GenericHeight,
-			}
-			gotRes, gotErr := s.GetCommit(context.Background(), req)
+			gotRes, gotErr := s.GetCommit(context.Background(), test.req)
 
 			test.checkErr(t, gotErr)
 			assert.Equal(t, mocks.GenericHeight, gotHeight)
@@ -286,7 +302,7 @@ func TestServer_GetHeader(t *testing.T) {
 		wantHeight uint64
 		wantRes    *GetHeaderResponse
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
@@ -302,7 +318,7 @@ func TestServer_GetHeader(t *testing.T) {
 				Data:   mocks.GenericBytes,
 			},
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
 		},
 		{
 			name: "error case",
@@ -314,7 +330,7 @@ func TestServer_GetHeader(t *testing.T) {
 			wantHeight: mocks.GenericHeight,
 			wantRes:    nil,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -369,7 +385,7 @@ func TestServer_GetEvents(t *testing.T) {
 		wantTypes  []flow.EventType
 		wantRes    *GetEventsResponse
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
@@ -388,7 +404,7 @@ func TestServer_GetEvents(t *testing.T) {
 				Data:   mocks.GenericBytes,
 			},
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
 		},
 		{
 			name: "error case",
@@ -403,7 +419,7 @@ func TestServer_GetEvents(t *testing.T) {
 			wantTypes:  mocks.GenericEventTypes(2),
 			wantRes:    nil,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -452,51 +468,67 @@ func TestServer_GetRegisterValues(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqHeight uint64
-		reqPaths  []ledger.Path
+		req *GetRegisterValuesRequest
 
-		mockValues []ledger.Value
-		mockErr    error
+		mockErr error
 
-		wantHeight uint64
-		wantPaths  []ledger.Path
-		wantRes    *GetRegisterValuesResponse
+		want *GetRegisterValuesResponse
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
-			reqHeight: mocks.GenericHeight,
-			reqPaths:  mocks.GenericLedgerPaths(6),
+			req: &GetRegisterValuesRequest{
+				Height: mocks.GenericHeight,
+				Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
+			},
 
-			mockValues: mocks.GenericLedgerValues(6),
-			mockErr:    nil,
+			mockErr: nil,
 
-			wantHeight: mocks.GenericHeight,
-			wantPaths:  mocks.GenericLedgerPaths(6),
-			wantRes: &GetRegisterValuesResponse{
+			want: &GetRegisterValuesResponse{
 				Height: mocks.GenericHeight,
 				Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
 				Values: convert.ValuesToBytes(mocks.GenericLedgerValues(6)),
 			},
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
+		},
+		{
+			name: "handles missing paths",
+
+			req: &GetRegisterValuesRequest{
+				Height: mocks.GenericHeight,
+			},
+
+			want: nil,
+
+			checkErr: require.Error,
+		},
+		{
+			name: "handles paths with invalid lengths",
+
+			req: &GetRegisterValuesRequest{
+				Height: mocks.GenericHeight,
+				Paths:  [][]byte{mocks.GenericBytes},
+			},
+
+			want: nil,
+
+			checkErr: require.Error,
 		},
 		{
 			name: "error case",
 
-			reqHeight: mocks.GenericHeight,
-			reqPaths:  mocks.GenericLedgerPaths(6),
+			req: &GetRegisterValuesRequest{
+				Height: mocks.GenericHeight,
+				Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
+			},
+			mockErr: mocks.GenericError,
 
-			mockValues: mocks.GenericLedgerValues(6),
-			mockErr:    mocks.GenericError,
+			want: nil,
 
-			wantHeight: mocks.GenericHeight,
-			wantPaths:  mocks.GenericLedgerPaths(6),
-			wantRes:    nil,
-
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -511,24 +543,22 @@ func TestServer_GetRegisterValues(t *testing.T) {
 			index.ValuesFunc = func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 				gotHeight = height
 				gotPaths = paths
-				return test.mockValues, test.mockErr
+				return mocks.GenericLedgerValues(6), test.mockErr
 			}
 
 			s := Server{index: index}
 
-			req := &GetRegisterValuesRequest{
-				Height: test.reqHeight,
-				Paths:  convert.PathsToBytes(test.reqPaths),
-			}
-			gotRes, gotErr := s.GetRegisterValues(context.Background(), req)
+			gotRes, gotErr := s.GetRegisterValues(context.Background(), test.req)
 
 			test.checkErr(t, gotErr)
-			assert.Equal(t, mocks.GenericHeight, gotHeight)
-			assert.Equal(t, test.wantPaths, gotPaths)
-			if gotErr == nil {
-				assert.Equal(t, test.wantRes.Height, gotRes.Height)
-				assert.EqualValues(t, test.wantRes.Paths, gotRes.Paths)
-				assert.EqualValues(t, test.wantRes.Values, gotRes.Values)
+			if test.want != nil {
+				assert.Equal(t, test.want.Height, gotHeight)
+				assert.ElementsMatch(t, test.want.Paths, convert.PathsToBytes(gotPaths))
+
+				require.NotNil(t, gotRes)
+				assert.Equal(t, test.want.Height, gotRes.Height)
+				assert.ElementsMatch(t, test.want.Values, gotRes.Values)
+				assert.ElementsMatch(t, test.want.Paths, gotRes.Paths)
 			}
 		})
 	}
@@ -540,31 +570,46 @@ func TestServer_GetCollection(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqCollectionID flow.Identifier
+		req *GetCollectionRequest
 
 		mockCollection *flow.LightCollection
 		mockErr        error
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
-			reqCollectionID: coll.ID(),
+			req: &GetCollectionRequest{
+				CollectionID: mocks.ByteSlice(coll.ID()),
+			},
 
 			mockCollection: coll,
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
+		},
+		{
+			name: "handles invalid collection ID",
+
+			req: &GetCollectionRequest{
+				CollectionID: mocks.GenericBytes,
+			},
+
+			mockCollection: coll,
+
+			checkErr: require.Error,
 		},
 		{
 			name: "handles index failure",
 
-			reqCollectionID: coll.ID(),
+			req: &GetCollectionRequest{
+				CollectionID: mocks.ByteSlice(coll.ID()),
+			},
 
 			mockCollection: coll,
 			mockErr:        mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -584,13 +629,11 @@ func TestServer_GetCollection(t *testing.T) {
 			}
 
 			wantID := test.mockCollection.ID()
-			req := &GetCollectionRequest{
-				CollectionID: wantID[:],
-			}
-			gotRes, gotErr := s.GetCollection(context.Background(), req)
+			gotRes, gotErr := s.GetCollection(context.Background(), test.req)
 
 			test.checkErr(t, gotErr)
-			if gotErr == nil {
+
+			if gotRes != nil {
 				assert.Equal(t, gotRes.CollectionID, wantID[:])
 				assert.NotEmpty(t, gotRes.Data)
 			}
@@ -607,7 +650,7 @@ func TestServer_ListCollectionsForHeight(t *testing.T) {
 		mockCollections []flow.Identifier
 		mockErr         error
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
@@ -616,7 +659,7 @@ func TestServer_ListCollectionsForHeight(t *testing.T) {
 
 			mockCollections: mocks.GenericIdentifiers(5),
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
 		},
 		{
 			name: "handles index failure",
@@ -625,7 +668,7 @@ func TestServer_ListCollectionsForHeight(t *testing.T) {
 
 			mockErr: mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -662,33 +705,43 @@ func TestServer_GetGuarantee(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqCollectionID flow.Identifier
+		req *GetGuaranteeRequest
 
-		mockGuarantee *flow.CollectionGuarantee
-		mockErr       error
+		mockErr error
 
 		wantGuarantee *flow.CollectionGuarantee
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
-			reqCollectionID: mocks.GenericIdentifier(0),
-
-			mockGuarantee: mocks.GenericGuarantee(0),
+			req: &GetGuaranteeRequest{
+				CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			wantGuarantee: mocks.GenericGuarantee(0),
-			checkErr:      assert.NoError,
+			checkErr:      require.NoError,
+		},
+		{
+			name: "handles invalid collection ID",
+
+			req: &GetGuaranteeRequest{
+				CollectionID: mocks.GenericBytes,
+			},
+
+			checkErr: require.Error,
 		},
 		{
 			name: "handles index failure",
 
-			reqCollectionID: mocks.GenericIdentifier(0),
+			req: &GetGuaranteeRequest{
+				CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			mockErr: mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -699,7 +752,7 @@ func TestServer_GetGuarantee(t *testing.T) {
 
 			index := mocks.BaselineReader(t)
 			index.GuaranteeFunc = func(id flow.Identifier) (*flow.CollectionGuarantee, error) {
-				return test.mockGuarantee, test.mockErr
+				return test.wantGuarantee, test.mockErr
 			}
 
 			s := Server{
@@ -707,14 +760,11 @@ func TestServer_GetGuarantee(t *testing.T) {
 				index: index,
 			}
 
-			req := &GetGuaranteeRequest{
-				CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
-			}
-			gotRes, gotErr := s.GetGuarantee(context.Background(), req)
+			gotRes, gotErr := s.GetGuarantee(context.Background(), test.req)
 
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
-				assert.Equal(t, gotRes.CollectionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
+				assert.Equal(t, gotRes.CollectionID, test.req.CollectionID)
 				assert.NotEmpty(t, gotRes.Data)
 			}
 		})
@@ -725,33 +775,43 @@ func TestServer_GetTransaction(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqTxID flow.Identifier
+		req *GetTransactionRequest
 
-		mockTransaction *flow.TransactionBody
-		mockErr         error
+		mockErr error
 
 		wantTransaction *flow.TransactionBody
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
-			reqTxID: mocks.GenericIdentifier(0),
-
-			mockTransaction: mocks.GenericTransaction(0),
+			req: &GetTransactionRequest{
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			wantTransaction: mocks.GenericTransaction(0),
-			checkErr:        assert.NoError,
+			checkErr:        require.NoError,
+		},
+		{
+			name: "handles invalid transaction ID",
+
+			req: &GetTransactionRequest{
+				TransactionID: mocks.GenericBytes,
+			},
+
+			checkErr: require.Error,
 		},
 		{
 			name: "handles index failure",
 
-			reqTxID: mocks.GenericIdentifier(0),
+			req: &GetTransactionRequest{
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			mockErr: mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -762,7 +822,7 @@ func TestServer_GetTransaction(t *testing.T) {
 
 			index := mocks.BaselineReader(t)
 			index.TransactionFunc = func(transactionID flow.Identifier) (*flow.TransactionBody, error) {
-				return test.mockTransaction, test.mockErr
+				return test.wantTransaction, test.mockErr
 			}
 
 			s := Server{
@@ -770,13 +830,11 @@ func TestServer_GetTransaction(t *testing.T) {
 				index: index,
 			}
 
-			req := &GetTransactionRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
-			}
-			gotRes, gotErr := s.GetTransaction(context.Background(), req)
+			gotRes, gotErr := s.GetTransaction(context.Background(), test.req)
 
 			test.checkErr(t, gotErr)
-			if gotErr == nil {
+
+			if test.wantTransaction != nil {
 				assert.Equal(t, gotRes.TransactionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
 				assert.NotEmpty(t, gotRes.Data)
 			}
@@ -788,33 +846,46 @@ func TestServer_GetHeightForTransaction(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqTxID flow.Identifier
+		req *GetHeightForTransactionRequest
 
 		mockErr error
 
 		wantTxID flow.Identifier
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
-			reqTxID: mocks.GenericIdentifier(0),
+			req: &GetHeightForTransactionRequest{
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			mockErr: nil,
 
 			wantTxID: mocks.GenericIdentifier(0),
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
+		},
+		{
+			name: "handles invalid transaction ID",
+
+			req: &GetHeightForTransactionRequest{
+				TransactionID: mocks.GenericBytes,
+			},
+
+			checkErr: require.Error,
 		},
 		{
 			name: "error handling",
 
-			reqTxID: mocks.GenericIdentifier(0),
+			req: &GetHeightForTransactionRequest{
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			mockErr: mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -830,10 +901,7 @@ func TestServer_GetHeightForTransaction(t *testing.T) {
 
 			s := Server{index: index}
 
-			req := &GetHeightForTransactionRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
-			}
-			gotRes, gotErr := s.GetHeightForTransaction(context.Background(), req)
+			gotRes, gotErr := s.GetHeightForTransaction(context.Background(), test.req)
 
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
@@ -853,7 +921,7 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 		mockTransactions []flow.Identifier
 		mockErr          error
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
@@ -862,7 +930,7 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 
 			mockTransactions: mocks.GenericIdentifiers(5),
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
 		},
 		{
 			name: "handles index failure",
@@ -871,7 +939,7 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 
 			mockErr: mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -908,33 +976,46 @@ func TestServer_GetResult(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqTxID flow.Identifier
+		req *GetResultRequest
 
 		mockResult *flow.TransactionResult
 		mockErr    error
 
 		wantResult *flow.TransactionResult
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
-			reqTxID: mocks.GenericIdentifier(0),
+			req: &GetResultRequest{
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			mockResult: mocks.GenericResult(0),
 
 			wantResult: mocks.GenericResult(0),
-			checkErr:   assert.NoError,
+			checkErr:   require.NoError,
+		},
+		{
+			name: "handles invalid transaction ID",
+
+			req: &GetResultRequest{
+				TransactionID: mocks.GenericBytes,
+			},
+
+			checkErr: require.Error,
 		},
 		{
 			name: "handles index failure",
 
-			reqTxID: mocks.GenericIdentifier(0),
+			req: &GetResultRequest{
+				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			mockErr: mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -953,10 +1034,7 @@ func TestServer_GetResult(t *testing.T) {
 				index: index,
 			}
 
-			req := &GetResultRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
-			}
-			gotRes, gotErr := s.GetResult(context.Background(), req)
+			gotRes, gotErr := s.GetResult(context.Background(), test.req)
 
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
@@ -971,32 +1049,45 @@ func TestServer_GetSeal(t *testing.T) {
 	tests := []struct {
 		name string
 
-		reqSealID flow.Identifier
+		req *GetSealRequest
 
 		mockSeal *flow.Seal
 		mockErr  error
 
 		wantSeal *flow.Seal
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
-			reqSealID: mocks.GenericIdentifier(0),
+			req: &GetSealRequest{
+				SealID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
 
 			mockSeal: mocks.GenericSeal(0),
 
 			wantSeal: mocks.GenericSeal(0),
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
+		},
+		{
+			name: "handles invalid seal ID",
+
+			req: &GetSealRequest{
+				SealID: mocks.GenericBytes,
+			},
+
+			checkErr: require.Error,
 		},
 		{
 			name: "handles index failure",
 
-			reqSealID: mocks.GenericIdentifier(0),
-			mockErr:   mocks.GenericError,
+			req: &GetSealRequest{
+				SealID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			},
+			mockErr: mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
@@ -1015,14 +1106,12 @@ func TestServer_GetSeal(t *testing.T) {
 				index: index,
 			}
 
-			req := GetSealRequest{
-				SealID: mocks.ByteSlice(test.reqSealID),
-			}
-			gotRes, gotErr := s.GetSeal(context.Background(), &req)
+			gotRes, gotErr := s.GetSeal(context.Background(), test.req)
 
 			test.checkErr(t, gotErr)
+
 			if gotErr == nil {
-				assert.Equal(t, gotRes.SealID, mocks.ByteSlice(test.reqSealID))
+				assert.Equal(t, gotRes.SealID, test.req.SealID)
 				assert.NotEmpty(t, gotRes.Data)
 			}
 		})
@@ -1040,7 +1129,7 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 
 		wantSeals []flow.Identifier
 
-		checkErr assert.ErrorAssertionFunc
+		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
@@ -1049,7 +1138,7 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 
 			mockSeals: mocks.GenericIdentifiers(5),
 
-			checkErr: assert.NoError,
+			checkErr: require.NoError,
 		},
 		{
 			name: "handles index failure",
@@ -1058,7 +1147,7 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 
 			mockErr: mocks.GenericError,
 
-			checkErr: assert.Error,
+			checkErr: require.Error,
 		},
 	}
 
