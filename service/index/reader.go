@@ -167,6 +167,7 @@ func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) 
 			continue
 		}
 		idSet = append(idSet, txID)
+		skip[txID] = struct{}{}
 	}
 
 	return idSet, err
