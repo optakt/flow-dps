@@ -383,15 +383,6 @@ func GenericOperations(number int) []object.Operation {
 			},
 		}
 
-		// Inject RelatedIDs.
-		for j := 0; j < number; j++ {
-			if j == i {
-				continue
-			}
-
-			operation.RelatedIDs = append(operation.RelatedIDs, identifier.Operation{Index: uint(j)})
-		}
-
 		operations = append(operations, operation)
 	}
 
