@@ -154,7 +154,22 @@ func (r *Reader) HeightForTransaction(txID flow.Identifier) (uint64, error) {
 func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	var txIDs []flow.Identifier
 	err := r.db.View(r.lib.LookupTransactionsForHeight(height, &txIDs))
-	return txIDs, err
+
+	// Some old index databases might have duplicate transaction IDs mapped to
+	// their blocks, because of a potential edge case on the Flow side. Once
+	// all old index databases have been updated, we can remove this work-around
+	// as we catch it on the writing side of things already.
+	idSet := make([]flow.Identifier, 0, len(txIDs))
+	skip := make(map[flow.Identifier]struct{})
+	for _, txID := range txIDs {
+		_, ok := skip[txID]
+		if ok {
+			continue
+		}
+		idSet = append(idSet, txID)
+	}
+
+	return idSet, err
 }
 
 // Result returns the transaction result for the given transaction ID.
