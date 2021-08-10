@@ -15,14 +15,13 @@
 package retriever
 
 import (
-	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/rosetta/converter"
 	"github.com/optakt/flow-dps/rosetta/failure"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -185,65 +184,48 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 		return nil, nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	// Convert events to operations and group them by transaction ID.
-	buckets := make(map[string][]object.Operation)
-	for _, event := range events {
-		op, err := r.convert.EventToOperation(event)
-		if errors.Is(err, converter.ErrIrrelevant) {
-			continue
-		}
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not convert event: %w", err)
-		}
-
-		tID := event.TransactionID.String()
-		buckets[tID] = append(buckets[tID], *op)
+	// Get all transaction IDs for this height.
+	txIDs, err := r.index.TransactionsByHeight(*completed.Index)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get transaction by height: %w", err)
 	}
 
-	// Iterate over all transactionIDs to create transactions with all relevant operations.
+	// Go over all the transaction IDs and create the related Rosetta transaction
+	// until we hit the limit, at which point we just add the identifier.
 	var blockTransactions []*object.Transaction
 	var extraTransactions []identifier.Transaction
-	var count int
-	for txID, operations := range buckets {
-		if count >= int(r.cfg.TransactionLimit) {
-			extraTransactions = append(extraTransactions, identifier.Transaction{Hash: txID})
+	for index, txID := range txIDs {
+		if index > int(r.cfg.TransactionLimit) {
+			extraTransactions = append(extraTransactions, identifier.Transaction{Hash: txID.String()})
 			continue
 		}
-
-		// Set RelatedIDs for all operations for the same transaction.
-		for i := range operations {
-			for j := range operations {
-				if i == j {
-					continue
-				}
-
-				operations[i].RelatedIDs = append(operations[i].RelatedIDs, operations[j].ID)
-			}
+		ops, err := r.operations(txID, events)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get operations: %w", err)
 		}
-
-		transaction := object.Transaction{
-			ID:         identifier.Transaction{Hash: txID},
-			Operations: operations,
+		rosTx := object.Transaction{
+			ID:         identifier.Transaction{Hash: txID.String()},
+			Operations: ops,
 		}
-		blockTransactions = append(blockTransactions, &transaction)
-
-		count++
-	}
-
-	parent := identifier.Block{
-		Index: &header.Height,
-		Hash:  header.ID().String(),
+		blockTransactions = append(blockTransactions, &rosTx)
 	}
 
 	// Rosetta spec notes that for genesis block, it is recommended to use the
 	// genesis block identifier also for the parent block identifier.
 	// See https://www.rosetta-api.org/docs/common_mistakes.html#malformed-genesis-block
-	if header.Height > 0 {
-		h := header.Height - 1
-		parent = identifier.Block{
-			Index: &h,
-			Hash:  header.ParentID.String(),
-		}
+	// We thus initialize the parent as the current block, and if the header is
+	// not the root block, we use it's actual parent.
+	var parent identifier.Block
+	first, err := r.index.First()
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get first block index: %w", err)
+	}
+	if header.Height == first {
+		parent = completed
+	} else {
+		height := *completed.Index - 1
+		parent.Index = &height
+		parent.Hash = header.ParentID.String()
 	}
 
 	// Now we just need to build the block.
@@ -313,34 +295,13 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	}
 
 	// Convert events to operations and group them by transaction ID.
-	var ops []object.Operation
-	for _, event := range events {
-		// Ignore events that are related to other transactions.
-		if event.TransactionID.String() != rosTxID.Hash {
-			continue
-		}
-
-		op, err := r.convert.EventToOperation(event)
-		if errors.Is(err, converter.ErrIrrelevant) {
-			continue
-		}
-		if err != nil {
-			return nil, fmt.Errorf("could not convert event: %w", err)
-		}
-
-		ops = append(ops, *op)
+	txID, err := flow.HexStringToIdentifier(rosTxID.Hash)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert Rosetta transaction hash to Flow identifier: %w", err)
 	}
-
-	// Set RelatedIDs for all operations for the same transaction.
-	for i := range ops {
-		for j := range ops {
-			if i == j {
-				continue
-			}
-
-			ops[i].RelatedIDs = append(ops[i].RelatedIDs, ops[j].ID)
-		}
-
+	ops, err := r.operations(txID, events)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert events to operations: %w", err)
 	}
 
 	transaction := object.Transaction{
@@ -349,4 +310,67 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	}
 
 	return &transaction, nil
+}
+
+// operations allows us to extract the operations for a transaction ID by using the given list of
+// events. In general, we retrieve all events for the block in question, so those should be passed in order to avoid
+// querying events for each transaction in a block.
+func (r *Retriever) operations(txID flow.Identifier, events []flow.Event) ([]*object.Operation, error) {
+
+	// These are the currently supported event types. The order here has to be kept the same so that we can keep
+	// deterministic operation indices, which is a requirement of the Rosetta API specification.
+	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate deposit event type: %w", err)
+	}
+	withdrawal, err := r.generator.TokensWithdrawn(dps.FlowSymbol)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
+	}
+	priorities := map[string]uint{
+		deposit:    1,
+		withdrawal: 2,
+	}
+
+	// We then start by filtering out all events that don't have the right transaction
+	// ID or which are not a supported type. Afterwards, we sort them by priority,
+	// which  will make sure that we keep a deterministic index order for operations.
+	filtered := make([]flow.Event, 0, len(events))
+	for _, event := range events {
+		if event.TransactionID != txID {
+			continue
+		}
+		_, ok := priorities[string(event.Type)]
+		if !ok {
+			continue
+		}
+		filtered = append(filtered, event)
+	}
+	sort.Slice(filtered, func(i int, j int) bool {
+		return priorities[string(events[i].Type)] < priorities[string(events[j].Type)]
+	})
+
+	// Now we can convert each event to an operation, as they are both filtered for
+	// only supported ones and properly ordered.
+	ops := make([]*object.Operation, 0, len(filtered))
+	for index, event := range filtered {
+		op, err := r.convert.EventToOperation(uint(index), event)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert event to operation (tx: %s, type: %s): %w", event.TransactionID, event.Type, err)
+		}
+		ops = append(ops, op)
+	}
+
+	// Finally, we want the operations within a transaction to be related to each
+	// other.
+	for _, op1 := range ops {
+		for _, op2 := range ops {
+			if op1.ID.Index == op2.ID.Index {
+				continue
+			}
+			op1.RelatedIDs = append(op1.RelatedIDs, op2.ID)
+		}
+	}
+
+	return ops, nil
 }

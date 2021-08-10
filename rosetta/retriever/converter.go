@@ -21,5 +21,5 @@ import (
 )
 
 type Converter interface {
-	EventToOperation(event flow.Event) (transaction *object.Operation, err error)
+	EventToOperation(index uint, event flow.Event) (transaction *object.Operation, err error)
 }
