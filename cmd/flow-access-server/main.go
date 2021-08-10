@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/c2h5oh/datasize"
-	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
@@ -39,7 +38,6 @@ import (
 	dpsApi "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/invoker"
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 const (
@@ -85,12 +83,12 @@ func run() int {
 	log = log.Level(level)
 
 	// Initialize the index core state and open database in read-only mode.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true).WithBypassLockGuard(true))
-	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
-		return failure
-	}
-	defer db.Close()
+	//db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true).WithBypassLockGuard(true))
+	//if err != nil {
+	//	log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+	//	return failure
+	//}
+	//defer db.Close()
 
 	// Initialize storage library.
 	codec, err := zbor.NewCodec()
