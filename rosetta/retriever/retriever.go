@@ -207,7 +207,7 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 			return nil, nil, fmt.Errorf("could not get operations: %w", err)
 		}
 		rosTx := object.Transaction{
-			ID:         identifier.Transaction{Hash: txID.String()},
+			ID:         rosettaTxID(txID),
 			Operations: ops,
 		}
 		blockTransactions = append(blockTransactions, &rosTx)
@@ -218,11 +218,11 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 	// See https://www.rosetta-api.org/docs/common_mistakes.html#malformed-genesis-block
 	// We thus initialize the parent as the current block, and if the header is
 	// not the root block, we use it's actual parent.
-	var parent identifier.Block
 	first, err := r.index.First()
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get first block index: %w", err)
 	}
+	var parent identifier.Block
 	if header.Height == first {
 		parent = rosettaBlockID(height, blockID)
 	} else {
@@ -292,7 +292,7 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 
-	// Convert events to operations and group them by transaction ID.
+	// Convert events to operations.
 	ops, err := r.operations(txID, events)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert events to operations: %w", err)
