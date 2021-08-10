@@ -16,7 +16,7 @@ syntax = "proto3";
 
 option go_package = "github.com/optakt/flow-dps/api/dps";
 
-import "validate/validate.proto";
+import "tagger/tagger.proto";
 
 service API {
   rpc GetFirst (GetFirstRequest) returns (GetFirstResponse) {}
@@ -41,7 +41,7 @@ message GetFirstRequest {
 }
 
 message GetFirstResponse {
-  uint64 height = 1;
+  uint64 height = 1 [(tagger.tags) = "validate:\"required\"" ];
 }
 
 message GetLastRequest {
@@ -52,7 +52,7 @@ message GetLastResponse {
 }
 
 message GetHeightForBlockRequest {
-  bytes blockID = 1 [(validate.rules).bytes.len = 32];
+  bytes blockID = 1 [(tagger.tags) = "validate:\"required,len=32\"" ];
 }
 
 message GetHeightForBlockResponse {
@@ -61,7 +61,7 @@ message GetHeightForBlockResponse {
 }
 
 message GetCommitRequest {
-  uint64 height = 1;
+  uint64 height = 1 [(tagger.tags) = "validate:\"required\"" ];
 }
 
 message GetCommitResponse {
@@ -70,7 +70,7 @@ message GetCommitResponse {
 }
 
 message GetHeaderRequest {
-  uint64 height = 1;
+  uint64 height = 1 [(tagger.tags) = "validate:\"required\"" ];
 }
 
 message GetHeaderResponse {
@@ -79,7 +79,7 @@ message GetHeaderResponse {
 }
 
 message GetEventsRequest {
-  uint64 height = 1;
+  uint64 height = 1 [(tagger.tags) = "validate:\"required\"" ];
   repeated string types = 2;
 }
 
@@ -90,8 +90,8 @@ message GetEventsResponse {
 }
 
 message GetRegisterValuesRequest {
-  uint64 height = 1;
-  repeated bytes paths = 2 [(validate.rules).repeated.items.bytes.len = 32];
+  uint64 height = 1 [(tagger.tags) = "validate:\"required\"" ];
+  repeated bytes paths = 2 [(tagger.tags) = "validate:\"required,dive,len=32\"" ];
 }
 
 message GetRegisterValuesResponse {
@@ -101,7 +101,7 @@ message GetRegisterValuesResponse {
 }
 
 message GetCollectionRequest {
-  bytes collectionID = 1 [(validate.rules).bytes.len = 32];
+  bytes collectionID = 1 [(tagger.tags) = "validate:\"required,len=32\"" ];
 }
 
 message GetCollectionResponse {
@@ -110,7 +110,7 @@ message GetCollectionResponse {
 }
 
 message ListCollectionsForHeightRequest {
-  uint64 height = 1;
+  uint64 height = 1 [(tagger.tags) = "validate:\"required\"" ];
 }
 
 message ListCollectionsForHeightResponse {
@@ -119,7 +119,7 @@ message ListCollectionsForHeightResponse {
 }
 
 message GetGuaranteeRequest {
-  bytes collectionID = 1 [(validate.rules).bytes.len = 32];
+  bytes collectionID = 1 [(tagger.tags) = "validate:\"required,len=32\"" ];
 }
 
 message GetGuaranteeResponse {
@@ -128,7 +128,7 @@ message GetGuaranteeResponse {
 }
 
 message GetTransactionRequest {
-  bytes transactionID = 1 [(validate.rules).bytes.len = 32];
+  bytes transactionID = 1 [(tagger.tags) = "validate:\"required,len=32\"" ];
 }
 
 message GetTransactionResponse {
@@ -137,7 +137,7 @@ message GetTransactionResponse {
 }
 
 message GetHeightForTransactionRequest {
-  bytes transactionID = 1 [(validate.rules).bytes.len = 32];
+  bytes transactionID = 1 [(tagger.tags) = "validate:\"required,len=32\"" ];
 }
 
 message GetHeightForTransactionResponse {
@@ -146,7 +146,7 @@ message GetHeightForTransactionResponse {
 }
 
 message ListTransactionsForHeightRequest {
-  uint64 height = 1;
+  uint64 height = 1 [(tagger.tags) = "validate:\"required\"" ];
 }
 
 message ListTransactionsForHeightResponse {
@@ -155,7 +155,7 @@ message ListTransactionsForHeightResponse {
 }
 
 message GetResultRequest {
-  bytes transactionID = 1 [(validate.rules).bytes.len = 32];
+  bytes transactionID = 1 [(tagger.tags) = "validate:\"required,len=32\"" ];
 }
 
 message GetResultResponse {
@@ -164,7 +164,7 @@ message GetResultResponse {
 }
 
 message GetSealRequest {
-  bytes sealID = 1 [(validate.rules).bytes.len = 32];
+  bytes sealID = 1 [(tagger.tags) = "validate:\"required,len=32\"" ];
 }
 
 message GetSealResponse {
@@ -173,7 +173,7 @@ message GetSealResponse {
 }
 
 message ListSealsForHeightRequest {
-  uint64 height = 1;
+  uint64 height = 1 [(tagger.tags) = "validate:\"required\"" ];
 }
 
 message ListSealsForHeightResponse {
