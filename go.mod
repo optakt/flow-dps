@@ -10,12 +10,12 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v0.6.1
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/gammazero/deque v0.1.0
+	github.com/go-playground/validator/v10 v10.9.0
 	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2 v2.0.0-rc.2
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-20200501113911-9a95f0fdbfea
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/klauspost/compress v1.12.2
-	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/echo/v4 v4.3.0
 	github.com/onflow/cadence v0.16.1
 	github.com/onflow/flow-go v0.17.6

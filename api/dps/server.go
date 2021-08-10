@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-playground/validator/v10"
+
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/convert"
@@ -79,7 +81,7 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
 
-	err := req.Validate()
+	err := validator.New().Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -101,6 +103,11 @@ func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequ
 // GetCommit implements the `GetCommit` method of the generated GRPC server.
 func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
 
+	err := validator.New().Struct(req)
+	if err != nil {
+		return nil, fmt.Errorf("bad request: %w", err)
+	}
+
 	commit, err := s.index.Commit(req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("could not get commit: %w", err)
@@ -116,6 +123,11 @@ func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommit
 
 // GetHeader implements the `GetHeader` method of the generated GRPC server.
 func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
+
+	err := validator.New().Struct(req)
+	if err != nil {
+		return nil, fmt.Errorf("bad request: %w", err)
+	}
 
 	header, err := s.index.Header(req.Height)
 	if err != nil {
@@ -162,7 +174,7 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 // generated GRPC server.
 func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequest) (*GetRegisterValuesResponse, error) {
 
-	err := req.Validate()
+	err := validator.New().Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -190,7 +202,7 @@ func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequ
 // server.
 func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*GetCollectionResponse, error) {
 
-	err := req.Validate()
+	err := validator.New().Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -217,6 +229,11 @@ func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*G
 // ListCollectionsForHeight implements the `ListCollectionsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListCollectionsForHeight(_ context.Context, req *ListCollectionsForHeightRequest) (*ListCollectionsForHeightResponse, error) {
+
+	err := validator.New().Struct(req)
+	if err != nil {
+		return nil, fmt.Errorf("bad request: %w", err)
+	}
 	collIDs, err := s.index.CollectionsByHeight(req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("could not list collections by height: %w", err)
@@ -239,7 +256,7 @@ func (s *Server) ListCollectionsForHeight(_ context.Context, req *ListCollection
 // server.
 func (s *Server) GetGuarantee(_ context.Context, req *GetGuaranteeRequest) (*GetGuaranteeResponse, error) {
 
-	err := req.Validate()
+	err := validator.New().Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -267,7 +284,7 @@ func (s *Server) GetGuarantee(_ context.Context, req *GetGuaranteeRequest) (*Get
 // server.
 func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
 
-	err := req.Validate()
+	err := validator.New().Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -295,7 +312,7 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 // server.
 func (s *Server) GetHeightForTransaction(_ context.Context, req *GetHeightForTransactionRequest) (*GetHeightForTransactionResponse, error) {
 
-	err := req.Validate()
+	err := validator.New().Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -317,6 +334,11 @@ func (s *Server) GetHeightForTransaction(_ context.Context, req *GetHeightForTra
 // ListTransactionsForHeight implements the `ListTransactionsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error) {
+
+	err := validator.New().Struct(req)
+	if err != nil {
+		return nil, fmt.Errorf("bad request: %w", err)
+	}
 
 	txIDs, err := s.index.TransactionsByHeight(req.Height)
 	if err != nil {
@@ -340,7 +362,7 @@ func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransacti
 // server.
 func (s *Server) GetResult(_ context.Context, req *GetResultRequest) (*GetResultResponse, error) {
 
-	err := req.Validate()
+	err := validator.New().Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -368,7 +390,7 @@ func (s *Server) GetResult(_ context.Context, req *GetResultRequest) (*GetResult
 // server.
 func (s *Server) GetSeal(_ context.Context, req *GetSealRequest) (*GetSealResponse, error) {
 
-	err := req.Validate()
+	err := validator.New().Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -395,6 +417,12 @@ func (s *Server) GetSeal(_ context.Context, req *GetSealRequest) (*GetSealRespon
 // ListSealsForHeight implements the `ListSealsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListSealsForHeight(_ context.Context, req *ListSealsForHeightRequest) (*ListSealsForHeightResponse, error) {
+
+	err := validator.New().Struct(req)
+	if err != nil {
+		return nil, fmt.Errorf("bad request: %w", err)
+	}
+
 	sealIDs, err := s.index.SealsByHeight(req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("could not list seals by height: %w", err)

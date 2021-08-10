@@ -12,7 +12,6 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-// FIXME: Replace basic protoc output with gotags one instead, or merge both together.
-//go:generate protoc -I . -I $GOPATH/pkg/mod/github.com/srikrsna/protoc-gen-gotag@v0.6.1 --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative --go-grpc_opt=require_unimplemented_servers=false --gotag_out=:./gen/ --gotag_opt=paths=source_relative ./api.proto
+//go:generate protoc -I . -I $GOPATH/pkg/mod/github.com/srikrsna/protoc-gen-gotag@v0.6.1 --gotag_out=:. --gotag_opt=paths=source_relative ./api.proto
 
 package dps
