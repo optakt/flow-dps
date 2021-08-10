@@ -358,16 +358,5 @@ func (r *Retriever) operations(txID flow.Identifier, events []flow.Event) ([]*ob
 		ops = append(ops, op)
 	}
 
-	// Finally, we want the operations within a transaction to be related to each
-	// other.
-	for _, op1 := range ops {
-		for _, op2 := range ops {
-			if op1.ID.Index == op2.ID.Index {
-				continue
-			}
-			op1.RelatedIDs = append(op1.RelatedIDs, op2.ID)
-		}
-	}
-
 	return ops, nil
 }

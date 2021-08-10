@@ -380,7 +380,6 @@ func TestRetriever_Block(t *testing.T) {
 				op = mocks.GenericOperation(1)
 			}
 
-			op.RelatedIDs = nil // unset RelatedIDs to prevent having duplicate related IDs.
 			return &op, nil
 		}
 
@@ -444,7 +443,6 @@ func TestRetriever_Block(t *testing.T) {
 				op = mocks.GenericOperation(1)
 			}
 
-			op.RelatedIDs = nil // unset RelatedIDs to prevent having duplicate related IDs.
 			return &op, nil
 		}
 
@@ -505,7 +503,6 @@ func TestRetriever_Block(t *testing.T) {
 				op = mocks.GenericOperation(1)
 			}
 
-			op.RelatedIDs = nil // unset RelatedIDs to prevent having duplicate related IDs.
 			return &op, nil
 		}
 
@@ -726,7 +723,6 @@ func TestRetriever_Transaction(t *testing.T) {
 				op = mocks.GenericOperation(1)
 			}
 
-			op.RelatedIDs = nil // unset RelatedIDs to prevent having duplicate related IDs.
 			return &op, nil
 		}
 
@@ -925,7 +921,6 @@ func baselineRetriever(t *testing.T) (*Retriever, error) {
 			op = mocks.GenericOperation(1)
 		}
 
-		op.RelatedIDs = nil // unset RelatedIDs to prevent having duplicate related IDs.
 		return &op, nil
 	}
 
