@@ -105,21 +105,22 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 
 func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifier.Account, rosCurrencies []identifier.Currency) (identifier.Block, []object.Amount, error) {
 
-	// Run validation on the block qualifier. This also fills in missing fields, where possible.
+	// Run validation on the Rosetta block identifier. If it is valid, this will
+	// return the associated Flow block height and block ID.
 	height, blockID, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return identifier.Block{}, nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
-	// Run validation on the account qualifier. This uses the chain ID to check the
-	// address validation.
+	// Run validation on the account qualifier. If it is valid, this will return
+	// the associated Flow account address.
 	address, err := r.validate.Account(rosAccountID)
 	if err != nil {
 		return identifier.Block{}, nil, fmt.Errorf("could not validate account: %w", err)
 	}
 
-	// Run validation on the currency qualifiers. This checks basically if we know the
-	// currency and if it has the correct decimals set, if they are set.
+	// Run validation on the currency qualifiers. For each valid currency, this
+	// will return the associated currency symbol and number of decimals.
 	symbols := make([]string, 0, len(rosCurrencies))
 	decimals := make(map[string]uint, len(rosCurrencies))
 	for _, currency := range rosCurrencies {
@@ -159,7 +160,8 @@ func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifie
 
 func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identifier.Transaction, error) {
 
-	// Run validation on the block ID. This also fills in missing information.
+	// Run validation on the Rosetta block identifier. If it is valid, this will
+	// return the associated Flow block height and block ID.
 	height, blockID, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not validate block: %w", err)
@@ -190,7 +192,7 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 	// Get all transaction IDs for this height.
 	txIDs, err := r.index.TransactionsByHeight(height)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not get transaction by height: %w", err)
+		return nil, nil, fmt.Errorf("could not get transactions by height: %w", err)
 	}
 
 	// Go over all the transaction IDs and create the related Rosetta transaction
@@ -199,7 +201,7 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 	var extraTransactions []identifier.Transaction
 	for index, txID := range txIDs {
 		if index >= int(r.cfg.TransactionLimit) {
-			extraTransactions = append(extraTransactions, identifier.Transaction{Hash: txID.String()})
+			extraTransactions = append(extraTransactions, rosettaTxID(txID))
 			continue
 		}
 		ops, err := r.operations(txID, events)
@@ -217,7 +219,7 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 	// genesis block identifier also for the parent block identifier.
 	// See https://www.rosetta-api.org/docs/common_mistakes.html#malformed-genesis-block
 	// We thus initialize the parent as the current block, and if the header is
-	// not the root block, we use it's actual parent.
+	// not the root block, we use its actual parent.
 	first, err := r.index.First()
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get first block index: %w", err)
@@ -242,31 +244,32 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 
 func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.Transaction) (*object.Transaction, error) {
 
-	// Run validation on the block qualifier. This also fills in missing information.
+	// Run validation on the Rosetta block identifier. If it is valid, this will
+	// return the associated Flow block height and block ID.
 	height, blockID, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
-	// Run validation on the transaction qualifier. This should never fail, as we
-	// already check the length, but let's run it anyway.
+	// Run validation on the transaction qualifier. If it is valid, this will return
+	// the associoted Flow transaction ID.
 	txID, err := r.validate.Transaction(rosTxID)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate transaction: %w", err)
 	}
 
+	// We retrieve all transaction IDs for the given block height to check that
+	// our transaction is part of it.
 	txIDs, err := r.index.TransactionsByHeight(height)
 	if err != nil {
 		return nil, fmt.Errorf("could not list block transactions: %w", err)
 	}
-	var found bool
-	for _, checkID := range txIDs {
-		if checkID == txID {
-			found = true
-			break
-		}
+	lookup := make(map[flow.Identifier]struct{})
+	for _, txID := range txIDs {
+		lookup[txID] = struct{}{}
 	}
-	if !found {
+	_, ok := lookup[txID]
+	if !ok {
 		return nil, failure.UnknownTransaction{
 			Hash: rosTxID.Hash,
 			Description: failure.NewDescription("transaction not found in given block",
