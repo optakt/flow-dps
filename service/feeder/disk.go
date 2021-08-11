@@ -71,6 +71,18 @@ func (d *Disk) Update() (*ledger.TrieUpdate, error) {
 		// decode function will reuse the underlying slices later.
 		update = clone(update)
 
+		// For older versions, we need to verify the length of types that are aliased
+		// to the hash.Hash type from Flow-Go, because it is a slice instead of
+		// a fixed-length byte array.
+		if len(update.RootHash) != 32 {
+			return nil, fmt.Errorf("invalid ledger root hash length in trie update: got %d want 32", len(update.RootHash))
+		}
+		for _, path := range update.Paths {
+			if len(path) != 32 {
+				return nil, fmt.Errorf("invalid ledger path length in trie update: got %d want 32", len(path))
+			}
+		}
+
 		return update, nil
 	}
 }
