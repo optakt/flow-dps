@@ -15,14 +15,17 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/onflow/flow-go/model/flow"
-	"github.com/onflow/flow-go/storage/badger/operation"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
+
+	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/storage"
+	"github.com/onflow/flow-go/storage/badger/operation"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -40,14 +43,12 @@ func run() int {
 
 	// Parse the command line arguments.
 	var (
-		flagData    string
-		flagLevel   string
-		flagHeights []uint
+		flagData  string
+		flagLevel string
 	)
 
 	pflag.StringVarP(&flagData, "data", "d", "data", "database directory for protocol state")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.UintSliceVarP(&flagHeights, "heights", "h", []uint{}, "heights to check for duplicate transactions")
 
 	pflag.Parse()
 
@@ -69,17 +70,29 @@ func run() int {
 	}
 	defer db.Close()
 
+	// Retrieve the root height as a start height for duplicate check.
+	var root uint64
+	err = db.View(operation.RetrieveRootHeight(&root))
+	if err != nil {
+		log.Error().Err(err).Msg("could not retrieve root height")
+		return failure
+	}
+
 	// Go through each height, retrieve the transactions from the DB and check for duplicates.
-	for _, height := range flagHeights {
+	for height := root; ; height++ {
 		txIDs := make(map[flow.Identifier]flow.Identifier)
 
-		log = log.With().Uint("height", height).Logger()
+		log = log.With().Uint64("height", height).Logger()
 
 		// height => blockID
 		var blockID flow.Identifier
 		err = db.View(operation.LookupBlockHeight(uint64(height), &blockID))
+		if errors.Is(err, storage.ErrNotFound) {
+			log.Info().Msg("duplicate transaction check finished")
+			break
+		}
 		if err != nil {
-			log.Error().Uint("height", height).Err(err).Msg("could not look up height")
+			log.Error().Err(err).Msg("could not look up height")
 			return failure
 		}
 
@@ -112,11 +125,12 @@ func run() int {
 
 				altID, ok := txIDs[txID]
 				if ok {
-					log.Info().Hex("alternative", altID[:]).Msg("duplicate transaction detected")
+					log.Info().Hex("alternative", altID[:]).Msg("transaction duplicated!")
 					continue
 				}
 
 				txIDs[txID] = collID
+				log.Debug().Msg("transaction not duplicated")
 			}
 		}
 	}
