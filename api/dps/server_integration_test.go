@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/convert"
@@ -358,6 +359,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		// Only request one of the types of the events. Since the generic events are
 		// of two types (to simulate deposit/withdrawal), we should get half of the
 		// events as a result of this request.
+		// TODO: https://github.com/optakt/flow-dps/issues/333
 		req := &dps.GetEventsRequest{
 			Types:  []string{string(events[0].Type)},
 			Height: height,
@@ -432,6 +434,8 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, height, resp.Height)
+
+		assert.Len(t, resp.Values, len(paths))
 		for _, payload := range payloads {
 			assert.Contains(t, resp.Values, []byte(payload.Value))
 		}
@@ -581,6 +585,7 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, resp.Height)
 
+		assert.Len(t, resp.CollectionIDs, len(collections))
 		for _, collection := range collections {
 			wantID := collection.ID()
 			assert.Contains(t, resp.CollectionIDs, wantID[:])
@@ -815,8 +820,9 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, resp.Height)
 
-		for _, collection := range transactions {
-			wantID := collection.ID()
+		assert.Len(t, resp.TransactionIDs, len(transactions))
+		for _, tx := range transactions {
+			wantID := tx.ID()
 			assert.Contains(t, resp.TransactionIDs, wantID[:])
 		}
 	})
@@ -993,8 +999,9 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, resp.Height)
 
-		for _, collection := range seals {
-			wantID := collection.ID()
+		assert.Len(t, resp.SealIDs, len(seals))
+		for _, seal := range seals {
+			wantID := seal.ID()
 			assert.Contains(t, resp.SealIDs, wantID[:])
 		}
 	})
