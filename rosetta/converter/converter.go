@@ -53,7 +53,7 @@ func New(gen Generator) (*Converter, error) {
 	return &c, nil
 }
 
-func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operation, err error) {
+func (c *Converter) EventToOperation(index uint, event flow.Event) (operation *object.Operation, err error) {
 
 	// Decode the event payload into a Cadence value and cast it to a Cadence event.
 	value, err := json.Decode(event.Payload)
@@ -91,7 +91,8 @@ func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operat
 
 	op := object.Operation{
 		ID: identifier.Operation{
-			Index: uint(event.EventIndex),
+			Index:        index,
+			NetworkIndex: uint(event.EventIndex),
 		},
 		Status: dps.StatusCompleted,
 		AccountID: identifier.Account{

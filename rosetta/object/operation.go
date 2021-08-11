@@ -31,10 +31,9 @@ import (
 // The `coin_change` field is omitted, as the Flow blockchain is an
 // account-based blockchain without utxo set.
 type Operation struct {
-	ID         identifier.Operation   `json:"operation_identifier"`
-	RelatedIDs []identifier.Operation `json:"related_operations"`
-	Type       string                 `json:"type"`
-	Status     string                 `json:"status"`
-	AccountID  identifier.Account     `json:"account"`
-	Amount     Amount                 `json:"amount"`
+	ID        identifier.Operation `json:"operation_identifier"`
+	Type      string               `json:"type"`
+	Status    string               `json:"status"`
+	AccountID identifier.Account   `json:"account"`
+	Amount    Amount               `json:"amount"`
 }

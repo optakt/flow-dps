@@ -124,7 +124,8 @@ func TestConverter_EventToOperation(t *testing.T) {
 
 	testDepositOp := object.Operation{
 		ID: identifier.Operation{
-			Index: 0,
+			Index:        1,
+			NetworkIndex: 10,
 		},
 		Type:   dps.OperationTransfer,
 		Status: dps.StatusCompleted,
@@ -141,7 +142,8 @@ func TestConverter_EventToOperation(t *testing.T) {
 	}
 	testWithdrawalOp := object.Operation{
 		ID: identifier.Operation{
-			Index: 1,
+			Index:        2,
+			NetworkIndex: 20,
 		},
 		Type:   dps.OperationTransfer,
 		Status: dps.StatusCompleted,
@@ -234,6 +236,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 	tests := []struct {
 		name string
 
+		index uint
 		event flow.Event
 
 		wantOperation  *object.Operation
@@ -243,11 +246,12 @@ func TestConverter_EventToOperation(t *testing.T) {
 		{
 			name: "nominal case with deposit event",
 
+			index: 1,
 			event: flow.Event{
 				TransactionID: id,
 				Type:          mocks.GenericEventType(0),
 				Payload:       depositEventPayload,
-				EventIndex:    0,
+				EventIndex:    10,
 			},
 
 			wantErr:        assert.NoError,
@@ -257,11 +261,12 @@ func TestConverter_EventToOperation(t *testing.T) {
 		{
 			name: "nominal case with withdrawal event",
 
+			index: 2,
 			event: flow.Event{
 				TransactionID: id,
 				Type:          mocks.GenericEventType(1),
 				Payload:       withdrawalEventPayload,
-				EventIndex:    1,
+				EventIndex:    20,
 			},
 
 			wantErr:        assert.NoError,
@@ -326,7 +331,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 				withdrawal: mocks.GenericEventType(1),
 			}
 
-			got, err := cvt.EventToOperation(test.event)
+			got, err := cvt.EventToOperation(test.index, test.event)
 
 			test.wantErr(t, err)
 			test.wantIrrelevant(t, errors.Is(err, ErrIrrelevant))

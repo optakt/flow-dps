@@ -497,10 +497,6 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 
 		assert.Equal(t, op1.Amount.Value, wantValue)
 
-		if assert.Len(t, op1.RelatedIDs, 1) {
-			assert.Equal(t, op1.RelatedIDs[0], op2.ID)
-		}
-
 		assert.Equal(t, op2.Type, dps.OperationTransfer)
 		assert.Equal(t, op2.Status, dps.StatusCompleted)
 
@@ -518,9 +514,5 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 		}
 
 		assert.Equal(t, op2.Amount.Value, wantValue)
-
-		if assert.Len(t, op2.RelatedIDs, 1) {
-			assert.Equal(t, op2.RelatedIDs[0], op1.ID)
-		}
 	}
 }
