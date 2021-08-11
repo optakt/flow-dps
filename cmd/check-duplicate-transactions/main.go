@@ -112,7 +112,7 @@ func run() int {
 
 				altID, ok := txIDs[txID]
 				if ok {
-					log.Info().Hex("collection", collID[:]).Hex("alternative", altID[:]).Hex("transaction", txID[:])
+					log.Info().Hex("alternative", altID[:]).Msg("duplicate transaction detected")
 					continue
 				}
 
