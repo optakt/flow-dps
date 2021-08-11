@@ -40,12 +40,12 @@ func run() int {
 
 	// Parse the command line arguments.
 	var (
-		flagIndex   string
+		flagData    string
 		flagLevel   string
 		flagHeights []uint
 	)
 
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.StringVarP(&flagData, "data", "d", "data", "database directory for protocol state")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.UintSliceVarP(&flagHeights, "heights", "h", []uint{}, "heights to check for duplicate transactions")
 
@@ -62,9 +62,9 @@ func run() int {
 	log = log.Level(level)
 
 	// Open the index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true).WithBypassLockGuard(true))
+	db, err := badger.Open(dps.DefaultOptions(flagData).WithReadOnly(true).WithBypassLockGuard(true))
 	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open badger db")
+		log.Error().Str("data", flagData).Err(err).Msg("could not open protocol state")
 		return failure
 	}
 	defer db.Close()
