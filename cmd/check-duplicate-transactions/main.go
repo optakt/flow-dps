@@ -82,7 +82,7 @@ func run() int {
 	for height := root; ; height++ {
 		txIDs := make(map[flow.Identifier]flow.Identifier)
 
-		log = log.With().Uint64("height", height).Logger()
+		log := log.With().Uint64("height", height).Logger()
 
 		// height => blockID
 		var blockID flow.Identifier
@@ -108,7 +108,7 @@ func run() int {
 
 		for _, collID := range collIDs {
 
-			log = log.With().Hex("collection", collID[:]).Logger()
+			log := log.With().Hex("collection", collID[:]).Logger()
 
 			// collID => txIDs
 			var collection flow.LightCollection
@@ -121,7 +121,7 @@ func run() int {
 			// txID ? duplicate
 			for _, txID := range collection.Transactions {
 
-				log = log.With().Hex("transaction", txID[:]).Logger()
+				log := log.With().Hex("transaction", txID[:]).Logger()
 
 				altID, ok := txIDs[txID]
 				if ok {
