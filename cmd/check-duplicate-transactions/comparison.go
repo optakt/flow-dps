@@ -21,8 +21,11 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/storage/badger/operation"
 
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 func compareDuplicates(log zerolog.Logger, dataDir string, indexDir string, duplicates map[uint64][]flow.Identifier) error {
@@ -40,6 +43,81 @@ func compareDuplicates(log zerolog.Logger, dataDir string, indexDir string, dupl
 		return fmt.Errorf("could not open state index (dir: %s): %w", indexDir, err)
 	}
 	defer index.Close()
+
+	// Initialize the storage library.
+	codec, _ := zbor.NewCodec()
+	lib := storage.New(codec)
+
+	// Go through duplicates and compare number and IDs of duplicates beetween databases.
+	for height, duplicateIDs := range duplicates {
+
+		log := log.With().Uint64("height", height).Int("duplicates", len(duplicateIDs)).Logger()
+
+		// create a lookup of duplicate IDs
+		lookup := make(map[flow.Identifier]struct{})
+		for _, duplicateID := range duplicateIDs {
+			lookup[duplicateID] = struct{}{}
+		}
+
+		// height => blockID
+		var blockID flow.Identifier
+		err = protocol.View(operation.LookupBlockHeight(uint64(height), &blockID))
+		if err != nil {
+			return fmt.Errorf("could not look up block (height: %d): %w", height, err)
+		}
+
+		// blockID => collIDs
+		var collIDs []flow.Identifier
+		err = protocol.View(operation.LookupPayloadGuarantees(blockID, &collIDs))
+		if err != nil {
+			return fmt.Errorf("could not look up payload guarantees (block: %x): %w", blockID, err)
+		}
+
+		// collIDs => txIDs
+		var firstFound uint
+		var firstCount uint
+		for _, collID := range collIDs {
+
+			log := log.With().Hex("collection", collID[:]).Logger()
+
+			// collID => txIDs
+			var collection flow.LightCollection
+			err := protocol.View(operation.RetrieveCollection(collID, &collection))
+			if err != nil {
+				return fmt.Errorf("could not retrieve collection (%x): %w", collID, err)
+			}
+
+			// txID ? in duplicate IDs
+			firstCount += uint(len(collection.Transactions))
+			for _, txID := range collection.Transactions {
+				_, ok := lookup[txID]
+				if ok {
+					firstFound++
+					log.Debug().Hex("transaction", txID[:]).Msg("duplicate from protocol state found in duplicates")
+				}
+			}
+		}
+
+		var txIDs []flow.Identifier
+		err = index.View(lib.LookupTransactionsForHeight(height, &txIDs))
+		if err != nil {
+			return fmt.Errorf("could not look up transactions (height: %d): %w", height, err)
+		}
+
+		// txID ? in duplicate IDs
+		// height => txIDs
+		secondCount := uint(len(txIDs))
+		var secondFound uint
+		for _, txID := range txIDs {
+			_, ok := lookup[txID]
+			if ok {
+				secondFound++
+				log.Debug().Hex("transaction", txID[:]).Msg("transaction from state index found in duplicates")
+			}
+		}
+
+		log.Info().Uint64("height", height).Hex("block", blockID[:]).Uint("first_count", firstCount).Uint("second_count", secondCount).Uint("first_found", firstFound).Uint("second_found", secondFound).Msg("compared duplicates for block")
+	}
 
 	log.Info().Msg("duplicate comparison completed")
 
