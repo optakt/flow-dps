@@ -113,12 +113,12 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 		for _, collection := range collections {
 			err := w.lib.SaveCollection(collection)(tx)
 			if err != nil {
-				return fmt.Errorf("could not store collection (id: %x): %w", collection.ID(), err)
+				return fmt.Errorf("could not store collection (coll: %x): %w", collection.ID(), err)
 			}
 			collID := collection.ID()
 			err = w.lib.IndexTransactionsForCollection(collID, collection.Transactions)(tx)
 			if err != nil {
-				return fmt.Errorf("could not index transactions for collection (id: %x): %w", collID, err)
+				return fmt.Errorf("could not index transactions for collection (coll: %x): %w", collID, err)
 			}
 			collIDs = append(collIDs, collID)
 		}
@@ -131,11 +131,11 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 }
 
 func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) error {
-	return w.db.Update(func(tx *badger.Txn) error {
+	return w.apply(func(tx *badger.Txn) error {
 		for _, guarantee := range guarantees {
 			err := w.lib.SaveGuarantee(guarantee)(tx)
 			if err != nil {
-				return fmt.Errorf("could not store guarantee (id: %x): %w", guarantee.ID(), err)
+				return fmt.Errorf("could not store guarantee (tx: %x): %w", guarantee.ID(), err)
 			}
 		}
 		return nil
@@ -148,11 +148,11 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 		for _, transaction := range transactions {
 			err := w.lib.SaveTransaction(transaction)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save transaction (id: %x): %w", transaction.ID(), err)
+				return fmt.Errorf("could not save transaction (tx: %x): %w", transaction.ID(), err)
 			}
-			err = w.db.Update(w.lib.IndexHeightForTransaction(transaction.ID(), height))
+			err = w.lib.IndexHeightForTransaction(transaction.ID(), height)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save transaction height (id: %x): %w", transaction.ID(), err)
+				return fmt.Errorf("could not save transaction height (tx: %x): %w", transaction.ID(), err)
 			}
 			txIDs = append(txIDs, transaction.ID())
 		}
@@ -167,11 +167,11 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 }
 
 func (w *Writer) Results(results []*flow.TransactionResult) error {
-	return w.db.Update(func(tx *badger.Txn) error {
+	return w.apply(func(tx *badger.Txn) error {
 		for _, result := range results {
-			err := w.db.Update(w.lib.SaveResult(result))
+			err := w.lib.SaveResult(result)(tx)
 			if err != nil {
-				return fmt.Errorf("could not index transaction results: %w", err)
+				return fmt.Errorf("could not index transaction result (tx: %x): %w", result.TransactionID, err)
 			}
 		}
 		return nil
@@ -189,7 +189,7 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 		for typ, evts := range buckets {
 			err := w.lib.SaveEvents(height, typ, evts)(tx)
 			if err != nil {
-				return fmt.Errorf("could not persist events: %w", err)
+				return fmt.Errorf("could not persist events bucket (type: %s): %w", typ, err)
 			}
 		}
 		return nil
@@ -204,17 +204,17 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 // block at the given height.
 func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
 	sealIDs := make([]flow.Identifier, 0, len(seals))
-	return w.db.Update(func(tx *badger.Txn) error {
+	return w.apply(func(tx *badger.Txn) error {
 		for _, seal := range seals {
-			err := w.db.Update(w.lib.SaveSeal(seal))
+			err := w.lib.SaveSeal(seal)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save seal (id: %x): %w", seal.ID(), err)
+				return fmt.Errorf("could not save seal (seal: %x): %w", seal.ID(), err)
 			}
 
 			sealIDs = append(sealIDs, seal.ID())
 		}
 
-		err := w.db.Update(w.lib.IndexSealsForHeight(height, sealIDs))
+		err := w.lib.IndexSealsForHeight(height, sealIDs)(tx)
 		if err != nil {
 			return fmt.Errorf("could not index seals for height: %w", err)
 		}
