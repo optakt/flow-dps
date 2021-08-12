@@ -113,12 +113,12 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 		for _, collection := range collections {
 			err := w.lib.SaveCollection(collection)(tx)
 			if err != nil {
-				return fmt.Errorf("could not store collection (id: %x): %w", collection.ID(), err)
+				return fmt.Errorf("could not store collection (coll: %x): %w", collection.ID(), err)
 			}
 			collID := collection.ID()
 			err = w.lib.IndexTransactionsForCollection(collID, collection.Transactions)(tx)
 			if err != nil {
-				return fmt.Errorf("could not index transactions for collection (id: %x): %w", collID, err)
+				return fmt.Errorf("could not index transactions for collection (coll: %x): %w", collID, err)
 			}
 			collIDs = append(collIDs, collID)
 		}
@@ -135,7 +135,7 @@ func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) er
 		for _, guarantee := range guarantees {
 			err := w.lib.SaveGuarantee(guarantee)(tx)
 			if err != nil {
-				return fmt.Errorf("could not store guarantee (id: %x): %w", guarantee.ID(), err)
+				return fmt.Errorf("could not store guarantee (tx: %x): %w", guarantee.ID(), err)
 			}
 		}
 		return nil
@@ -143,40 +143,18 @@ func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) er
 }
 
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
-
-	// It seems there is an edge case where the same transaction is included more than
-	// once in the same block. This means that we should deduplicate them here. We do
-	// so before the transaction to keep the core code clean.
-	skip := make(map[flow.Identifier]struct{})
-	txSet := make([]*flow.TransactionBody, 0, len(transactions))
-	for _, tx := range transactions {
-		txID := tx.ID()
-		_, ok := skip[txID]
-		if ok {
-			continue
-		}
-		txSet = append(txSet, tx)
-		skip[txID] = struct{}{}
-	}
-
 	var txIDs []flow.Identifier
 	return w.apply(func(tx *badger.Txn) error {
-		for _, transaction := range txSet {
-			txID := transaction.ID()
-			_, ok := skip[txID]
-			if ok {
-				continue
-			}
+		for _, transaction := range transactions {
 			err := w.lib.SaveTransaction(transaction)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save transaction (id: %x): %w", txID, err)
+				return fmt.Errorf("could not save transaction (tx: %x): %w", transaction.ID(), err)
 			}
-			err = w.lib.IndexHeightForTransaction(txID, height)(tx)
+			err = w.lib.IndexHeightForTransaction(transaction.ID(), height)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save transaction height (id: %x): %w", txID, err)
+				return fmt.Errorf("could not save transaction height (tx: %x): %w", transaction.ID(), err)
 			}
-			txIDs = append(txIDs, txID)
-			skip[txID] = struct{}{}
+			txIDs = append(txIDs, transaction.ID())
 		}
 
 		err := w.lib.IndexTransactionsForHeight(height, txIDs)(tx)
@@ -189,44 +167,11 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 }
 
 func (w *Writer) Results(results []*flow.TransactionResult) error {
-
-	// If we have duplicate transactions, we might also have duplicate results.
-	// However, unfortunately, we might need to keep the duplicate if that one
-	// was successful and the other one wasn't. This makes the logic more
-	// complex here.
-	resultSet := make([]*flow.TransactionResult, 0, len(results))
-	olds := make(map[flow.Identifier]*flow.TransactionResult)
-	indices := make(map[flow.Identifier]int)
-	for _, result := range results {
-
-		txID := result.TransactionID
-		old, ok := olds[txID]
-
-		// If we don't have a result for the same transaction yet, append it. We
-		// also keep track of the result's index in the result set, and of the
-		// full result.
-		if !ok {
-			indices[txID] = len(resultSet)
-			resultSet = append(resultSet, result)
-			olds[txID] = result
-			continue
-		}
-
-		// If we already have a result for the same transaction, we only want to
-		// replace it if the result previously included in the result set has an
-		// error, while the one we check now doesn't.
-		if old.ErrorMessage != "" && result.ErrorMessage == "" {
-			index := indices[txID]
-			resultSet[index] = old
-			continue
-		}
-	}
-
 	return w.apply(func(tx *badger.Txn) error {
 		for _, result := range results {
 			err := w.lib.SaveResult(result)(tx)
 			if err != nil {
-				return fmt.Errorf("could not index transaction results: %w", err)
+				return fmt.Errorf("could not index transaction result (tx: %x): %w", result.TransactionID, err)
 			}
 		}
 		return nil
@@ -244,7 +189,7 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 		for typ, evts := range buckets {
 			err := w.lib.SaveEvents(height, typ, evts)(tx)
 			if err != nil {
-				return fmt.Errorf("could not persist events: %w", err)
+				return fmt.Errorf("could not persist events bucket (type: %s): %w", typ, err)
 			}
 		}
 		return nil
@@ -263,7 +208,7 @@ func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
 		for _, seal := range seals {
 			err := w.lib.SaveSeal(seal)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save seal (id: %x): %w", seal.ID(), err)
+				return fmt.Errorf("could not save seal (seal: %x): %w", seal.ID(), err)
 			}
 
 			sealIDs = append(sealIDs, seal.ID())

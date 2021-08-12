@@ -1243,6 +1243,7 @@ func TestIndexAndLookup_Seals(t *testing.T) {
 
 		var got []flow.Identifier
 		err = db.View(l.LookupSealsForHeight(mocks.GenericHeight, &got))
+		require.NoError(t, err)
 
 		assert.Equal(t, 1, decodeCallCount)
 	})
