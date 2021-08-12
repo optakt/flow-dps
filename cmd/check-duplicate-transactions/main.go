@@ -75,6 +75,8 @@ func run() int {
 	// Only check the protocol state if a directory for it is given.
 	if flagData != "" {
 
+		log.Info().Str("data", flagData).Msg("starting protocol state duplicate check")
+
 		// Open the index database.
 		db, err := badger.Open(dps.DefaultOptions(flagData).WithReadOnly(true).WithBypassLockGuard(true))
 		if err != nil {
@@ -147,11 +149,15 @@ func run() int {
 			}
 		}
 
+		_ = db.Close()
+
 		log.Info().Msg("protocol state duplicate check complete")
 	}
 
 	// Only check the state index if a directory for it is given.
 	if flagIndex != "" {
+
+		log.Info().Str("index", flagIndex).Msg("starting index state duplicate check")
 
 		// Open the index database.
 		db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true).WithBypassLockGuard(true))
@@ -205,6 +211,8 @@ func run() int {
 				log.Debug().Msg("transaction not duplicated")
 			}
 		}
+
+		_ = db.Close()
 
 		log.Info().Msg("index state duplicate check complete")
 	}
