@@ -87,6 +87,11 @@ func (l *Library) save(key []byte, value interface{}) func(*badger.Txn) error {
 			return fmt.Errorf("could not encode value (key: %x): %w", key, err)
 		}
 
-		return tx.Set(key, val)
+		err = tx.Set(key, val)
+		if err != nil {
+			return fmt.Errorf("could not set value (key: %x): %w", key, err)
+		}
+
+		return nil
 	}
 }
