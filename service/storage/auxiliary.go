@@ -56,9 +56,9 @@ func Combine(ops ...func(*badger.Txn) error) func(*badger.Txn) error {
 
 func (l *Library) retrieve(key []byte, v interface{}) func(tx *badger.Txn) error {
 	// NOTE: When retrieving things from the database, it's important that the
-	// variable is initialized within a loop body if the retrieval happens as
+	// variable is initialized within the loop body if the retrieval happens as
 	// part of a loop. This makes sure that the value we decode into always has
-	// it's own independent memory location.
+	// its own independent memory location.
 	return func(tx *badger.Txn) error {
 		item, err := tx.Get(key)
 		if err != nil {
