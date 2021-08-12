@@ -50,8 +50,8 @@ func run() int {
 		flagLevel string
 	)
 
-	pflag.StringVarP(&flagData, "data", "d", "data", "database directory for protocol state")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol state")
+	pflag.StringVarP(&flagIndex, "index", "i", "", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 
 	pflag.Parse()
