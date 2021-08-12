@@ -15,21 +15,13 @@
 package main
 
 import (
-	"errors"
 	"os"
 	"time"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
 	"github.com/onflow/flow-go/model/flow"
-	storerr "github.com/onflow/flow-go/storage"
-	"github.com/onflow/flow-go/storage/badger/operation"
-
-	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/storage"
 )
 
 const (
@@ -74,147 +66,34 @@ func run() int {
 
 	// Only check the protocol state if a directory for it is given.
 	if flagData != "" {
-
-		log.Info().Str("data", flagData).Msg("starting protocol state duplicate check")
-
-		// Open the index database.
-		db, err := badger.Open(dps.DefaultOptions(flagData).WithReadOnly(true).WithBypassLockGuard(true))
+		err = protocolCheck(log, flagData)
 		if err != nil {
-			log.Error().Str("data", flagData).Err(err).Msg("could not open protocol state")
+			log.Error().Err(err).Msg("could not execute protocol state duplicate check")
 			return failure
 		}
-		defer db.Close()
-
-		// Retrieve the root height as a start height for duplicate check.
-		var root uint64
-		err = db.View(operation.RetrieveRootHeight(&root))
-		if err != nil {
-			log.Error().Err(err).Msg("could not retrieve root height")
-			return failure
-		}
-
-		// Go through each height, retrieve the transactions from the DB and check for duplicates.
-		for height := root; ; height++ {
-			seen := make(map[flow.Identifier]flow.Identifier)
-
-			log := log.With().Uint64("height", height).Logger()
-
-			// height => blockID
-			var blockID flow.Identifier
-			err = db.View(operation.LookupBlockHeight(uint64(height), &blockID))
-			if errors.Is(err, storerr.ErrNotFound) {
-				break
-			}
-			if err != nil {
-				log.Error().Err(err).Msg("could not look up height")
-				return failure
-			}
-
-			log = log.With().Hex("block", blockID[:]).Logger()
-
-			// blockID => collIDs
-			var collIDs []flow.Identifier
-			err = db.View(operation.LookupPayloadGuarantees(blockID, &collIDs))
-			if err != nil {
-				log.Error().Err(err).Msg("could not look up payload guarantees")
-				return failure
-			}
-
-			for _, collID := range collIDs {
-
-				log := log.With().Hex("collection", collID[:]).Logger()
-
-				// collID => txIDs
-				var collection flow.LightCollection
-				err := db.View(operation.RetrieveCollection(collID, &collection))
-				if err != nil {
-					log.Error().Msg("could not retrieve collection")
-					return failure
-				}
-
-				// txID ? duplicate
-				for _, txID := range collection.Transactions {
-
-					log := log.With().Hex("transaction", txID[:]).Logger()
-
-					altID, ok := seen[txID]
-					if ok {
-						log.Info().Hex("alternative", altID[:]).Msg("transaction duplicated!")
-						continue
-					}
-
-					seen[txID] = collID
-					log.Debug().Msg("transaction not duplicated")
-				}
-			}
-		}
-
-		_ = db.Close()
-
-		log.Info().Msg("protocol state duplicate check complete")
 	}
 
+	// This keeps track of heights on the state index that have duplicate
+	// transactions and checks against the protocol state where available.
+
 	// Only check the state index if a directory for it is given.
+	var duplicates map[uint64][]flow.Identifier
 	if flagIndex != "" {
-
-		log.Info().Str("index", flagIndex).Msg("starting index state duplicate check")
-
-		// Open the index database.
-		db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true).WithBypassLockGuard(true))
+		duplicates, err = indexCheck(log, flagIndex)
 		if err != nil {
-			log.Error().Str("index", flagIndex).Err(err).Msg("could not open state index")
+			log.Error().Err(err).Msg("could not execute state index duplicate check")
 			return failure
 		}
-		defer db.Close()
+	}
 
-		// Initialize the storage library.
-		codec, _ := zbor.NewCodec()
-		lib := storage.New(codec)
-
-		// Retrieve the root height as a start height for duplicate check.
-		var first uint64
-		err = db.View(lib.RetrieveFirst(&first))
+	// If we have both a protocol state and a state index database, we can check
+	// duplicates from the state index against the protocol state.
+	if flagData != "" && flagIndex != "" && len(duplicates) > 0 {
+		err := compareDuplicates(log, flagData, flagIndex, duplicates)
 		if err != nil {
-			log.Error().Err(err).Msg("could not retrieve first height")
+			log.Error().Err(err).Msg("could not compare duplicates")
 			return failure
 		}
-
-		// Go through each height, retrieve the transactions from the DB and check for duplicates.
-		for height := first; ; height++ {
-			seen := make(map[flow.Identifier]struct{})
-
-			log := log.With().Uint64("height", height).Logger()
-
-			// height => txIDs
-			var txIDs []flow.Identifier
-			err = db.View(lib.LookupTransactionsForHeight(height, &txIDs))
-			if errors.Is(err, badger.ErrKeyNotFound) {
-				break
-			}
-			if err != nil {
-				log.Error().Err(err).Msg("could not look up payload guarantees")
-				return failure
-			}
-
-			// txID ? duplicate
-			for _, txID := range txIDs {
-
-				log := log.With().Hex("transaction", txID[:]).Logger()
-
-				_, ok := seen[txID]
-				if ok {
-					log.Info().Msg("transaction duplicated!")
-					continue
-				}
-
-				seen[txID] = struct{}{}
-				log.Debug().Msg("transaction not duplicated")
-			}
-		}
-
-		_ = db.Close()
-
-		log.Info().Msg("index state duplicate check complete")
 	}
 
 	return success
