@@ -146,15 +146,16 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 	var txIDs []flow.Identifier
 	return w.apply(func(tx *badger.Txn) error {
 		for _, transaction := range transactions {
+			txID := transaction.ID()
 			err := w.lib.SaveTransaction(transaction)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save transaction (tx: %x): %w", transaction.ID(), err)
+				return fmt.Errorf("could not save transaction (tx: %x): %w", txID, err)
 			}
-			err = w.lib.IndexHeightForTransaction(transaction.ID(), height)(tx)
+			err = w.lib.IndexHeightForTransaction(txID, height)(tx)
 			if err != nil {
-				return fmt.Errorf("could not save transaction height (tx: %x): %w", transaction.ID(), err)
+				return fmt.Errorf("could not save transaction height (tx: %x): %w", txID, err)
 			}
-			txIDs = append(txIDs, transaction.ID())
+			txIDs = append(txIDs, txID)
 		}
 
 		err := w.lib.IndexTransactionsForHeight(height, txIDs)(tx)
