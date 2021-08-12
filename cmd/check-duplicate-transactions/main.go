@@ -101,7 +101,6 @@ func run() int {
 			var blockID flow.Identifier
 			err = db.View(operation.LookupBlockHeight(uint64(height), &blockID))
 			if errors.Is(err, storerr.ErrNotFound) {
-				log.Info().Msg("duplicate transaction check finished")
 				break
 			}
 			if err != nil {
@@ -147,6 +146,8 @@ func run() int {
 				}
 			}
 		}
+
+		log.Info().Msg("protocol state duplicate check complete")
 	}
 
 	// Only check the state index if a directory for it is given.
@@ -181,6 +182,9 @@ func run() int {
 			// height => txIDs
 			var txIDs []flow.Identifier
 			err = db.View(lib.LookupTransactionsForHeight(height, &txIDs))
+			if errors.Is(err, badger.ErrKeyNotFound) {
+				break
+			}
 			if err != nil {
 				log.Error().Err(err).Msg("could not look up payload guarantees")
 				return failure
@@ -201,6 +205,8 @@ func run() int {
 				log.Debug().Msg("transaction not duplicated")
 			}
 		}
+
+		log.Info().Msg("index state duplicate check complete")
 	}
 
 	return success
