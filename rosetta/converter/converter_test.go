@@ -15,7 +15,6 @@
 package converter
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +28,7 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -124,8 +124,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 
 	testDepositOp := object.Operation{
 		ID: identifier.Operation{
-			Index:        1,
-			NetworkIndex: 10,
+			NetworkIndex: 1,
 		},
 		Type:   dps.OperationTransfer,
 		Status: dps.StatusCompleted,
@@ -142,8 +141,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 	}
 	testWithdrawalOp := object.Operation{
 		ID: identifier.Operation{
-			Index:        2,
-			NetworkIndex: 20,
+			NetworkIndex: 2,
 		},
 		Type:   dps.OperationTransfer,
 		Status: dps.StatusCompleted,
@@ -233,58 +231,60 @@ func TestConverter_EventToOperation(t *testing.T) {
 	).WithType(missingAddressEventType)
 	missingAddressEventPayload := json.MustEncode(missingAddressEvent)
 
+	nilAddressEvent := cadence.NewEvent(
+		[]cadence.Value{
+			cadence.NewUInt64(42),
+			cadence.NewOptional(nil),
+		},
+	).WithType(withdrawalType)
+	nilAddressPayload := json.MustEncode(nilAddressEvent)
+
 	tests := []struct {
 		name string
 
-		index uint
 		event flow.Event
 
-		wantOperation  *object.Operation
-		wantIrrelevant assert.BoolAssertionFunc
-		wantErr        assert.ErrorAssertionFunc
+		wantErr       assert.ErrorAssertionFunc
+		wantSentinel  error
+		wantOperation *object.Operation
 	}{
 		{
 			name: "nominal case with deposit event",
 
-			index: 1,
 			event: flow.Event{
 				TransactionID: id,
 				Type:          mocks.GenericEventType(0),
 				Payload:       depositEventPayload,
-				EventIndex:    10,
+				EventIndex:    1,
 			},
 
-			wantErr:        assert.NoError,
-			wantIrrelevant: assert.False,
-			wantOperation:  &testDepositOp,
+			wantErr:       assert.NoError,
+			wantOperation: &testDepositOp,
 		},
 		{
 			name: "nominal case with withdrawal event",
 
-			index: 2,
 			event: flow.Event{
 				TransactionID: id,
 				Type:          mocks.GenericEventType(1),
 				Payload:       withdrawalEventPayload,
-				EventIndex:    20,
+				EventIndex:    2,
 			},
 
-			wantErr:        assert.NoError,
-			wantIrrelevant: assert.False,
-			wantOperation:  &testWithdrawalOp,
+			wantErr:       assert.NoError,
+			wantOperation: &testWithdrawalOp,
 		},
 		{
-			name: "irrelevant event",
+			name: "unsupported event type",
 
 			event: flow.Event{
 				TransactionID: id,
 				Type:          flow.EventType("irrelevant"),
 				Payload:       withdrawalEventPayload,
-				EventIndex:    2,
 			},
 
-			wantIrrelevant: assert.True,
-			wantErr:        assert.Error,
+			wantErr:      assert.Error,
+			wantSentinel: retriever.ErrNotSupported,
 		},
 		{
 			name: "wrong amount of fields",
@@ -294,8 +294,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 				Payload: threeFieldsEventPayload,
 			},
 
-			wantIrrelevant: assert.False,
-			wantErr:        assert.Error,
+			wantErr: assert.Error,
 		},
 		{
 			name: "missing amount field",
@@ -305,8 +304,7 @@ func TestConverter_EventToOperation(t *testing.T) {
 				Payload: missingAmountEventPayload,
 			},
 
-			wantIrrelevant: assert.False,
-			wantErr:        assert.Error,
+			wantErr: assert.Error,
 		},
 		{
 			name: "missing address field",
@@ -316,8 +314,19 @@ func TestConverter_EventToOperation(t *testing.T) {
 				Payload: missingAddressEventPayload,
 			},
 
-			wantIrrelevant: assert.False,
-			wantErr:        assert.Error,
+			wantErr: assert.Error,
+		},
+		{
+			name: "nil address field",
+
+			event: flow.Event{
+				TransactionID: id,
+				Type:          mocks.GenericEventType(0),
+				Payload:       nilAddressPayload,
+			},
+
+			wantErr:      assert.Error,
+			wantSentinel: retriever.ErrNoAddress,
 		},
 	}
 
@@ -331,10 +340,12 @@ func TestConverter_EventToOperation(t *testing.T) {
 				withdrawal: mocks.GenericEventType(1),
 			}
 
-			got, err := cvt.EventToOperation(test.index, test.event)
+			got, err := cvt.EventToOperation(test.event)
 
 			test.wantErr(t, err)
-			test.wantIrrelevant(t, errors.Is(err, ErrIrrelevant))
+			if test.wantSentinel != nil {
+				assert.ErrorIs(t, err, test.wantSentinel)
+			}
 
 			assert.Equal(t, test.wantOperation, got)
 		})

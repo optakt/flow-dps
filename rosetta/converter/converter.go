@@ -25,6 +25,7 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/retriever"
 )
 
 type Converter struct {
@@ -53,7 +54,7 @@ func New(gen Generator) (*Converter, error) {
 	return &c, nil
 }
 
-func (c *Converter) EventToOperation(index uint, event flow.Event) (operation *object.Operation, err error) {
+func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operation, err error) {
 
 	// Decode the event payload into a Cadence value and cast it to a Cadence event.
 	value, err := json.Decode(event.Payload)
@@ -84,7 +85,7 @@ func (c *Converter) EventToOperation(index uint, event flow.Event) (operation *o
 	// Sometimes an event is not associated with an account. Ignore these events
 	// as they refer to intermediary vaults.
 	if vAddress == nil {
-		return nil, ErrIrrelevant
+		return nil, retriever.ErrNoAddress
 	}
 
 	bAddress, ok := vAddress.([flow.AddressLength]byte)
@@ -99,7 +100,6 @@ func (c *Converter) EventToOperation(index uint, event flow.Event) (operation *o
 
 	op := object.Operation{
 		ID: identifier.Operation{
-			Index:        index,
 			NetworkIndex: uint(event.EventIndex),
 		},
 		Status: dps.StatusCompleted,
@@ -119,7 +119,7 @@ func (c *Converter) EventToOperation(index uint, event flow.Event) (operation *o
 		op.Type = dps.OperationTransfer
 		amount = -amount
 	default:
-		return nil, ErrIrrelevant
+		return nil, retriever.ErrNotSupported
 	}
 
 	op.Amount = object.Amount{
