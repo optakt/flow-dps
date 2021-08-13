@@ -15,6 +15,7 @@
 package retriever
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -22,9 +23,10 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/rosetta/failure"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/converter"
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -350,12 +352,20 @@ func (r *Retriever) operations(txID flow.Identifier, events []flow.Event) ([]*ob
 	// Now we can convert each event to an operation, as they are both filtered for
 	// only supported ones and properly ordered.
 	ops := make([]*object.Operation, 0, len(filtered))
-	for index, event := range filtered {
+
+	// Keep track of event indices while ignoring skipped events.
+	index := 0
+
+	for _, event := range filtered {
 		op, err := r.convert.EventToOperation(uint(index), event)
+		if errors.Is(err, converter.ErrIrrelevant) {
+			continue
+		}
 		if err != nil {
 			return nil, fmt.Errorf("could not convert event to operation (tx: %s, type: %s): %w", event.TransactionID, event.Type, err)
 		}
 		ops = append(ops, op)
+		index++
 	}
 
 	return ops, nil

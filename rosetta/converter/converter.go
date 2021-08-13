@@ -78,7 +78,15 @@ func (c *Converter) EventToOperation(index uint, event flow.Event) (operation *o
 	if !ok {
 		return nil, fmt.Errorf("could not cast amount (%T)", vAmount)
 	}
+
 	vAddress := e.Fields[1].ToGoValue()
+
+	// Sometimes an event is not associated with an account. Ignore these events
+	// as they refer to intermediary vaults.
+	if vAddress == nil {
+		return nil, ErrIrrelevant
+	}
+
 	bAddress, ok := vAddress.([flow.AddressLength]byte)
 	if !ok {
 		return nil, fmt.Errorf("could not cast address (%T)", vAddress)
