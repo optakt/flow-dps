@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -28,6 +29,10 @@ import (
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+)
+
+const (
+	missingVault = "Could not borrow Balance reference to the Vault"
 )
 
 type Retriever struct {
@@ -136,23 +141,31 @@ func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifie
 	// Get the Cadence value that is the result of the script execution.
 	amounts := make([]object.Amount, 0, len(symbols))
 	for _, symbol := range symbols {
+
+		// We get the script to get the vault balance and execute it.
 		script, err := r.generator.GetBalance(symbol)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not generate script: %w", err)
 		}
 		params := []cadence.Value{cadence.NewAddress(address)}
 		result, err := r.invoke.Script(height, script, params)
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), missingVault) {
 			return identifier.Block{}, nil, fmt.Errorf("could not invoke script: %w", err)
 		}
-		balance, ok := result.ToGoValue().(uint64)
-		if !ok {
-			return identifier.Block{}, nil, fmt.Errorf("could not convert balance (type: %T)", result.ToGoValue())
+
+		// In the previous error check, we exclude errors that are about getting
+		// the vault reference in Cadence. In those cases, we keep the default
+		// balance here, which is zero.
+		balance := uint64(0)
+		if err == nil {
+			balance = result.ToGoValue().(uint64)
 		}
+
 		amount := object.Amount{
 			Currency: rosettaCurrency(symbol, decimals[symbol]),
 			Value:    strconv.FormatUint(balance, 10),
 		}
+
 		amounts = append(amounts, amount)
 	}
 
