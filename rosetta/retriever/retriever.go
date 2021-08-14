@@ -142,7 +142,7 @@ func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifie
 	amounts := make([]object.Amount, 0, len(symbols))
 	for _, symbol := range symbols {
 
-		// We get the script to get the vault balance and execute it.
+		// We generate the script to get the vault balance and execute it.
 		script, err := r.generator.GetBalance(symbol)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not generate script: %w", err)
