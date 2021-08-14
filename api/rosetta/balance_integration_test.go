@@ -40,6 +40,7 @@ func TestAPI_Balance(t *testing.T) {
 	const testAccount = "754aed9de6197641"
 
 	var (
+		zeroBlock   = knownHeader(1)   // block before the account appears
 		firstBlock  = knownHeader(13)  // block where the account first appears
 		secondBlock = knownHeader(50)  // a block mid-chain
 		lastBlock   = knownHeader(425) // last indexed block
@@ -53,6 +54,12 @@ func TestAPI_Balance(t *testing.T) {
 		wantBalance   string
 		validateBlock validateBlockFunc
 	}{
+		{
+			name:          "before first occurence of the account",
+			request:       requestBalance(testAccount, zeroBlock),
+			wantBalance:   "0",
+			validateBlock: validateBlock(t, zeroBlock.Height, zeroBlock.ID().String()),
+		},
 		{
 			name:          "first occurrence of the account",
 			request:       requestBalance(testAccount, firstBlock),
@@ -400,20 +407,6 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			},
 
 			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidCurrency),
-		},
-		{
-			// Request the account balance before the account is created, so the account/vault does not exist.
-			// TODO: differentiate between vault and account not existing
-			// => https://github.com/optakt/flow-dps/issues/204
-			name: "account vault does not exist",
-			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetwork(),
-				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: getUint64P(accFirstOccurrence - 1)}, // one block before the account is created
-				Currencies: defaultCurrency(),
-			},
-
-			checkError: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
 		},
 	}
 
