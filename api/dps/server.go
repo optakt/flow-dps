@@ -33,6 +33,8 @@ import (
 type Server struct {
 	index dps.Reader
 	codec dps.Codec
+
+	validate *validator.Validate
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
@@ -40,8 +42,9 @@ type Server struct {
 func NewServer(index dps.Reader, codec dps.Codec) *Server {
 
 	s := Server{
-		index: index,
-		codec: codec,
+		index:    index,
+		codec:    codec,
+		validate: validator.New(),
 	}
 
 	return &s
@@ -81,7 +84,7 @@ func (s *Server) GetLast(_ context.Context, _ *GetLastRequest) (*GetLastResponse
 // server.
 func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -103,7 +106,7 @@ func (s *Server) GetHeightForBlock(_ context.Context, req *GetHeightForBlockRequ
 // GetCommit implements the `GetCommit` method of the generated GRPC server.
 func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -124,7 +127,7 @@ func (s *Server) GetCommit(_ context.Context, req *GetCommitRequest) (*GetCommit
 // GetHeader implements the `GetHeader` method of the generated GRPC server.
 func (s *Server) GetHeader(_ context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -174,7 +177,7 @@ func (s *Server) GetEvents(_ context.Context, req *GetEventsRequest) (*GetEvents
 // generated GRPC server.
 func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequest) (*GetRegisterValuesResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -202,7 +205,7 @@ func (s *Server) GetRegisterValues(_ context.Context, req *GetRegisterValuesRequ
 // server.
 func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*GetCollectionResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -230,7 +233,7 @@ func (s *Server) GetCollection(_ context.Context, req *GetCollectionRequest) (*G
 // server.
 func (s *Server) ListCollectionsForHeight(_ context.Context, req *ListCollectionsForHeightRequest) (*ListCollectionsForHeightResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -256,7 +259,7 @@ func (s *Server) ListCollectionsForHeight(_ context.Context, req *ListCollection
 // server.
 func (s *Server) GetGuarantee(_ context.Context, req *GetGuaranteeRequest) (*GetGuaranteeResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -284,7 +287,7 @@ func (s *Server) GetGuarantee(_ context.Context, req *GetGuaranteeRequest) (*Get
 // server.
 func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -312,7 +315,7 @@ func (s *Server) GetTransaction(_ context.Context, req *GetTransactionRequest) (
 // server.
 func (s *Server) GetHeightForTransaction(_ context.Context, req *GetHeightForTransactionRequest) (*GetHeightForTransactionResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -335,7 +338,7 @@ func (s *Server) GetHeightForTransaction(_ context.Context, req *GetHeightForTra
 // server.
 func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -362,7 +365,7 @@ func (s *Server) ListTransactionsForHeight(_ context.Context, req *ListTransacti
 // server.
 func (s *Server) GetResult(_ context.Context, req *GetResultRequest) (*GetResultResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -390,7 +393,7 @@ func (s *Server) GetResult(_ context.Context, req *GetResultRequest) (*GetResult
 // server.
 func (s *Server) GetSeal(_ context.Context, req *GetSealRequest) (*GetSealResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -418,7 +421,7 @@ func (s *Server) GetSeal(_ context.Context, req *GetSealRequest) (*GetSealRespon
 // server.
 func (s *Server) ListSealsForHeight(_ context.Context, req *ListSealsForHeightRequest) (*ListSealsForHeightResponse, error) {
 
-	err := validator.New().Struct(req)
+	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
