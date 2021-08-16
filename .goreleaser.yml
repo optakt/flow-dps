@@ -1,8 +1,3 @@
-before:
-  hooks:
-    - go mod tidy
-    - go generate ./...
-
 # By default, builds only for darwin and linux, which works for us since FlowGo does not support
 # Windows builds. We also can only build on amd64 architectures since all others are also not
 # supported at the moment.
