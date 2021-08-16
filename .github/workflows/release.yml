@@ -50,6 +50,7 @@ jobs:
         run: |
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
+          go install github.com/srikrsna/protoc-gen-gotag@v0.6.1
 
       # Install GoReleaser and print its version before running.
       - name: Install GoReleaser
