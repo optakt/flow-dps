@@ -21,20 +21,21 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
-// Submitter uses the Flow Access API to submit specified transaction for execution.
+// Submitter submits transactions for execution.
 type Submitter struct {
+	// api is typically a Flow SDK client.
 	api API
 }
 
-// New creates a new Submitter that uses the specified API, typically a Flow SDK client.
+// New creates a new Submitter that uses the given API.
 func New(api API) *Submitter {
-	s := &Submitter{
+	s := Submitter{
 		api: api,
 	}
-	return s
+	return &s
 }
 
-// Transaction will submit the specified transaction to the Flow Access API.
+// Transaction submits the given transaction for execution.
 func (s *Submitter) Transaction(tx *flow.Transaction) error {
 	err := s.api.SendTransaction(context.Background(), *tx)
 	if err != nil {

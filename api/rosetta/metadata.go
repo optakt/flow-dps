@@ -94,7 +94,7 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, res)
 }
 
-// TODO: implement getSequenceNumber()
+// FIXME: implement getSequenceNumber()
 func getSequenceNumber(address flow.Address) (uint64, error) {
 	return 0, fmt.Errorf("TBD: not implemented")
 }
