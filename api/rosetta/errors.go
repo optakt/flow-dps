@@ -189,7 +189,5 @@ func invalidIntent(fail failure.InvalidIntent) Error {
 	return convertError(
 		configuration.ErrorInvalidTransactionIntent,
 		fail.Description,
-		withDetail("from", fail.Sender),
-		withDetail("to", fail.Receiver),
 	)
 }

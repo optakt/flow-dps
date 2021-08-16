@@ -20,13 +20,9 @@ import (
 
 type InvalidIntent struct {
 	Description Description
-	Sender      string
-	Receiver    string
 }
 
 func (i InvalidIntent) Error() string {
-	return fmt.Sprintf("invalid transaction intent (from: %s, to: %s): %s",
-		i.Sender,
-		i.Receiver,
+	return fmt.Sprintf("invalid transaction intent: %s",
 		i.Description)
 }
