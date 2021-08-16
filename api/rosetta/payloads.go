@@ -42,10 +42,10 @@ type PayloadsResponse struct {
 }
 
 // Payloads implements the /construction/payloads endpoint of the Rosetta Construction API.
-// Payloads endpoint receives an array of operations and all other relevant information
-// required to construct an unsigned transaction. Operations must deterministically
-// describe the intent of the transaction. Besides the unsigned transaction text,
-// this endpoint also returns the list of payloads that should be signed.
+// It receives an array of operations and all other relevant information required to construct
+// an unsigned transaction. Operations must deterministically describe the intent of the
+// transaction. Besides the unsigned transaction text, this endpoint also returns the list
+// of payloads that should be signed.
 // See https://www.rosetta-api.org/docs/ConstructionApi.html#constructionpayloads
 func (c *Construction) Payloads(ctx echo.Context) error {
 
@@ -60,6 +60,19 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	}
 	if req.NetworkID.Network == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
+	}
+
+	// Metadata object is the response from our metadata endpoint. Thus, the object
+	// should be okay, but let's validate it anyway.
+	blockID := req.Metadata.ReferenceBlockID
+	if blockID.Index == nil && blockID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
+	}
+	if blockID.Hash != "" && len(blockID.Hash) != hexIDSize {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
+			withDetail("have_length", len(blockID.Hash)),
+			withDetail("want_length", hexIDSize),
+		))
 	}
 
 	intent, err := c.parser.DeriveIntent(req.Operations)
@@ -87,7 +100,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermination, err))
 	}
 
-	tx, err := c.parser.CreateTransaction(intent)
+	tx, err := c.parser.CompileTransaction(intent, req.Metadata)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
 	}
@@ -97,12 +110,13 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
 	}
 
+	// We only support a single signer at the moment, so the account only needs to sign the transaction envelope.
 	res := PayloadsResponse{
 		Transaction: string(enc),
 		Payloads: []object.SigningPayload{
 			{
 				AccountID:     identifier.Account{Address: intent.From.Hex()},
-				HexBytes:      string(tx.PayloadMessage()),
+				HexBytes:      string(tx.EnvelopeMessage()),
 				SignatureType: FlowSignatureAlgorithm,
 			},
 		},

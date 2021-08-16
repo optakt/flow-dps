@@ -21,23 +21,34 @@ import (
 	"github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-// CreateTransaction translates the transaction intent to the Flow Transaction struct.
-func (p *Parser) CreateTransaction(intent *Intent) (*flow.Transaction, error) {
+// CompileTransaction creates a complete Flow transaction from the given intent and metadata.
+func (p *Parser) CompileTransaction(intent *Intent, metadata object.Metadata) (*flow.Transaction, error) {
 
+	// Run validation on the block ID. This also fills in missing information.
+	completed, err := p.validate.Block(metadata.ReferenceBlockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate block: %w", err)
+	}
+
+	// Generate script for the token transfer.
 	script, err := p.generate.TransferTokens(dps.FlowSymbol)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate transfer script: %w", err)
 	}
 
+	// Create the transaction.
 	tx := flow.NewTransaction().
 		SetScript(script).
-		SetReferenceBlockID(flow.BytesToID(intent.ReferenceBlock[:])).
+		SetReferenceBlockID(flow.HexToID(completed.Hash)).
 		SetPayer(flow.Address(intent.Payer)).
-		SetProposalKey(flow.Address(intent.Proposer), 0, intent.SequenceNumber).
+		SetProposalKey(flow.Address(intent.Proposer), 0, metadata.SequenceNumber). // FIXME: allow arbitrary key index
 		AddAuthorizer(flow.Address(intent.From)).
 		SetGasLimit(intent.GasLimit)
+
+	// Add the script arguments - the amount and the receiver.
 
 	err = tx.AddArgument(intent.Amount)
 	if err != nil {
