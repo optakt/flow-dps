@@ -35,7 +35,7 @@ func (p *Parser) CreateTransaction(intent *Intent) (*flow.Transaction, error) {
 		SetScript(script).
 		SetReferenceBlockID(flow.BytesToID(intent.ReferenceBlock[:])).
 		SetPayer(flow.Address(intent.Payer)).
-		SetProposalKey(flow.Address(intent.Proposer), 0, intent.ProposerKeySequenceNumber).
+		SetProposalKey(flow.Address(intent.Proposer), 0, intent.SequenceNumber).
 		AddAuthorizer(flow.Address(intent.From)).
 		SetGasLimit(intent.GasLimit)
 

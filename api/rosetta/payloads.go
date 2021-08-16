@@ -62,14 +62,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
-	if len(req.Operations) != 2 {
-		return echo.NewHTTPError(http.StatusBadRequest,
-			invalidFormat(txInvalidOpCount,
-				withDetail("have_operations", len(req.Operations))),
-		)
-	}
-
-	intent, err := c.parser.CreateTransactionIntent(req.Operations)
+	intent, err := c.parser.DeriveIntent(req.Operations)
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
@@ -82,22 +75,26 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	if errors.As(err, &ucErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownCurrency(ucErr))
 	}
+	var opErr failure.InvalidOperations
+	if errors.As(err, &opErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txInvalidOps))
+	}
 	var inErr failure.InvalidIntent
 	if errors.As(err, &inErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidIntent(inErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermine, err))
+		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermination, err))
 	}
 
 	tx, err := c.parser.CreateTransaction(intent)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruct, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
 	}
 
 	enc, err := json.Marshal(tx)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruct, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
 	}
 
 	res := PayloadsResponse{
