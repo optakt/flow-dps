@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
@@ -62,22 +61,8 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	send := operations[0]
 	receive := operations[1]
 
-	// Verify that the send operation is negative.
-	// We don't need to check the receive amount since it will be parsed as an uint64
-	// which will err on inapropriate input.
-	if !strings.HasPrefix(send.Amount.Value, "-") {
-		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("invalid amount for transfer",
-				failure.WithString("withdrawal_amount", send.Amount.Value),
-			),
-			Sender:   send.AccountID.Address,
-			Receiver: receive.AccountID.Address,
-		}
-	}
-
-	// Parse value specified by the sender, after removing the negative sign prefix.
-	trimmed := strings.TrimPrefix(send.Amount.Value, "-")
-	sv, err := strconv.ParseUint(trimmed, 10, 64)
+	// Parse value specified by the sender.
+	sv, err := strconv.ParseInt(send.Amount.Value, 10, 64)
 	if err != nil {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
@@ -89,8 +74,19 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 		}
 	}
 
+	// Verify that the send value is negative.
+	if sv >= 0 {
+		return nil, failure.InvalidIntent{
+			Sender:   send.AccountID.Address,
+			Receiver: receive.AccountID.Address,
+			Description: failure.NewDescription("invalid withdrawal amount",
+				failure.WithString("withdrawal_amount", send.Amount.Value),
+			),
+		}
+	}
+
 	// Parse value specified by the receiver.
-	rv, err := strconv.ParseUint(receive.Amount.Value, 10, 64)
+	rv, err := strconv.ParseInt(receive.Amount.Value, 10, 64)
 	if err != nil {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
@@ -103,7 +99,7 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	}
 
 	// Check if the specified amounts match.
-	if sv != rv {
+	if rv != -sv {
 		return nil, failure.InvalidIntent{
 			Sender:   send.AccountID.Address,
 			Receiver: receive.AccountID.Address,
@@ -161,7 +157,7 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	intent := Intent{
 		From:     flow.HexToAddress(send.AccountID.Address),
 		To:       flow.HexToAddress(receive.AccountID.Address),
-		Amount:   cadence.UFix64(sv),
+		Amount:   cadence.UFix64(rv),
 		Payer:    flow.HexToAddress(send.AccountID.Address),
 		Proposer: flow.HexToAddress(send.AccountID.Address),
 		GasLimit: flow.DefaultMaxTransactionGasLimit,
