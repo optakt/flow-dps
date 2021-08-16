@@ -38,7 +38,7 @@ type Writer struct {
 	cfg  Config
 	tx   *badger.Txn
 	sema *semaphore.Weighted
-	err  error
+	err  chan error
 }
 
 // NewWriter creates a new index writer that writes new indexing data to the
@@ -56,7 +56,7 @@ func NewWriter(db *badger.DB, lib dps.WriteLibrary, options ...func(*Config)) *W
 		cfg:  cfg,
 		tx:   db.NewTransaction(true),
 		sema: semaphore.NewWeighted(int64(cfg.ConcurrentTransactions)),
-		err:  nil,
+		err:  make(chan error),
 	}
 
 	return &w
@@ -230,11 +230,11 @@ func (w *Writer) apply(op func(*badger.Txn) error) error {
 	// currently building, we want to see if there was an error committing the
 	// previous transaction. As it is set in a callback, we copy the error while
 	// guarded with a read lock.
-	w.RLock()
-	err := w.err
-	w.RUnlock()
-	if err != nil {
-		return fmt.Errorf("could not commit transaction: %w", w.err)
+	select {
+	case err := <-w.err:
+		return fmt.Errorf("could not commit transaction: %w", err)
+	default:
+		// skip
 	}
 
 	// If we had no error in a previous transaction, we try applying the
@@ -242,7 +242,7 @@ func (w *Writer) apply(op func(*badger.Txn) error) error {
 	// big, we simply commit it with our callback and start a new transaction.
 	// Transaction creation is guarded by a semaphore that limits it to the
 	// configured number of inflight transactions.
-	err = op(w.tx)
+	err := op(w.tx)
 	if errors.Is(err, badger.ErrTxnTooBig) {
 		w.tx.CommitWith(w.done)
 		_ = w.sema.Acquire(context.Background(), 1)
@@ -262,9 +262,7 @@ func (w *Writer) done(err error) {
 	// callback. If we have an error, we acquire the write lock for the error
 	// and store it.
 	if err != nil {
-		w.Lock()
-		w.err = err
-		w.Unlock()
+		w.err <- err
 	}
 
 	// Releasing one resource on the semaphore will free up one slot for
@@ -291,8 +289,11 @@ func (w *Writer) Close() error {
 	// is guaranteed if we are able to acquire all of the resources on the
 	// semaphore, which we do here.
 	_ = w.sema.Acquire(context.Background(), int64(w.cfg.ConcurrentTransactions))
-	if w.err != nil {
-		return fmt.Errorf("could not flush in-flight transactions: %w", w.err)
+	select {
+	case err := <-w.err:
+		return fmt.Errorf("could not flush remaining transactions: %w", err)
+	default:
+		// skip
 	}
 
 	return nil
