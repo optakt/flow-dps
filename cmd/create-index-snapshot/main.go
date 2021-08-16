@@ -53,7 +53,7 @@ func run() int {
 
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagFormat, "format", "f", "hex", "output format (hex, gzip or raw)")
+	pflag.StringVarP(&flagFormat, "format", "f", "raw", "output format (hex, gzip or raw)")
 
 	pflag.Parse()
 
