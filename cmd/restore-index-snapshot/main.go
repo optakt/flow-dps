@@ -16,6 +16,8 @@ package main
 
 import (
 	"compress/gzip"
+	"encoding/hex"
+	"io"
 	"os"
 	"runtime"
 	"time"
@@ -42,14 +44,14 @@ func run() int {
 
 	// Parse the command line arguments.
 	var (
-		flagIndex string
-		flagLevel string
-		flagInput string
+		flagIndex  string
+		flagLevel  string
+		flagFormat string
 	)
 
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVar(&flagInput, "input", "", "snapshot archive path")
+	pflag.StringVarP(&flagFormat, "format", "f", "hex", "input format (hex, gzip or raw)")
 
 	pflag.Parse()
 
@@ -63,32 +65,36 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// Verify the snapshot archive path.
-	if flagInput == "" {
-		log.Error().Msg("snapshot archive path missing")
+	// Validate input format
+	switch flagFormat {
+	case "hex", "gzip", "raw":
+		// Valid input formats.
+	default:
+		log.Error().Msg("invalid input format")
 		return failure
 	}
 
-	// Open the input gzip file.
-	file, err := os.Open(flagInput)
-	if err != nil {
-		log.Error().Str("file", flagInput).Err(err).Msg("could not open snapshot archive")
-		return failure
+	// Create input reader
+	var reader io.Reader
+	reader = os.Stdin
+	if flagFormat == "hex" {
+		reader = hex.NewDecoder(reader)
+
+	} else if flagFormat == "gzip" {
+
+		// Create a gzip reader.
+		gzr, err := gzip.NewReader(reader)
+		if err != nil {
+			log.Error().Err(err).Msg("could not create gzip reader")
+			return failure
+		}
+
+		// Log the snapshot metadata.
+		log.Info().Str("comment", gzr.Comment).Msg("snapshot archive info")
+		log.Info().Time("archive_time", gzr.ModTime).Msg("snapshot archive creation time")
+
+		reader = gzr
 	}
-	defer file.Close()
-
-	// Create a gzip reader.
-	reader, err := gzip.NewReader(file)
-	if err != nil {
-		log.Error().Err(err).Msg("could not create gzip reader")
-		return failure
-	}
-
-	log.Info().Str("file", flagInput).Msg("snapshot archive open ok")
-
-	// Log the snapshot metadata.
-	log.Info().Str("comment", reader.Comment).Msg("snapshot archive info")
-	log.Info().Time("archive_time", reader.ModTime).Msg("snapshot archive creation time")
 
 	// Create a decompressor with the default dictionary.
 	decompressor, err := zstd.NewReader(reader, zstd.WithDecoderDicts(zbor.Dictionary))
@@ -113,6 +119,5 @@ func run() int {
 	}
 
 	log.Info().Msg("snapshot restore complete")
-
 	return success
 }
