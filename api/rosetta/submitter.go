@@ -12,17 +12,13 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package rosetta
 
 import (
-	"fmt"
+	"github.com/onflow/flow-go-sdk"
 )
 
-type InvalidIntent struct {
-	Description Description
-}
-
-func (i InvalidIntent) Error() string {
-	return fmt.Sprintf("invalid transaction intent: %s",
-		i.Description)
+// Submitter is used to submit the constructed transaction for execution in a Flow network.
+type Submitter interface {
+	Transaction(tx *flow.Transaction) error
 }

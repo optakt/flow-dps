@@ -73,15 +73,15 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		))
 	}
 
-	current, _, err := c.retriever.Current()
+	current, _, err := c.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txReferenceRetrieval, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(referenceBlockRetrieval, err))
 	}
 
 	proposer := flow.HexToAddress(req.Options.AccountID.Address)
-	sequenceNr, err := getAccountSequenceNumber(proposer)
+	sequenceNr, err := getSequenceNumber(proposer)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txSequenceNumberRetrieval, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(sequenceNumberRetrieval, err))
 	}
 
 	res := MetadataResponse{
@@ -94,7 +94,7 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, res)
 }
 
-// TODO: implement getAccountSequenceNr()
-func getAccountSequenceNumber(address flow.Address) (uint64, error) {
+// FIXME: implement getSequenceNumber()
+func getSequenceNumber(address flow.Address) (uint64, error) {
 	return 0, fmt.Errorf("TBD: not implemented")
 }

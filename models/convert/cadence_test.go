@@ -18,9 +18,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/onflow/cadence"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence"
 )
 
 func TestParseCadenceArgument(t *testing.T) {
