@@ -86,9 +86,13 @@ func run() int {
 	}
 	defer db.Close()
 
-	// Create the writer(s) for the output format.
+	// We want to pipe everything to stdout in the end; if the user wants to
+	// create a file, he can redirect the output.
 	var writer io.Writer
 	writer = os.Stdout
+	defer os.Stdout.Close()
+
+	// Create the writer(s) for the output format.
 	switch flagEncoding {
 	case encodingNone:
 		// nothing to do
@@ -99,7 +103,7 @@ func run() int {
 		defer encoder.Close()
 		writer = encoder
 	default:
-		log.Error().Str("encoding", flagEncoding).Msg("invalid encoding specified")
+		log.Error().Str("encoding", flagEncoding).Msg("invalid encoding format specified")
 	}
 
 	// Wrap the output writer in a compressing writer of the given algorithm.
@@ -114,14 +118,18 @@ func run() int {
 		compressor, _ := gzip.NewWriterLevel(writer, gzip.BestCompression)
 		defer compressor.Close()
 		writer = compressor
+	default:
+		log.Error().Str("compression", flagCompression).Msg("invalid compression algorithm specified")
 	}
 
 	// Run the DB backup mechanism on top of the writer to create the snapshot.
 	_, err = db.Backup(writer, 0)
 	if err != nil {
-		log.Error().Err(err).Msg("could not backup database")
+		log.Error().Err(err).Msg("snapshot generation failed")
 		return failure
 	}
+
+	log.Info().Msg("snapshot generation complete")
 
 	return success
 }

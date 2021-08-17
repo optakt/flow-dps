@@ -16,6 +16,7 @@ package main
 
 import (
 	"compress/gzip"
+	"encoding/base64"
 	"encoding/hex"
 	"io"
 	"os"
@@ -27,13 +28,24 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
-	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
 const (
 	success = 0
 	failure = 1
+)
+
+const (
+	encodingNone   = "none"
+	encodingHex    = "hex"
+	encodingBase64 = "base64"
+)
+
+const (
+	compressionNone = "none"
+	compressionZstd = "zstd"
+	compressionGzip = "gzip"
 )
 
 func main() {
@@ -44,14 +56,16 @@ func run() int {
 
 	// Parse the command line arguments.
 	var (
-		flagIndex  string
-		flagLevel  string
-		flagFormat string
+		flagCompression string
+		flagEncoding    string
+		flagIndex       string
+		flagLevel       string
 	)
 
+	pflag.StringVarP(&flagCompression, "compression", "c", "zstd", "compression algorithm (`none`, `zstd` or `gzip`)")
+	pflag.StringVarP(&flagEncoding, "encoding", "e", "none", "output encoding (`none`, `hex` or `base64`)")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
-	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagFormat, "format", "f", "raw", "input format (hex, gzip or raw)")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "severity level for logging output")
 
 	pflag.Parse()
 
@@ -65,59 +79,56 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// Validate input format
-	switch flagFormat {
-	case "hex", "gzip", "raw":
-		// Valid input formats.
-	default:
-		log.Error().Msg("invalid input format")
-		return failure
-	}
-
-	// Create input reader
-	var reader io.Reader
-	reader = os.Stdin
-	if flagFormat == "hex" {
-		reader = hex.NewDecoder(reader)
-
-	} else if flagFormat == "gzip" {
-
-		// Create a gzip reader.
-		gzr, err := gzip.NewReader(reader)
-		if err != nil {
-			log.Error().Err(err).Msg("could not create gzip reader")
-			return failure
-		}
-
-		// Log the snapshot metadata.
-		log.Info().Str("comment", gzr.Comment).Msg("snapshot archive info")
-		log.Info().Time("archive_time", gzr.ModTime).Msg("snapshot archive creation time")
-
-		reader = gzr
-	}
-
-	// Create a decompressor with the default dictionary.
-	decompressor, err := zstd.NewReader(reader, zstd.WithDecoderDicts(zbor.Dictionary))
-	if err != nil {
-		log.Error().Err(err).Msg("could not create decompressor")
-		return failure
-	}
-
 	// Open the index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex))
+	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open badger db")
 		return failure
 	}
 	defer db.Close()
 
+	// We will consume from stdin; if the user wants to load from a file, he can
+	// pipe it into the command.
+	var reader io.Reader
+	reader = os.Stdin
+	defer os.Stdin.Close()
+
+	// When reading, we first need to decompress, so we start with that
+	switch flagCompression {
+	case compressionNone:
+		// nothing to do
+	case compressionZstd:
+		decompressor, _ := zstd.NewReader(reader)
+		defer decompressor.Close()
+		reader = decompressor
+	case compressionGzip:
+		decompressor, _ := gzip.NewReader(reader)
+		defer decompressor.Close()
+		reader = decompressor
+	default:
+		log.Error().Str("compression", flagCompression).Msg("invalid compression algorithm specified")
+	}
+
+	// After decompression, we can decode the encoding.
+	switch flagEncoding {
+	case encodingNone:
+		// nothing to do
+	case encodingHex:
+		reader = hex.NewDecoder(reader)
+	case encodingBase64:
+		reader = base64.NewDecoder(base64.StdEncoding, reader)
+	default:
+		log.Error().Str("encoding", flagEncoding).Msg("invalid encoding format specified")
+	}
+
 	// Restore the database
-	err = db.Load(decompressor, runtime.GOMAXPROCS(0))
+	err = db.Load(reader, runtime.GOMAXPROCS(0))
 	if err != nil {
-		log.Error().Err(err).Msg("could not restore database")
+		log.Error().Err(err).Msg("snapshot restoration failed")
 		return failure
 	}
 
-	log.Info().Msg("snapshot restore complete")
+	log.Info().Msg("snapshot restoration complete")
+
 	return success
 }
