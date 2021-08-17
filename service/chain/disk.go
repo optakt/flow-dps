@@ -68,9 +68,6 @@ func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 	if err != nil {
 		return flow.StateCommitment{}, fmt.Errorf("could not look up commit: %w", err)
 	}
-	if len(commit) != 32 {
-		return flow.StateCommitment{}, fmt.Errorf("invalid commit length: got %d want 32", len(commit))
-	}
 
 	return commit, nil
 }
