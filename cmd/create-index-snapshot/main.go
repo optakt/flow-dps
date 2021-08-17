@@ -60,8 +60,8 @@ func run() int {
 		flagIndex       string
 	)
 
-	pflag.StringVarP(&flagCompression, "compression", "c", "zstd", "compression algorithm (\"none\", \"zstd\" or \"gzip\")")
-	pflag.StringVarP(&flagEncoding, "encoding", "e", "none", "output encoding (\"none\", \"hex\" or \"base64\")")
+	pflag.StringVarP(&flagCompression, "compression", "c", compressionZstd, "compression algorithm (\"none\", \"zstd\" or \"gzip\")")
+	pflag.StringVarP(&flagEncoding, "encoding", "e", encodingNone, "output encoding (\"none\", \"hex\" or \"base64\")")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 
 	pflag.Parse()
