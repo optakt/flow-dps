@@ -12,10 +12,10 @@ This output can be used to restore a database from a previous snapshot by a `res
 ## Usage
 
 ```sh
-Usage of create-index-snapshot:
-  -f, --format string   output format (hex, gzip or raw) (default "raw")
-  -i, --index string    database directory for state index (default "index")
-  -l, --level string    log output level (default "info")
+Usage of ./create-index-snapshot:
+  -c, --compression string   compression algorithm ("none", "zstd" or "gzip") (default "zstd")
+  -e, --encoding string      output encoding ("none", "hex" or "base64") (default "none")
+  -i, --index string         database directory for state index (default "index")
 ```
 
 ## Examples

@@ -11,11 +11,11 @@ It also logs any metadata written by the backup tool (such as the time of backup
 ## Usage
 
 ```sh
-Usage of restore-index-snapshot:
-  -f, --format string   input format (hex, gzip or raw) (default "raw")
-  -i, --index string    database directory for state index (default "index")
-  -l, --level string    log output level (default "info")
-  ```
+Usage of ./restore-index-snapshot:
+  -c, --compression string   compression algorithm ("none", "zstd" or "gzip") (default "zstd")
+  -e, --encoding string      output encoding ("none", "hex" or "base64") (default "none")
+  -i, --index string         database directory for state index (default "index")
+```
 
 ## Example
 

@@ -58,25 +58,17 @@ func run() int {
 		flagCompression string
 		flagEncoding    string
 		flagIndex       string
-		flagLevel       string
 	)
 
-	pflag.StringVarP(&flagCompression, "compression", "c", "zstd", "compression algorithm (`none`, `zstd` or `gzip`)")
-	pflag.StringVarP(&flagEncoding, "encoding", "e", "none", "output encoding (`none`, `hex` or `base64`)")
+	pflag.StringVarP(&flagCompression, "compression", "c", "zstd", "compression algorithm (\"none\", \"zstd\" or \"gzip\")")
+	pflag.StringVarP(&flagEncoding, "encoding", "e", "none", "output encoding (\"none\", \"hex\" or \"base64\")")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
-	pflag.StringVarP(&flagLevel, "level", "l", "info", "severity level for logging output")
 
 	pflag.Parse()
 
 	// Initialize the logger.
 	zerolog.TimestampFunc = func() time.Time { return time.Now().UTC() }
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
-	level, err := zerolog.ParseLevel(flagLevel)
-	if err != nil {
-		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
-		return failure
-	}
-	log = log.Level(level)
 
 	// Open the index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
