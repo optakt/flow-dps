@@ -12,16 +12,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package failure
 
 import (
-	"context"
-
-	"google.golang.org/grpc"
-
-	"github.com/onflow/flow-go-sdk"
+	"fmt"
 )
 
-type Client interface {
-	SendTransaction(ctx context.Context, tx flow.Transaction, options ...grpc.CallOption) error
+type InvalidOperations struct {
+	Description Description
+	Count       int
+}
+
+func (i InvalidOperations) Error() string {
+	return fmt.Sprintf("invalid operations (count: %d): %s", i.Count, i.Description)
 }

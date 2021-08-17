@@ -25,6 +25,6 @@ import (
 
 // ParseTransactions processes the flow transaction and translates it to a list of operations and a list of
 // signers.
-func (p *Parser) ParseTransaction(tx flow.Transaction) ([]object.Operation, []identifier.Account, error) {
+func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []identifier.Account, error) {
 	return nil, nil, fmt.Errorf("TBD: not implemented")
 }

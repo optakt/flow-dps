@@ -23,30 +23,30 @@ import (
 const (
 	invalidJSON = "request does not contain valid JSON-encoded body"
 
-	blockchainEmpty  = "blockchain identifier has empty blockchain field"
-	networkEmpty     = "blockchain identifier has empty network field"
-	blockEmpty       = "block identifier has empty index and hash fields"
-	blockLength      = "block identifier has invalid hash field length"
-	addressEmpty     = "account identifier has empty address field"
-	addressLength    = "account identifier has invalid address field length"
-	currenciesEmpty  = "currency identifier list is empty"
-	symbolEmpty      = "currency identifier has empty symbol field"
-	txHashEmpty      = "transaction identifier has empty hash field"
-	txLength         = "transaction identifier has invalid hash filed length"
-	txInvalidOpCount = "transaction operations list has an invalid number of operations"
-	txEmpty          = "transaction text is empty"
-	txInvalid        = "transaction text is invalid"
+	blockchainEmpty = "blockchain identifier has empty blockchain field"
+	networkEmpty    = "blockchain identifier has empty network field"
+	blockEmpty      = "block identifier has empty index and hash fields"
+	blockLength     = "block identifier has invalid hash field length"
+	addressEmpty    = "account identifier has empty address field"
+	addressLength   = "account identifier has invalid address field length"
+	currenciesEmpty = "currency identifier list is empty"
+	symbolEmpty     = "currency identifier has empty symbol field"
+	txHashEmpty     = "transaction identifier has empty hash field"
+	txLength        = "transaction identifier has invalid hash filed length"
+	txInvalidOps    = "transaction operations are invalid"
+	txBodyEmpty     = "transaction text is empty"
+	txBodyInvalid   = "transaction text is invalid"
 
-	networkCheck              = "unable to check network"
-	blockRetrieval            = "unable to retrieve block"
-	balancesRetrieval         = "unable to retrieve balances"
-	oldestRetrieval           = "unable to retrieve oldest block"
-	currentRetrieval          = "unable to retrieve current block"
-	txSubmittal               = "unable to submit transaction"
-	txRetrieval               = "unable to retrieve transaction"
-	intentDetermine           = "unable to determine transaction intent"
-	txReferenceRetrieval      = "unable to retrieve transaction reference block"
-	txSequenceNumberRetrieval = "unable to retrieve account key sequence number"
+	networkCheck            = "unable to check network"
+	blockRetrieval          = "unable to retrieve block"
+	balancesRetrieval       = "unable to retrieve balances"
+	oldestRetrieval         = "unable to retrieve oldest block"
+	currentRetrieval        = "unable to retrieve current block"
+	txSubmission            = "unable to submit transaction"
+	txRetrieval             = "unable to retrieve transaction"
+	intentDetermination     = "unable to determine transaction intent"
+	referenceBlockRetrieval = "unable to retrieve transaction reference block"
+	sequenceNumberRetrieval = "unable to retrieve account key sequence number"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
@@ -189,7 +189,5 @@ func invalidIntent(fail failure.InvalidIntent) Error {
 	return convertError(
 		configuration.ErrorInvalidTransactionIntent,
 		fail.Description,
-		withDetail("from", fail.Sender),
-		withDetail("to", fail.Receiver),
 	)
 }
