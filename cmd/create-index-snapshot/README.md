@@ -2,12 +2,12 @@
 
 ## Description
 
-This utility binary creates snapshots of existing indexes.
-When a path to the index (badger database) is specified, the badger API is used to create a backup. 
-This backup is written to the standard output, using the format specified by the `format` argument.
-This backup is compressed with Zstandard compression.
+This utility binary creates snapshots of DPS state index databases.
+It uses the Badger backup API to create a single file snapshot of the database.
+Output is written to standard output and can be piped into a file if desired.
+The user can choose between various encoding and compression formats.
 
-This output can be used to restore a database from a previous snapshot by a `restore-index-snapshot` tool.
+The index database can later be restored using the `restore-index-snapshot` tool.
 
 ## Usage
 
@@ -22,31 +22,31 @@ Usage of ./create-index-snapshot:
 
 ### Usage
 
-Backup index to a hex-encoded string:
+Outputting a hex-encoded zstd-compressed index snapshot on the console to use in testing:
 
 ```console
-$ create-index-snapshot -i index --format hex > snapshot.hex
+$ create-index-snapshot -i /var/dps/index -c zstd -e hex
 ```
 
-Backup index to a file named `dps-backup.gz` in the `/tmp` directory:
+Back up an existing index database to a Gzip compressed file without encoding:
 
 ```console
-$ create-index-snapshot -i index --format gzip > /tmp/dps-backup.gz
+$ create-index-snapshot -i /var/dps/index -c gzip > dps-index-snapshot.gz
 ```
 
 
 ### Go Program Restoring the Index
 
-The program below opens a read-only in-memory badger database and restores the state from the created hex-encoded backup. Error handling is omitted for brevity.
+The program below opens a in-memory Badger database and restores the state from the created hex-encoded backup. Error handling is omitted for brevity.
 
 ```go
-opts := badger.DefaultOptions("").WithInMemory(true).WithReadOnly(true).WithLogger(nil)
+opts := badger.DefaultOptions("").WithInMemory(true).WithLogger(nil)
 db, _ := badger.Open(opts)
 
-payload := "hex output of create-index-snapshot"
+payload := "<pasted hex-encoded zstd-compressed output of create-index-snapshot>"
 
-dbSnapshot, _ := zstd.NewReader(hex.NewDecoder(strings.NewReader(payload)))
-defer dbSnapshot.Close()
+reader, _ := zstd.NewReader(hex.NewDecoder(strings.NewReader(payload)))
+defer reader.Close()
 
-db.Load(dbSnapshot, 10)
+db.Load(reader, 10)
 ```
