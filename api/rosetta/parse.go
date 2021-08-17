@@ -16,7 +16,6 @@ package rosetta
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -85,8 +84,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 	// Parse the transaction and recreate the original list of operations, as well as all signers involved.
 	operations, signers, err := c.parser.ParseTransaction(&tx)
 	if err != nil {
-		// TODO: add different error returns here
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("could not parse transaction: %w", err))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyInvalid, withError(err)))
 	}
 
 	metadata := object.Metadata{

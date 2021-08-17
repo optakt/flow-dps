@@ -56,7 +56,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	}
 	amountArg, ok := val.ToGoValue().(uint64)
 	if !ok {
-		return nil, nil, fmt.Errorf("invalid transaction amount")
+		return nil, nil, fmt.Errorf("invalid transaction amount: %v", val.String())
 	}
 	amount := strconv.FormatUint(amountArg, 10)
 
