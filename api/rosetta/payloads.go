@@ -15,6 +15,7 @@
 package rosetta
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -116,7 +117,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		Payloads: []object.SigningPayload{
 			{
 				AccountID:     identifier.Account{Address: intent.From.Hex()},
-				HexBytes:      string(tx.EnvelopeMessage()),
+				HexBytes:      hex.EncodeToString(tx.EnvelopeMessage()),
 				SignatureType: FlowSignatureAlgorithm,
 			},
 		},
