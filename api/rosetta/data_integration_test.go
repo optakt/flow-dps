@@ -93,8 +93,7 @@ func setupDB(t *testing.T) *badger.DB {
 func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	t.Helper()
 
-	codec, err := zbor.NewCodec()
-	require.NoError(t, err)
+	codec := zbor.NewCodec()
 	storage := storage.New(codec)
 	index := index.NewReader(db, storage)
 

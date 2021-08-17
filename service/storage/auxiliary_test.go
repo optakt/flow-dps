@@ -305,8 +305,7 @@ func insertKeyValue(t *testing.T, db *badger.DB, key []byte, value uint64) error
 	t.Helper()
 
 	err := db.Update(func(txn *badger.Txn) error {
-		enc, err := zbor.NewCodec()
-		require.NoError(t, err)
+		enc := zbor.NewCodec()
 
 		val, err := enc.Marshal(value)
 		require.NoError(t, err)

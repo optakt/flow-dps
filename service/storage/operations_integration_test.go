@@ -21,7 +21,6 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
@@ -341,8 +340,7 @@ func TestLibrary(t *testing.T) {
 func setupLibrary(t *testing.T) (*badger.DB, *storage.Library) {
 	t.Helper()
 
-	codec, err := zbor.NewCodec()
-	require.NoError(t, err)
+	codec := zbor.NewCodec()
 
 	return helpers.InMemoryDB(t), storage.New(codec)
 }

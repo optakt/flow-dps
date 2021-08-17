@@ -39,8 +39,7 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -64,8 +63,7 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 	t.Run("handles indexer failure on First", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -77,7 +75,7 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetFirstRequest{}
-		_, err = server.GetFirst(context.Background(), req)
+		_, err := server.GetFirst(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -88,8 +86,7 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -113,8 +110,7 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 	t.Run("handles indexer failure on Last", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -126,7 +122,7 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetLastRequest{}
-		_, err = server.GetLast(context.Background(), req)
+		_, err := server.GetLast(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -138,8 +134,7 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -165,8 +160,7 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 	t.Run("handles indexer failure on HeightForBlock", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -180,7 +174,7 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 		req := &dps.GetHeightForBlockRequest{
 			BlockID: id[:],
 		}
-		_, err = server.GetHeightForBlock(context.Background(), req)
+		_, err := server.GetHeightForBlock(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -192,8 +186,7 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -220,8 +213,7 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 	t.Run("handles indexer failure on Commit", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -235,7 +227,7 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 		req := &dps.GetCommitRequest{
 			Height: mocks.GenericHeight,
 		}
-		_, err = server.GetCommit(context.Background(), req)
+		_, err := server.GetCommit(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -247,8 +239,7 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -278,8 +269,7 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 	t.Run("handles indexer failure on Header", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -293,7 +283,7 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 		req := &dps.GetHeaderRequest{
 			Height: mocks.GenericHeight,
 		}
-		_, err = server.GetHeader(context.Background(), req)
+		_, err := server.GetHeader(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -306,8 +296,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 	t.Run("nominal case without type specified", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -339,8 +328,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 	t.Run("nominal case with type specified", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -380,8 +368,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 	t.Run("handles indexer failure on Events", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -395,7 +382,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		req := &dps.GetEventsRequest{
 			Height: height,
 		}
-		_, err = server.GetEvents(context.Background(), req)
+		_, err := server.GetEvents(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -409,8 +396,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -445,8 +431,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 	t.Run("handles conversion error", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -466,7 +451,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 			Height: height,
 			Paths:  [][]byte{mocks.GenericBytes},
 		}
-		_, err = server.GetRegisterValues(context.Background(), req)
+		_, err := server.GetRegisterValues(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -474,8 +459,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 	t.Run("handles indexer failure on Values", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -490,7 +474,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 			Height: height,
 			Paths:  [][]byte{mocks.GenericBytes},
 		}
-		_, err = server.GetRegisterValues(context.Background(), req)
+		_, err := server.GetRegisterValues(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -503,8 +487,7 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -534,8 +517,7 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 	t.Run("handles indexer failure on Collection", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -549,7 +531,7 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 		req := &dps.GetCollectionRequest{
 			CollectionID: collID[:],
 		}
-		_, err = server.GetCollection(context.Background(), req)
+		_, err := server.GetCollection(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -562,8 +544,7 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -595,8 +576,7 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 	t.Run("handles indexer failure on CollectionsByHeight", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -610,7 +590,7 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		req := &dps.ListCollectionsForHeightRequest{
 			Height: mocks.GenericHeight,
 		}
-		_, err = server.ListCollectionsForHeight(context.Background(), req)
+		_, err := server.ListCollectionsForHeight(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -623,8 +603,7 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -654,8 +633,7 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 	t.Run("handles indexer failure on Guarantee", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -669,7 +647,7 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 		req := &dps.GetGuaranteeRequest{
 			CollectionID: collID[:],
 		}
-		_, err = server.GetGuarantee(context.Background(), req)
+		_, err := server.GetGuarantee(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -682,8 +660,7 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -713,8 +690,7 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 	t.Run("handles indexer failure on Transaction", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -728,7 +704,7 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 		req := &dps.GetTransactionRequest{
 			TransactionID: txID[:],
 		}
-		_, err = server.GetTransaction(context.Background(), req)
+		_, err := server.GetTransaction(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -741,8 +717,7 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -769,8 +744,7 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 	t.Run("handles indexer failure on HeightForTransaction", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -784,7 +758,7 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 		req := &dps.GetHeightForTransactionRequest{
 			TransactionID: txID[:],
 		}
-		_, err = server.GetHeightForTransaction(context.Background(), req)
+		_, err := server.GetHeightForTransaction(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -797,8 +771,7 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -830,8 +803,7 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 	t.Run("handles indexer failure on TransactionsByHeight", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -845,7 +817,7 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		req := &dps.ListTransactionsForHeightRequest{
 			Height: mocks.GenericHeight,
 		}
-		_, err = server.ListTransactionsForHeight(context.Background(), req)
+		_, err := server.ListTransactionsForHeight(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -858,8 +830,7 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -889,8 +860,7 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 	t.Run("handles indexer failure on Result", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -904,7 +874,7 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 		req := &dps.GetResultRequest{
 			TransactionID: txID[:],
 		}
-		_, err = server.GetResult(context.Background(), req)
+		_, err := server.GetResult(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -917,8 +887,7 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -948,8 +917,7 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 	t.Run("handles indexer failure on Seal", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -963,7 +931,7 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 		req := &dps.GetSealRequest{
 			SealID: sealID[:],
 		}
-		_, err = server.GetSeal(context.Background(), req)
+		_, err := server.GetSeal(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -976,8 +944,7 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -1009,8 +976,7 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 	t.Run("handles indexer failure on SealsByHeight", func(t *testing.T) {
 		t.Parallel()
 
-		codec, err := zbor.NewCodec()
-		require.NoError(t, err)
+		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
 
@@ -1024,7 +990,7 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		req := &dps.ListSealsForHeightRequest{
 			Height: mocks.GenericHeight,
 		}
-		_, err = server.ListSealsForHeight(context.Background(), req)
+		_, err := server.ListSealsForHeight(context.Background(), req)
 
 		assert.Error(t, err)
 	})
