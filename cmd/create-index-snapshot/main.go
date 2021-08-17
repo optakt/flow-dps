@@ -16,8 +16,8 @@ package main
 
 import (
 	"compress/gzip"
+	"encoding/base64"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"os"
 	"time"
@@ -27,15 +27,24 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
-	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
 const (
 	success = 0
 	failure = 1
+)
 
-	timeLayout = "02-01-2006-15-04"
+const (
+	encodingNone   = "none"
+	encodingHex    = "hex"
+	encodingBase64 = "base64"
+)
+
+const (
+	compressionNone = "none"
+	compressionZstd = "zstd"
+	compressionGzip = "gzip"
 )
 
 func main() {
@@ -46,14 +55,16 @@ func run() int {
 
 	// Parse the command line arguments.
 	var (
-		flagIndex  string
-		flagLevel  string
-		flagFormat string
+		flagCompression string
+		flagEncoding    string
+		flagIndex       string
+		flagLevel       string
 	)
 
+	pflag.StringVarP(&flagCompression, "compression", "c", "zstd", "compression algorithm (`none`, `zstd` or `gzip`)")
+	pflag.StringVarP(&flagEncoding, "encoding", "e", "none", "output encoding (`none`, `hex` or `base64`)")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
-	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagFormat, "format", "f", "raw", "output format (hex, gzip or raw)")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "severity level for logging output")
 
 	pflag.Parse()
 
@@ -67,59 +78,46 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// Validate output format.
-	switch flagFormat {
-	case "hex", "gzip", "raw":
-		// Valid output formats.
-	default:
-		log.Error().Str("format", flagFormat).Msg("invalid format specified")
-		return failure
-	}
-
 	// Open the index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true).WithBypassLockGuard(true))
+	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open badger db")
 		return failure
 	}
 	defer db.Close()
 
-	// Create output writer.
+	// Create the writer(s) for the output format.
 	var writer io.Writer
 	writer = os.Stdout
-	if flagFormat == "hex" {
+	switch flagEncoding {
+	case encodingNone:
+		// nothing to do
+	case encodingHex:
 		writer = hex.NewEncoder(writer)
-
-	} else if flagFormat == "gzip" {
-
-		// Create a gzip writer. Data is written without compression
-		// since we'll take care of compression ourselves.
-		gzw, err := gzip.NewWriterLevel(writer, gzip.NoCompression)
-		if err != nil {
-			log.Error().Err(err).Msg("could not create gzip writer")
-			return failure
-		}
-		defer gzw.Close()
-
-		gzw.Comment = fmt.Sprintf("DPS Index snapshot created at %v", time.Now().UTC().Format(timeLayout))
-		gzw.ModTime = time.Now().UTC()
-
-		writer = gzw
+	case encodingBase64:
+		encoder := base64.NewEncoder(base64.StdEncoding, writer)
+		defer encoder.Close()
+		writer = encoder
+	default:
+		log.Error().Str("encoding", flagEncoding).Msg("invalid encoding specified")
 	}
 
-	// Create a compressor to make sure only compressed bytes are piped into the writer.
-	compressor, err := zstd.NewWriter(writer,
-		zstd.WithEncoderDict(zbor.Dictionary),
-	)
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize compressor")
-		return failure
+	// Wrap the output writer in a compressing writer of the given algorithm.
+	switch flagCompression {
+	case compressionNone:
+		// nothing to do
+	case compressionZstd:
+		compressor, _ := zstd.NewWriter(writer, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+		defer compressor.Close()
+		writer = compressor
+	case compressionGzip:
+		compressor, _ := gzip.NewWriterLevel(writer, gzip.BestCompression)
+		defer compressor.Close()
+		writer = compressor
 	}
-	defer compressor.Close()
 
-	// Run the DB backup mechanism on top of the writer to directly
-	// write the output.
-	_, err = db.Backup(compressor, 0)
+	// Run the DB backup mechanism on top of the writer to create the snapshot.
+	_, err = db.Backup(writer, 0)
 	if err != nil {
 		log.Error().Err(err).Msg("could not backup database")
 		return failure
