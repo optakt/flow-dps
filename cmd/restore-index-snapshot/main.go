@@ -28,7 +28,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/service/index"
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 const (
@@ -78,6 +81,14 @@ func run() int {
 		return failure
 	}
 	defer db.Close()
+
+	// Check if the database is empty.
+	index := index.NewReader(db, storage.New(zbor.NewCodec()))
+	_, err = index.First()
+	if err == nil {
+		log.Error().Msg("database directory already contains index database")
+		return failure
+	}
 
 	// We will consume from stdin; if the user wants to load from a file, he can
 	// pipe it into the command.

@@ -45,8 +45,7 @@ func compareDuplicates(log zerolog.Logger, dataDir string, indexDir string, dupl
 	defer index.Close()
 
 	// Initialize the storage library.
-	codec, _ := zbor.NewCodec()
-	lib := storage.New(codec)
+	lib := storage.New(zbor.NewCodec())
 
 	// Go through duplicates and compare number and IDs of duplicates beetween databases.
 	for height, duplicateIDs := range duplicates {

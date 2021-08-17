@@ -121,12 +121,8 @@ func run() int {
 		args = append(args, arg)
 	}
 
-	// Initialize storage library.
-	codec, err := zbor.NewCodec()
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize storage codec")
-		return failure
-	}
+	// Initialize codec.
+	codec := zbor.NewCodec()
 
 	// Execute the script using remote lookup and read.
 	client := dps.NewAPIClient(conn)

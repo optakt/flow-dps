@@ -155,11 +155,7 @@ func run() int {
 	// interact with a Badger database while encoding and compressing
 	// transparently.
 	var codec dps.Codec
-	codec, err = zbor.NewCodec()
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize storage codec")
-		return failure
-	}
+	codec = zbor.NewCodec()
 	if flagMetrics {
 		size := rcrowley.NewSize("store")
 		mout.Register(size)

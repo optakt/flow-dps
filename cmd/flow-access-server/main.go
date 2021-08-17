@@ -92,12 +92,8 @@ func run() int {
 	}
 	defer db.Close()
 
-	// Initialize storage library.
-	codec, err := zbor.NewCodec()
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize storage codec")
-		return failure
-	}
+	// Initialize codec.
+	codec := zbor.NewCodec()
 
 	// GRPC API initialization.
 	opts := []logging.Option{

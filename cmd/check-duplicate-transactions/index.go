@@ -43,8 +43,7 @@ func indexCheck(log zerolog.Logger, dir string) (map[uint64][]flow.Identifier, e
 	defer index.Close()
 
 	// Initialize the storage library.
-	codec, _ := zbor.NewCodec()
-	lib := storage.New(codec)
+	lib := storage.New(zbor.NewCodec())
 
 	// Retrieve the root height as a start height for duplicate check.
 	var first uint64
