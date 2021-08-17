@@ -12,17 +12,34 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package submitter
 
 import (
+	"context"
 	"fmt"
+
+	"github.com/onflow/flow-go-sdk"
 )
 
-type InvalidIntent struct {
-	Description Description
+// Submitter submits transactions for execution.
+type Submitter struct {
+	// api is typically a Flow SDK client.
+	api API
 }
 
-func (i InvalidIntent) Error() string {
-	return fmt.Sprintf("invalid transaction intent: %s",
-		i.Description)
+// New creates a new Submitter that uses the given API.
+func New(api API) *Submitter {
+	s := Submitter{
+		api: api,
+	}
+	return &s
+}
+
+// Transaction submits the given transaction for execution.
+func (s *Submitter) Transaction(tx *flow.Transaction) error {
+	err := s.api.SendTransaction(context.Background(), *tx)
+	if err != nil {
+		return fmt.Errorf("could not submit transaction: %w", err)
+	}
+	return nil
 }

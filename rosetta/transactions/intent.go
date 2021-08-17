@@ -16,12 +16,12 @@ package transactions
 
 import (
 	"fmt"
-	"strings"
+	"sort"
+	"strconv"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/object"
@@ -35,61 +35,62 @@ type Intent struct {
 	Payer    flow.Address
 	Proposer flow.Address
 
-	ReferenceBlock            flow.Identifier
-	ProposerKeySequenceNumber uint64
-	GasLimit                  uint64
+	ReferenceBlock flow.Identifier
+	SequenceNumber uint64
+	GasLimit       uint64
 }
 
-// CreateTransactionIntent creates a transaction Intent from two operations given as input.
+// DeriveIntent derives a transaction Intent from two operations given as input.
 // Specified operations should be symmetrical, a deposit and a withdrawal from two
 // different accounts. At the moment, the only fields taken into account are the
 // account IDs, amounts and type of operation.
-func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent, error) {
+func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 
-	firstOpNegative := strings.HasPrefix(operations[0].Amount.Value, "-")
-	secondOpNegative := strings.HasPrefix(operations[1].Amount.Value, "-")
-
-	// Operations are invalid if both operations have negative amounts.
-	if firstOpNegative && secondOpNegative {
-
-		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("invalid operations - two deposits specified"),
-			Sender:      operations[0].AccountID.Address,
-			Receiver:    operations[1].AccountID.Address,
+	// Verify that we have exactly two operations.
+	if len(operations) != 2 {
+		return nil, failure.InvalidOperations{
+			Description: failure.NewDescription("invalid number of operations"),
+			Count:       len(operations),
 		}
 	}
 
-	// Operations are also invalid if both operations have positive amounts.
-	if !firstOpNegative && !secondOpNegative {
+	amounts := make(map[int]int64)
 
+	// Parse amounts.
+	for i, op := range operations {
+		amount, err := strconv.ParseInt(op.Amount.Value, 10, 64)
+		if err != nil {
+			return nil, failure.InvalidIntent{
+				Description: failure.NewDescription("could not parse amount",
+					failure.WithString("amount", op.Amount.Value),
+					failure.WithErr(err),
+				),
+			}
+		}
+
+		amounts[i] = amount
+	}
+
+	// Verify that the amounts match.
+	if amounts[0] != -amounts[1] {
 		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("invalid operations - two withdrawals specified"),
-			Sender:      operations[0].AccountID.Address,
-			Receiver:    operations[1].AccountID.Address,
+			Description: failure.NewDescription("transfer amounts do not match",
+				failure.WithString("first_amount", operations[0].Amount.Value),
+				failure.WithString("second_amount", operations[1].Amount.Value),
+			),
 		}
 	}
 
-	// Assume the first operation is the one with the negative amount.
+	// Sort the operations so that the send operation (negative amount) comes first.
+	sort.Slice(operations, func(i, j int) bool {
+		return amounts[i] < amounts[j]
+	})
+
 	send := operations[0]
 	receive := operations[1]
 
-	// If that was not the case, switch the send and receive operations.
-	if !strings.HasPrefix(send.Amount.Value, "-") {
-		receive = operations[0]
-		send = operations[1]
-	}
-
-	// Validate the sender and the receiver account IDs.
-	err := p.validate.Account(send.AccountID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid sender account: %w", err)
-	}
-	err = p.validate.Account(receive.AccountID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid receiver account: %w", err)
-	}
-
 	// Validate the currencies specified for deposit and withdrawal.
+	var err error
 	send.Amount.Currency, err = p.validate.Currency(send.Amount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sender currency: %w", err)
@@ -99,73 +100,47 @@ func (p *Parser) CreateTransactionIntent(operations []object.Operation) (*Intent
 		return nil, fmt.Errorf("invalid receiver currency: %w", err)
 	}
 
-	// Make sure that both the send and receive operations use the same currency.
-	// This is perhaps unnecessary at the moment since we only have a single currency.
-	if send.Amount.Currency != receive.Amount.Currency {
+	// Make sure that both the send and receive operations are for FLOW tokens.
+	if send.Amount.Currency.Symbol != dps.FlowSymbol || receive.Amount.Currency.Symbol != dps.FlowSymbol {
+
 		return nil, failure.InvalidIntent{
-			Sender:      send.AccountID.Address,
-			Receiver:    receive.AccountID.Address,
-			Description: failure.NewDescription("send and receive currencies do not match"),
+			Description: failure.NewDescription("invalid currencies found",
+				failure.WithString("sender", send.AccountID.Address),
+				failure.WithString("receiver", receive.AccountID.Address),
+				failure.WithString("withdrawal_currency", send.Amount.Currency.Symbol),
+				failure.WithString("deposit_currency", receive.Amount.Currency.Symbol)),
 		}
 	}
 
-	// Parse value specified by the sender, after removing the negative sign prefix.
-	trimmed := strings.TrimPrefix(send.Amount.Value, "-")
-	sv, err := convert.ParseRosettaValue(trimmed)
+	// Validate the sender and the receiver account IDs.
+	err = p.validate.Account(send.AccountID)
 	if err != nil {
-		return nil, failure.InvalidIntent{
-			Sender:   send.AccountID.Address,
-			Receiver: receive.AccountID.Address,
-			Description: failure.NewDescription("could not parse withdrawal amount",
-				failure.WithString("withdrawal_amount", send.Amount.Value),
-				failure.WithErr(err),
-			),
-		}
+		return nil, fmt.Errorf("invalid sender account: %w", err)
 	}
-
-	// Parse value specified by the receiver.
-	rv, err := convert.ParseRosettaValue(receive.Amount.Value)
+	err = p.validate.Account(receive.AccountID)
 	if err != nil {
-		return nil, failure.InvalidIntent{
-			Sender:   send.AccountID.Address,
-			Receiver: receive.AccountID.Address,
-			Description: failure.NewDescription("could not parse deposit amount",
-				failure.WithString("deposit_amount", receive.Amount.Value),
-				failure.WithErr(err),
-			),
-		}
-	}
-
-	// Check if the specified amounts match.
-	if sv != rv {
-		return nil, failure.InvalidIntent{
-			Sender:   send.AccountID.Address,
-			Receiver: receive.AccountID.Address,
-			Description: failure.NewDescription("deposit and withdrawal amounts do not match",
-				failure.WithString("deposit_amount", receive.Amount.Value),
-				failure.WithString("withdrawal_amount", send.Amount.Value),
-			),
-		}
+		return nil, fmt.Errorf("invalid receiver account: %w", err)
 	}
 
 	// Validate that the specified operations are transfers.
-	if strings.ToUpper(send.Type) != dps.OperationTransfer ||
-		strings.ToUpper(receive.Type) != dps.OperationTransfer {
-
+	if send.Type != dps.OperationTransfer || receive.Type != dps.OperationTransfer {
 		return nil, failure.InvalidIntent{
-			Sender:   send.AccountID.Address,
-			Receiver: receive.AccountID.Address,
 			Description: failure.NewDescription("only transfer operations are supported",
-				failure.WithString("deposit_type", receive.Type),
 				failure.WithString("withdrawal_type", send.Type),
+				failure.WithString("deposit_type", receive.Type),
 			),
 		}
+	}
+
+	amount := amounts[0]
+	if amount < 0 {
+		amount = -amount
 	}
 
 	intent := Intent{
 		From:     flow.HexToAddress(send.AccountID.Address),
 		To:       flow.HexToAddress(receive.AccountID.Address),
-		Amount:   sv,
+		Amount:   cadence.UFix64(amount),
 		Payer:    flow.HexToAddress(send.AccountID.Address),
 		Proposer: flow.HexToAddress(send.AccountID.Address),
 		GasLimit: flow.DefaultMaxTransactionGasLimit,

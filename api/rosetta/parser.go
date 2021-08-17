@@ -24,7 +24,7 @@ import (
 
 // Parser is used by the Rosetta Construction API to handle transaction related operations.
 type Parser interface {
-	CreateTransactionIntent(operations []object.Operation) (intent *transactions.Intent, err error)
+	DeriveIntent(operations []object.Operation) (intent *transactions.Intent, err error)
 	CreateTransaction(intent *transactions.Intent) (tx *flow.Transaction, err error)
-	ParseTransaction(tx flow.Transaction) (operations []object.Operation, signers []identifier.Account, err error)
+	ParseTransaction(tx *flow.Transaction) (operations []object.Operation, signers []identifier.Account, err error)
 }
