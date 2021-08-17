@@ -36,15 +36,14 @@ func indexCheck(log zerolog.Logger, dir string) (map[uint64][]flow.Identifier, e
 	log.Info().Str("index", dir).Msg("starting index state duplicate check")
 
 	// Open the index database.
-	index, err := badger.Open(dps.DefaultOptions(dir).WithReadOnly(true).WithBypassLockGuard(true))
+	index, err := badger.Open(dps.DefaultOptions(dir).WithReadOnly(true))
 	if err != nil {
 		return nil, fmt.Errorf("could not open state index (dir: %s): %w", dir, err)
 	}
 	defer index.Close()
 
 	// Initialize the storage library.
-	codec, _ := zbor.NewCodec()
-	lib := storage.New(codec)
+	lib := storage.New(zbor.NewCodec())
 
 	// Retrieve the root height as a start height for duplicate check.
 	var first uint64

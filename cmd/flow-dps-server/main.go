@@ -78,7 +78,7 @@ func run() int {
 	log = log.Level(level)
 
 	// Initialize the index core state and open database in read-only mode.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true).WithBypassLockGuard(true))
+	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
 		return failure
@@ -86,11 +86,7 @@ func run() int {
 	defer db.Close()
 
 	// Initialize storage library.
-	codec, err := zbor.NewCodec()
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize storage codec")
-		return failure
-	}
+	codec := zbor.NewCodec()
 	storage := storage.New(codec)
 
 	// GRPC API initialization.
