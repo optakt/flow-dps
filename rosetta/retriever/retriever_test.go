@@ -369,7 +369,7 @@ func TestRetriever_Block(t *testing.T) {
 		}
 
 		convert := mocks.BaselineConverter(t)
-		convert.EventToOperationFunc = func(index uint, event flow.Event) (*object.Operation, error) {
+		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
 			assert.Contains(t, mocks.GenericEvents(4), event)
 
 			var op object.Operation
@@ -432,7 +432,7 @@ func TestRetriever_Block(t *testing.T) {
 		}
 
 		convert := mocks.BaselineConverter(t)
-		convert.EventToOperationFunc = func(index uint, event flow.Event) (*object.Operation, error) {
+		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
 			assert.Contains(t, mocks.GenericEvents(4), event)
 
 			var op object.Operation
@@ -492,7 +492,7 @@ func TestRetriever_Block(t *testing.T) {
 			return string(mocks.GenericEventType(1)), nil
 		}
 		convert := mocks.BaselineConverter(t)
-		convert.EventToOperationFunc = func(index uint, event flow.Event) (*object.Operation, error) {
+		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
 			assert.Contains(t, mocks.GenericEvents(4), event)
 
 			var op object.Operation
@@ -658,7 +658,7 @@ func TestRetriever_Block(t *testing.T) {
 		t.Parallel()
 
 		convert := mocks.BaselineConverter(t)
-		convert.EventToOperationFunc = func(index uint, event flow.Event) (*object.Operation, error) {
+		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -712,7 +712,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		}
 
 		convert := mocks.BaselineConverter(t)
-		convert.EventToOperationFunc = func(index uint, event flow.Event) (*object.Operation, error) {
+		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
 			assert.Contains(t, mocks.GenericEvents(4), event)
 
 			var op object.Operation
@@ -888,7 +888,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		t.Parallel()
 
 		convert := mocks.BaselineConverter(t)
-		convert.EventToOperationFunc = func(index uint, event flow.Event) (*object.Operation, error) {
+		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -912,7 +912,7 @@ func baselineRetriever(t *testing.T) (*Retriever, error) {
 	invoker := mocks.BaselineInvoker(t)
 
 	convert := mocks.BaselineConverter(t)
-	convert.EventToOperationFunc = func(index uint, event flow.Event) (*object.Operation, error) {
+	convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
 		var op object.Operation
 		switch event.Type {
 		case mocks.GenericEventType(0):

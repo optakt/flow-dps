@@ -54,18 +54,18 @@ func Combine(ops ...func(*badger.Txn) error) func(*badger.Txn) error {
 	}
 }
 
-func (l *Library) retrieve(key []byte, value interface{}) func(tx *badger.Txn) error {
+func (l *Library) retrieve(key []byte, v interface{}) func(tx *badger.Txn) error {
 	return func(tx *badger.Txn) error {
 		item, err := tx.Get(key)
 		if err != nil {
-			return fmt.Errorf("could not retrieve value at %x: %w", key, err)
+			return fmt.Errorf("could not get value (key: %x): %w", key, err)
 		}
 
-		err = item.Value(func(b []byte) error {
-			return l.codec.Unmarshal(b, value)
+		err = item.Value(func(val []byte) error {
+			return l.codec.Unmarshal(val, v)
 		})
 		if err != nil {
-			return fmt.Errorf("could not retrieve value at %x: %w", key, err)
+			return fmt.Errorf("could not decode value (key: %x): %w", key, err)
 		}
 
 		return nil
@@ -74,11 +74,16 @@ func (l *Library) retrieve(key []byte, value interface{}) func(tx *badger.Txn) e
 
 func (l *Library) save(key []byte, value interface{}) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
-		b, err := l.codec.Marshal(value)
+		val, err := l.codec.Marshal(value)
 		if err != nil {
-			return fmt.Errorf("could not encode value at %x: %w", key, err)
+			return fmt.Errorf("could not encode value (key: %x): %w", key, err)
 		}
 
-		return tx.Set(key, b)
+		err = tx.Set(key, val)
+		if err != nil {
+			return fmt.Errorf("could not set value (key: %x): %w", key, err)
+		}
+
+		return nil
 	}
 }

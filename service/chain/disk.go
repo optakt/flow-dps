@@ -159,16 +159,14 @@ func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve collection (%x): %w", collID, err)
 		}
-		batch := make([]*flow.TransactionBody, 0, len(collection.Transactions))
 		for _, txID := range collection.Transactions {
 			var transaction flow.TransactionBody
 			err := d.db.View(operation.RetrieveTransaction(txID, &transaction))
 			if err != nil {
 				return nil, fmt.Errorf("could not retrieve transaction (%x): %w", txID, err)
 			}
-			batch = append(batch, &transaction)
+			transactions = append(transactions, &transaction)
 		}
-		transactions = append(transactions, batch...)
 	}
 
 	return transactions, nil
