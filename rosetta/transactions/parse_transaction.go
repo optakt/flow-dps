@@ -30,7 +30,7 @@ const (
 	// Transactions should have exactly one authorizer.
 	authorizersRequired = 1
 
-	// Transaction scripts should have exactly two arguments.
+	// Transaction script should have exactly two arguments.
 	argsRequired = 2
 )
 
