@@ -181,6 +181,7 @@ func run() int {
 	server.POST("/construction/parse", constructCtrl.Parse)
 	server.POST("/construction/hash", constructCtrl.Hash)
 	server.POST("/construction/submit", constructCtrl.Submit)
+	server.POST("/construction/combine", constructCtrl.Combine)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
