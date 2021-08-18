@@ -36,8 +36,8 @@ const (
 	txInvalidOps      = "transaction operations are invalid"
 	txBodyEmpty       = "transaction text is empty"
 	txBodyInvalid     = "transaction text is invalid"
-	txSignaturesEmpty = "transaction signature list is empty"
-	txSignaturesFound = "unsigned transaction has non-empty signature list"
+	txNoSignatures    = "required signatures missing for signed transaction"
+	txExtraSignatures = "superflous signatures found for unsigned transaction"
 
 	networkCheck            = "unable to check network"
 	blockRetrieval          = "unable to retrieve block"

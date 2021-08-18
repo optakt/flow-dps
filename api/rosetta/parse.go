@@ -73,12 +73,12 @@ func (c *Construction) Parse(ctx echo.Context) error {
 
 	// If the transaction is signed, make sure that we have signatures provided.
 	if req.Signed && len(tx.EnvelopeSignatures) == 0 {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txSignaturesEmpty))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txNoSignatures))
 	}
 
 	// If the transaction is unsigned, verify that no signatures are present.
 	if !req.Signed && len(tx.EnvelopeSignatures) > 0 {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txSignaturesFound))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txExtraSignatures))
 	}
 
 	// Parse the transaction and recreate the original list of operations, as well as all signers involved.
