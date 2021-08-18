@@ -15,6 +15,7 @@
 package transactions
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 
@@ -74,6 +75,17 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 			Have:        tx.ProposalKey.Address,
 			Want:        authorizer,
 			Description: failure.NewDescription("invalid transaction proposer"),
+		}
+	}
+
+	// Verify the transaction script is the token transfer script.
+	script, err := p.generate.TransferTokens(dps.FlowSymbol)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not generate transfer script: %w", err)
+	}
+	if !bytes.Equal(script, tx.Script) {
+		return nil, nil, failure.InvalidScript{
+			Description: failure.NewDescription("transaction text is not valid token transfer script"),
 		}
 	}
 
