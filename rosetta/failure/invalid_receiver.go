@@ -24,5 +24,5 @@ type InvalidReceiver struct {
 }
 
 func (i InvalidReceiver) Error() string {
-	return fmt.Sprintf("invalid transaction receiver (raw_receiver: %v): %v", i.RawReceiver, i.Description)
+	return fmt.Sprintf("invalid transaction receiver (raw_receiver: %s): %s", i.RawReceiver, i.Description)
 }

@@ -25,5 +25,5 @@ type InvalidAuthorizers struct {
 }
 
 func (i InvalidAuthorizers) Error() string {
-	return fmt.Sprintf("invalid authorizers (have: %v, want: %v): %v", i.Have, i.Want, i.Description)
+	return fmt.Sprintf("invalid authorizers (have: %d, want: %d): %s", i.Have, i.Want, i.Description)
 }

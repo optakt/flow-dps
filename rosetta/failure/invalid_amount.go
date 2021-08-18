@@ -24,5 +24,5 @@ type InvalidAmount struct {
 }
 
 func (i InvalidAmount) Error() string {
-	return fmt.Sprintf("invalid transaction amount (raw_amount: %v): %v", i.RawAmount, i.Description)
+	return fmt.Sprintf("invalid transaction amount (raw_amount: %s): %s", i.RawAmount, i.Description)
 }

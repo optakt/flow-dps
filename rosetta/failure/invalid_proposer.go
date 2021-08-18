@@ -16,14 +16,16 @@ package failure
 
 import (
 	"fmt"
+
+	"github.com/onflow/flow-go-sdk"
 )
 
-type InvalidArguments struct {
+type InvalidProposer struct {
 	Description Description
-	Have        uint
-	Want        uint
+	Have        flow.Address
+	Want        flow.Address
 }
 
-func (i InvalidArguments) Error() string {
-	return fmt.Sprintf("invalid transaction arguments (have: %d, want: %d): %s", i.Have, i.Want, i.Description)
+func (i InvalidProposer) Error() string {
+	return fmt.Sprintf("invalid transaction proposer (have: %s, want: %s): %s", i.Have.String(), i.Want.String(), i.Description)
 }

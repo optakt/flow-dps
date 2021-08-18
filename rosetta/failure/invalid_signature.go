@@ -18,12 +18,10 @@ import (
 	"fmt"
 )
 
-type InvalidArguments struct {
+type InvalidSignature struct {
 	Description Description
-	Have        uint
-	Want        uint
 }
 
-func (i InvalidArguments) Error() string {
-	return fmt.Sprintf("invalid transaction arguments (have: %d, want: %d): %s", i.Have, i.Want, i.Description)
+func (i InvalidSignature) Error() string {
+	return fmt.Sprintf("invalid transaction signature: %s", i.Description)
 }

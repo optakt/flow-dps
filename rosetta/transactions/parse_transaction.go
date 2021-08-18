@@ -15,6 +15,7 @@
 package transactions
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/onflow/cadence/encoding/json"
@@ -34,16 +35,45 @@ const (
 	argsRequired = 2
 )
 
-// ParseTransactions processes the flow transaction and translates it to a list of operations and a list of
-// signers.
+// ParseTransactions processes the flow transaction, validates its correctness and translates it
+// to a list of operations and a list of signers.
 func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []identifier.Account, error) {
 
-	// Verify that we have the correct number of authorizers.
+	// Validate the transaction actors. We expect a single authorizer - the sender account.
+	// For now, the sender must also be the proposer and the payer for the transaction.
+
 	if len(tx.Authorizers) != authorizersRequired {
 		return nil, nil, failure.InvalidAuthorizers{
 			Have:        uint(len(tx.Authorizers)),
 			Want:        authorizersRequired,
 			Description: failure.NewDescription("invalid number of authorizers"),
+		}
+	}
+
+	authorizer := tx.Authorizers[0]
+	sender := identifier.Account{
+		Address: authorizer.String(),
+	}
+
+	// Validate the sender address.
+	err := p.validate.Account(sender)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid sender account: %w", err)
+	}
+
+	// Verify that the sender is the payer and the proposer.
+	if tx.Payer != authorizer {
+		return nil, nil, failure.InvalidPayer{
+			Have:        tx.Payer,
+			Want:        authorizer,
+			Description: failure.NewDescription("invalid transaction payer"),
+		}
+	}
+	if tx.ProposalKey.Address != authorizer {
+		return nil, nil, failure.InvalidProposer{
+			Have:        tx.ProposalKey.Address,
+			Want:        authorizer,
+			Description: failure.NewDescription("invalid transaction proposer"),
 		}
 	}
 
@@ -57,7 +87,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 		}
 	}
 
-	// Parse the amount script argument.
+	// Parse and validate the amount argument.
 	val, err := json.Decode(args[0])
 	if err != nil {
 		return nil, nil, failure.InvalidAmount{
@@ -75,7 +105,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	}
 	amount := strconv.FormatUint(amountArg, 10)
 
-	// Parse the receiver script argument.
+	// Parse and validate receiver script argument.
 	val, err = json.Decode(args[1])
 	if err != nil {
 		return nil, nil, failure.InvalidReceiver{
@@ -84,20 +114,31 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 				failure.WithErr(err)),
 		}
 	}
-	receiver := flow.HexToAddress(val.String())
+	receiver := identifier.Account{
+		Address: val.String(),
+	}
+	err = p.validate.Account(receiver)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid receiver account: %w", err)
+	}
 
-	ops := make([]object.Operation, 2)
+	// Validate the reference block identifier.
+	rosBlockID := identifier.Block{
+		Hash: tx.ReferenceBlockID.String(),
+	}
+	_, err = p.validate.Block(rosBlockID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid reference block: %w", err)
+	}
 
 	// Create the send operation.
-	ops[0] = object.Operation{
+	sendOp := object.Operation{
 		ID: identifier.Operation{
 			Index: 0,
 		},
 		RelatedIDs: []identifier.Operation{{Index: 1}},
-		AccountID: identifier.Account{
-			Address: tx.Authorizers[0].String(),
-		},
-		Type: dps.OperationTransfer,
+		AccountID:  sender,
+		Type:       dps.OperationTransfer,
 		Amount: object.Amount{
 			Value: "-" + amount,
 			Currency: identifier.Currency{
@@ -108,15 +149,13 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	}
 
 	// Create the receive operation.
-	ops[1] = object.Operation{
+	receiveOp := object.Operation{
 		ID: identifier.Operation{
 			Index: 1,
 		},
 		RelatedIDs: []identifier.Operation{{Index: 0}},
-		AccountID: identifier.Account{
-			Address: receiver.String(),
-		},
-		Type: dps.OperationTransfer,
+		AccountID:  receiver,
+		Type:       dps.OperationTransfer,
 		Amount: object.Amount{
 			Value: amount,
 			Currency: identifier.Currency{
@@ -126,13 +165,45 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 		},
 	}
 
-	// Create the signers list.
-	signers := make([]identifier.Account, 0)
-	for _, sig := range tx.EnvelopeSignatures {
-		signer := identifier.Account{
-			Address: sig.Address.String(),
+	// Create the operations list.
+	ops := []object.Operation{
+		sendOp,
+		receiveOp,
+	}
+
+	// Since we only support sender as the payer/proposer, we never expect any payload signatures.
+	if len(tx.PayloadSignatures) > 0 {
+		return nil, nil, failure.InvalidSignature{
+			Description: failure.NewDescription("unexpected payload signature found",
+				failure.WithInt("signatures", len(tx.PayloadSignatures))),
 		}
-		signers = append(signers, signer)
+	}
+
+	// We may be parsing an unsigned transaction - if that's the case, we're done.
+	if len(tx.EnvelopeSignatures) == 0 {
+		return ops, nil, nil
+	}
+
+	// We don't support multiple signatures.
+	if len(tx.EnvelopeSignatures) > 1 {
+		return nil, nil, failure.InvalidSignature{
+			Description: failure.NewDescription("unexpected envelope signatures found",
+				failure.WithInt("signatures", len(tx.EnvelopeSignatures))),
+		}
+	}
+
+	// Validate that it is the sender who signed the transaction.
+	signer := tx.EnvelopeSignatures[0].Address
+	if signer != authorizer {
+		return nil, nil, failure.InvalidSignature{
+			Description: failure.NewDescription("invalid signer account",
+				failure.WithString("signer", signer.String())),
+		}
+	}
+
+	// Create the signers list.
+	signers := []identifier.Account{
+		sender,
 	}
 
 	return ops, signers, nil
