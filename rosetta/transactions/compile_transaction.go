@@ -39,27 +39,23 @@ func (p *Parser) CompileTransaction(intent *Intent, metadata object.Metadata) (*
 		return nil, fmt.Errorf("could not generate transfer script: %w", err)
 	}
 
+	// TODO: Allow arbitrary proposal key index
+	// => https://github.com/optakt/flow-dps/issues/369
+
 	// Create the transaction.
 	tx := flow.NewTransaction().
 		SetScript(script).
 		SetReferenceBlockID(flow.HexToID(completed.Hash)).
 		SetPayer(flow.Address(intent.Payer)).
-		SetProposalKey(flow.Address(intent.Proposer), 0, metadata.SequenceNumber). // FIXME: allow arbitrary key index
+		SetProposalKey(flow.Address(intent.Proposer), 0, metadata.SequenceNumber).
 		AddAuthorizer(flow.Address(intent.From)).
 		SetGasLimit(intent.GasLimit)
 
-	// Add the script arguments - the amount and the receiver.
-
-	err = tx.AddArgument(intent.Amount)
-	if err != nil {
-		return nil, fmt.Errorf("could not add amount argument: %w", err)
-	}
-
 	receiver := cadence.NewAddress(flow.BytesToAddress(intent.To.Bytes()))
-	err = tx.AddArgument(receiver)
-	if err != nil {
-		return nil, fmt.Errorf("could not add recipient argument: %w", err)
-	}
+
+	// Add the script arguments - the amount and the receiver.
+	_ = tx.AddArgument(intent.Amount)
+	_ = tx.AddArgument(receiver)
 
 	return tx, nil
 }
