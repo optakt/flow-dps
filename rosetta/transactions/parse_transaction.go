@@ -15,13 +15,13 @@
 package transactions
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -40,30 +40,49 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 
 	// Verify that we have the correct number of authorizers.
 	if len(tx.Authorizers) != authorizersRequired {
-		return nil, nil, fmt.Errorf("invalid authorizer count (have: %v, want: %v)", len(tx.Authorizers), authorizersRequired)
+		return nil, nil, failure.InvalidAuthorizers{
+			Have:        uint(len(tx.Authorizers)),
+			Want:        authorizersRequired,
+			Description: failure.NewDescription("invalid number of authorizers"),
+		}
 	}
 
 	// Verify that the transaction script has the correct number of arguments.
 	args := tx.Arguments
 	if len(args) != argsRequired {
-		return nil, nil, fmt.Errorf("invalid arguments count: (have: %v, want: %v)", len(args), argsRequired)
+		return nil, nil, failure.InvalidArguments{
+			Have:        uint(len(args)),
+			Want:        argsRequired,
+			Description: failure.NewDescription("invalid number of arguments"),
+		}
 	}
 
 	// Parse the amount script argument.
 	val, err := json.Decode(args[0])
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not parse transaction amount: %w", err)
+		return nil, nil, failure.InvalidAmount{
+			RawAmount: string(args[0]),
+			Description: failure.NewDescription("could not parse transaction amount",
+				failure.WithErr(err)),
+		}
 	}
 	amountArg, ok := val.ToGoValue().(uint64)
 	if !ok {
-		return nil, nil, fmt.Errorf("invalid transaction amount: %v", val.String())
+		return nil, nil, failure.InvalidAmount{
+			RawAmount:   string(args[0]),
+			Description: failure.NewDescription("invalid amount"),
+		}
 	}
 	amount := strconv.FormatUint(amountArg, 10)
 
 	// Parse the receiver script argument.
 	val, err = json.Decode(args[1])
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not parse receiver address: %w", err)
+		return nil, nil, failure.InvalidReceiver{
+			RawReceiver: string(args[1]),
+			Description: failure.NewDescription("could not parse transaction receiver address",
+				failure.WithErr(err)),
+		}
 	}
 	receiver := flow.HexToAddress(val.String())
 
@@ -78,8 +97,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 		AccountID: identifier.Account{
 			Address: tx.Authorizers[0].String(),
 		},
-		Type:   dps.OperationTransfer,
-		Status: dps.StatusCompleted,
+		Type: dps.OperationTransfer,
 		Amount: object.Amount{
 			Value: "-" + amount,
 			Currency: identifier.Currency{
@@ -98,8 +116,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 		AccountID: identifier.Account{
 			Address: receiver.String(),
 		},
-		Type:   dps.OperationTransfer,
-		Status: dps.StatusCompleted,
+		Type: dps.OperationTransfer,
 		Amount: object.Amount{
 			Value: amount,
 			Currency: identifier.Currency{
