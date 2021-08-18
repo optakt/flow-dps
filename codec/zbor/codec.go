@@ -28,28 +28,28 @@ type Codec struct {
 }
 
 // NewCodec creates a new Codec.
-func NewCodec() (*Codec, error) {
+func NewCodec() *Codec {
 
+	// We should never fail here if the options are valid, so use panic to keep
+	// the function signature for the codec clean.
 	options := cbor.CanonicalEncOptions()
 	options.Time = cbor.TimeRFC3339Nano
 	encoder, err := options.EncMode()
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize encoder: %w", err)
+		panic(err)
 	}
-
 	compressor, err := zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
 		zstd.WithEncoderDict(Dictionary),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize compressor: %w", err)
+		panic(err)
 	}
-
 	decompressor, err := zstd.NewReader(nil,
 		zstd.WithDecoderDicts(Dictionary),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize decompressor: %w", err)
+		panic(err)
 	}
 
 	c := Codec{
@@ -58,7 +58,7 @@ func NewCodec() (*Codec, error) {
 		decompressor: decompressor,
 	}
 
-	return &c, nil
+	return &c
 }
 
 func (c *Codec) Encode(value interface{}) ([]byte, error) {

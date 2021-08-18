@@ -85,12 +85,8 @@ func run() int {
 	log = log.Level(level)
 	elog := lecho.From(log)
 
-	// Initialize storage library.
-	codec, err := zbor.NewCodec()
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize storage codec")
-		return failure
-	}
+	// Initialize codec.
+	codec := zbor.NewCodec()
 
 	// Initialize the DPS API client and wrap it for easy usage.
 	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())

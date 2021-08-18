@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
@@ -27,7 +28,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/service/index"
+	"github.com/optakt/flow-dps/service/storage"
 )
 
 const (
@@ -71,57 +75,63 @@ func run() int {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 
 	// Open the index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
+	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open badger db")
 		return failure
 	}
 	defer db.Close()
 
-	// We want to pipe everything to stdout in the end; if the user wants to
-	// create a file, he can redirect the output.
-	var writer io.Writer
-	writer = os.Stdout
-	defer os.Stdout.Close()
-
-	// Create the writer(s) for the output format.
-	switch flagEncoding {
-	case encodingNone:
-		// nothing to do
-	case encodingHex:
-		writer = hex.NewEncoder(writer)
-	case encodingBase64:
-		encoder := base64.NewEncoder(base64.StdEncoding, writer)
-		defer encoder.Close()
-		writer = encoder
-	default:
-		log.Error().Str("encoding", flagEncoding).Msg("invalid encoding format specified")
+	// Check if the database is empty.
+	index := index.NewReader(db, storage.New(zbor.NewCodec()))
+	_, err = index.First()
+	if err == nil {
+		log.Error().Msg("database directory already contains index database")
+		return failure
 	}
 
-	// Wrap the output writer in a compressing writer of the given algorithm.
+	// We will consume from stdin; if the user wants to load from a file, he can
+	// pipe it into the command.
+	var reader io.Reader
+	reader = os.Stdin
+	defer os.Stdin.Close()
+
+	// When reading, we first need to decompress, so we start with that
 	switch flagCompression {
 	case compressionNone:
 		// nothing to do
 	case compressionZstd:
-		compressor, _ := zstd.NewWriter(writer, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
-		defer compressor.Close()
-		writer = compressor
+		decompressor, _ := zstd.NewReader(reader)
+		defer decompressor.Close()
+		reader = decompressor
 	case compressionGzip:
-		compressor, _ := gzip.NewWriterLevel(writer, gzip.BestCompression)
-		defer compressor.Close()
-		writer = compressor
+		decompressor, _ := gzip.NewReader(reader)
+		defer decompressor.Close()
+		reader = decompressor
 	default:
 		log.Error().Str("compression", flagCompression).Msg("invalid compression algorithm specified")
 	}
 
-	// Run the DB backup mechanism on top of the writer to create the snapshot.
-	_, err = db.Backup(writer, 0)
+	// After decompression, we can decode the encoding.
+	switch flagEncoding {
+	case encodingNone:
+		// nothing to do
+	case encodingHex:
+		reader = hex.NewDecoder(reader)
+	case encodingBase64:
+		reader = base64.NewDecoder(base64.StdEncoding, reader)
+	default:
+		log.Error().Str("encoding", flagEncoding).Msg("invalid encoding format specified")
+	}
+
+	// Restore the database
+	err = db.Load(reader, runtime.GOMAXPROCS(0))
 	if err != nil {
-		log.Error().Err(err).Msg("snapshot generation failed")
+		log.Error().Err(err).Msg("snapshot restoration failed")
 		return failure
 	}
 
-	log.Info().Msg("snapshot generation complete")
+	log.Info().Msg("snapshot restoration complete")
 
 	return success
 }

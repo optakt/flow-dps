@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/model/flow"
 
@@ -320,8 +319,7 @@ func TestIndex(t *testing.T) {
 func setupIndex(t *testing.T) (*index.Reader, *index.Writer) {
 	t.Helper()
 
-	codec, err := zbor.NewCodec()
-	require.NoError(t, err)
+	codec := zbor.NewCodec()
 
 	db := helpers.InMemoryDB(t)
 	lib := storage.New(codec)

@@ -33,7 +33,7 @@ func protocolCheck(log zerolog.Logger, dir string) error {
 	log.Info().Str("data", dir).Msg("starting protocol state duplicate check")
 
 	// Open the protocol state database.
-	protocol, err := badger.Open(dps.DefaultOptions(dir).WithReadOnly(true).WithBypassLockGuard(true))
+	protocol, err := badger.Open(dps.DefaultOptions(dir).WithReadOnly(true))
 	if err != nil {
 		return fmt.Errorf("could not open protocol state (dir: %s): %w", dir, err)
 	}

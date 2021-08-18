@@ -33,20 +33,19 @@ func compareDuplicates(log zerolog.Logger, dataDir string, indexDir string, dupl
 	log.Info().Msg("comparing duplicates between databases")
 
 	// Initialize the databases.
-	protocol, err := badger.Open(dps.DefaultOptions(dataDir).WithReadOnly(true).WithBypassLockGuard(true))
+	protocol, err := badger.Open(dps.DefaultOptions(dataDir).WithReadOnly(true))
 	if err != nil {
 		return fmt.Errorf("could not open protocol state (dir: %s): %w", dataDir, err)
 	}
 	defer protocol.Close()
-	index, err := badger.Open(dps.DefaultOptions(indexDir).WithReadOnly(true).WithBypassLockGuard(true))
+	index, err := badger.Open(dps.DefaultOptions(indexDir).WithReadOnly(true))
 	if err != nil {
 		return fmt.Errorf("could not open state index (dir: %s): %w", indexDir, err)
 	}
 	defer index.Close()
 
 	// Initialize the storage library.
-	codec, _ := zbor.NewCodec()
-	lib := storage.New(codec)
+	lib := storage.New(zbor.NewCodec())
 
 	// Go through duplicates and compare number and IDs of duplicates beetween databases.
 	for height, duplicateIDs := range duplicates {
