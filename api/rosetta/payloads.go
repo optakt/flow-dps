@@ -65,13 +65,13 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 
 	// Metadata object is the response from our metadata endpoint. Thus, the object
 	// should be okay, but let's validate it anyway.
-	blockID := req.Metadata.ReferenceBlockID
-	if blockID.Index == nil && blockID.Hash == "" {
+	rosBlockID := req.Metadata.ReferenceBlockID
+	if rosBlockID.Index == nil && rosBlockID.Hash == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
 	}
-	if blockID.Hash != "" && len(blockID.Hash) != hexIDSize {
+	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != hexIDSize {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
-			withDetail("have_length", len(blockID.Hash)),
+			withDetail("have_length", len(rosBlockID.Hash)),
 			withDetail("want_length", hexIDSize),
 		))
 	}
@@ -106,14 +106,14 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
 	}
 
-	enc, err := json.Marshal(tx)
+	data, err := json.Marshal(tx)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(txEncoding, err))
 	}
 
 	// We only support a single signer at the moment, so the account only needs to sign the transaction envelope.
 	res := PayloadsResponse{
-		Transaction: string(enc),
+		Transaction: string(data),
 		Payloads: []object.SigningPayload{
 			{
 				AccountID:     identifier.Account{Address: intent.From.Hex()},
