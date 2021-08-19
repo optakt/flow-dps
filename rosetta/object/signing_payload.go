@@ -12,15 +12,14 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package object
 
 import (
-	"fmt"
-
-	"github.com/onflow/flow-go-sdk"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-// CreateTransaction translates the transaction intent to the Flow Transaction struct.
-func (p *Parser) CreateTransaction(intent *Intent) (*flow.Transaction, error) {
-	return nil, fmt.Errorf("TBD - not implemented")
+type SigningPayload struct {
+	AccountID     identifier.Account `json:"account_identifier"`
+	HexBytes      string             `json:"hex_bytes"`
+	SignatureType string             `json:"signature_type"`
 }
