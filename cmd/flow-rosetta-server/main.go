@@ -181,8 +181,9 @@ func run() int {
 	// This group contains all of the Rosetta Construction API endpoints.
 	server.POST("/construction/preprocess", constructCtrl.Preprocess)
 	server.POST("/construction/metadata", constructCtrl.Metadata)
-	server.POST("/construction/submit", constructCtrl.Submit)
+	server.POST("/construction/payloads", constructCtrl.Payloads)
 	server.POST("/construction/hash", constructCtrl.Hash)
+	server.POST("/construction/submit", constructCtrl.Submit)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

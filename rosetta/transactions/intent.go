@@ -35,9 +35,7 @@ type Intent struct {
 	Payer    flow.Address
 	Proposer flow.Address
 
-	ReferenceBlock flow.Identifier
-	SequenceNumber uint64
-	GasLimit       uint64
+	GasLimit uint64
 }
 
 // DeriveIntent derives a transaction Intent from two operations given as input.
