@@ -20,5 +20,6 @@ import (
 
 type Validator interface {
 	Account(address identifier.Account) error
+	Block(rosBlockID identifier.Block) (identifier.Block, error)
 	Currency(currency identifier.Currency) (identifier.Currency, error)
 }

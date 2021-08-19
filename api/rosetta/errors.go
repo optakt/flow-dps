@@ -47,6 +47,8 @@ const (
 	intentDetermination     = "unable to determine transaction intent"
 	referenceBlockRetrieval = "unable to retrieve transaction reference block"
 	sequenceNumberRetrieval = "unable to retrieve account key sequence number"
+	txConstruction          = "unable to construct transaction"
+	txEncoding              = "unable to encode transaction"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
