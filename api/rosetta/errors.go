@@ -15,6 +15,8 @@
 package rosetta
 
 import (
+	"github.com/onflow/flow-go-sdk"
+
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/meta"
@@ -51,6 +53,7 @@ const (
 	sequenceNumberRetrieval = "unable to retrieve account key sequence number"
 	txConstruction          = "unable to construct transaction"
 	txEncoding              = "unable to encode transaction"
+	txParsing               = "unable to parse transaction"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
@@ -75,6 +78,12 @@ func withError(err error) detailFunc {
 func withDetail(key string, val interface{}) detailFunc {
 	return func(details map[string]interface{}) {
 		details[key] = val
+	}
+}
+
+func withAddress(key string, val flow.Address) detailFunc {
+	return func(details map[string]interface{}) {
+		details[key] = val.String()
 	}
 }
 
@@ -192,6 +201,72 @@ func unknownTransaction(fail failure.UnknownTransaction) Error {
 func invalidIntent(fail failure.InvalidIntent) Error {
 	return convertError(
 		configuration.ErrorInvalidTransactionIntent,
+		fail.Description,
+	)
+}
+
+func invalidAuthorizers(fail failure.InvalidAuthorizers) Error {
+	return convertError(
+		configuration.ErrorInvalidAuthorizers,
+		fail.Description,
+		withDetail("have_authorizers", fail.Have),
+		withDetail("want_authorizers", fail.Want),
+	)
+}
+
+func invalidPayer(fail failure.InvalidPayer) Error {
+	return convertError(
+		configuration.ErrorInvalidPayer,
+		fail.Description,
+		withAddress("have_payer", fail.Have),
+		withAddress("want_payer", fail.Want),
+	)
+}
+
+func invalidProposer(fail failure.InvalidProposer) Error {
+	return convertError(
+		configuration.ErrorInvalidProposer,
+		fail.Description,
+		withAddress("have_proposer", fail.Have),
+		withAddress("want_proposer", fail.Want),
+	)
+}
+
+func invalidScript(fail failure.InvalidScript) Error {
+	return convertError(
+		configuration.ErrorInvalidScript,
+		fail.Description,
+	)
+}
+
+func invalidArguments(fail failure.InvalidArguments) Error {
+	return convertError(
+		configuration.ErrorInvalidArguments,
+		fail.Description,
+		withDetail("have_arguments", fail.Have),
+		withDetail("want_arguments", fail.Want),
+	)
+}
+
+func invalidAmount(fail failure.InvalidAmount) Error {
+	return convertError(
+		configuration.ErrorInvalidAmount,
+		fail.Description,
+		withDetail("raw_amount", fail.RawAmount),
+	)
+}
+
+func invalidReceiver(fail failure.InvalidReceiver) Error {
+	return convertError(
+		configuration.ErrorInvalidReceiver,
+		fail.Description,
+		withDetail("raw_receiver", fail.RawReceiver),
+	)
+}
+
+func invalidSignature(fail failure.InvalidSignature) Error {
+	return convertError(
+		configuration.ErrorInvalidSignature,
 		fail.Description,
 	)
 }

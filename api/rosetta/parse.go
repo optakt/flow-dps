@@ -16,11 +16,14 @@ package rosetta
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+
 	"github.com/onflow/flow-go-sdk"
 
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -71,7 +74,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyInvalid, withError(err)))
 	}
 
-	// If the transaction is signed, make sure that we have signatures provided.
+	// If the transaction is signed, make sure that signatures are provided.
 	if req.Signed && len(tx.EnvelopeSignatures) == 0 {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txNoSignatures))
 	}
@@ -83,8 +86,53 @@ func (c *Construction) Parse(ctx echo.Context) error {
 
 	// Parse the transaction and recreate the original list of operations, as well as all signers involved.
 	operations, signers, err := c.parser.ParseTransaction(&tx)
+
+	var iaErr failure.InvalidAuthorizers
+	if errors.As(err, &iaErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
+	}
+	var iacErr failure.InvalidAccount
+	if errors.As(err, &iacErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iacErr))
+	}
+	var ipyErr failure.InvalidPayer
+	if errors.As(err, &ipyErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidPayer(ipyErr))
+	}
+	var iprErr failure.InvalidProposer
+	if errors.As(err, &iprErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidProposer(iprErr))
+	}
+	var isErr failure.InvalidScript
+	if errors.As(err, &isErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidScript(isErr))
+	}
+	var iargErr failure.InvalidArguments
+	if errors.As(err, &iargErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidArguments(iargErr))
+	}
+	var imErr failure.InvalidAmount
+	if errors.As(err, &imErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAmount(imErr))
+	}
+	var irErr failure.InvalidReceiver
+	if errors.As(err, &irErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidReceiver(irErr))
+	}
+	var isgErr failure.InvalidSignature
+	if errors.As(err, &isgErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignature(isgErr))
+	}
+	var ibErr failure.InvalidBlock
+	if errors.As(err, &ibErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
+	}
+	var ubErr failure.UnknownBlock
+	if errors.As(err, &ubErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
+	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyInvalid, withError(err)))
+		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
 	}
 
 	metadata := object.Metadata{
