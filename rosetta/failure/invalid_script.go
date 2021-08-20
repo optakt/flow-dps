@@ -23,5 +23,5 @@ type InvalidScript struct {
 }
 
 func (i InvalidScript) Error() string {
-	return fmt.Sprintf("invalid transaction script: %v", i.Description)
+	return fmt.Sprintf("invalid transaction script: %s", i.Description)
 }
