@@ -20,6 +20,7 @@ import (
 
 type InvalidScript struct {
 	Description Description
+	Script      string
 }
 
 func (i InvalidScript) Error() string {

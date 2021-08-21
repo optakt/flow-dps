@@ -20,9 +20,9 @@ import (
 
 type InvalidAmount struct {
 	Description Description
-	RawAmount   string
+	Amount      string
 }
 
 func (i InvalidAmount) Error() string {
-	return fmt.Sprintf("invalid transaction amount (raw_amount: %s): %s", i.RawAmount, i.Description)
+	return fmt.Sprintf("invalid transaction amount (amount: %s): %s", i.Amount, i.Description)
 }

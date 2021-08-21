@@ -16,6 +16,7 @@ package transactions
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 
@@ -85,6 +86,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	}
 	if !bytes.Equal(script, tx.Script) {
 		return nil, nil, failure.InvalidScript{
+			Script:      string(tx.Script),
 			Description: failure.NewDescription("transaction text is not valid token transfer script"),
 		}
 	}
@@ -103,7 +105,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	val, err := json.Decode(args[0])
 	if err != nil {
 		return nil, nil, failure.InvalidAmount{
-			RawAmount: string(args[0]),
+			Amount: string(args[0]),
 			Description: failure.NewDescription("could not parse transaction amount",
 				failure.WithErr(err)),
 		}
@@ -111,7 +113,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	amountArg, ok := val.ToGoValue().(uint64)
 	if !ok {
 		return nil, nil, failure.InvalidAmount{
-			RawAmount:   string(args[0]),
+			Amount:      string(args[0]),
 			Description: failure.NewDescription("invalid amount"),
 		}
 	}
@@ -121,7 +123,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	val, err = json.Decode(args[1])
 	if err != nil {
 		return nil, nil, failure.InvalidReceiver{
-			RawReceiver: string(args[1]),
+			Receiver: string(args[1]),
 			Description: failure.NewDescription("could not parse transaction receiver address",
 				failure.WithErr(err)),
 		}
@@ -209,7 +211,9 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	if signer != authorizer {
 		return nil, nil, failure.InvalidSignature{
 			Description: failure.NewDescription("invalid signer account",
-				failure.WithString("signer", signer.String())),
+				failure.WithString("have_signer", signer.String()),
+				failure.WithString("want_signer", authorizer.String()),
+				failure.WithString("signature", hex.EncodeToString(tx.EnvelopeSignatures[0].Signature))),
 		}
 	}
 

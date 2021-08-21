@@ -236,6 +236,7 @@ func invalidScript(fail failure.InvalidScript) Error {
 	return convertError(
 		configuration.ErrorInvalidScript,
 		fail.Description,
+		withDetail("script", fail.Script),
 	)
 }
 
@@ -252,7 +253,7 @@ func invalidAmount(fail failure.InvalidAmount) Error {
 	return convertError(
 		configuration.ErrorInvalidAmount,
 		fail.Description,
-		withDetail("raw_amount", fail.RawAmount),
+		withDetail("amount", fail.Amount),
 	)
 }
 
@@ -260,7 +261,7 @@ func invalidReceiver(fail failure.InvalidReceiver) Error {
 	return convertError(
 		configuration.ErrorInvalidReceiver,
 		fail.Description,
-		withDetail("raw_receiver", fail.RawReceiver),
+		withDetail("receiver", fail.Receiver),
 	)
 }
 
