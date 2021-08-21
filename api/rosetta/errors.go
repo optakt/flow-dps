@@ -15,6 +15,8 @@
 package rosetta
 
 import (
+	"github.com/onflow/flow-go-sdk"
+
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/meta"
@@ -23,19 +25,21 @@ import (
 const (
 	invalidJSON = "request does not contain valid JSON-encoded body"
 
-	blockchainEmpty = "blockchain identifier has empty blockchain field"
-	networkEmpty    = "blockchain identifier has empty network field"
-	blockEmpty      = "block identifier has empty index and hash fields"
-	blockLength     = "block identifier has invalid hash field length"
-	addressEmpty    = "account identifier has empty address field"
-	addressLength   = "account identifier has invalid address field length"
-	currenciesEmpty = "currency identifier list is empty"
-	symbolEmpty     = "currency identifier has empty symbol field"
-	txHashEmpty     = "transaction identifier has empty hash field"
-	txLength        = "transaction identifier has invalid hash filed length"
-	txInvalidOps    = "transaction operations are invalid"
-	txBodyEmpty     = "transaction text is empty"
-	txBodyInvalid   = "transaction text is invalid"
+	blockchainEmpty   = "blockchain identifier has empty blockchain field"
+	networkEmpty      = "blockchain identifier has empty network field"
+	blockEmpty        = "block identifier has empty index and hash fields"
+	blockLength       = "block identifier has invalid hash field length"
+	addressEmpty      = "account identifier has empty address field"
+	addressLength     = "account identifier has invalid address field length"
+	currenciesEmpty   = "currency identifier list is empty"
+	symbolEmpty       = "currency identifier has empty symbol field"
+	txHashEmpty       = "transaction identifier has empty hash field"
+	txLength          = "transaction identifier has invalid hash filed length"
+	txInvalidOps      = "transaction operations are invalid"
+	txBodyEmpty       = "transaction text is empty"
+	txBodyInvalid     = "transaction text is invalid"
+	txNoSignatures    = "required signatures missing for signed transaction"
+	txExtraSignatures = "superflous signatures found for unsigned transaction"
 
 	networkCheck            = "unable to check network"
 	blockRetrieval          = "unable to retrieve block"
@@ -49,6 +53,7 @@ const (
 	sequenceNumberRetrieval = "unable to retrieve account key sequence number"
 	txConstruction          = "unable to construct transaction"
 	txEncoding              = "unable to encode transaction"
+	txParsing               = "unable to parse transaction"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
@@ -73,6 +78,12 @@ func withError(err error) detailFunc {
 func withDetail(key string, val interface{}) detailFunc {
 	return func(details map[string]interface{}) {
 		details[key] = val
+	}
+}
+
+func withAddress(key string, val flow.Address) detailFunc {
+	return func(details map[string]interface{}) {
+		details[key] = val.String()
 	}
 }
 
@@ -190,6 +201,73 @@ func unknownTransaction(fail failure.UnknownTransaction) Error {
 func invalidIntent(fail failure.InvalidIntent) Error {
 	return convertError(
 		configuration.ErrorInvalidTransactionIntent,
+		fail.Description,
+	)
+}
+
+func invalidAuthorizers(fail failure.InvalidAuthorizers) Error {
+	return convertError(
+		configuration.ErrorInvalidAuthorizers,
+		fail.Description,
+		withDetail("have_authorizers", fail.Have),
+		withDetail("want_authorizers", fail.Want),
+	)
+}
+
+func invalidPayer(fail failure.InvalidPayer) Error {
+	return convertError(
+		configuration.ErrorInvalidPayer,
+		fail.Description,
+		withAddress("have_payer", fail.Have),
+		withAddress("want_payer", fail.Want),
+	)
+}
+
+func invalidProposer(fail failure.InvalidProposer) Error {
+	return convertError(
+		configuration.ErrorInvalidProposer,
+		fail.Description,
+		withAddress("have_proposer", fail.Have),
+		withAddress("want_proposer", fail.Want),
+	)
+}
+
+func invalidScript(fail failure.InvalidScript) Error {
+	return convertError(
+		configuration.ErrorInvalidScript,
+		fail.Description,
+		withDetail("script", fail.Script),
+	)
+}
+
+func invalidArguments(fail failure.InvalidArguments) Error {
+	return convertError(
+		configuration.ErrorInvalidArguments,
+		fail.Description,
+		withDetail("have_arguments", fail.Have),
+		withDetail("want_arguments", fail.Want),
+	)
+}
+
+func invalidAmount(fail failure.InvalidAmount) Error {
+	return convertError(
+		configuration.ErrorInvalidAmount,
+		fail.Description,
+		withDetail("amount", fail.Amount),
+	)
+}
+
+func invalidReceiver(fail failure.InvalidReceiver) Error {
+	return convertError(
+		configuration.ErrorInvalidReceiver,
+		fail.Description,
+		withDetail("receiver", fail.Receiver),
+	)
+}
+
+func invalidSignature(fail failure.InvalidSignature) Error {
+	return convertError(
+		configuration.ErrorInvalidSignature,
 		fail.Description,
 	)
 }
