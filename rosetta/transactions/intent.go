@@ -88,18 +88,17 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	receive := operations[1]
 
 	// Validate the currencies specified for deposit and withdrawal.
-	var err error
-	send.Amount.Currency, err = p.validate.Currency(send.Amount.Currency)
+	sendSymbol, _, err := p.validate.Currency(send.Amount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sender currency: %w", err)
 	}
-	receive.Amount.Currency, err = p.validate.Currency(receive.Amount.Currency)
+	receiveSymbol, _, err := p.validate.Currency(receive.Amount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("invalid receiver currency: %w", err)
 	}
 
 	// Make sure that both the send and receive operations are for FLOW tokens.
-	if send.Amount.Currency.Symbol != dps.FlowSymbol || receive.Amount.Currency.Symbol != dps.FlowSymbol {
+	if sendSymbol != dps.FlowSymbol || receiveSymbol != dps.FlowSymbol {
 
 		return nil, failure.InvalidIntent{
 			Description: failure.NewDescription("invalid currencies found",
@@ -111,11 +110,11 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	}
 
 	// Validate the sender and the receiver account IDs.
-	err = p.validate.Account(send.AccountID)
+	_, err = p.validate.Account(send.AccountID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sender account: %w", err)
 	}
-	err = p.validate.Account(receive.AccountID)
+	_, err = p.validate.Account(receive.AccountID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid receiver account: %w", err)
 	}

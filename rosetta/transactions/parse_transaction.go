@@ -58,7 +58,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	}
 
 	// Validate the sender address.
-	err := p.validate.Account(sender)
+	_, err := p.validate.Account(sender)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid sender account: %w", err)
 	}
@@ -131,7 +131,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	receiver := identifier.Account{
 		Address: val.String(),
 	}
-	err = p.validate.Account(receiver)
+	_, err = p.validate.Account(receiver)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid receiver account: %w", err)
 	}
@@ -140,7 +140,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	rosBlockID := identifier.Block{
 		Hash: tx.ReferenceBlockID.String(),
 	}
-	_, err = p.validate.Block(rosBlockID)
+	_, _, err = p.validate.Block(rosBlockID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid reference block: %w", err)
 	}
@@ -150,9 +150,8 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 		ID: identifier.Operation{
 			Index: 0,
 		},
-		RelatedIDs: []identifier.Operation{{Index: 1}},
-		AccountID:  sender,
-		Type:       dps.OperationTransfer,
+		AccountID: sender,
+		Type:      dps.OperationTransfer,
 		Amount: object.Amount{
 			Value: "-" + amount,
 			Currency: identifier.Currency{
@@ -167,9 +166,8 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 		ID: identifier.Operation{
 			Index: 1,
 		},
-		RelatedIDs: []identifier.Operation{{Index: 0}},
-		AccountID:  receiver,
-		Type:       dps.OperationTransfer,
+		AccountID: receiver,
+		Type:      dps.OperationTransfer,
 		Amount: object.Amount{
 			Value: amount,
 			Currency: identifier.Currency{
