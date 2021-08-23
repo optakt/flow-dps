@@ -15,11 +15,13 @@
 package transactions
 
 import (
+	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 type Validator interface {
-	Account(address identifier.Account) error
-	Block(rosBlockID identifier.Block) (identifier.Block, error)
-	Currency(currency identifier.Currency) (identifier.Currency, error)
+	Account(rosAccountID identifier.Account) (address flow.Address, err error)
+	Block(rosBlockID identifier.Block) (height uint64, blockID flow.Identifier, err error)
+	Currency(currency identifier.Currency) (symbol string, decimals uint, err error)
 }

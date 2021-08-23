@@ -28,7 +28,7 @@ import (
 func (p *Parser) CompileTransaction(intent *Intent, metadata object.Metadata) (*flow.Transaction, error) {
 
 	// Run validation on the block ID. This also fills in missing information.
-	completed, err := p.validate.Block(metadata.ReferenceBlockID)
+	_, blockID, err := p.validate.Block(metadata.ReferenceBlockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
@@ -45,7 +45,7 @@ func (p *Parser) CompileTransaction(intent *Intent, metadata object.Metadata) (*
 	// Create the transaction.
 	tx := flow.NewTransaction().
 		SetScript(script).
-		SetReferenceBlockID(flow.HexToID(completed.Hash)).
+		SetReferenceBlockID(flow.BytesToID(blockID[:])).
 		SetPayer(flow.Address(intent.Payer)).
 		SetProposalKey(flow.Address(intent.Proposer), 0, metadata.SequenceNumber).
 		AddAuthorizer(flow.Address(intent.From)).
