@@ -12,14 +12,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package retriever
+package failure
 
 import (
-	"github.com/onflow/cadence"
-	"github.com/onflow/flow-go/model/flow"
+	"fmt"
+
+	"github.com/onflow/flow-go-sdk"
 )
 
-type Invoker interface {
-	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
-	GetAccount(address flow.Address, height uint64) (*flow.Account, error)
+type InvalidProposalKey struct {
+	Description Description
+	Address     flow.Address
+	Index       int
+}
+
+func (i InvalidProposalKey) Error() string {
+	return fmt.Sprintf("invalid proposal key (address: %s, key index: %d): %s", i.Address.String(), i.Index, i.Description)
 }

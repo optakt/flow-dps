@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/onflow/cadence"
+	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -386,4 +387,51 @@ func (r *Retriever) operations(txID flow.Identifier, events []flow.Event) ([]*ob
 	}
 
 	return ops, nil
+}
+
+func (r *Retriever) AccountSequenceNumber(rosAccountID identifier.Account, keyIndex int) (uint64, error) {
+
+	// Run validation on the account qualifier. If it is valid, this will return
+	// the associated Flow account address.
+	address, err := r.validate.Account(rosAccountID)
+	if err != nil {
+		return 0, fmt.Errorf("could not validate account: %w", err)
+	}
+
+	// Get the latest block.
+	last, err := r.index.Last()
+	if err != nil {
+		return 0, fmt.Errorf("could not find last indexed block: %w", err)
+	}
+
+	// Retrieve the account at the latest block.
+	account, err := r.invoke.GetAccount(address, last)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve account: %w", err)
+	}
+
+	// Lookup the specified key.
+	for _, key := range account.Keys {
+
+		if key.Index != keyIndex {
+			continue
+		}
+
+		if key.Revoked {
+			return 0, failure.InvalidProposalKey{
+				Address:     sdk.BytesToAddress(address[:]),
+				Index:       keyIndex,
+				Description: failure.NewDescription("account key was revoked"),
+			}
+		}
+
+		return key.SeqNumber, nil
+	}
+
+	// We haven't found the specified key.
+	return 0, failure.InvalidProposalKey{
+		Address:     sdk.BytesToAddress(address[:]),
+		Index:       keyIndex,
+		Description: failure.NewDescription("account key not found"),
+	}
 }

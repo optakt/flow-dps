@@ -271,3 +271,12 @@ func invalidSignature(fail failure.InvalidSignature) Error {
 		fail.Description,
 	)
 }
+
+func invalidProposalKey(fail failure.InvalidProposalKey) Error {
+	return convertError(
+		configuration.ErrorInvalidProposalKey,
+		fail.Description,
+		withAddress("account", fail.Address),
+		withDetail("index", fail.Index),
+	)
+}

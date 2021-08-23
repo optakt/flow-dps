@@ -15,13 +15,12 @@
 package rosetta
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/onflow/flow-go-sdk"
-
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -44,7 +43,7 @@ type MetadataResponse struct {
 // Metadata implements the /construction/metadata endpoint of the Rosetta Construction API.
 // Metadata endpoint returns information required for constructing the transaction.
 // For Flow, that information includes the reference block and sequence number. Reference block
-// is the last indexed blcok, and is used to track transaction expiration. Sequence number is
+// is the last indexed block, and is used to track transaction expiration. Sequence number is
 // the proposer account's public key sequence number. Sequence number is incremented for each
 // transaction and is used to prevent replay attacks.
 // See https://www.rosetta-api.org/docs/ConstructionApi.html#constructionmetadata
@@ -78,8 +77,17 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(referenceBlockRetrieval, err))
 	}
 
-	proposer := flow.HexToAddress(req.Options.AccountID.Address)
-	sequenceNr, err := getSequenceNumber(proposer)
+	// TODO: Allow arbitrary proposal key index
+	// => https://github.com/optakt/flow-dps/issues/369
+	sequenceNr, err := c.retrieve.AccountSequenceNumber(req.Options.AccountID, 0)
+	var iaErr failure.InvalidAccount
+	if errors.As(err, &iaErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
+	}
+	var ipErr failure.InvalidProposalKey
+	if errors.As(err, &ipErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidProposalKey(ipErr))
+	}
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(sequenceNumberRetrieval, err))
 	}
@@ -92,9 +100,4 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusOK, res)
-}
-
-// FIXME: implement getSequenceNumber()
-func getSequenceNumber(address flow.Address) (uint64, error) {
-	return 0, fmt.Errorf("TBD: not implemented")
 }
