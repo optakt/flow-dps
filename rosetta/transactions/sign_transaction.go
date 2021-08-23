@@ -23,7 +23,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-// SignTransaction will add the given signature to the transaction.
+// SignTransaction adds the given signature to the transaction.
 func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signature) error {
 
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
@@ -73,6 +73,7 @@ func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signatur
 	}
 
 	// TODO: allow arbitrary key index
+	// => https://github.com/optakt/flow-dps/issues/369
 	tx.AddEnvelopeSignature(signer, 0, bytes)
 
 	return nil
