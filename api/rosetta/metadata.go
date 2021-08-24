@@ -92,9 +92,16 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(sequenceNumberRetrieval, err))
 	}
 
+	// In the `parse` endpoint, we parse a transaction to produce the original metadata (and operations).
+	// Since we can only deduce the block hash from the transaction, we will omit the block height from
+	// the identifier here, to keep the data identical.
+	rosBlockID := identifier.Block{
+		Hash: current.Hash,
+	}
+
 	res := MetadataResponse{
 		Metadata: object.Metadata{
-			ReferenceBlockID: current,
+			ReferenceBlockID: rosBlockID,
 			SequenceNumber:   sequenceNr,
 		},
 	}
