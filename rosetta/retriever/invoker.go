@@ -21,5 +21,5 @@ import (
 
 type Invoker interface {
 	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
-	GetAccount(address flow.Address, height uint64) (*flow.Account, error)
+	Account(address flow.Address, height uint64) (*flow.Account, error)
 }

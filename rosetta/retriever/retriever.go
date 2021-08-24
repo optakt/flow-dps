@@ -405,7 +405,7 @@ func (r *Retriever) SequenceNumber(rosAccountID identifier.Account, keyIndex int
 	}
 
 	// Retrieve the account at the latest block.
-	account, err := r.invoke.GetAccount(address, last)
+	account, err := r.invoke.Account(address, last)
 	if err != nil {
 		return 0, fmt.Errorf("could not retrieve account: %w", err)
 	}
