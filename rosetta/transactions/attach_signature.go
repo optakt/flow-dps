@@ -24,8 +24,8 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-// SignTransaction adds the given signature to the transaction.
-func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signature) (*flow.Transaction, error) {
+// AttachSignature adds the given signature to the transaction.
+func (p *Parser) AttachSignature(tx *flow.Transaction, signature object.Signature) (*flow.Transaction, error) {
 
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
 	if len(tx.Authorizers) != authorizersRequired {

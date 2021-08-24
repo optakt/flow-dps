@@ -27,5 +27,5 @@ type Parser interface {
 	DeriveIntent(operations []object.Operation) (intent *transactions.Intent, err error)
 	CompileTransaction(intent *transactions.Intent, metadata object.Metadata) (tx *flow.Transaction, err error)
 	ParseTransaction(tx *flow.Transaction) (operations []object.Operation, signers []identifier.Account, err error)
-	SignTransaction(unsignedTx *flow.Transaction, signature object.Signature) (tx *flow.Transaction, err error)
+	AttachSignature(unsignedTx *flow.Transaction, signature object.Signature) (tx *flow.Transaction, err error)
 }

@@ -81,7 +81,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txBodyInvalid, withError(err)))
 	}
 
-	tx, err := c.parser.SignTransaction(&unsignedTx, signature)
+	tx, err := c.parser.AttachSignature(&unsignedTx, signature)
 	var iaErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
