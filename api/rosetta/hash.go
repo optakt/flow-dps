@@ -73,5 +73,4 @@ func (c *Construction) Hash(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusOK, res)
-
 }

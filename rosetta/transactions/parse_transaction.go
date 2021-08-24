@@ -215,6 +215,9 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 		}
 	}
 
+	// TODO: Validate the actual signature.
+	// => https://github.com/optakt/flow-dps/issues/376
+
 	// Create the signers list.
 	signers := []identifier.Account{
 		sender,
