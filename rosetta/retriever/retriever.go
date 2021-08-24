@@ -410,28 +410,30 @@ func (r *Retriever) SequenceNumber(rosAccountID identifier.Account, keyIndex int
 		return 0, fmt.Errorf("could not retrieve account: %w", err)
 	}
 
-	// Lookup the specified key.
+	// Create a key lookup map.
+	keys := make(map[int]flow.AccountPublicKey)
 	for _, key := range account.Keys {
-
-		if key.Index != keyIndex {
-			continue
-		}
-
-		if key.Revoked {
-			return 0, failure.InvalidProposalKey{
-				Address:     sdk.BytesToAddress(address[:]),
-				Index:       keyIndex,
-				Description: failure.NewDescription("account key was revoked"),
-			}
-		}
-
-		return key.SeqNumber, nil
+		keys[key.Index] = key
 	}
 
-	// We haven't found the specified key.
-	return 0, failure.InvalidProposalKey{
-		Address:     sdk.BytesToAddress(address[:]),
-		Index:       keyIndex,
-		Description: failure.NewDescription("account key not found"),
+	// Lookup the specified key.
+	key, ok := keys[keyIndex]
+	if !ok {
+		return 0, failure.InvalidProposalKey{
+			Address:     sdk.BytesToAddress(address[:]),
+			Index:       keyIndex,
+			Description: failure.NewDescription("account key not found"),
+		}
 	}
+
+	// Check if the key is still valid.
+	if key.Revoked {
+		return 0, failure.InvalidProposalKey{
+			Address:     sdk.BytesToAddress(address[:]),
+			Index:       keyIndex,
+			Description: failure.NewDescription("account key was revoked"),
+		}
+	}
+
+	return key.SeqNumber, nil
 }
