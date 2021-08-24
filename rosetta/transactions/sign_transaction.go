@@ -24,11 +24,11 @@ import (
 )
 
 // SignTransaction adds the given signature to the transaction.
-func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signature) error {
+func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signature) (*flow.Transaction, error) {
 
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
 	if len(tx.Authorizers) != authorizersRequired {
-		return failure.InvalidAuthorizers{
+		return nil, failure.InvalidAuthorizers{
 			Have:        uint(len(tx.Authorizers)),
 			Want:        authorizersRequired,
 			Description: failure.NewDescription("invalid number of authorizers"),
@@ -39,7 +39,7 @@ func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signatur
 
 	// Verify that the sender is the payer, since it is the payer that needs to sign the envelope.
 	if tx.Payer != sender {
-		return failure.InvalidPayer{
+		return nil, failure.InvalidPayer{
 			Have:        tx.Payer,
 			Want:        sender,
 			Description: failure.NewDescription("invalid transaction payer"),
@@ -48,7 +48,7 @@ func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signatur
 
 	// Verify that we do not already have signatures.
 	if len(tx.EnvelopeSignatures) > 0 {
-		return failure.InvalidSignature{
+		return nil, failure.InvalidSignature{
 			Description: failure.NewDescription("unexpected envelope signatures found",
 				failure.WithInt("signatures", len(tx.EnvelopeSignatures))),
 		}
@@ -57,7 +57,7 @@ func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signatur
 	// Verify that the signature belongs to the sender.
 	signer := flow.HexToAddress(signature.SigningPayload.AccountID.Address)
 	if signer != sender {
-		return failure.InvalidSignature{
+		return nil, failure.InvalidSignature{
 			Description: failure.NewDescription("invalid signer account",
 				failure.WithString("have_signer", signer.String()),
 				failure.WithString("want_signer", sender.String())),
@@ -66,15 +66,19 @@ func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signatur
 
 	bytes, err := hex.DecodeString(signature.HexBytes)
 	if err != nil {
-		return failure.InvalidSignature{
+		return nil, failure.InvalidSignature{
 			Description: failure.NewDescription("invalid signature payload",
 				failure.WithErr(err)),
 		}
 	}
 
+	// Copy the transaction and add the signature.
+	copyTx := *tx
+	signedTx := &copyTx
+
 	// TODO: allow arbitrary key index
 	// => https://github.com/optakt/flow-dps/issues/369
-	tx.AddEnvelopeSignature(signer, 0, bytes)
+	signedTx.AddEnvelopeSignature(signer, 0, bytes)
 
-	return nil
+	return signedTx, nil
 }

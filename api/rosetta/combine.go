@@ -75,13 +75,13 @@ func (c *Construction) Combine(ctx echo.Context) error {
 	}
 
 	// Unpack the transaction blob.
-	var transaction flow.Transaction
-	err = json.Unmarshal([]byte(req.UnsignedTransaction), &transaction)
+	var unsignedTx flow.Transaction
+	err = json.Unmarshal([]byte(req.UnsignedTransaction), &unsignedTx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txBodyInvalid, withError(err)))
 	}
 
-	err = c.parser.SignTransaction(&transaction, signature)
+	tx, err := c.parser.SignTransaction(&unsignedTx, signature)
 	var iaErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
@@ -98,7 +98,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, internal(txSigning, err))
 	}
 
-	data, err := json.Marshal(transaction)
+	data, err := json.Marshal(tx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txEncoding, err))
 	}
