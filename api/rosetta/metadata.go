@@ -79,7 +79,7 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 
 	// TODO: Allow arbitrary proposal key index
 	// => https://github.com/optakt/flow-dps/issues/369
-	sequenceNr, err := c.retrieve.AccountSequenceNumber(req.Options.AccountID, 0)
+	sequenceNr, err := c.retrieve.SequenceNumber(req.Options.AccountID, 0)
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))

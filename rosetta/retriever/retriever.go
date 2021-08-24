@@ -389,7 +389,7 @@ func (r *Retriever) operations(txID flow.Identifier, events []flow.Event) ([]*ob
 	return ops, nil
 }
 
-func (r *Retriever) AccountSequenceNumber(rosAccountID identifier.Account, keyIndex int) (uint64, error) {
+func (r *Retriever) SequenceNumber(rosAccountID identifier.Account, keyIndex int) (uint64, error) {
 
 	// Run validation on the account qualifier. If it is valid, this will return
 	// the associated Flow account address.
