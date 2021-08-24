@@ -16,6 +16,7 @@ package transactions
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"github.com/onflow/flow-go-sdk"
 
@@ -73,8 +74,10 @@ func (p *Parser) SignTransaction(tx *flow.Transaction, signature object.Signatur
 	}
 
 	// Copy the transaction and add the signature.
-	copyTx := *tx
-	signedTx := &copyTx
+	signedTx, err := flow.DecodeTransaction(tx.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("could not copy transaction: %w", err)
+	}
 
 	// TODO: allow arbitrary key index
 	// => https://github.com/optakt/flow-dps/issues/369
