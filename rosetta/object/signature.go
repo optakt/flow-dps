@@ -12,20 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package object
 
-import (
-	"github.com/onflow/cadence"
-	"github.com/onflow/flow-go/model/flow"
-)
+type Signature struct {
+	SigningPayload SigningPayload `json:"signing_payload"`
+	SignatureType  string         `json:"signature_type"`
+	HexBytes       string         `json:"hex_bytes"`
+	PublicKey      PublicKey      `json:"public_key"`
+}
 
-// Intent describes the intent of an array of Rosetta operations.
-type Intent struct {
-	From     flow.Address
-	To       flow.Address
-	Amount   cadence.UFix64
-	Payer    flow.Address
-	Proposer flow.Address
-
-	GasLimit uint64
+type PublicKey struct {
+	HexBytes  string `json:"hex_bytes"`
+	CurveType string `json:"curve_type"`
 }
