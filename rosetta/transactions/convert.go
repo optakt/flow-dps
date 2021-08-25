@@ -12,20 +12,13 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package transactions
 
 import (
-	"fmt"
-
+	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type InvalidPayer struct {
-	Description Description
-	Have        flow.Address
-	Want        flow.Address
-}
-
-func (i InvalidPayer) Error() string {
-	return fmt.Sprintf("invalid transaction payer (have: %s, want: %s): %s", i.Have.String(), i.Want.String(), i.Description)
+func convertAddress(address sdk.Address) flow.Address {
+	return flow.BytesToAddress(address[:])
 }

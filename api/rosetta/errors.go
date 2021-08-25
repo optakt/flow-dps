@@ -15,7 +15,7 @@
 package rosetta
 
 import (
-	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/failure"
@@ -272,5 +272,14 @@ func invalidSignature(fail failure.InvalidSignature) Error {
 	return convertError(
 		configuration.ErrorInvalidSignature,
 		fail.Description,
+	)
+}
+
+func invalidProposalKey(fail failure.InvalidProposalKey) Error {
+	return convertError(
+		configuration.ErrorInvalidProposalKey,
+		fail.Description,
+		withAddress("account", fail.Address),
+		withDetail("index", fail.Index),
 	)
 }

@@ -853,7 +853,7 @@ func TestServer_GetAccount(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
+		invoker.AccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericAccount.Address, address)
 			assert.Equal(t, mocks.GenericHeight, height)
 
@@ -895,7 +895,7 @@ func TestServer_GetAccount(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
+		invoker.AccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -921,7 +921,7 @@ func TestServer_GetAccountAtLatestBlock(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
+		invoker.AccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericAccount.Address, address)
 			assert.Equal(t, mocks.GenericHeight, height)
 
@@ -963,7 +963,7 @@ func TestServer_GetAccountAtLatestBlock(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
+		invoker.AccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -989,7 +989,7 @@ func TestServer_GetAccountAtBlockHeight(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
+		invoker.AccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericAccount.Address, address)
 			assert.Equal(t, mocks.GenericHeight+999, height)
 
@@ -1017,7 +1017,7 @@ func TestServer_GetAccountAtBlockHeight(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
+		invoker.AccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 

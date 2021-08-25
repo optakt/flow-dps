@@ -27,4 +27,5 @@ type Retriever interface {
 	Block(rosBlockID identifier.Block) (*object.Block, []identifier.Transaction, error)
 	Transaction(rosBlockID identifier.Block, rosTxID identifier.Transaction) (*object.Transaction, error)
 	Balances(rosBlockID identifier.Block, rosAccountID identifier.Account, rosCurrencies []identifier.Currency) (identifier.Block, []object.Amount, error)
+	SequenceNumber(rosAccountID identifier.Account, keyIndex int) (uint64, error)
 }

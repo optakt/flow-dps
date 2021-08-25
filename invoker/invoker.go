@@ -126,7 +126,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	return proc.Value, nil
 }
 
-func (i *Invoker) GetAccount(address flow.Address, height uint64) (*flow.Account, error) {
+func (i *Invoker) Account(address flow.Address, height uint64) (*flow.Account, error) {
 	// Look up the current block and commit for the block.
 	header, err := i.index.Header(height)
 	if err != nil {

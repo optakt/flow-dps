@@ -387,3 +387,52 @@ func (r *Retriever) operations(txID flow.Identifier, events []flow.Event) ([]*ob
 
 	return ops, nil
 }
+
+func (r *Retriever) SequenceNumber(rosAccountID identifier.Account, keyIndex int) (uint64, error) {
+
+	// Run validation on the account qualifier. If it is valid, this will return
+	// the associated Flow account address.
+	address, err := r.validate.Account(rosAccountID)
+	if err != nil {
+		return 0, fmt.Errorf("could not validate account: %w", err)
+	}
+
+	// Get the latest block.
+	last, err := r.index.Last()
+	if err != nil {
+		return 0, fmt.Errorf("could not find last indexed block: %w", err)
+	}
+
+	// Retrieve the account at the latest block.
+	account, err := r.invoke.Account(address, last)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve account: %w", err)
+	}
+
+	// Create a key lookup map.
+	keys := make(map[int]flow.AccountPublicKey)
+	for _, key := range account.Keys {
+		keys[key.Index] = key
+	}
+
+	// Lookup the specified key.
+	key, ok := keys[keyIndex]
+	if !ok {
+		return 0, failure.InvalidProposalKey{
+			Address:     address,
+			Index:       keyIndex,
+			Description: failure.NewDescription("account key not found"),
+		}
+	}
+
+	// Check if the key is still valid.
+	if key.Revoked {
+		return 0, failure.InvalidProposalKey{
+			Address:     address,
+			Index:       keyIndex,
+			Description: failure.NewDescription("account key was revoked"),
+		}
+	}
+
+	return key.SeqNumber, nil
+}
