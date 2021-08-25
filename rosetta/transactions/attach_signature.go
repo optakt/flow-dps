@@ -41,8 +41,8 @@ func (p *Parser) AttachSignature(tx *flow.Transaction, signature object.Signatur
 	// Verify that the sender is the payer, since it is the payer that needs to sign the envelope.
 	if tx.Payer != sender {
 		return nil, failure.InvalidPayer{
-			Have:        tx.Payer,
-			Want:        sender,
+			Have:        convertAddress(tx.Payer),
+			Want:        convertAddress(sender),
 			Description: failure.NewDescription("invalid transaction payer"),
 		}
 	}
