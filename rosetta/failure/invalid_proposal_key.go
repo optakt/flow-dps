@@ -27,5 +27,5 @@ type InvalidProposalKey struct {
 }
 
 func (i InvalidProposalKey) Error() string {
-	return fmt.Sprintf("invalid proposal key (address: %s, key index: %d): %s", i.Address.String(), i.Index, i.Description)
+	return fmt.Sprintf("invalid proposal key (address: %s, key index: %d): %s", i.Address, i.Index, i.Description)
 }
