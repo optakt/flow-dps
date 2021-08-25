@@ -17,6 +17,7 @@ package execution_test
 import (
 	"bytes"
 	"io"
+	"reflect"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -33,6 +34,8 @@ import (
 )
 
 func TestFollower_OnBlockFinalized(t *testing.T) {
+	blockData := fakeBlockData(t)
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
@@ -41,13 +44,9 @@ func TestFollower_OnBlockFinalized(t *testing.T) {
 		blocks := mocks.BaselineDownloader(t)
 
 		codec := mocks.BaselineCodec(t)
-		blockData := execution.BlockData{
-			Block: &flow.Block{
-				Header: mocks.GenericHeader,
-			},
-		}
 		codec.UnmarshalFunc = func(_ []byte, value interface{}) error {
-			value = &blockData
+			// Fake a successful unmarshalling.
+			reflect.ValueOf(value).Elem().Set(reflect.ValueOf(blockData))
 			return nil
 		}
 
@@ -86,32 +85,7 @@ func TestFollower_OnBlockFinalized(t *testing.T) {
 }
 
 func TestFollower_IndexAll(t *testing.T) {
-	var collections []*entity.CompleteCollection
-	for _, guar := range mocks.GenericGuarantees(4) {
-		collections = append(collections, &entity.CompleteCollection{
-			Guarantee:    guar,
-			Transactions: mocks.GenericTransactions(2),
-		})
-	}
-
-	var events []*flow.Event
-	for _, event := range mocks.GenericEvents(4) {
-		events = append(events, &event)
-	}
-
-	blockData := execution.BlockData{
-		Block: &flow.Block{
-			Header: mocks.GenericHeader,
-			Payload: &flow.Payload{
-				Guarantees: mocks.GenericGuarantees(4),
-				Seals:      mocks.GenericSeals(4),
-			},
-		},
-		Collections: collections,
-		TxResults:   mocks.GenericResults(4),
-		Events:      events,
-		TrieUpdates: []*ledger.TrieUpdate{mocks.GenericTrieUpdate},
-	}
+	blockData := fakeBlockData(t)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -123,7 +97,8 @@ func TestFollower_IndexAll(t *testing.T) {
 
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(_ []byte, value interface{}) error {
-			value = &blockData
+			// Fake a successful unmarshalling.
+			reflect.ValueOf(value).Elem().Set(reflect.ValueOf(blockData))
 			return nil
 		}
 
@@ -137,6 +112,40 @@ func TestFollower_IndexAll(t *testing.T) {
 		//        tested with a proper integration test. Will be done once we are sure
 		//        that this design works for us.
 		// Assert that no errors occurred which means that the indexing was successful.
-		assert.Empty(t, buffer.Bytes())
+		assert.Empty(t, buffer.String())
 	})
+}
+
+func fakeBlockData(t *testing.T) execution.BlockData {
+	t.Helper()
+
+	var collections []*entity.CompleteCollection
+	for _, guar := range mocks.GenericGuarantees(1) {
+		collections = append(collections, &entity.CompleteCollection{
+			Guarantee:    guar,
+			Transactions: mocks.GenericTransactions(2),
+		})
+	}
+
+	var events []*flow.Event
+	for _, event := range mocks.GenericEvents(4) {
+		event := event
+		events = append(events, &event)
+	}
+
+	blockData := execution.BlockData{
+		Block: &flow.Block{
+			Header: mocks.GenericHeader,
+			Payload: &flow.Payload{
+				Guarantees: mocks.GenericGuarantees(1),
+				Seals:      mocks.GenericSeals(4),
+			},
+		},
+		Collections: collections,
+		TxResults:   mocks.GenericResults(4),
+		Events:      events,
+		TrieUpdates: []*ledger.TrieUpdate{mocks.GenericTrieUpdate},
+	}
+
+	return blockData
 }

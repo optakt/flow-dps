@@ -18,41 +18,33 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 
-	"github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
 )
 
 type executionFollower interface {
-	OnBlockFinalized(finalizedBlockID flow.Identifier)
+	OnBlockFinalized(finalID flow.Identifier)
 }
 
 type Follower struct {
 	log zerolog.Logger
 
-	db        *badger.DB
-	consensus follower.ConsensusFollower
-	execution executionFollower
+	db *badger.DB
 
 	height  uint64
 	blockID flow.Identifier
 }
 
-func New(log zerolog.Logger, execution executionFollower, consensus follower.ConsensusFollower, db *badger.DB) *Follower {
+func New(log zerolog.Logger, db *badger.DB) *Follower {
 	f := Follower{
 		log: log,
-
-		consensus: consensus,
-		execution: execution,
-		db:        db,
+		db:  db,
 	}
-
-	consensus.AddOnBlockFinalizedConsumer(f.OnBlockFinalized)
 
 	return &f
 }
 
-func (f *Follower) OnBlockFinalized(finalizedBlockID flow.Identifier) {
+func (f *Follower) OnBlockFinalized(finalID flow.Identifier) {
 	var height uint64
 	err := f.db.View(operation.RetrieveFinalizedHeight(&height))
 	if err != nil {
@@ -61,9 +53,7 @@ func (f *Follower) OnBlockFinalized(finalizedBlockID flow.Identifier) {
 	}
 
 	f.height = height
-	f.blockID = finalizedBlockID
-
-	f.execution.OnBlockFinalized(finalizedBlockID)
+	f.blockID = finalID
 }
 
 func (f *Follower) Height() uint64 {

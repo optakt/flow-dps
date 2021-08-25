@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
 
-	"github.com/optakt/flow-dps/bucket/gcp"
+	gcp2 "github.com/optakt/flow-dps/gcp"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -53,7 +53,7 @@ func TestReader_Read(t *testing.T) {
 
 	bucket := client.Bucket("my-bucket")
 
-	downloader := gcp.NewReader(bucket)
+	downloader := gcp2.NewReader(bucket)
 
 	got, err := downloader.Read(blockID)
 

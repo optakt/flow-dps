@@ -21,7 +21,7 @@ import (
 )
 
 type ExecutionFollower struct {
-	OnBlockFinalizedFunc func(finalizedBlockID flow.Identifier)
+	OnBlockFinalizedFunc func(finalID flow.Identifier)
 	HeightFunc           func() uint64
 }
 
@@ -29,7 +29,7 @@ func BaselineExecutionFollower(t *testing.T) *ExecutionFollower {
 	t.Helper()
 
 	f := ExecutionFollower{
-		OnBlockFinalizedFunc: func(finalizedBlockID flow.Identifier) {},
+		OnBlockFinalizedFunc: func(finalID flow.Identifier) {},
 		HeightFunc: func() uint64 {
 			return GenericHeight
 		},
@@ -38,8 +38,8 @@ func BaselineExecutionFollower(t *testing.T) *ExecutionFollower {
 	return &f
 }
 
-func (f *ExecutionFollower) OnBlockFinalized(finalizedBlockID flow.Identifier) {
-	f.OnBlockFinalizedFunc(finalizedBlockID)
+func (f *ExecutionFollower) OnBlockFinalized(finalID flow.Identifier) {
+	f.OnBlockFinalizedFunc(finalID)
 }
 
 func (f *ExecutionFollower) Height() uint64 {

@@ -39,11 +39,10 @@ import (
 	"github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/flow"
 	api "github.com/optakt/flow-dps/api/dps"
-	"github.com/optakt/flow-dps/bucket"
-	"github.com/optakt/flow-dps/bucket/gcp"
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/follower/consensus"
 	"github.com/optakt/flow-dps/follower/execution"
+	"github.com/optakt/flow-dps/gcp"
 	"github.com/optakt/flow-dps/metrics/output"
 	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
@@ -217,7 +216,7 @@ func run() int {
 	}
 
 	bkt := client.Bucket(flagBucket)
-	downloader := bucket.NewDownloader(gcp.NewReader(bkt))
+	downloader := gcp.NewReader(bkt)
 
 	host, portStr, err := net.SplitHostPort(flagPeerAddr)
 	if err != nil {
@@ -249,6 +248,8 @@ func run() int {
 		Port:             uint(port),
 		NetworkPublicKey: key,
 	}}
+	execution := execution.New(log, downloader, codec, data)
+	consensus := consensus.New(log, data)
 	follower, err := follower.NewConsensusFollower(nodeID, bootstrapIdentities, flagBindAddr, follower.WithDataDir(flagData))
 	if err != nil {
 		log.Error().
@@ -257,13 +258,13 @@ func run() int {
 			Msg("could not create consensus follower")
 		return failure
 	}
+	follower.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
+	follower.AddOnBlockFinalizedConsumer(execution.OnBlockFinalized)
 
-	execution := execution.New(log, downloader, codec, data)
 	chain := chain.FromFollower(log, execution, data)
 
 	// FIXME: Is the consensus needed anywhere besides existing to make it index things
 	//  and call the exec follower's callback.
-	_ = consensus.New(log, execution, follower, data)
 
 	// Writer is responsible for writing the index data to the index database.
 	writer := index.NewWriter(db, storage)
