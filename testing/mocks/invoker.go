@@ -22,8 +22,8 @@ import (
 )
 
 type Invoker struct {
-	ScriptFunc     func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
-	GetAccountFunc func(address flow.Address, height uint64) (*flow.Account, error)
+	ScriptFunc  func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
+	AccountFunc func(address flow.Address, height uint64) (*flow.Account, error)
 }
 
 func BaselineInvoker(t *testing.T) *Invoker {
@@ -33,7 +33,7 @@ func BaselineInvoker(t *testing.T) *Invoker {
 		ScriptFunc: func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
 			return GenericAmount(0), nil
 		},
-		GetAccountFunc: func(address flow.Address, height uint64) (*flow.Account, error) {
+		AccountFunc: func(address flow.Address, height uint64) (*flow.Account, error) {
 			return &GenericAccount, nil
 		},
 	}
@@ -45,6 +45,6 @@ func (i *Invoker) Script(height uint64, script []byte, parameters []cadence.Valu
 	return i.ScriptFunc(height, script, parameters)
 }
 
-func (i *Invoker) GetAccount(address flow.Address, height uint64) (*flow.Account, error) {
-	return i.GetAccountFunc(address, height)
+func (i *Invoker) Account(address flow.Address, height uint64) (*flow.Account, error) {
+	return i.AccountFunc(address, height)
 }

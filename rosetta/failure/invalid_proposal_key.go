@@ -20,12 +20,12 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type InvalidPayer struct {
+type InvalidProposalKey struct {
 	Description Description
-	Have        flow.Address
-	Want        flow.Address
+	Address     flow.Address
+	Index       int
 }
 
-func (i InvalidPayer) Error() string {
-	return fmt.Sprintf("invalid transaction payer (have: %s, want: %s): %s", i.Have.String(), i.Want.String(), i.Description)
+func (i InvalidProposalKey) Error() string {
+	return fmt.Sprintf("invalid proposal key (address: %s, key index: %d): %s", i.Address, i.Index, i.Description)
 }

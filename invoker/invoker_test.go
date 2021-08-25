@@ -151,7 +151,7 @@ func TestInvoker_Script(t *testing.T) {
 	})
 }
 
-func TestInvoker_GetAccount(t *testing.T) {
+func TestInvoker_Account(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
@@ -176,7 +176,7 @@ func TestInvoker_GetAccount(t *testing.T) {
 		invoker.vm = vm
 		invoker.index = index
 
-		account, err := invoker.GetAccount(mocks.GenericAccount.Address, mocks.GenericHeight)
+		account, err := invoker.Account(mocks.GenericAccount.Address, mocks.GenericHeight)
 
 		assert.NoError(t, err)
 		assert.Equal(t, &mocks.GenericAccount, account)
@@ -193,12 +193,12 @@ func TestInvoker_GetAccount(t *testing.T) {
 		invoker := baselineInvoker(t)
 		invoker.index = index
 
-		_, err := invoker.GetAccount(mocks.GenericAccount.Address, mocks.GenericHeight)
+		_, err := invoker.Account(mocks.GenericAccount.Address, mocks.GenericHeight)
 
 		assert.Error(t, err)
 	})
 
-	t.Run("handles vm failure on GetAccount", func(t *testing.T) {
+	t.Run("handles vm failure on Account", func(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
@@ -209,7 +209,7 @@ func TestInvoker_GetAccount(t *testing.T) {
 		invoker := baselineInvoker(t)
 		invoker.vm = vm
 
-		_, err := invoker.GetAccount(mocks.GenericAccount.Address, mocks.GenericHeight)
+		_, err := invoker.Account(mocks.GenericAccount.Address, mocks.GenericHeight)
 
 		assert.Error(t, err)
 	})

@@ -319,7 +319,7 @@ func (s *Server) GetAccountAtLatestBlock(ctx context.Context, in *access.GetAcco
 }
 
 func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccountAtBlockHeightRequest) (*access.AccountResponse, error) {
-	account, err := s.invoker.GetAccount(flow.BytesToAddress(in.Address), in.BlockHeight)
+	account, err := s.invoker.Account(flow.BytesToAddress(in.Address), in.BlockHeight)
 	if err != nil {
 		return nil, fmt.Errorf("could not get account: %w", err)
 	}
