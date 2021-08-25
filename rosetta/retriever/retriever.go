@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/onflow/cadence"
-	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -420,7 +419,7 @@ func (r *Retriever) SequenceNumber(rosAccountID identifier.Account, keyIndex int
 	key, ok := keys[keyIndex]
 	if !ok {
 		return 0, failure.InvalidProposalKey{
-			Address:     sdk.BytesToAddress(address[:]),
+			Address:     address,
 			Index:       keyIndex,
 			Description: failure.NewDescription("account key not found"),
 		}
@@ -429,7 +428,7 @@ func (r *Retriever) SequenceNumber(rosAccountID identifier.Account, keyIndex int
 	// Check if the key is still valid.
 	if key.Revoked {
 		return 0, failure.InvalidProposalKey{
-			Address:     sdk.BytesToAddress(address[:]),
+			Address:     address,
 			Index:       keyIndex,
 			Description: failure.NewDescription("account key was revoked"),
 		}

@@ -17,7 +17,7 @@ package failure
 import (
 	"fmt"
 
-	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go/model/flow"
 )
 
 type InvalidPayer struct {

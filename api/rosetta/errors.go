@@ -15,7 +15,7 @@
 package rosetta
 
 import (
-	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/failure"

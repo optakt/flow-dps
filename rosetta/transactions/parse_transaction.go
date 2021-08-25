@@ -66,15 +66,15 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	// Verify that the sender is the payer and the proposer.
 	if tx.Payer != authorizer {
 		return nil, nil, failure.InvalidPayer{
-			Have:        tx.Payer,
-			Want:        authorizer,
+			Have:        convertAddress(tx.Payer),
+			Want:        convertAddress(authorizer),
 			Description: failure.NewDescription("invalid transaction payer"),
 		}
 	}
 	if tx.ProposalKey.Address != authorizer {
 		return nil, nil, failure.InvalidProposer{
-			Have:        tx.ProposalKey.Address,
-			Want:        authorizer,
+			Have:        convertAddress(tx.ProposalKey.Address),
+			Want:        convertAddress(authorizer),
 			Description: failure.NewDescription("invalid transaction proposer"),
 		}
 	}

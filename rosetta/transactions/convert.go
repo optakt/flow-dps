@@ -12,20 +12,13 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package transactions
 
 import (
-	"fmt"
-
+	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type InvalidProposalKey struct {
-	Description Description
-	Address     flow.Address
-	Index       int
-}
-
-func (i InvalidProposalKey) Error() string {
-	return fmt.Sprintf("invalid proposal key (address: %s, key index: %d): %s", i.Address.String(), i.Index, i.Description)
+func convertAddress(address sdk.Address) flow.Address {
+	return flow.BytesToAddress(address[:])
 }
