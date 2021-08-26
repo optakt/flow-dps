@@ -33,7 +33,7 @@ import (
 type Operation struct {
 	ID        identifier.Operation `json:"operation_identifier"`
 	Type      string               `json:"type"`
-	Status    string               `json:"status"`
+	Status    string               `json:"status,omitempty"`
 	AccountID identifier.Account   `json:"account"`
 	Amount    Amount               `json:"amount"`
 }

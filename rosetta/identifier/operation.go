@@ -18,5 +18,5 @@ package identifier
 // needed because of the absence Flow does not support sharding.
 type Operation struct {
 	Index        uint `json:"index"`
-	NetworkIndex uint `json:"network_index"`
+	NetworkIndex uint `json:"network_index,omitempty"`
 }

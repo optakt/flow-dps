@@ -128,8 +128,9 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 				failure.WithErr(err)),
 		}
 	}
+	addr := flow.HexToAddress(val.String())
 	receiver := identifier.Account{
-		Address: val.String(),
+		Address: addr.String(),
 	}
 	_, err = p.validate.Account(receiver)
 	if err != nil {
