@@ -33,6 +33,8 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// FIXME: Fix those tests and figure out what changes in our Flow dependency caused their failure.
+
 func TestAPI_Balance(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)

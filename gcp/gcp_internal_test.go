@@ -12,22 +12,23 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package gcp_test
+package gcp
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
 
-	gcp2 "github.com/optakt/flow-dps/gcp"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -53,10 +54,30 @@ func TestReader_Read(t *testing.T) {
 
 	bucket := client.Bucket("my-bucket")
 
-	downloader := gcp2.NewReader(bucket)
+	fileName := fmt.Sprintf("%x.cbor", blockID[:])
 
-	got, err := downloader.Read(blockID)
+	t.Run("nominal case", func(t *testing.T) {
+		downloader := &Downloader{
+			bucket: bucket,
+			cache: map[string]time.Time{
+				fileName: time.Now(),
+			},
+		}
 
-	assert.NoError(t, err)
-	assert.Equal(t, mocks.GenericBytes, got)
+		got, err := downloader.Read(blockID)
+
+		assert.NoError(t, err)
+		assert.Equal(t, mocks.GenericBytes, got)
+	})
+
+	t.Run("handles item missing from cache", func(t *testing.T) {
+		downloader := &Downloader{
+			bucket: bucket,
+			cache:  map[string]time.Time{},
+		}
+
+		_, err = downloader.Read(blockID)
+
+		assert.Error(t, err)
+	})
 }

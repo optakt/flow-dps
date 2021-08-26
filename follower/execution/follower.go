@@ -15,6 +15,7 @@
 package execution
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -24,13 +25,14 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/onflow/flow-go/storage/badger/operation"
-
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+const cacheSize = 1024
+
 type blockReader interface {
-	Read(blockID flow.Identifier) ([]byte, error)
+	Notify() <-chan string
+	Read(filename string) ([]byte, error)
 }
 
 type Follower struct {
@@ -40,9 +42,12 @@ type Follower struct {
 	codec  dps.Codec
 	db     *badger.DB
 
-	data   BlockData
-	height uint64
-	index int
+	data    map[uint64]*BlockData
+	current *BlockData
+	height  uint64
+	index   int
+
+	stop chan struct{}
 }
 
 func New(log zerolog.Logger, blocks blockReader, codec dps.Codec, db *badger.DB) *Follower {
@@ -52,113 +57,236 @@ func New(log zerolog.Logger, blocks blockReader, codec dps.Codec, db *badger.DB)
 		blocks: blocks,
 		codec:  codec,
 		db:     db,
+
 		height: math.MaxUint64,
+		data:   make(map[uint64]*BlockData, cacheSize),
+
+		stop: make(chan struct{}),
 	}
 
 	return &f
 }
 
-func (f *Follower) Height() uint64 {
-	return f.height
+// Run launches the execution follower.
+func (f *Follower) Run() error {
+	tick := time.NewTicker(1 * time.Second)
+	defer tick.Stop()
+
+	for range tick.C {
+		select {
+		case <-f.stop:
+			return nil
+		default:
+		}
+
+		// If cache is already full, wait for items to get consumed.
+		if len(f.data) == cacheSize {
+			continue
+		}
+
+		// If cache has available space, wait for new block data to be available.
+		select {
+		case <-f.stop:
+			return nil
+		case file := <-f.blocks.Notify():
+			b, err := f.blocks.Read(file)
+			if err != nil {
+				return fmt.Errorf("could not read block data: %w", err)
+			}
+
+			var data *BlockData
+			err = f.codec.Unmarshal(b, &data)
+			if err != nil {
+				return fmt.Errorf("could not decode block data: %w", err)
+			}
+
+			f.data[data.Block.Header.Height] = data
+
+			// This should only ever happen once, when we get the oldest available block.
+			if data.Block.Header.Height < f.height {
+				if f.height != math.MaxUint64 {
+					// This should never happen, it would mean we received blocks in an
+					// incorrect order!
+					return fmt.Errorf("fatal discrepancy: received block data in incorrect order")
+				}
+				f.height = data.Block.Header.Height
+			}
+		}
+	}
+
+	return nil
 }
 
+// Update returns the next trie update, in chronological order. It is also in charge of moving onto the next
 func (f *Follower) Update() (*ledger.TrieUpdate, error) {
-	if len(f.data.TrieUpdates) == 0 || f.index == len(f.data.TrieUpdates) {
-		// No more trie updates are available.
-		return nil, dps.ErrTimeout
+	// If we reached the end of the trie updates for the current block, it means it should have been indexed
+	// successfully. Therefore, we move on to the next block.
+	if f.index == len(f.current.TrieUpdates) {
+		err := f.next()
+		if err != nil {
+			return nil, fmt.Errorf("could not forward execution follower to the next block: %w", err)
+		}
 	}
 
 	// Copy next update to be returned.
-	update := f.data.TrieUpdates[f.index]
+	update := f.current.TrieUpdates[f.index]
 	f.index++
 
 	return update, nil
 }
 
-// Block returns the latest sealed block data.
-func (f *Follower) Block() BlockData {
-	return f.data
-}
-
-func (f *Follower) OnBlockFinalized(finalID flow.Identifier) {
-	for {
-		b, err := f.blocks.Read(finalID)
-		if err != nil {
-			// The block data is not yet available. Retry until it becomes available.
-			time.Sleep(1 * time.Second)
-		}
-
-		var data BlockData
-		err = f.codec.Unmarshal(b, &data)
-		if err != nil {
-			f.log.Error().Err(err).Msg("could not unmarshal block from execution follower")
-			return
-		}
-
-		f.data = data
-		f.height = data.Block.Header.Height
-		f.index = 0
-
-		break
+func (f *Follower) next() error {
+	if len(f.data) == 0 {
+		return dps.ErrUnavailable
 	}
 
-	f.IndexAll(finalID)
+	f.height++
+	f.index = 0
+
+	var exists bool
+	f.current, exists = f.data[f.height]
+	if !exists {
+		return errors.New("fatal discrepancy: execution follower height does not match available block data")
+	}
+
+	// Sanity check: Verify that we can find a matching seal and execution result for that block ID.
+	blockID := f.current.Block.ID()
+	for _, blockData := range f.data {
+		for _, seal := range blockData.Block.Payload.Seals {
+			// Only look for the seal of the current block.
+			if seal.BlockID != blockID {
+				continue
+			}
+
+			for _, result := range blockData.Block.Payload.Results {
+				// Only look for the result of the current block.
+				if result.BlockID != blockID {
+					continue
+				}
+
+				finalState, err := result.FinalStateCommitment()
+				if err != nil {
+					return fmt.Errorf("could not compute state commitment from execution result: %w", err)
+				}
+
+				if seal.FinalState != finalState {
+					return errors.New("fatal discrepancy: mismatch between seal and execution result state commitments")
+				}
+				break
+			}
+			break
+		}
+	}
+
+	return nil
 }
 
-func (f *Follower) IndexAll(blockID flow.Identifier) {
-	// FIXME: Sanity check with block seals and execution results.
-
-	err := f.db.Update(func(txn *badger.Txn) error {
-		var guarIDs []flow.Identifier
-		for _, coll := range f.data.Collections {
-			guarIDs = append(guarIDs, coll.Guarantee.ID())
-			err := operation.InsertGuarantee(coll.Collection().ID(), coll.Guarantee)(txn)
-			if err != nil {
-				return fmt.Errorf("could not index guarantee: %w", err)
-			}
-
-			lightColl := coll.Collection().Light()
-			err = operation.InsertCollection(&lightColl)(txn)
-			if err != nil {
-				return fmt.Errorf("could not index collection: %w", err)
-			}
-		}
-
-		err := operation.IndexPayloadGuarantees(blockID, guarIDs)(txn)
-		if err != nil {
-			return fmt.Errorf("could not index payload guarantees: %w", err)
-		}
-
-		for _, result := range f.data.TxResults {
-			err := operation.InsertTransactionResult(blockID, result)(txn)
-			if err != nil {
-				return fmt.Errorf("could not index transaction result: %w", err)
-			}
-		}
-
-		var seals []flow.Identifier
-		for _, seal := range f.data.Block.Payload.Seals {
-			seals = append(seals, seal.ID())
-
-			err := operation.InsertSeal(seal.ID(), seal)(txn)
-			if err != nil {
-				return fmt.Errorf("could not index seal: %w", err)
-			}
-		}
-		err = operation.IndexPayloadSeals(blockID, seals)(txn)
-		if err != nil {
-			return fmt.Errorf("could not index payload seal: %w", err)
-		}
-
-		for _, event := range f.data.Events {
-			err := operation.InsertEvent(blockID, *event)(txn)
-			if err != nil {
-				return fmt.Errorf("could not index event: %w", err)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		f.log.Error().Err(err).Msg("could not index execution state")
+// Header returns the header for the current block.
+func (f *Follower) Header(height uint64) (*flow.Header, error) {
+	if f.current == nil {
+		return nil, errors.New("no block data available")
 	}
+	if height != f.height {
+		return nil, fmt.Errorf("block data requested for wrong block height (current: %d, requested %d)", f.height, height)
+	}
+
+	return f.current.Block.Header, nil
+}
+
+// Collections returns the collections for the current block.
+func (f *Follower) Collections(height uint64) ([]*flow.LightCollection, error) {
+	if f.current == nil {
+		return nil, errors.New("no block data available")
+	}
+	if height != f.height {
+		return nil, fmt.Errorf("block data requested for wrong block height (current: %d, requested %d)", f.height, height)
+	}
+
+	var colls []*flow.LightCollection
+	for _, coll := range f.current.Collections {
+		lightColl := coll.Collection().Light()
+		colls = append(colls, &lightColl)
+	}
+
+	return colls, nil
+}
+
+// Guarantees returns the guarantees for the current block.
+func (f *Follower) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
+	if f.current == nil {
+		return nil, errors.New("no block data available")
+	}
+	if height != f.height {
+		return nil, fmt.Errorf("block data requested for wrong block height (current: %d, requested %d)", f.height, height)
+	}
+
+	var guars []*flow.CollectionGuarantee
+	for _, coll := range f.current.Collections {
+		guars = append(guars, coll.Guarantee)
+	}
+
+	return guars, nil
+}
+
+// Seals returns the seals for the current block.
+func (f *Follower) Seals(height uint64) ([]*flow.Seal, error) {
+	if f.current == nil {
+		return nil, errors.New("no block data available")
+	}
+	if height != f.height {
+		return nil, fmt.Errorf("block data requested for wrong block height (current: %d, requested %d)", f.height, height)
+	}
+
+	return f.current.Block.Payload.Seals, nil
+}
+
+// Transactions returns the transactions for the current block.
+func (f *Follower) Transactions(height uint64) ([]*flow.TransactionBody, error) {
+	if f.current == nil {
+		return nil, errors.New("no block data available")
+	}
+	if height != f.height {
+		return nil, fmt.Errorf("block data requested for wrong block height (current: %d, requested %d)", f.height, height)
+	}
+
+	var transactions []*flow.TransactionBody
+	for _, coll := range f.current.Collections {
+		transactions = append(transactions, coll.Transactions...)
+	}
+
+	return transactions, nil
+}
+
+// Results returns the results for the current block.
+func (f *Follower) Results(height uint64) ([]*flow.TransactionResult, error) {
+	if f.current == nil {
+		return nil, errors.New("no block data available")
+	}
+	if height != f.height {
+		return nil, fmt.Errorf("block data requested for wrong block height (current: %d, requested %d)", f.height, height)
+	}
+
+	return f.current.TxResults, nil
+}
+
+// Events returns the events for the current block.
+func (f *Follower) Events(height uint64) ([]flow.Event, error) {
+	if f.current == nil {
+		return nil, errors.New("no block data available")
+	}
+	if height != f.height {
+		return nil, fmt.Errorf("block data requested for wrong block height (current: %d, requested %d)", f.height, height)
+	}
+
+	var events []flow.Event
+	for _, e := range f.current.Events {
+		e := e
+		events = append(events, *e)
+	}
+
+	return events, nil
+}
+
+func (f *Follower) Stop() {
+	close(f.stop)
 }

@@ -22,10 +22,8 @@ import (
 	"github.com/onflow/flow-go/storage/badger/operation"
 )
 
-type executionFollower interface {
-	OnBlockFinalized(finalID flow.Identifier)
-}
-
+// Follower is a wrapper around the database that the Flow consensus follower populates. It is used to
+// expose the current height and block ID of the consensus follower's last finalized block.
 type Follower struct {
 	log zerolog.Logger
 
@@ -35,6 +33,7 @@ type Follower struct {
 	blockID flow.Identifier
 }
 
+// New returns a new Follower instance.
 func New(log zerolog.Logger, db *badger.DB) *Follower {
 	f := Follower{
 		log: log,
@@ -44,6 +43,7 @@ func New(log zerolog.Logger, db *badger.DB) *Follower {
 	return &f
 }
 
+// OnBlockFinalized is a callback that is used to update the state of the Follower.
 func (f *Follower) OnBlockFinalized(finalID flow.Identifier) {
 	var height uint64
 	err := f.db.View(operation.RetrieveFinalizedHeight(&height))
@@ -56,14 +56,12 @@ func (f *Follower) OnBlockFinalized(finalID flow.Identifier) {
 	f.blockID = finalID
 }
 
+// Height returns the last finalized height according to the consensus follower.
 func (f *Follower) Height() uint64 {
 	return f.height
 }
 
+// BlockID returns the last finalized block's ID according to the consensus follower.
 func (f *Follower) BlockID() flow.Identifier {
 	return f.blockID
 }
-
-// FIXME: Document in this file the indexes that are automatically written by
-//  the follower. Only the ones that we use though, as the maintenance effort
-//  would not be worth it otherwise.

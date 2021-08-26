@@ -15,106 +15,17 @@
 package execution_test
 
 import (
-	"bytes"
-	"io"
-	"reflect"
 	"testing"
-
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/mempool/entity"
 
 	"github.com/optakt/flow-dps/follower/execution"
-	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
-func TestFollower_OnBlockFinalized(t *testing.T) {
-	blockData := fakeBlockData(t)
-
-	t.Run("nominal case", func(t *testing.T) {
-		t.Parallel()
-
-		log := zerolog.New(io.Discard)
-		db := helpers.InMemoryDB(t)
-		blocks := mocks.BaselineDownloader(t)
-
-		codec := mocks.BaselineCodec(t)
-		codec.UnmarshalFunc = func(_ []byte, value interface{}) error {
-			// Fake a successful unmarshalling.
-			reflect.ValueOf(value).Elem().Set(reflect.ValueOf(blockData))
-			return nil
-		}
-
-		follower := execution.New(log, blocks, codec, db)
-
-		follower.OnBlockFinalized(mocks.GenericIdentifier(0))
-
-		got := follower.Block()
-
-		require.NotNil(t, got.Block)
-		assert.Equal(t, blockData.Block.Header, got.Block.Header)
-	})
-
-	t.Run("unmarshal error", func(t *testing.T) {
-		t.Parallel()
-
-		buffer := &bytes.Buffer{}
-		log := zerolog.New(buffer)
-		db := helpers.InMemoryDB(t)
-		blocks := mocks.BaselineDownloader(t)
-
-		codec := mocks.BaselineCodec(t)
-		codec.UnmarshalFunc = func(_ []byte, value interface{}) error {
-			return mocks.GenericError
-		}
-
-		follower := execution.New(log, blocks, codec, db)
-
-		follower.OnBlockFinalized(mocks.GenericIdentifier(0))
-
-		got := follower.Block()
-
-		assert.Nil(t, got.Block)
-		assert.NotEmpty(t, buffer.Bytes())
-	})
-}
-
-func TestFollower_IndexAll(t *testing.T) {
-	blockData := fakeBlockData(t)
-
-	t.Run("nominal case", func(t *testing.T) {
-		t.Parallel()
-
-		buffer := &bytes.Buffer{}
-		log := zerolog.New(buffer)
-		db := helpers.InMemoryDB(t)
-		blocks := mocks.BaselineDownloader(t)
-
-		codec := mocks.BaselineCodec(t)
-		codec.UnmarshalFunc = func(_ []byte, value interface{}) error {
-			// Fake a successful unmarshalling.
-			reflect.ValueOf(value).Elem().Set(reflect.ValueOf(blockData))
-			return nil
-		}
-
-		follower := execution.New(log, blocks, codec, db)
-
-		// OnBlockFinalized will populate the follower's block data and subsequently
-		// call IndexAll.
-		follower.OnBlockFinalized(mocks.GenericIdentifier(0))
-
-		// FIXME: This is a very flaky way to test this func. Maybe this would be better
-		//        tested with a proper integration test. Will be done once we are sure
-		//        that this design works for us.
-		// Assert that no errors occurred which means that the indexing was successful.
-		assert.Empty(t, buffer.String())
-	})
-}
+// FIXME: Rewrite tests.
 
 func fakeBlockData(t *testing.T) execution.BlockData {
 	t.Helper()

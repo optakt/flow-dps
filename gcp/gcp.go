@@ -18,36 +18,124 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
+	"time"
 
 	"cloud.google.com/go/storage"
-
-	"github.com/onflow/flow-go/model/flow"
+	"google.golang.org/api/iterator"
 )
 
-type Reader struct {
+const cacheSize = 1024
+
+type Downloader struct {
 	bucket *storage.BucketHandle
 
-	// the index of the next segment to retrieve.
-	index int
+	cache        map[string]time.Time
+	notify       chan string
+	lastConsumed time.Time
+
+	stop chan struct{}
 }
 
-// NewReader creates a Reader instance that has access to a GCP bucket.
-func NewReader(bucket *storage.BucketHandle) *Reader {
-	d := Reader{
+// NewDownloader creates a Downloader instance that has access to a GCP bucket.
+func NewDownloader(bucket *storage.BucketHandle) *Downloader {
+	d := Downloader{
 		bucket: bucket,
+		cache:  make(map[string]time.Time, cacheSize),
+		notify: make(chan string, cacheSize),
+		stop:   make(chan struct{}),
 	}
 
 	return &d
 }
 
+// Run launches a polling process which continuously caches files to be downloaded ordered by creation time.
+func (d *Downloader) Run() error {
+	for {
+		select {
+		case <-d.stop:
+			return nil
+		default:
+		}
+
+		// If the cache is already full, wait for one item to be consumed before loading more into the cache.
+		if len(d.cache) == cacheSize {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// Make a query to only populate the name and creation time of each bucket item.
+		query := &storage.Query{}
+		err := query.SetAttrSelection([]string{"Name", "Created"})
+		if err != nil {
+			return fmt.Errorf("could not create Google Cloud Storage query: %w", err)
+		}
+
+		it := d.bucket.Objects(context.TODO(), query)
+		var files []*storage.ObjectAttrs
+		for {
+			file, err := it.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return fmt.Errorf("could not iterate through Google Cloud Storage files: %w", err)
+			}
+			files = append(files, file)
+		}
+
+		// Sort files by creation time.
+		sort.Slice(files, func(i, j int) bool {
+			return files[i].Created.Before(files[j].Created)
+		})
+
+		for _, file := range files {
+			// Ignore files that were already consumed.
+			if file.Created.Before(d.lastConsumed) {
+				continue
+			}
+
+			// Stop adding new files if the cache is already full.
+			if len(d.cache) == cacheSize {
+				break
+			}
+			d.cache[file.Name] = file.Created
+			d.notify <- file.Name
+		}
+	}
+}
+
+// Stop stops the Downloader's polling process.
+func (d *Downloader) Stop() {
+	close(d.stop)
+	close(d.notify)
+}
+
+func (d *Downloader) Notify() <-chan string {
+	return d.notify
+}
+
 // Read reads and returns the contents of the next available segment.
-func (d *Reader) Read(blockID flow.Identifier) ([]byte, error) {
-	block := d.bucket.Object(fmt.Sprintf("%x.cbor", blockID))
+func (d *Downloader) Read(name string) ([]byte, error) {
+	_, cached := d.cache[name]
+	if !cached {
+		return nil, fmt.Errorf("missing item from downloader cache: %s", name)
+	}
+
+	block := d.bucket.Object(name)
 	r, err := block.NewReader(context.TODO()) // FIXME: Use a proper context
 	if err != nil {
-		return nil, fmt.Errorf("could not read bucket item: %w", err)
+		return nil, fmt.Errorf("could not create bucket item reader: %w", err)
 	}
 	defer r.Close()
 
-	return io.ReadAll(r)
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("could not read bucket item: %w", err)
+	}
+
+	d.lastConsumed = d.cache[name]
+	delete(d.cache, name)
+
+	return b, nil
 }

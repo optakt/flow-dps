@@ -141,12 +141,16 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// it to in the forest. This usually means that it was meant for a pruned
 	// branch of the execution forest.
 	update, err := t.feed.Update()
+	if err == dps.ErrUnavailable {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("could not feed update: %w", err)
 	}
 	parent := flow.StateCommitment(update.RootHash)
 	tree, ok := s.forest.Tree(parent)
 	if !ok {
+		log.Warn().Msg("state commitment mismatch, retrieving next trie update")
 		return nil
 	}
 
@@ -323,7 +327,7 @@ func (t *Transitions) IndexChain(s *State) error {
 	}
 
 	// As we have only just forwarded to this height, we need to set the commit
-	// of the next finalized block as the sentinal we will be looking for.
+	// of the next finalized block as the sentinel we will be looking for.
 	commit, err := t.chain.Commit(s.height)
 	if err != nil {
 		return fmt.Errorf("could not get commit: %w", err)

@@ -52,6 +52,8 @@ import (
 	"github.com/optakt/flow-dps/testing/snapshots"
 )
 
+// FIXME: Fix those tests and figure out what changes in our Flow dependency caused their failure.
+
 const (
 	balanceEndpoint     = "/account/balance"
 	blockEndpoint       = "/block"

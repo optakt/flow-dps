@@ -35,6 +35,8 @@ import (
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
+// FIXME: Fix those tests and figure out what changes in our Flow dependency caused their failure.
+
 func TestAPI_Transaction(t *testing.T) {
 
 	db := setupDB(t)

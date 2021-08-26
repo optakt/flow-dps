@@ -36,6 +36,8 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
+// FIXME: Fix those tests and figure out what changes in our Flow dependency caused their failure.
+
 type validateBlockFunc func(identifier.Block)
 type validateTxFunc func([]*object.Transaction)
 

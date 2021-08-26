@@ -40,13 +40,13 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
+	source "github.com/optakt/flow-dps/follower"
 	"github.com/optakt/flow-dps/follower/consensus"
 	"github.com/optakt/flow-dps/follower/execution"
 	"github.com/optakt/flow-dps/gcp"
 	"github.com/optakt/flow-dps/metrics/output"
 	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
@@ -216,7 +216,7 @@ func run() int {
 	}
 
 	bkt := client.Bucket(flagBucket)
-	downloader := gcp.NewReader(bkt)
+	downloader := gcp.NewDownloader(bkt)
 
 	host, portStr, err := net.SplitHostPort(flagPeerAddr)
 	if err != nil {
@@ -259,12 +259,8 @@ func run() int {
 		return failure
 	}
 	follower.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
-	follower.AddOnBlockFinalizedConsumer(execution.OnBlockFinalized)
 
-	chain := chain.FromFollower(log, execution, data)
-
-	// FIXME: Is the consensus needed anywhere besides existing to make it index things
-	//  and call the exec follower's callback.
+	source := source.FromFollowers(log, execution, consensus, data)
 
 	// Writer is responsible for writing the index data to the index database.
 	writer := index.NewWriter(db, storage)
@@ -282,7 +278,7 @@ func run() int {
 	}
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	transitions := mapper.NewTransitions(log, load, chain, execution, write,
+	transitions := mapper.NewTransitions(log, load, source, source, write,
 		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),
