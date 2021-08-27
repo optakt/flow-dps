@@ -23,10 +23,9 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strconv"
 	"time"
 
-	gcs "cloud.google.com/go/storage"
+	googlecloud "cloud.google.com/go/storage"
 	"github.com/dgraph-io/badger/v2"
 	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -35,7 +34,6 @@ import (
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 
-	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/flow"
 	api "github.com/optakt/flow-dps/api/dps"
@@ -43,10 +41,11 @@ import (
 	source "github.com/optakt/flow-dps/follower"
 	"github.com/optakt/flow-dps/follower/consensus"
 	"github.com/optakt/flow-dps/follower/execution"
-	"github.com/optakt/flow-dps/gcp"
+	"github.com/optakt/flow-dps/gcs"
 	"github.com/optakt/flow-dps/metrics/output"
 	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/network"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
@@ -73,7 +72,7 @@ func run() int {
 	// Command line parameter initialization.
 	var (
 		flagBindAddr          string
-		flagBucket            string
+		flagBlockDataBucket   string
 		flagCheckpoint        string
 		flagData              string
 		flagDownloadDir       string
@@ -96,10 +95,13 @@ func run() int {
 		flagPeerAddr          string
 		flagPeerKey           string
 		flagPort              uint16
+		flagBootstrapBucket   string
 		flagSkipBootstrap     bool
+		flagToken             string
 	)
 
-	pflag.StringVarP(&flagBucket, "bucket", "b", "", "name of the S3 bucket which contains the state ledger")
+	pflag.StringVar(&flagBlockDataBucket, "block-data-bucket", "", "name of the Google Cloud Storage bucket which contains the block data")
+	pflag.StringVar(&flagBootstrapBucket, "bootstrap-bucket", "", "name of the Google Cloud Storage bucket which contains the public bootstrap data")
 	pflag.StringVar(&flagBindAddr, "bind-addr", "127.0.0.1:FIXME", "address on which to bind the FIXME")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
@@ -124,6 +126,7 @@ func run() int {
 	pflag.StringVar(&flagPeerKey, "access-key", "", "network public key of the peer to connect to")
 	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
 	pflag.BoolVar(&flagSkipBootstrap, "skip-bootstrap", false, "enable skipping checkpoint register payloads indexing")
+	pflag.StringVar(&flagToken, "token", "", "token provided by the Flow team to access the Transit server")
 
 	pflag.Parse()
 
@@ -209,52 +212,43 @@ func run() int {
 		return failure
 	}
 
-	client, err := gcs.NewClient(context.Background())
+	ctx := context.Background()
+	client, err := googlecloud.NewClient(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("could not connect to Google Cloud Platform")
 		return failure
 	}
 
-	bkt := client.Bucket(flagBucket)
-	downloader := gcp.NewDownloader(bkt)
+	// FIXME: If no key pair is already generated, generate one and send it to the server. (transit push equivalent)
+	//		* A token is needed to be able to push our keys.
+	//		* We're supposed to specify the role of our node, but our node is an unstaked node completely outside
+	//		  of the network, so what should we do?
+	//		* Is this step mandatory? I thought we could fetch the public keys without any authentication.
+	// FIXME: Pull node info and public keys (transit pull equivalent)
+	// FIXME: Use those as bootstrap identities.
 
-	host, portStr, err := net.SplitHostPort(flagPeerAddr)
+	// Fetch bootstrap identities from the network.
+	bootstrap := client.Bucket(flagBootstrapBucket)
+	downloader := gcs.NewDownloader(bootstrap)
+	bootstrapIdentities, err := network.RetrieveIdentities(log, downloader, flagToken)
 	if err != nil {
 		log.Error().
 			Err(err).
-			Str("peer_address", flagPeerAddr).
-			Msg("invalid peer address format")
+			Str("bucket", flagBootstrapBucket).
+			Msg("could not retrieve bootstrap identities")
 		return failure
 	}
-	port, err := strconv.ParseUint(portStr, 10, 16)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Str("peer_address", flagPeerAddr).
-			Msg("invalid peer port")
-		return failure
-	}
-	key, err := crypto.DecodePublicKeyHex(crypto.ECDSA_P256, flagPeerKey)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Str("peer_key", flagPeerKey).
-			Msg("invalid peer public key")
-		return failure
-	}
-	// FIXME: Get public keys from transit stuff.
-	bootstrapIdentities := []follower.BootstrapNodeInfo{{
-		Host:             host,
-		Port:             uint(port),
-		NetworkPublicKey: key,
-	}}
-	execution := execution.New(log, downloader, codec, data)
+
+	blockData := client.Bucket(flagBlockDataBucket)
+	poller := gcs.NewPoller(blockData)
+
+	execution := execution.New(log, poller, codec, data)
 	consensus := consensus.New(log, data)
 	follower, err := follower.NewConsensusFollower(nodeID, bootstrapIdentities, flagBindAddr, follower.WithDataDir(flagData))
 	if err != nil {
 		log.Error().
 			Err(err).
-			Str("bucket", flagBucket).
+			Str("bucket", flagBlockDataBucket).
 			Msg("could not create consensus follower")
 		return failure
 	}
@@ -354,11 +348,22 @@ func run() int {
 		}
 		log.Info().Msg("Flow DPS Live Server stopped")
 	}()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		log.Info().Msg("Consensus follower starting")
 		follower.Run(ctx)
 		log.Info().Msg("Consensus follower stopped")
+	}()
+	go func() {
+		log.Info().Msg("Google Cloud Storage poller starting")
+		err = poller.Run()
+		if err != nil {
+			log.Warn().Err(err).Msg("Google Cloud Storage poller failed")
+			close(failed)
+		} else {
+			close(done)
+		}
+		log.Info().Msg("Google Cloud Storage poller stopped")
 	}()
 
 	// Start metrics output.
@@ -382,6 +387,9 @@ func run() int {
 		os.Exit(1)
 	}()
 
+	// First, stop the DPS API to avoid failed requests.
+	gsvr.GracefulStop()
+
 	// Stop metrics output.
 	if flagMetrics {
 		mout.Stop()
@@ -390,13 +398,15 @@ func run() int {
 	// Stop consensus follower.
 	cancel()
 
-	gsvr.GracefulStop()
+	// Stop poller from downloading new files.
+	poller.Stop()
+
 
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the
 	// allocated shutdown time. Otherwise, we will force the shutdown and log
 	// an error. We then wait for shutdown on each component to complete.
-	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	err = fsm.Stop(ctx)
 	if err != nil {

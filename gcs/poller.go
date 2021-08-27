@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package gcp
+package gcs
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 
 const cacheSize = 1024
 
-type Downloader struct {
+type Poller struct {
 	bucket *storage.BucketHandle
 
 	cache        map[string]time.Time
@@ -37,29 +37,29 @@ type Downloader struct {
 	stop chan struct{}
 }
 
-// NewDownloader creates a Downloader instance that has access to a GCP bucket.
-func NewDownloader(bucket *storage.BucketHandle) *Downloader {
-	d := Downloader{
+// NewPoller creates a Poller instance that has access to a GCS bucket.
+func NewPoller(bucket *storage.BucketHandle) *Poller {
+	p := Poller{
 		bucket: bucket,
 		cache:  make(map[string]time.Time, cacheSize),
 		notify: make(chan string, cacheSize),
 		stop:   make(chan struct{}),
 	}
 
-	return &d
+	return &p
 }
 
 // Run launches a polling process which continuously caches files to be downloaded ordered by creation time.
-func (d *Downloader) Run() error {
+func (p *Poller) Run() error {
 	for {
 		select {
-		case <-d.stop:
+		case <-p.stop:
 			return nil
 		default:
 		}
 
 		// If the cache is already full, wait for one item to be consumed before loading more into the cache.
-		if len(d.cache) == cacheSize {
+		if len(p.cache) == cacheSize {
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -71,7 +71,7 @@ func (d *Downloader) Run() error {
 			return fmt.Errorf("could not create Google Cloud Storage query: %w", err)
 		}
 
-		it := d.bucket.Objects(context.TODO(), query)
+		it := p.bucket.Objects(context.TODO(), query)
 		var files []*storage.ObjectAttrs
 		for {
 			file, err := it.Next()
@@ -91,38 +91,38 @@ func (d *Downloader) Run() error {
 
 		for _, file := range files {
 			// Ignore files that were already consumed.
-			if file.Created.Before(d.lastConsumed) {
+			if file.Created.Before(p.lastConsumed) {
 				continue
 			}
 
 			// Stop adding new files if the cache is already full.
-			if len(d.cache) == cacheSize {
+			if len(p.cache) == cacheSize {
 				break
 			}
-			d.cache[file.Name] = file.Created
-			d.notify <- file.Name
+			p.cache[file.Name] = file.Created
+			p.notify <- file.Name
 		}
 	}
 }
 
-// Stop stops the Downloader's polling process.
-func (d *Downloader) Stop() {
-	close(d.stop)
-	close(d.notify)
+// Stop stops the Poller's polling process.
+func (p *Poller) Stop() {
+	close(p.stop)
+	close(p.notify)
 }
 
-func (d *Downloader) Notify() <-chan string {
-	return d.notify
+func (p *Poller) Notify() <-chan string {
+	return p.notify
 }
 
 // Read reads and returns the contents of the next available segment.
-func (d *Downloader) Read(name string) ([]byte, error) {
-	_, cached := d.cache[name]
+func (p *Poller) Read(name string) ([]byte, error) {
+	_, cached := p.cache[name]
 	if !cached {
-		return nil, fmt.Errorf("missing item from downloader cache: %s", name)
+		return nil, fmt.Errorf("missing item from poller cache: %s", name)
 	}
 
-	block := d.bucket.Object(name)
+	block := p.bucket.Object(name)
 	r, err := block.NewReader(context.TODO()) // FIXME: Use a proper context
 	if err != nil {
 		return nil, fmt.Errorf("could not create bucket item reader: %w", err)
@@ -134,8 +134,8 @@ func (d *Downloader) Read(name string) ([]byte, error) {
 		return nil, fmt.Errorf("could not read bucket item: %w", err)
 	}
 
-	d.lastConsumed = d.cache[name]
-	delete(d.cache, name)
+	p.lastConsumed = p.cache[name]
+	delete(p.cache, name)
 
 	return b, nil
 }

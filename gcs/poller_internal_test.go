@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package gcp
+package gcs
 
 import (
 	"context"
@@ -35,7 +35,7 @@ import (
 func TestReader_Read(t *testing.T) {
 	blockID := mocks.GenericIdentifier(0)
 
-	// Set up fake GCP server for testing, which always returns no error.
+	// Set up fake GCS server for testing, which always returns no error.
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		_, err := rw.Write(mocks.GenericBytes)
 		require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestReader_Read(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Make the GCP Storage client use that server.
+	// Make the GCS Storage client use that server.
 	url, err := url.Parse(server.URL)
 	require.NoError(t, err)
 	_ = os.Setenv("STORAGE_EMULATOR_HOST", url.Host)
@@ -57,26 +57,26 @@ func TestReader_Read(t *testing.T) {
 	fileName := fmt.Sprintf("%x.cbor", blockID[:])
 
 	t.Run("nominal case", func(t *testing.T) {
-		downloader := &Downloader{
+		poller := &Poller{
 			bucket: bucket,
 			cache: map[string]time.Time{
 				fileName: time.Now(),
 			},
 		}
 
-		got, err := downloader.Read(blockID)
+		got, err := poller.Read(fileName)
 
 		assert.NoError(t, err)
 		assert.Equal(t, mocks.GenericBytes, got)
 	})
 
 	t.Run("handles item missing from cache", func(t *testing.T) {
-		downloader := &Downloader{
+		poller := &Poller{
 			bucket: bucket,
 			cache:  map[string]time.Time{},
 		}
 
-		_, err = downloader.Read(blockID)
+		_, err = poller.Read(fileName)
 
 		assert.Error(t, err)
 	})
