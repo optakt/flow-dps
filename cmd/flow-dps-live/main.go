@@ -72,7 +72,8 @@ func run() int {
 	// Command line parameter initialization.
 	var (
 		flagBindAddr          string
-		flagBlockDataBucket   string
+		flagBootstrap         string
+		flagBucket            string
 		flagCheckpoint        string
 		flagData              string
 		flagDownloadDir       string
@@ -95,13 +96,11 @@ func run() int {
 		flagPeerAddr          string
 		flagPeerKey           string
 		flagPort              uint16
-		flagBootstrapBucket   string
 		flagSkipBootstrap     bool
-		flagToken             string
 	)
 
-	pflag.StringVar(&flagBlockDataBucket, "block-data-bucket", "", "name of the Google Cloud Storage bucket which contains the block data")
-	pflag.StringVar(&flagBootstrapBucket, "bootstrap-bucket", "", "name of the Google Cloud Storage bucket which contains the public bootstrap data")
+	pflag.StringVar(&flagBucket, "bucket", "", "name of the Google Cloud Storage bucket which contains the block data")
+	pflag.StringVar(&flagBootstrap, "bootstrap", "", "path to the file which contains bootstrap data")
 	pflag.StringVar(&flagBindAddr, "bind-addr", "127.0.0.1:FIXME", "address on which to bind the FIXME")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
@@ -126,7 +125,6 @@ func run() int {
 	pflag.StringVar(&flagPeerKey, "access-key", "", "network public key of the peer to connect to")
 	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
 	pflag.BoolVar(&flagSkipBootstrap, "skip-bootstrap", false, "enable skipping checkpoint register payloads indexing")
-	pflag.StringVar(&flagToken, "token", "", "token provided by the Flow team to access the Transit server")
 
 	pflag.Parse()
 
@@ -219,27 +217,13 @@ func run() int {
 		return failure
 	}
 
-	// FIXME: If no key pair is already generated, generate one and send it to the server. (transit push equivalent)
-	//		* A token is needed to be able to push our keys.
-	//		* We're supposed to specify the role of our node, but our node is an unstaked node completely outside
-	//		  of the network, so what should we do?
-	//		* Is this step mandatory? I thought we could fetch the public keys without any authentication.
-	// FIXME: Pull node info and public keys (transit pull equivalent)
-	// FIXME: Use those as bootstrap identities.
-
-	// Fetch bootstrap identities from the network.
-	bootstrap := client.Bucket(flagBootstrapBucket)
-	downloader := gcs.NewDownloader(bootstrap)
-	bootstrapIdentities, err := network.RetrieveIdentities(log, downloader, flagToken)
+	bootstrapIdentities, err := network.RetrieveIdentities(flagBootstrap)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Str("bucket", flagBootstrapBucket).
-			Msg("could not retrieve bootstrap identities")
+		log.Error().Err(err).Msg("could not retrieve bootstrap identities")
 		return failure
 	}
 
-	blockData := client.Bucket(flagBlockDataBucket)
+	blockData := client.Bucket(flagBucket)
 	poller := gcs.NewPoller(blockData)
 
 	execution := execution.New(log, poller, codec, data)
@@ -248,13 +232,13 @@ func run() int {
 	if err != nil {
 		log.Error().
 			Err(err).
-			Str("bucket", flagBlockDataBucket).
+			Str("bucket", flagBucket).
 			Msg("could not create consensus follower")
 		return failure
 	}
 	follower.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
-	source := source.FromFollowers(log, execution, consensus, data)
+	source := source.NewSource(log, execution, consensus, data)
 
 	// Writer is responsible for writing the index data to the index database.
 	writer := index.NewWriter(db, storage)
@@ -400,7 +384,6 @@ func run() int {
 
 	// Stop poller from downloading new files.
 	poller.Stop()
-
 
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the

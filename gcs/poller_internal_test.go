@@ -32,6 +32,36 @@ import (
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
+// Note: Because we cannot mock the GCS client without writing lots of complex httptest mock code, we probably do not
+// want to test the specifics for now. For reference in the meantime, here are the untested parts of the poller:
+//   * Cache full while new files are available
+//   * Actual polling of items on the bucket
+//   * Logic of ignoring files that were already consumed
+//   * Sorting of files by timestamp
+//   * Notifications when new files are available
+
+func TestReader_Run(t *testing.T) {
+	notify := make(chan string)
+	p := &Poller{
+		notify: notify,
+		stop:   make(chan struct{}),
+	}
+
+	go func() {
+		err := p.Run()
+		assert.NoError(t, err)
+	}()
+
+	p.Stop()
+
+	select {
+	case <-time.After(50 * time.Millisecond):
+		t.Fatalf("poller did not stop within expected time limit")
+	case <-notify:
+		// Poller stopped successfully since it closed its notify channel.
+	}
+}
+
 func TestReader_Read(t *testing.T) {
 	blockID := mocks.GenericIdentifier(0)
 

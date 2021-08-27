@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package source
+package follower
 
 import (
 	"fmt"
@@ -54,7 +54,7 @@ type Source struct {
 	height  uint64
 }
 
-func FromFollowers(log zerolog.Logger, execution executionFollower, consensus consensusFollower, db *badger.DB) *Source {
+func NewSource(log zerolog.Logger, execution executionFollower, consensus consensusFollower, db *badger.DB) *Source {
 	s := Source{
 		log: log,
 

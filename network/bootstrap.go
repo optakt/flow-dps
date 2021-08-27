@@ -15,42 +15,71 @@
 package network
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
-	"path/filepath"
+	"io"
+	"net"
+	"os"
+	"strconv"
 
-	"github.com/rs/zerolog"
-
+	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go/follower"
-	"github.com/onflow/flow-go/model/bootstrap"
-
-	"github.com/optakt/flow-dps/gcs"
 )
 
-// FIXME: Should this be configurable?
-const outputDir = "./bootstrap"
+type Bootstrap struct {
+	Identities []Identity `json:"Identities"`
+}
 
-func RetrieveIdentities(log zerolog.Logger, downloader *gcs.Downloader, token string) ([]follower.BootstrapNodeInfo, error) {
-	prefix := fmt.Sprintf("%s/%s/", token, bootstrap.DirnamePublicBootstrap)
-	files, err := downloader.List(context.Background(), prefix)
+type Identity struct {
+	NodeID        string `json:"NodeID"`
+	Address       string `json:"Address"`
+	Role          string `json:"Role"`
+	Stake         int    `json:"Stake"`
+	StakingPubKey string `json:"StakingPubKey"`
+	NetworkPubKey string `json:"NetworkPubKey"`
+}
+
+func RetrieveIdentities(path string) ([]follower.BootstrapNodeInfo, error) {
+	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("could not get list of files from GCS")
+		return nil, fmt.Errorf("could not read bootstrap directory: %w", err)
 	}
 
-	log.Info().Msgf("found %d files in public bootstrap GCS Bucket", len(files))
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("could not read root protocol state snapshot: %w", err)
+	}
 
-	// download found files
-	for _, file := range files {
-		fullPath := filepath.Join(outputDir, "public-root-information", filepath.Base(file))
-		log.Info().Str("source", file).Str("destination", fullPath).Msgf("downloading file from transit servers")
+	var info Bootstrap
+	err = json.Unmarshal(b, &info)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode root protocol state snapshot: %w", err)
+	}
 
-		err = downloader.Download(context.Background(), fullPath, file)
+	var nodeInfo []follower.BootstrapNodeInfo
+	for _, id := range info.Identities {
+		host, portStr, err := net.SplitHostPort(id.Address)
 		if err != nil {
-			return nil, fmt.Errorf("could not download file from GCS")
+			return nil, fmt.Errorf("could not parse node address: %w", err)
 		}
+
+		port, err := strconv.ParseUint(portStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse node port: %w", err)
+		}
+
+		// FIXME: How do we know the algorithm the key uses?
+		key, err := crypto.DecodePublicKeyHex(crypto.ECDSA_P256, id.NetworkPubKey)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse node address: %w", err)
+		}
+
+		nodeInfo = append(nodeInfo, follower.BootstrapNodeInfo{
+			Host:             host,
+			Port:             uint(port),
+			NetworkPublicKey: key,
+		})
 	}
 
-	// FIXME: Parse those files to generate Bootstrap Identities from them.
-
-	return nil, nil
+	return nodeInfo, nil
 }

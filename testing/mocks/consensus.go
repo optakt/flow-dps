@@ -25,6 +25,8 @@ import (
 type ConsensusFollower struct {
 	// Methods from our implementation of the consensus follower.
 	OnBlockFinalizedFunc func(finalID flow.Identifier)
+	HeightFunc           func() uint64
+	BlockIDFunc          func() flow.Identifier
 
 	// Methods from the flow-go consensus follower.
 	RunFunc                         func(context.Context)
@@ -35,7 +37,12 @@ func BaselineConsensusFollower(t *testing.T) *ConsensusFollower {
 	t.Helper()
 
 	f := ConsensusFollower{
-		OnBlockFinalizedFunc:            func(finalID flow.Identifier) {},
+		// Methods from our implementation of the consensus follower.
+		OnBlockFinalizedFunc: func(finalID flow.Identifier) {},
+		HeightFunc:           func() uint64 { return GenericHeight },
+		BlockIDFunc:          func() flow.Identifier { return GenericIdentifier(0) },
+
+		// Methods from the flow-go consensus follower.
 		RunFunc:                         func(context.Context) {},
 		AddOnBlockFinalizedConsumerFunc: func(consumer pubsub.OnBlockFinalizedConsumer) {},
 	}
@@ -45,6 +52,14 @@ func BaselineConsensusFollower(t *testing.T) *ConsensusFollower {
 
 func (f *ConsensusFollower) OnBlockFinalized(finalID flow.Identifier) {
 	f.OnBlockFinalizedFunc(finalID)
+}
+
+func (f *ConsensusFollower) Height() uint64 {
+	return f.HeightFunc()
+}
+
+func (f *ConsensusFollower) BlockID() flow.Identifier {
+	return f.BlockIDFunc()
 }
 
 func (f *ConsensusFollower) Run(ctx context.Context) {

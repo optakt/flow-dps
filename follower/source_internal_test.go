@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package consensus
+package follower
 
 import (
 	"io"
@@ -22,16 +22,23 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/flow-go/model/flow"
 	"github.com/optakt/flow-dps/testing/helpers"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
-func TestNew(t *testing.T) {
+func TestFromFollowers(t *testing.T) {
 	log := zerolog.New(io.Discard)
+	exec := mocks.BaselineExecutionFollower(t)
+	cons := mocks.BaselineConsensusFollower(t)
 	db := helpers.InMemoryDB(t)
 
-	follower := New(log, db)
+	s := NewSource(log, exec, cons, db)
 
-	require.NotNil(t, follower)
-	assert.Equal(t, follower.log, log)
-	assert.Equal(t, follower.db, db)
+	require.NotNil(t, s)
+	assert.Equal(t, log, s.log)
+	assert.Equal(t, exec, s.execution)
+	assert.Equal(t, cons, s.consensus)
+	assert.Equal(t, db, s.db)
+	assert.Equal(t, flow.ZeroID, s.blockID)
 }

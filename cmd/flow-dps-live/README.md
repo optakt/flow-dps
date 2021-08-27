@@ -13,7 +13,8 @@ Usage of flow-dps-live:
       --access-address string       address (host:port) of the peer to connect to
       --access-key string           network public key of the peer to connect to
       --bind-addr string            address on which to bind the FIXME (default "127.0.0.1:FIXME")
-  -b, --bucket string               name of the S3 bucket which contains the state ledger
+      --bootstrap-dir string        path to the directory which contains bootstrap data
+      --bucket string               name of the Google Cloud Storage bucket which contains the block data
   -c, --checkpoint string           checkpoint file for state trie
   -d, --data string                 database directory for protocol data
       --download-directory string   directory where to download ledger WAL checkpoints
