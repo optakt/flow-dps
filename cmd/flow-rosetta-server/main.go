@@ -23,8 +23,11 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	modelindex "github.com/optakt/flow-dps/models/index"
+	serviceindex "github.com/optakt/flow-dps/service/index"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
@@ -61,12 +64,14 @@ func run() int {
 		flagChain string
 		flagLevel string
 		flagPort  uint16
+		flagIndex string
 	)
 
 	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
 	pflag.StringVarP(&flagChain, "chain", "c", dps.FlowTestnet.String(), "chain ID for Flow network core contracts")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
+	pflag.StringVarP(&flagIndex, "index", "i", "", "database directory for state index (disables GRPC API if specified)")
 
 	pflag.Parse()
 
@@ -87,18 +92,34 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the API client.
-	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
-	if err != nil {
-		log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
-		return failure
-	}
-	defer conn.Close()
+	var index modelindex.Reader
 
 	// Rosetta API initialization.
-	client := api.NewAPIClient(conn)
+	if flagIndex != "" {
+		db, err := badger.Open(dps.DefaultOptions(flagIndex))
+		if err != nil {
+			log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+			return failure
+		}
+		defer db.Close()
+
+		index = serviceindex.NewReader(db)
+	} else {
+
+		// Initialize the API client.
+		conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
+		if err != nil {
+			log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
+			return failure
+		}
+		defer conn.Close()
+
+		client := api.NewAPIClient(conn)
+		index = api.IndexFromAPI(client)
+	}
+
 	generator := scripts.NewGenerator(params)
-	invoke := invoker.New(api.IndexFromAPI(client))
+	invoke := invoker.New(index)
 	validate := validator.New(params)
 	retrieve := retriever.New(generator, invoke)
 	ctrl := rosetta.NewData(validate, retrieve)
