@@ -16,19 +16,21 @@ package mocks
 
 import (
 	"testing"
-
-	"github.com/onflow/flow-go/model/flow"
 )
 
-type BucketDownloader struct {
-	ReadFunc func(blockID flow.Identifier) ([]byte, error)
+type Poller struct {
+	NotifyFunc func() <-chan string
+	ReadFunc func(filename string) ([]byte, error)
 }
 
-func BaselineDownloader(t *testing.T) *BucketDownloader {
+func BaselinePoller(t *testing.T, notifyCh chan string) *Poller {
 	t.Helper()
 
-	b := BucketDownloader{
-		ReadFunc: func(blockID flow.Identifier) ([]byte, error) {
+	b := Poller{
+		NotifyFunc: func() <-chan string {
+			return notifyCh
+		},
+		ReadFunc: func(filename string) ([]byte, error) {
 			return GenericBytes, nil
 		},
 	}
@@ -36,6 +38,10 @@ func BaselineDownloader(t *testing.T) *BucketDownloader {
 	return &b
 }
 
-func (b *BucketDownloader) Read(blockID flow.Identifier) ([]byte, error) {
-	return b.ReadFunc(blockID)
+func (p *Poller) Read(filename string) ([]byte, error) {
+	return p.ReadFunc(filename)
+}
+
+func (p *Poller) Notify() <-chan string {
+	return p.NotifyFunc()
 }

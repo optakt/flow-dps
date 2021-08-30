@@ -94,13 +94,16 @@ func (f *Follower) Run() error {
 				return fmt.Errorf("could not read block data: %w", err)
 			}
 
-			var data *BlockData
+			var data BlockData
 			err = f.codec.Unmarshal(b, &data)
 			if err != nil {
 				return fmt.Errorf("could not decode block data: %w", err)
 			}
+			if data.Block == nil {
+				return fmt.Errorf("invalid block data")
+			}
 
-			f.data[data.Block.Header.Height] = data
+			f.data[data.Block.Header.Height] = &data
 
 			// This should only ever happen once, when we get the oldest available block.
 			if data.Block.Header.Height < f.height {
@@ -121,7 +124,7 @@ func (f *Follower) Run() error {
 func (f *Follower) Update() (*ledger.TrieUpdate, error) {
 	// If we reached the end of the trie updates for the current block, it means it should have been indexed
 	// successfully. Therefore, we move on to the next block.
-	if f.index == len(f.current.TrieUpdates) {
+	if f.current == nil || f.index == len(f.current.TrieUpdates) {
 		err := f.next()
 		if err != nil {
 			return nil, fmt.Errorf("could not forward execution follower to the next block: %w", err)
@@ -140,8 +143,12 @@ func (f *Follower) next() error {
 		return dps.ErrUnavailable
 	}
 
-	f.height++
-	f.index = 0
+	// Only increment height and reset index if we are moving from one block to the next,
+	// not if this is the first block.
+	if f.current != nil {
+		f.height++
+		f.index = 0
+	}
 
 	var exists bool
 	f.current, exists = f.data[f.height]

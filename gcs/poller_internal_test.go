@@ -56,7 +56,7 @@ func TestReader_Run(t *testing.T) {
 
 	select {
 	case <-time.After(50 * time.Millisecond):
-		t.Fatalf("poller did not stop within expected time limit")
+		t.Fatal("poller did not stop within expected time limit")
 	case <-notify:
 		// Poller stopped successfully since it closed its notify channel.
 	}
