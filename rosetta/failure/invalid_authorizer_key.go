@@ -12,20 +12,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package failure
 
 import (
-	"github.com/onflow/cadence"
+	"fmt"
+
 	"github.com/onflow/flow-go/model/flow"
 )
 
-// Intent describes the intent of an array of Rosetta operations.
-type Intent struct {
-	From     flow.Address
-	To       flow.Address
-	Amount   cadence.UFix64
-	Payer    flow.Address
-	Proposer flow.Address
+type InvalidAuthorizerKey struct {
+	Description Description
+	Address     flow.Address
+	Index       int
+}
 
-	GasLimit uint64
+func (i InvalidAuthorizerKey) Error() string {
+	return fmt.Sprintf("invalid authorizer key (address: %s, key index: %d): %s", i.Address, i.Index, i.Description)
 }

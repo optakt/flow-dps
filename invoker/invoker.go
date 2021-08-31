@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/failure"
 )
 
 type Invoker struct {
@@ -72,6 +73,70 @@ func New(index dps.Reader, options ...func(*Config)) (*Invoker, error) {
 	}
 
 	return &i, nil
+}
+
+func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
+
+	// Retrieve the account at the latest block.
+	account, err := i.Account(height, address)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve account: %w", err)
+	}
+
+	// Create a key lookup map.
+	keys := make(map[int]flow.AccountPublicKey)
+	for _, key := range account.Keys {
+		keys[key.Index] = key
+	}
+
+	// Lookup the specified key.
+	key, ok := keys[index]
+	if !ok {
+		return nil, failure.InvalidAuthorizerKey{
+			Address:     address,
+			Index:       index,
+			Description: failure.NewDescription("account key not found"),
+		}
+	}
+
+	// Check if the key is still valid.
+	if key.Revoked {
+		return nil, failure.InvalidAuthorizerKey{
+			Address:     address,
+			Index:       index,
+			Description: failure.NewDescription("account key was revoked"),
+		}
+	}
+
+	return &key, nil
+}
+
+func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, error) {
+
+	// Look up the current block and commit for the block.
+	header, err := i.index.Header(height)
+	if err != nil {
+		return nil, fmt.Errorf("could not get header: %w", err)
+	}
+
+	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
+
+	// Initialize the read function. We use a shared cache between all heights
+	// here. It's a smart cache, which means that items that are accessed often
+	// are more likely to be kept, regardless of height. This allows us to put
+	// an upper bound on total cache size while using it for all heights.
+	read := readRegister(i.index, i.cache, header.Height)
+
+	// Initialize the view of the execution state on top of the ledger by
+	// using the read function at a specific commit.
+	view := delta.NewView(read)
+
+	account, err := i.vm.GetAccount(ctx, address, view, programs.NewEmptyPrograms())
+	if err != nil {
+		return nil, fmt.Errorf("could not get account at height %d: %w", header.Height, err)
+	}
+
+	return account, nil
 }
 
 func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value) (cadence.Value, error) {
@@ -124,31 +189,4 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	return proc.Value, nil
-}
-
-func (i *Invoker) Account(address flow.Address, height uint64) (*flow.Account, error) {
-	// Look up the current block and commit for the block.
-	header, err := i.index.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get header: %w", err)
-	}
-
-	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
-
-	// Initialize the read function. We use a shared cache between all heights
-	// here. It's a smart cache, which means that items that are accessed often
-	// are more likely to be kept, regardless of height. This allows us to put
-	// an upper bound on total cache size while using it for all heights.
-	read := readRegister(i.index, i.cache, header.Height)
-
-	// Initialize the view of the execution state on top of the ledger by
-	// using the read function at a specific commit.
-	view := delta.NewView(read)
-
-	account, err := i.vm.GetAccount(ctx, address, view, programs.NewEmptyPrograms())
-	if err != nil {
-		return nil, fmt.Errorf("could not get account at height %d: %w", header.Height, err)
-	}
-
-	return account, nil
 }

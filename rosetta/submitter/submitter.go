@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/onflow/flow-go-sdk"
+	sdk "github.com/onflow/flow-go-sdk"
 )
 
 // Submitter submits transactions for execution.
@@ -36,7 +36,7 @@ func New(api API) *Submitter {
 }
 
 // Transaction submits the given transaction for execution.
-func (s *Submitter) Transaction(tx *flow.Transaction) error {
+func (s *Submitter) Transaction(tx *sdk.Transaction) error {
 	err := s.api.SendTransaction(context.Background(), *tx)
 	if err != nil {
 		return fmt.Errorf("could not submit transaction: %w", err)

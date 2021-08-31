@@ -21,7 +21,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/onflow/flow-go-sdk"
+	sdk "github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -74,14 +74,13 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txSignatureInvalid))
 	}
 
-	// Unpack the transaction blob.
-	var unsignedTx flow.Transaction
+	var unsignedTx sdk.Transaction
 	err = json.Unmarshal([]byte(req.UnsignedTransaction), &unsignedTx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txBodyInvalid, withError(err)))
 	}
 
-	tx, err := c.parser.AttachSignature(&unsignedTx, signature)
+	signedTx, err := c.transact.AttachSignature(&unsignedTx, signature)
 	var iaErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
@@ -98,7 +97,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, internal(txSigning, err))
 	}
 
-	data, err := json.Marshal(tx)
+	data, err := json.Marshal(signedTx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txEncoding, err))
 	}

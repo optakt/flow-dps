@@ -12,14 +12,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package access
+package transactor
 
 import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type Invoker interface {
-	Account(height uint64, address flow.Address) (*flow.Account, error)
-	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
+// Intent describes the intent of an array of Rosetta operations.
+type Intent struct {
+	From     flow.Address
+	To       flow.Address
+	Amount   cadence.UFix64
+	Payer    flow.Address
+	Proposer flow.Address
+
+	GasLimit uint64
 }

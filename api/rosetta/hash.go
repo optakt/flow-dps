@@ -20,7 +20,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/onflow/flow-go-sdk"
+	sdk "github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
@@ -60,15 +60,15 @@ func (c *Construction) Hash(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyEmpty))
 	}
 
-	var tx flow.Transaction
-	err = json.Unmarshal([]byte(req.SignedTransaction), &tx)
+	var signedTx sdk.Transaction
+	err = json.Unmarshal([]byte(req.SignedTransaction), &signedTx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyInvalid, withError(err)))
 	}
 
 	res := HashResponse{
 		TransactionID: identifier.Transaction{
-			Hash: tx.ID().Hex(),
+			Hash: signedTx.ID().Hex(),
 		},
 	}
 

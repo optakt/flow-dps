@@ -59,7 +59,7 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
-	intent, err := c.parser.DeriveIntent(req.Operations)
+	intent, err := c.transact.DeriveIntent(req.Operations)
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))

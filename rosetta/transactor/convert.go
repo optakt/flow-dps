@@ -12,24 +12,13 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
-// Parser has the capabilities to determine transaction intent from an array
-// of Rosetta operations, create a Flow transaction from a transaction intent
-// and transate a Flow transaction back to an array of Rosetta operations.
-type Parser struct {
-	validate Validator
-	generate Generator
-}
+import (
+	sdk "github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go/model/flow"
+)
 
-// NewParser creates a new transaction Parser to handle constructing
-// and parsing transactions.
-func NewParser(validate Validator, generate Generator) *Parser {
-
-	p := Parser{
-		validate: validate,
-		generate: generate,
-	}
-
-	return &p
+func convertAddress(address sdk.Address) flow.Address {
+	return flow.BytesToAddress(address[:])
 }

@@ -65,7 +65,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 
 	// Metadata object is the response from our metadata endpoint. Thus, the object
 	// should be okay, but let's validate it anyway.
-	rosBlockID := req.Metadata.ReferenceBlockID
+	rosBlockID := req.Metadata.CurrentBlockID
 	if rosBlockID.Index == nil && rosBlockID.Hash == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
 	}
@@ -76,7 +76,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		))
 	}
 
-	intent, err := c.parser.DeriveIntent(req.Operations)
+	intent, err := c.transact.DeriveIntent(req.Operations)
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
@@ -101,14 +101,22 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermination, err))
 	}
 
-	tx, err := c.parser.CompileTransaction(intent, req.Metadata)
+	unsignedTx, err := c.transact.CompileTransaction(req.Metadata.CurrentBlockID, intent, req.Metadata.SequenceNumber)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
 	}
 
-	data, err := json.Marshal(tx)
+	data, err := json.Marshal(unsignedTx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txEncoding, err))
+	}
+
+	sender := identifier.Account{
+		Address: intent.From.String(),
+	}
+	payload, err := c.transact.HashPayload(req.Metadata.CurrentBlockID, unsignedTx, sender)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, internal(payloadHashing, err))
 	}
 
 	// We only support a single signer at the moment, so the account only needs to sign the transaction envelope.
@@ -117,7 +125,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		Payloads: []object.SigningPayload{
 			{
 				AccountID:     identifier.Account{Address: intent.From.Hex()},
-				HexBytes:      hex.EncodeToString(tx.EnvelopeMessage()),
+				HexBytes:      hex.EncodeToString(payload),
 				SignatureType: FlowSignatureAlgorithm,
 			},
 		},
