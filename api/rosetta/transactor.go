@@ -22,8 +22,8 @@ import (
 	"github.com/optakt/flow-dps/rosetta/transactor"
 )
 
-// Parser is used by the Rosetta Construction API to handle transaction related operations.
-type Parser interface {
+// Transactor is used by the Rosetta Construction API to handle transaction related operations.
+type Transactor interface {
 	DeriveIntent(operations []object.Operation) (intent *transactor.Intent, err error)
 	CompileTransaction(intent *transactor.Intent, metadata object.Metadata) (tx *sdk.Transaction, err error)
 	ParseTransaction(tx *sdk.Transaction) (operations []object.Operation, signers []identifier.Account, err error)

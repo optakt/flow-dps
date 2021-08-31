@@ -156,9 +156,9 @@ func run() int {
 	)
 	dataCtrl := rosetta.NewData(config, retrieve)
 
-	parse := transactor.New(validate, generate)
+	transact := transactor.New(validate, generate)
 	submit := submitter.New(accessAPI)
-	constructCtrl := rosetta.NewConstruction(config, parse, retrieve, submit)
+	constructCtrl := rosetta.NewConstruction(config, transact, retrieve, submit)
 
 	server := echo.New()
 	server.HideBanner = true

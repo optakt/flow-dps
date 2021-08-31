@@ -33,9 +33,9 @@ const (
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html
 type Construction struct {
-	config Configuration
-	parser Parser
-	submit Submitter
+	config   Configuration
+	transact Transactor
+	submit   Submitter
 
 	// Retrieve is used to get the latest block ID. This is needed since
 	// transactions require a reference block ID, so that their validity
@@ -45,11 +45,11 @@ type Construction struct {
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
-func NewConstruction(config Configuration, parser Parser, retriever Retriever, submitter Submitter) *Construction {
+func NewConstruction(config Configuration, transact Transactor, retriever Retriever, submitter Submitter) *Construction {
 
 	c := Construction{
 		config:   config,
-		parser:   parser,
+		transact: transact,
 		retrieve: retriever,
 		submit:   submitter,
 	}

@@ -81,7 +81,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		))
 	}
 
-	intent, err := c.parser.DeriveIntent(req.Operations)
+	intent, err := c.transact.DeriveIntent(req.Operations)
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
@@ -106,7 +106,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermination, err))
 	}
 
-	unsignedTx, err := c.parser.CompileTransaction(intent, req.Metadata)
+	unsignedTx, err := c.transact.CompileTransaction(intent, req.Metadata)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
 	}
