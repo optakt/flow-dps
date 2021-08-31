@@ -15,10 +15,10 @@
 package rosetta
 
 import (
-	"github.com/onflow/flow-go-sdk"
+	sdk "github.com/onflow/flow-go-sdk"
 )
 
 // Submitter is used to submit the constructed transaction for execution in a Flow network.
 type Submitter interface {
-	Transaction(tx *flow.Transaction) error
+	Transaction(tx *sdk.Transaction) error
 }

@@ -12,13 +12,8 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
-import (
-	sdk "github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go/model/flow"
-)
-
-func convertAddress(address sdk.Address) flow.Address {
-	return flow.BytesToAddress(address[:])
+type Generator interface {
+	TransferTokens(symbol string) ([]byte, error)
 }

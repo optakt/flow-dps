@@ -19,6 +19,6 @@ import (
 )
 
 type Metadata struct {
-	ReferenceBlockID identifier.Block `json:"reference_block"`
-	SequenceNumber   uint64           `json:"sequence_number"`
+	CurrentBlockID identifier.Block `json:"current_block"`
+	SequenceNumber uint64           `json:"sequence_number"`
 }

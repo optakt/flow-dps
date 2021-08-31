@@ -79,7 +79,7 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 
 	// TODO: Allow arbitrary proposal key index
 	// => https://github.com/optakt/flow-dps/issues/369
-	sequenceNr, err := c.retrieve.SequenceNumber(req.Options.AccountID, 0)
+	sequence, err := c.retrieve.Sequence(current, req.Options.AccountID, 0)
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
@@ -97,14 +97,10 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 	// the identifier here, to keep the data identical.
 	// TODO: perhaps better to have this complete but have the `parse` endpoint do one additional lookup.
 	// => https://github.com/optakt/flow-dps/issues/378
-	rosBlockID := identifier.Block{
-		Hash: current.Hash,
-	}
-
 	res := MetadataResponse{
 		Metadata: object.Metadata{
-			ReferenceBlockID: rosBlockID,
-			SequenceNumber:   sequenceNr,
+			CurrentBlockID: current,
+			SequenceNumber: sequence,
 		},
 	}
 

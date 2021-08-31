@@ -21,7 +21,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/onflow/flow-go-sdk"
+	sdk "github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -68,7 +68,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyEmpty))
 	}
 
-	var tx flow.Transaction
+	var tx sdk.Transaction
 	err = json.Unmarshal([]byte(req.Transaction), &tx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyInvalid, withError(err)))
@@ -85,8 +85,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 	}
 
 	// Parse the transaction and recreate the original list of operations, as well as all signers involved.
-	operations, signers, err := c.parser.ParseTransaction(&tx)
-
+	operations, signers, err := c.transact.ParseTransaction(&tx)
 	var iaErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
@@ -136,7 +135,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 	}
 
 	metadata := object.Metadata{
-		ReferenceBlockID: identifier.Block{
+		CurrentBlockID: identifier.Block{
 			Hash: tx.ReferenceBlockID.Hex(),
 		},
 		SequenceNumber: tx.ProposalKey.SequenceNumber,

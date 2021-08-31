@@ -19,9 +19,9 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/onflow/flow-go-sdk"
+	sdk "github.com/onflow/flow-go-sdk"
 )
 
 type API interface {
-	SendTransaction(ctx context.Context, tx flow.Transaction, opts ...grpc.CallOption) error
+	SendTransaction(ctx context.Context, tx sdk.Transaction, opts ...grpc.CallOption) error
 }

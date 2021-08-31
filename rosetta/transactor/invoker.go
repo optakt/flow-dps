@@ -12,8 +12,12 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
-type Generator interface {
-	TransferTokens(symbol string) ([]byte, error)
+import (
+	"github.com/onflow/flow-go/model/flow"
+)
+
+type Invoker interface {
+	Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error)
 }
