@@ -25,8 +25,8 @@ import (
 // Transactor is used by the Rosetta Construction API to handle transaction related operations.
 type Transactor interface {
 	DeriveIntent(operations []object.Operation) (intent *transactor.Intent, err error)
-	CompileTransaction(intent *transactor.Intent, metadata object.Metadata) (tx *sdk.Transaction, err error)
-	HashPayload(tx *sdk.Transaction, signer identifier.Account) (payload []byte, err error)
+	CompileTransaction(refBlockID identifier.Block, intent *transactor.Intent, sequence uint64) (tx *sdk.Transaction, err error)
+	HashPayload(rosBlockID identifier.Block, tx *sdk.Transaction, signer identifier.Account) (payload []byte, err error)
 	ParseTransaction(tx *sdk.Transaction) (operations []object.Operation, signers []identifier.Account, err error)
 	AttachSignature(unsignedTx *sdk.Transaction, signature object.Signature) (tx *sdk.Transaction, err error)
 }

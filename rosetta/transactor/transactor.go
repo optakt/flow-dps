@@ -173,13 +173,7 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 }
 
 // CompileTransaction creates a complete Flow transaction from the given intent and metadata.
-func (t *Transactor) CompileTransaction(intent *Intent, metadata object.Metadata) (*sdk.Transaction, error) {
-
-	// Run validation on the block ID. This also fills in missing information.
-	_, blockID, err := t.validate.Block(metadata.ReferenceBlockID)
-	if err != nil {
-		return nil, fmt.Errorf("could not validate block: %w", err)
-	}
+func (t *Transactor) CompileTransaction(refBlockID identifier.Block, intent *Intent, sequence uint64) (*sdk.Transaction, error) {
 
 	// Generate script for the token transfer.
 	script, err := t.generate.TransferTokens(dps.FlowSymbol)
@@ -193,9 +187,9 @@ func (t *Transactor) CompileTransaction(intent *Intent, metadata object.Metadata
 	// Create the transaction.
 	tx := sdk.NewTransaction().
 		SetScript(script).
-		SetReferenceBlockID(sdk.BytesToID(blockID[:])).
+		SetReferenceBlockID(sdk.HexToID(refBlockID.Hash)).
 		SetPayer(sdk.Address(intent.Payer)).
-		SetProposalKey(sdk.Address(intent.Proposer), 0, metadata.SequenceNumber).
+		SetProposalKey(sdk.Address(intent.Proposer), 0, sequence).
 		AddAuthorizer(sdk.Address(intent.From)).
 		SetGasLimit(intent.GasLimit)
 
@@ -208,19 +202,26 @@ func (t *Transactor) CompileTransaction(intent *Intent, metadata object.Metadata
 	return tx, nil
 }
 
-func (t *Transactor) HashPayload(tx *sdk.Transaction, signer identifier.Account) ([]byte, error) {
+func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsignedTx *sdk.Transaction, signer identifier.Account) ([]byte, error) {
 
-	address, err := t.validate.Account(signer)
+	// Validate block.
+	height, _, err := t.validate.Block(rosBlockID)
 	if err != nil {
-		return nil, failure.InvalidAccount{}
+		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
-	key, err := t.invoke.Key(0, address, 0)
+	// Validate address.
+	address, err := t.validate.Account(signer)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate account: %w", err)
+	}
+
+	key, err := t.invoke.Key(height, address, 0)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve key: %w", err)
 	}
 
-	message := tx.EnvelopeMessage()
+	message := unsignedTx.EnvelopeMessage()
 	message = append(flow.TransactionDomainTag[:], message...)
 
 	hasher, err := crypto.NewHasher(key.HashAlgo)

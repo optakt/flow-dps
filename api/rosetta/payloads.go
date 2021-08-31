@@ -65,7 +65,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 
 	// Metadata object is the response from our metadata endpoint. Thus, the object
 	// should be okay, but let's validate it anyway.
-	rosBlockID := req.Metadata.ReferenceBlockID
+	rosBlockID := req.Metadata.CurrentBlockID
 	if rosBlockID.Index == nil && rosBlockID.Hash == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
 	}
@@ -101,7 +101,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermination, err))
 	}
 
-	unsignedTx, err := c.transact.CompileTransaction(intent, req.Metadata)
+	unsignedTx, err := c.transact.CompileTransaction(req.Metadata.CurrentBlockID, intent, req.Metadata.SequenceNumber)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
 	}
@@ -114,7 +114,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	sender := identifier.Account{
 		Address: intent.From.String(),
 	}
-	payload, err := c.transact.HashPayload(unsignedTx, sender)
+	payload, err := c.transact.HashPayload(req.Metadata.CurrentBlockID, unsignedTx, sender)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(payloadHashing, err))
 	}

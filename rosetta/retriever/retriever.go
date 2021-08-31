@@ -323,6 +323,52 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	return &transaction, nil
 }
 
+func (r *Retriever) SequenceNumber(rosBlockID identifier.Block, rosAccountID identifier.Account, index int) (uint64, error) {
+
+	// Run validation on the block identifier and the address.
+	height, _, err := r.validate.Block(rosBlockID)
+	if err != nil {
+		return 0, fmt.Errorf("could not validate block: %w", err)
+	}
+	address, err := r.validate.Account(rosAccountID)
+	if err != nil {
+		return 0, fmt.Errorf("could not validate account: %w", err)
+	}
+
+	// Retrieve the account from the invoker.
+	account, err := r.invoke.Account(height, address)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve account: %w", err)
+	}
+
+	// Create a key lookup map.
+	keys := make(map[int]flow.AccountPublicKey)
+	for _, key := range account.Keys {
+		keys[key.Index] = key
+	}
+
+	// Lookup the specified key.
+	key, ok := keys[index]
+	if !ok {
+		return 0, failure.InvalidProposalKey{
+			Address:     address,
+			Index:       index,
+			Description: failure.NewDescription("account key not found"),
+		}
+	}
+
+	// Check if the key is still valid.
+	if key.Revoked {
+		return 0, failure.InvalidProposalKey{
+			Address:     address,
+			Index:       index,
+			Description: failure.NewDescription("account key was revoked"),
+		}
+	}
+
+	return key.SeqNumber, nil
+}
+
 // operations allows us to extract the operations for a transaction ID by using the given list of
 // events. In general, we retrieve all events for the block in question, so those should be passed in order to avoid
 // querying events for each transaction in a block.

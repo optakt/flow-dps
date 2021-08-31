@@ -135,7 +135,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 	}
 
 	metadata := object.Metadata{
-		ReferenceBlockID: identifier.Block{
+		CurrentBlockID: identifier.Block{
 			Hash: tx.ReferenceBlockID.Hex(),
 		},
 		SequenceNumber: tx.ProposalKey.SequenceNumber,
