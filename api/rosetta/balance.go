@@ -58,12 +58,19 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
-	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
+	rosBlockID := req.BlockID
+	// If both index and hash are not populated, it's assumed that the client is making
+	// a request at the current block.
+	if rosBlockID.Index == nil && rosBlockID.Hash == "" {
+		current, _, err := d.retrieve.Current()
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, internal(currentRetrieval, err))
+		}
+		rosBlockID = current
 	}
-	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
+	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != hexIDSize {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
-			withDetail("have_length", len(req.BlockID.Hash)),
+			withDetail("have_length", len(rosBlockID.Hash)),
 			withDetail("want_length", hexIDSize),
 		))
 	}
@@ -100,7 +107,7 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(networkCheck, err))
 	}
 
-	rosBlockID, balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
+	rosBlockID, balances, err := d.retrieve.Balances(rosBlockID, req.AccountID, req.Currencies)
 
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {

@@ -147,6 +147,18 @@ func TestAPI_Block(t *testing.T) {
 			wantParentHeight: lastHeader.Height - 1,
 			validateBlock:    validateByHeader(t, lastHeader),
 		},
+		{
+			name: "last indexed block by omitting block identifier",
+			request: rosetta.BlockRequest{
+				NetworkID: defaultNetwork(),
+				BlockID:   identifier.Block{},
+			},
+
+			wantTimestamp:    convert.RosettaTime(lastHeader.Timestamp),
+			wantParentHash:   lastHeader.ParentID.String(),
+			wantParentHeight: lastHeader.Height - 1,
+			validateBlock:    validateByHeader(t, lastHeader),
+		},
 	}
 
 	for _, test := range tests {
@@ -264,18 +276,6 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			},
 
 			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
-		},
-		{
-			name: "missing block height and hash",
-			request: rosetta.BlockRequest{
-				NetworkID: defaultNetwork(),
-				BlockID: identifier.Block{
-					Index: nil,
-					Hash:  "",
-				},
-			},
-
-			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of block id",

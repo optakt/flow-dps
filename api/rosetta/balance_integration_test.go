@@ -95,6 +95,20 @@ func TestAPI_Balance(t *testing.T) {
 			wantBalance:   "10000099999",
 			validateBlock: validateBlock(t, secondBlock.Height, secondBlock.ID().String()),
 		},
+		{
+			name: "get latest block by omitting block identifier",
+			request: rosetta.BalanceRequest{
+				NetworkID: defaultNetwork(),
+				AccountID: identifier.Account{
+					Address: testAccount,
+				},
+				BlockID:    identifier.Block{},
+				Currencies: defaultCurrency(),
+			},
+
+			wantBalance:   "10000100002",
+			validateBlock: validateBlock(t, lastBlock.Height, lastBlock.ID().String()),
+		},
 	}
 
 	for _, test := range tests {
@@ -223,17 +237,6 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 			},
 
 			checkError: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidNetwork),
-		},
-		{
-			name: "missing block index and height",
-			request: rosetta.BalanceRequest{
-				NetworkID:  defaultNetwork(),
-				AccountID:  testAccount,
-				BlockID:    identifier.Block{Index: nil, Hash: ""},
-				Currencies: defaultCurrency(),
-			},
-
-			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid length of block id",
