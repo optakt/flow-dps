@@ -323,47 +323,27 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	return &transaction, nil
 }
 
-func (r *Retriever) SequenceNumber(rosBlockID identifier.Block, rosAccountID identifier.Account, index int) (uint64, error) {
+func (r *Retriever) Sequence(rosBlockID identifier.Block, rosAccountID identifier.Account, index int) (uint64, error) {
 
-	// Run validation on the block identifier and the address.
+	// Run validation on the Rosetta block identifier. This will infer any
+	// missing data and return the height and block ID.
 	height, _, err := r.validate.Block(rosBlockID)
 	if err != nil {
 		return 0, fmt.Errorf("could not validate block: %w", err)
 	}
+
+	// Run validation on the Rosetta account identifier. This will return the
+	// native Flow address.
 	address, err := r.validate.Account(rosAccountID)
 	if err != nil {
 		return 0, fmt.Errorf("could not validate account: %w", err)
 	}
 
-	// Retrieve the account from the invoker.
-	account, err := r.invoke.Account(height, address)
+	// Retrieve the key at the height of the given block and for the given
+	// address at index 0.
+	key, err := r.invoke.Key(height, address, 0)
 	if err != nil {
 		return 0, fmt.Errorf("could not retrieve account: %w", err)
-	}
-
-	// Create a key lookup map.
-	keys := make(map[int]flow.AccountPublicKey)
-	for _, key := range account.Keys {
-		keys[key.Index] = key
-	}
-
-	// Lookup the specified key.
-	key, ok := keys[index]
-	if !ok {
-		return 0, failure.InvalidProposalKey{
-			Address:     address,
-			Index:       index,
-			Description: failure.NewDescription("account key not found"),
-		}
-	}
-
-	// Check if the key is still valid.
-	if key.Revoked {
-		return 0, failure.InvalidProposalKey{
-			Address:     address,
-			Index:       index,
-			Description: failure.NewDescription("account key was revoked"),
-		}
 	}
 
 	return key.SeqNumber, nil

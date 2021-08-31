@@ -22,6 +22,7 @@ import (
 )
 
 type Invoker struct {
+	KeyFunc     func(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error)
 	AccountFunc func(height uint64, address flow.Address) (*flow.Account, error)
 	ScriptFunc  func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
 }
@@ -30,6 +31,9 @@ func BaselineInvoker(t *testing.T) *Invoker {
 	t.Helper()
 
 	i := Invoker{
+		KeyFunc: func(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
+			return &GenericAccount.Keys[0], nil
+		},
 		AccountFunc: func(height uint64, address flow.Address) (*flow.Account, error) {
 			return &GenericAccount, nil
 		},
@@ -39,6 +43,10 @@ func BaselineInvoker(t *testing.T) *Invoker {
 	}
 
 	return &i
+}
+
+func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
+	return i.KeyFunc(height, address, index)
 }
 
 func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, error) {

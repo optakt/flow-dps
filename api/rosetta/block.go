@@ -56,9 +56,6 @@ func (d *Data) Block(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
-	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
-	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
 			withDetail("have_length", len(req.BlockID.Hash)),
@@ -76,7 +73,6 @@ func (d *Data) Block(ctx echo.Context) error {
 	}
 
 	block, extraTxIDs, err := d.retrieve.Block(req.BlockID)
-
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
@@ -85,7 +81,6 @@ func (d *Data) Block(ctx echo.Context) error {
 	if errors.As(err, &ubErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
 	}
-
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(blockRetrieval, err))
 	}

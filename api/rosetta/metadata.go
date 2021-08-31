@@ -84,9 +84,9 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
 	}
-	var ipErr failure.InvalidProposalKey
+	var ipErr failure.InvalidKey
 	if errors.As(err, &ipErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidProposalKey(ipErr))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidKey(ipErr))
 	}
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(sequenceNumberRetrieval, err))

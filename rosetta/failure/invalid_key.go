@@ -20,12 +20,12 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type InvalidProposalKey struct {
+type InvalidKey struct {
 	Description Description
 	Address     flow.Address
 	Index       int
 }
 
-func (i InvalidProposalKey) Error() string {
-	return fmt.Sprintf("invalid proposal key (address: %s, key index: %d): %s", i.Address, i.Index, i.Description)
+func (i InvalidKey) Error() string {
+	return fmt.Sprintf("invalid signer key (address: %s, key index: %d): %s", i.Address, i.Index, i.Description)
 }

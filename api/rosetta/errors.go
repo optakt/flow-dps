@@ -57,7 +57,6 @@ const (
 	txEncoding              = "unable to encode transaction"
 	txParsing               = "unable to parse transaction"
 	txSigning               = "unable to sign transaction"
-	keyRetrieval            = "unable to retrieve account key"
 	payloadHashing          = "unable to hash signing payload"
 	signatureVerification   = "unable to verify signature"
 )
@@ -278,18 +277,9 @@ func invalidSignature(fail failure.InvalidSignature) Error {
 	)
 }
 
-func invalidProposalKey(fail failure.InvalidProposalKey) Error {
+func invalidKey(fail failure.InvalidKey) Error {
 	return convertError(
 		configuration.ErrorInvalidProposalKey,
-		fail.Description,
-		withAddress("account", fail.Address),
-		withDetail("index", fail.Index),
-	)
-}
-
-func invalidAuthorizerKey(fail failure.InvalidAuthorizerKey) Error {
-	return convertError(
-		configuration.ErrorInvalidAuthorizerKey,
 		fail.Description,
 		withAddress("account", fail.Address),
 		withDetail("index", fail.Index),

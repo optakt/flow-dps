@@ -31,9 +31,15 @@ func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier,
 
 	// If both the index and the hash are missing, the block identifier is invalid.
 	if rosBlockID.Index == nil && rosBlockID.Hash == "" {
-		return 0, flow.ZeroID, failure.InvalidBlock{
-			Description: failure.NewDescription("block needs either a valid index or a valid hash"),
+		last, err := v.index.Last()
+		if err != nil {
+			return 0, flow.ZeroID, fmt.Errorf("could not retrieve last: %w", err)
 		}
+		header, err := v.index.Header(last)
+		if err != nil {
+			return 0, flow.ZeroID, fmt.Errorf("could not retrieve header: %w", err)
+		}
+		return last, header.ID(), nil
 	}
 
 	// If a block hash is present, it should be a valid block ID for Flow.

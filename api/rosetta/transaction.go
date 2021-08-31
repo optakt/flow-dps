@@ -86,7 +86,6 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	}
 
 	transaction, err := d.retrieve.Transaction(req.BlockID, req.TransactionID)
-
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
