@@ -88,7 +88,7 @@ func withDetail(key string, val interface{}) detailFunc {
 
 func withAddress(key string, val flow.Address) detailFunc {
 	return func(details map[string]interface{}) {
-		details[key] = val.String()
+		details[key] = val.Hex()
 	}
 }
 
@@ -281,6 +281,7 @@ func invalidKey(fail failure.InvalidKey) Error {
 	return convertError(
 		configuration.ErrorInvalidProposalKey,
 		fail.Description,
+		withDetail("height", fail.Height),
 		withAddress("account", fail.Address),
 		withDetail("index", fail.Index),
 	)

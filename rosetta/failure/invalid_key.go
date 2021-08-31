@@ -22,10 +22,11 @@ import (
 
 type InvalidKey struct {
 	Description Description
+	Height      uint64
 	Address     flow.Address
 	Index       int
 }
 
 func (i InvalidKey) Error() string {
-	return fmt.Sprintf("invalid signer key (address: %s, key index: %d): %s", i.Address, i.Index, i.Description)
+	return fmt.Sprintf("invalid signer key (height: %d, address: %s, key index: %d): %s", i.Height, i.Address, i.Index, i.Description)
 }
