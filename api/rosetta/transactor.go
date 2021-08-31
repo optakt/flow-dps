@@ -29,4 +29,5 @@ type Transactor interface {
 	HashPayload(rosBlockID identifier.Block, tx *sdk.Transaction, signer identifier.Account) (payload []byte, err error)
 	ParseTransaction(tx *sdk.Transaction) (operations []object.Operation, signers []identifier.Account, err error)
 	AttachSignature(unsignedTx *sdk.Transaction, signature object.Signature) (tx *sdk.Transaction, err error)
+	VerifySignature(signedTx *sdk.Transaction, signers []identifier.Account) error
 }

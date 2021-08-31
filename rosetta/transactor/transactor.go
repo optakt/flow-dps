@@ -413,9 +413,6 @@ func (t *Transactor) ParseTransaction(tx *sdk.Transaction) ([]object.Operation, 
 		}
 	}
 
-	// TODO: Validate the actual signature.
-	// => https://github.com/optakt/flow-dps/issues/376
-
 	// Create the signers list.
 	signers := []identifier.Account{
 		sender,
@@ -484,4 +481,69 @@ func (t *Transactor) AttachSignature(tx *sdk.Transaction, signature object.Signa
 	signedTx.AddEnvelopeSignature(signer, 0, bytes)
 
 	return signedTx, nil
+}
+
+func (t *Transactor) VerifySignature(tx *sdk.Transaction, signers []identifier.Account) error {
+
+	if len(signers) == 0 {
+		return nil
+	}
+
+	if len(signers) != authorizersRequired {
+		return failure.InvalidAuthorizers{
+			Have:        uint(len(tx.Authorizers)),
+			Want:        authorizersRequired,
+			Description: failure.NewDescription("invalid number of authorizers"),
+		}
+	}
+
+	if len(tx.EnvelopeSignatures) != 1 {
+		return failure.InvalidSignature{
+			Description: failure.NewDescription("invalid number of signatures",
+				failure.WithInt("signatures", len(tx.EnvelopeSignatures))),
+		}
+	}
+
+	signer := signers[0]
+	address, err := t.validate.Account(signer)
+	if err != nil {
+		return fmt.Errorf("could not validate account: %w", err)
+	}
+
+	rosBlockID := identifier.Block{Hash: tx.ReferenceBlockID.Hex()}
+	height, _, err := t.validate.Block(rosBlockID)
+	if err != nil {
+		return fmt.Errorf("could not validate block: %w", err)
+	}
+
+	key, err := t.invoke.Key(height, address, 0)
+	if err != nil {
+		return fmt.Errorf("could not retrieve key: %w", err)
+	}
+
+	// NOTE: signature verification is ported from the DefaultSignatureVerifier
+	// => https://github.com/onflow/flow-go/blob/master/fvm/crypto/crypto.go
+	hasher, err := crypto.NewHasher(key.HashAlgo)
+	if err != nil {
+		return fmt.Errorf("could not get new hasher: %w", err)
+	}
+
+	message := tx.EnvelopeMessage()
+	message = append(sdk.TransactionDomainTag[:], message...)
+
+	signature := tx.EnvelopeSignatures[0].Signature
+
+	valid, err := key.PublicKey.Verify(signature, message, hasher)
+	if err != nil {
+		return fmt.Errorf("could not verify transaction signature: %w", err)
+	}
+
+	if !valid {
+		return failure.InvalidSignature{
+			Description: failure.NewDescription("provided signature is not valid",
+				failure.WithString("signature", hex.EncodeToString(signature))),
+		}
+	}
+
+	return nil
 }
