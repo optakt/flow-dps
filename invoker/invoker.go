@@ -92,7 +92,7 @@ func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.Acc
 	// Lookup the specified key.
 	key, ok := keys[index]
 	if !ok {
-		return nil, failure.InvalidAuthorizerKey{
+		return nil, failure.InvalidKey{
 			Address:     address,
 			Index:       index,
 			Description: failure.NewDescription("account key not found"),
@@ -101,7 +101,7 @@ func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.Acc
 
 	// Check if the key is still valid.
 	if key.Revoked {
-		return nil, failure.InvalidAuthorizerKey{
+		return nil, failure.InvalidKey{
 			Address:     address,
 			Index:       index,
 			Description: failure.NewDescription("account key was revoked"),

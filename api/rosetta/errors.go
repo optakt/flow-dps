@@ -277,7 +277,7 @@ func invalidSignature(fail failure.InvalidSignature) Error {
 	)
 }
 
-func invalidProposalKey(fail failure.InvalidProposalKey) Error {
+func invalidKey(fail failure.InvalidKey) Error {
 	return convertError(
 		configuration.ErrorInvalidProposalKey,
 		fail.Description,

@@ -70,6 +70,7 @@ func (d *Data) Status(ctx echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(oldestRetrieval, err))
 	}
+
 	current, timestamp, err := d.retrieve.Current()
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(currentRetrieval, err))

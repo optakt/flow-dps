@@ -20,6 +20,7 @@ import (
 )
 
 type Invoker interface {
+	Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error)
 	Account(height uint64, address flow.Address) (*flow.Account, error)
 	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
 }
