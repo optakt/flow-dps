@@ -37,13 +37,13 @@ func TestNew(t *testing.T) {
 
 		index := mocks.BaselineReader(t)
 
-		invoker, err := New(index, WithCacheSize(uint64(datasize.MB)))
+		invoke, err := New(index, WithCacheSize(uint64(datasize.MB)))
 
 		assert.NoError(t, err)
-		assert.NotNil(t, invoker)
-		assert.Equal(t, index, invoker.index)
-		assert.NotNil(t, invoker.cache)
-		assert.NotNil(t, invoker.vm)
+		assert.NotNil(t, invoke)
+		assert.Equal(t, index, invoke.index)
+		assert.NotNil(t, invoke.cache)
+		assert.NotNil(t, invoke.vm)
 	})
 
 	t.Run("handles invalid cache configuration", func(t *testing.T) {
@@ -84,15 +84,15 @@ func TestInvoker_Script(t *testing.T) {
 			return nil
 		}
 
-		invoker := baselineInvoker(t)
-		invoker.index = index
-		invoker.vm = vm
+		invoke := baselineInvoker(t)
+		invoke.index = index
+		invoke.vm = vm
 
 		values := []cadence.Value{
 			cadence.NewUInt64(1337),
 		}
 
-		val, err := invoker.Script(mocks.GenericHeight, mocks.GenericBytes, values)
+		val, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, values)
 
 		assert.NoError(t, err)
 		assert.Equal(t, testValue, val)
@@ -106,10 +106,10 @@ func TestInvoker_Script(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		invoker := baselineInvoker(t)
-		invoker.index = index
+		invoke := baselineInvoker(t)
+		invoke.index = index
 
-		_, err := invoker.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
 
 		assert.Error(t, err)
 	})
@@ -126,10 +126,10 @@ func TestInvoker_Script(t *testing.T) {
 			return nil
 		}
 
-		invoker := baselineInvoker(t)
-		invoker.vm = vm
+		invoke := baselineInvoker(t)
+		invoke.vm = vm
 
-		_, err := invoker.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
 
 		assert.Error(t, err)
 	})
@@ -142,10 +142,10 @@ func TestInvoker_Script(t *testing.T) {
 			return mocks.GenericError
 		}
 
-		invoker := baselineInvoker(t)
-		invoker.vm = vm
+		invoke := baselineInvoker(t)
+		invoke.vm = vm
 
-		_, err := invoker.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
 
 		assert.Error(t, err)
 	})
@@ -172,11 +172,11 @@ func TestInvoker_Account(t *testing.T) {
 			return mocks.GenericHeader, nil
 		}
 
-		invoker := baselineInvoker(t)
-		invoker.vm = vm
-		invoker.index = index
+		invoke := baselineInvoker(t)
+		invoke.vm = vm
+		invoke.index = index
 
-		account, err := invoker.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+		account, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
 
 		assert.NoError(t, err)
 		assert.Equal(t, &mocks.GenericAccount, account)
@@ -190,10 +190,10 @@ func TestInvoker_Account(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		invoker := baselineInvoker(t)
-		invoker.index = index
+		invoke := baselineInvoker(t)
+		invoke.index = index
 
-		_, err := invoker.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+		_, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
 
 		assert.Error(t, err)
 	})
@@ -206,10 +206,10 @@ func TestInvoker_Account(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		invoker := baselineInvoker(t)
-		invoker.vm = vm
+		invoke := baselineInvoker(t)
+		invoke.vm = vm
 
-		_, err := invoker.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+		_, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
 
 		assert.Error(t, err)
 	})
