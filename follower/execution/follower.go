@@ -18,9 +18,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
@@ -38,10 +38,12 @@ type blockReader interface {
 type Follower struct {
 	log zerolog.Logger
 
-	blocks blockReader
-	codec  dps.Codec
-	db     *badger.DB
+	blocks   blockReader
+	codec    dps.Codec
+	db       *badger.DB
+	validate *validator.Validate
 
+	// FIXME: Index by block ID instead of height.
 	data    map[uint64]*BlockData
 	current *BlockData
 	height  uint64
@@ -54,9 +56,10 @@ func New(log zerolog.Logger, blocks blockReader, codec dps.Codec, db *badger.DB)
 	f := Follower{
 		log: log,
 
-		blocks: blocks,
-		codec:  codec,
-		db:     db,
+		blocks:   blocks,
+		codec:    codec,
+		db:       db,
+		validate: validator.New(),
 
 		height: math.MaxUint64,
 		data:   make(map[uint64]*BlockData, cacheSize),
@@ -69,10 +72,7 @@ func New(log zerolog.Logger, blocks blockReader, codec dps.Codec, db *badger.DB)
 
 // Run launches the execution follower.
 func (f *Follower) Run() error {
-	tick := time.NewTicker(1 * time.Second)
-	defer tick.Stop()
-
-	for range tick.C {
+	for {
 		select {
 		case <-f.stop:
 			return nil
@@ -99,12 +99,14 @@ func (f *Follower) Run() error {
 			if err != nil {
 				return fmt.Errorf("could not decode block data: %w", err)
 			}
-			if data.Block == nil {
-				return fmt.Errorf("invalid block data")
+			err = f.validate.Struct(data)
+			if err != nil {
+				return fmt.Errorf("invalid block data: %w", err)
 			}
 
 			f.data[data.Block.Header.Height] = &data
 
+			// FIXME: Rewrite this in a more elegant way
 			// This should only ever happen once, when we get the oldest available block.
 			if data.Block.Header.Height < f.height {
 				if f.height != math.MaxUint64 {
@@ -116,8 +118,6 @@ func (f *Follower) Run() error {
 			}
 		}
 	}
-
-	return nil
 }
 
 // Update returns the next trie update, in chronological order. It is also in charge of moving onto the next

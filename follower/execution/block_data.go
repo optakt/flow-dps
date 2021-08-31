@@ -21,7 +21,7 @@ import (
 )
 
 type BlockData struct {
-	Block       *flow.Block
+	Block       *flow.Block `validate:"required"`
 	Collections []*entity.CompleteCollection
 	TxResults   []*flow.TransactionResult
 	Events      []*flow.Event

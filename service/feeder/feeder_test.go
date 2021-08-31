@@ -26,10 +26,10 @@ import (
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
-func TestFromReader(t *testing.T) {
+func TestFromWAL(t *testing.T) {
 	reader := mocks.BaselineWALReader(t)
 
-	feeder := FromReader(reader)
+	feeder := FromWAL(reader)
 
 	assert.Equal(t, reader, feeder.reader)
 }

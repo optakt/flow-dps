@@ -45,14 +45,14 @@ func New(log zerolog.Logger, db *badger.DB) *Follower {
 
 // OnBlockFinalized is a callback that is used to update the state of the Follower.
 func (f *Follower) OnBlockFinalized(finalID flow.Identifier) {
-	var height uint64
-	err := f.db.View(operation.RetrieveFinalizedHeight(&height))
+	var header flow.Header
+	err := f.db.View(operation.RetrieveHeader(finalID, &header))
 	if err != nil {
-		f.log.Error().Err(err).Msg("Could not retrieve finalized block height")
+		f.log.Error().Err(err).Msg("Could not retrieve finalized block header")
 		return
 	}
 
-	f.height = height
+	f.height = header.Height
 	f.blockID = finalID
 }
 

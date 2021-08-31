@@ -39,7 +39,7 @@ If you want to make changes to the GRPC API, the two following binaries are requ
 * `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1`
 * `go install github.com/srikrsna/protoc-gen-gotag@v0.6.1`
 
-[TEMPORARY] In order to build the live binary, the following extra steps and dependencies are required:
+In order to build the live binary, the following extra steps and dependencies are required:
 
 * [`CMake`](https://cmake.org/install/)
 

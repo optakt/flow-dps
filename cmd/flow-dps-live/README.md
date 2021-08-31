@@ -3,7 +3,7 @@
 ## Description
 
 The Flow DPS Live binary implements the core functionality to create the index for live sporks.
-It needs access to an S3 bucket containing the execution state in the form of ledger WAL checkpoints, as well as access to the Flow network as a follower.
+It needs access to a Google Cloud Storage bucket containing the execution state in the form of block data files, as well as access to the Flow network as an unstaked consensus follower.
 The index is generated in the form of a Badger database that allows random access to any ledger register at any block height.
 
 ## Usage
@@ -12,7 +12,7 @@ The index is generated in the form of a Badger database that allows random acces
 Usage of flow-dps-live:
       --access-address string       address (host:port) of the peer to connect to
       --access-key string           network public key of the peer to connect to
-      --bind-addr string            address on which to bind the FIXME (default "127.0.0.1:FIXME")
+      --bind-addr string            address on which to bind the unstaked consensus follower (default "127.0.0.1:5006")
       --bootstrap-dir string        path to the directory which contains bootstrap data
       --bucket string               name of the Google Cloud Storage bucket which contains the block data
   -c, --checkpoint string           checkpoint file for state trie
@@ -43,5 +43,5 @@ Usage of flow-dps-live:
 The below command line starts indexing a live spork.
 
 ```sh
-./flow-dps-live -a -l debug -b myS3BucketName -r us-west-2 -c /var/flow/bootstrap/root.checkpoint -i /var/flow/data/index
+./flow-dps-live -a -l debug -b myGCSBucketName -r us-west-2 -c /var/flow/bootstrap/root.checkpoint -i /var/flow/data/index
 ```

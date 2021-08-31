@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"time"
 
 	googlecloud "cloud.google.com/go/storage"
@@ -34,8 +35,10 @@ import (
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 
+	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/flow"
+
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
 	source "github.com/optakt/flow-dps/follower"
@@ -45,7 +48,6 @@ import (
 	"github.com/optakt/flow-dps/metrics/output"
 	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/network"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
@@ -71,52 +73,27 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagBindAddr          string
-		flagBootstrap         string
-		flagBucket            string
-		flagCheckpoint        string
-		flagData              string
-		flagDownloadDir       string
-		flagForce             bool
-		flagIndex             string
-		flagIndexAll          bool
-		flagIndexCollections  bool
-		flagIndexCommit       bool
-		flagIndexEvents       bool
-		flagIndexGuarantees   bool
-		flagIndexHeader       bool
-		flagIndexPayloads     bool
-		flagIndexResults      bool
-		flagIndexSeals        bool
-		flagIndexTransactions bool
-		flagLevel             string
-		flagMetrics           bool
-		flagMetricsInterval   time.Duration
-		flagNodeID            string
-		flagPeerAddr          string
-		flagPeerKey           string
-		flagPort              uint16
-		flagSkipBootstrap     bool
+		flagBindAddr        string
+		flagBucket          string
+		flagCheckpoint      string
+		flagData            string
+		flagForce           bool
+		flagIndex           string
+		flagLevel           string
+		flagMetrics         bool
+		flagMetricsInterval time.Duration
+		flagNodeID          string
+		flagPeerAddr        string
+		flagPeerKey         string
+		flagPort            uint16
 	)
 
+	pflag.StringVar(&flagBindAddr, "bind-addr", "127.0.0.1:5006", "address on which to bind the FIXME")
 	pflag.StringVar(&flagBucket, "bucket", "", "name of the Google Cloud Storage bucket which contains the block data")
-	pflag.StringVar(&flagBootstrap, "bootstrap", "", "path to the file which contains bootstrap data")
-	pflag.StringVar(&flagBindAddr, "bind-addr", "127.0.0.1:FIXME", "address on which to bind the FIXME")
-	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
-	pflag.StringVar(&flagDownloadDir, "download-directory", "", "directory where to download ledger WAL checkpoints")
+	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
-	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
-	pflag.BoolVar(&flagIndexCollections, "index-collections", false, "index collections")
-	pflag.BoolVar(&flagIndexGuarantees, "index-guarantees", false, "index collection guarantees")
-	pflag.BoolVar(&flagIndexCommit, "index-commits", false, "index commits")
-	pflag.BoolVar(&flagIndexEvents, "index-events", false, "index events")
-	pflag.BoolVar(&flagIndexHeader, "index-headers", false, "index headers")
-	pflag.BoolVar(&flagIndexPayloads, "index-payloads", false, "index payloads")
-	pflag.BoolVar(&flagIndexResults, "index-results", false, "index transaction results")
-	pflag.BoolVar(&flagIndexTransactions, "index-transactions", false, "index transactions")
-	pflag.BoolVar(&flagIndexSeals, "index-seals", false, "index seals")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.BoolVarP(&flagMetrics, "metrics", "m", false, "enable metrics collection and output")
 	pflag.DurationVar(&flagMetricsInterval, "metrics-interval", 5*time.Minute, "defines the interval of metrics output to log")
@@ -124,7 +101,6 @@ func run() int {
 	pflag.StringVar(&flagPeerAddr, "access-address", "", "address (host:port) of the peer to connect to")
 	pflag.StringVar(&flagPeerKey, "access-key", "", "network public key of the peer to connect to")
 	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
-	pflag.BoolVar(&flagSkipBootstrap, "skip-bootstrap", false, "enable skipping checkpoint register payloads indexing")
 
 	pflag.Parse()
 
@@ -141,23 +117,6 @@ func run() int {
 		return failure
 	}
 	log = log.Level(level)
-
-	// Ensure that at least one index is specified.
-	if !flagIndexAll && !flagIndexCommit && !flagIndexHeader && !flagIndexPayloads && !flagIndexCollections &&
-		!flagIndexGuarantees && !flagIndexTransactions && !flagIndexResults && !flagIndexEvents && !flagIndexSeals {
-		log.Error().Str("level", flagLevel).Msg("no indexing option specified, use -a/--all to build all indexes")
-		pflag.Usage()
-		return failure
-	}
-
-	// Fail if IndexAll is specified along with other index flags, as this would most likely mean that the user does
-	// not understand what they are doing.
-	if flagIndexAll && (flagIndexCommit || flagIndexHeader || flagIndexPayloads || flagIndexGuarantees ||
-		flagIndexCollections || flagIndexTransactions || flagIndexResults || flagIndexEvents || flagIndexSeals) {
-		log.Error().Str("level", flagLevel).Msg("-a/--all is mutually exclusive with specific indexing flags")
-		pflag.Usage()
-		return failure
-	}
 
 	// Open index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
@@ -217,18 +176,33 @@ func run() int {
 		return failure
 	}
 
-	bootstrapIdentities, err := network.RetrieveIdentities(flagBootstrap)
-	if err != nil {
-		log.Error().Err(err).Msg("could not retrieve bootstrap identities")
-		return failure
-	}
-
 	blockData := client.Bucket(flagBucket)
 	poller := gcs.NewPoller(blockData)
 
+	host, portStr, err := net.SplitHostPort(flagPeerAddr)
+	if err != nil {
+		log.Error().Err(err).Str("peer_addr", flagPeerAddr).Msg("could not parse peer address")
+		return failure
+	}
+	port, err := strconv.ParseUint(portStr, 10, 64)
+	if err != nil {
+		log.Error().Err(err).Str("peer_addr", flagPeerAddr).Msg("could not parse peer port")
+		return failure
+	}
+	key, err := crypto.DecodePublicKeyHex(crypto.ECDSA_P256, flagPeerKey)
+	if err != nil {
+		log.Error().Err(err).Str("peer_key", flagPeerKey).Msg("could not parse peer public key")
+		return failure
+	}
+	accessNodeIdentity := follower.BootstrapNodeInfo{
+		Host:             host,
+		Port:             uint(port),
+		NetworkPublicKey: key,
+	}
+
 	execution := execution.New(log, poller, codec, data)
 	consensus := consensus.New(log, data)
-	follower, err := follower.NewConsensusFollower(nodeID, bootstrapIdentities, flagBindAddr, follower.WithDataDir(flagData))
+	follower, err := follower.NewConsensusFollower(nodeID, []follower.BootstrapNodeInfo{accessNodeIdentity}, flagBindAddr, follower.WithDataDir(flagData))
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -257,16 +231,16 @@ func run() int {
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	transitions := mapper.NewTransitions(log, load, source, source, write,
-		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
-		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
-		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),
-		mapper.WithIndexGuarantees(flagIndexAll || flagIndexGuarantees),
-		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
-		mapper.WithIndexResults(flagIndexAll || flagIndexResults),
-		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),
-		mapper.WithIndexPayloads(flagIndexAll || flagIndexPayloads),
-		mapper.WithIndexSeals(flagIndexAll || flagIndexSeals),
-		mapper.WithSkipBootstrap(flagSkipBootstrap),
+		mapper.WithIndexCommit(true),
+		mapper.WithIndexHeader(true),
+		mapper.WithIndexCollections(true),
+		mapper.WithIndexGuarantees(true),
+		mapper.WithIndexTransactions(true),
+		mapper.WithIndexResults(true),
+		mapper.WithIndexEvents(true),
+		mapper.WithIndexPayloads(true),
+		mapper.WithIndexSeals(true),
+		mapper.WithSkipBootstrap(false),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)

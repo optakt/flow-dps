@@ -27,8 +27,8 @@ type Feeder struct {
 	reader WALReader
 }
 
-// FromReader creates a trie update feeder that sources state deltas from a WAL reader.
-func FromReader(reader WALReader) *Feeder {
+// FromWAL creates a trie update feeder that sources state deltas from a WAL reader.
+func FromWAL(reader WALReader) *Feeder {
 
 	l := Feeder{
 		reader: reader,
