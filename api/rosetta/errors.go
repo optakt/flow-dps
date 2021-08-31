@@ -57,6 +57,8 @@ const (
 	txEncoding              = "unable to encode transaction"
 	txParsing               = "unable to parse transaction"
 	txSigning               = "unable to sign transaction"
+	keyRetrieval            = "unable to retrieve account key"
+	payloadDerivation       = "unable to derive signing payload"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
@@ -278,6 +280,15 @@ func invalidSignature(fail failure.InvalidSignature) Error {
 func invalidProposalKey(fail failure.InvalidProposalKey) Error {
 	return convertError(
 		configuration.ErrorInvalidProposalKey,
+		fail.Description,
+		withAddress("account", fail.Address),
+		withDetail("index", fail.Index),
+	)
+}
+
+func invalidAuthorizerKey(fail failure.InvalidAuthorizerKey) Error {
+	return convertError(
+		configuration.ErrorInvalidAuthorizerKey,
 		fail.Description,
 		withAddress("account", fail.Address),
 		withDetail("index", fail.Index),
