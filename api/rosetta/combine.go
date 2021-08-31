@@ -21,7 +21,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/onflow/flow-go-sdk"
+	sdk "github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -75,7 +75,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 	}
 
 	// Unpack the transaction blob.
-	var unsignedTx flow.Transaction
+	var unsignedTx sdk.Transaction
 	err = json.Unmarshal([]byte(req.UnsignedTransaction), &unsignedTx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txBodyInvalid, withError(err)))
