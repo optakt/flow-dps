@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
 import (
 	"fmt"
@@ -25,16 +25,16 @@ import (
 )
 
 // CompileTransaction creates a complete Flow transaction from the given intent and metadata.
-func (p *Parser) CompileTransaction(intent *Intent, metadata object.Metadata) (*flow.Transaction, error) {
+func (t *Transactor) CompileTransaction(intent *Intent, metadata object.Metadata) (*flow.Transaction, error) {
 
 	// Run validation on the block ID. This also fills in missing information.
-	_, blockID, err := p.validate.Block(metadata.ReferenceBlockID)
+	_, blockID, err := t.validate.Block(metadata.ReferenceBlockID)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate block: %w", err)
 	}
 
 	// Generate script for the token transfer.
-	script, err := p.generate.TransferTokens(dps.FlowSymbol)
+	script, err := t.generate.TransferTokens(dps.FlowSymbol)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate transfer script: %w", err)
 	}

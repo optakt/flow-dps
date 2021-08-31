@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
 type Generator interface {
 	TransferTokens(symbol string) ([]byte, error)

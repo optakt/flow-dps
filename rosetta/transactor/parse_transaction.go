@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
 import (
 	"bytes"
@@ -39,7 +39,7 @@ const (
 
 // ParseTransactions processes the flow transaction, validates its correctness and translates it
 // to a list of operations and a list of signers.
-func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []identifier.Account, error) {
+func (t *Transactor) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []identifier.Account, error) {
 
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
 	// For now, the sender must also be the proposer and the payer for the transaction.
@@ -58,7 +58,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	}
 
 	// Validate the sender address.
-	_, err := p.validate.Account(sender)
+	_, err := t.validate.Account(sender)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid sender account: %w", err)
 	}
@@ -80,7 +80,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	}
 
 	// Verify the transaction script is the token transfer script.
-	script, err := p.generate.TransferTokens(dps.FlowSymbol)
+	script, err := t.generate.TransferTokens(dps.FlowSymbol)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not generate transfer script: %w", err)
 	}
@@ -132,7 +132,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	receiver := identifier.Account{
 		Address: addr.String(),
 	}
-	_, err = p.validate.Account(receiver)
+	_, err = t.validate.Account(receiver)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid receiver account: %w", err)
 	}
@@ -141,7 +141,7 @@ func (p *Parser) ParseTransaction(tx *flow.Transaction) ([]object.Operation, []i
 	rosBlockID := identifier.Block{
 		Hash: tx.ReferenceBlockID.String(),
 	}
-	_, _, err = p.validate.Block(rosBlockID)
+	_, _, err = t.validate.Block(rosBlockID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid reference block: %w", err)
 	}

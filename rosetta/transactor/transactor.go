@@ -12,21 +12,21 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
-// Parser has the capabilities to determine transaction intent from an array
+// Transactor has the capabilities to determine transaction intent from an array
 // of Rosetta operations, create a Flow transaction from a transaction intent
 // and transate a Flow transaction back to an array of Rosetta operations.
-type Parser struct {
+type Transactor struct {
 	validate Validator
 	generate Generator
 }
 
-// NewParser creates a new transaction Parser to handle constructing
+// NewTransactor creates a new transaction Transactor to handle constructing
 // and parsing transactions.
-func NewParser(validate Validator, generate Generator) *Parser {
+func New(validate Validator, generate Generator) *Transactor {
 
-	p := Parser{
+	p := Transactor{
 		validate: validate,
 		generate: generate,
 	}

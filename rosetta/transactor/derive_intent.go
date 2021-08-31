@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ import (
 // Specified operations should be symmetrical, a deposit and a withdrawal from two
 // different accounts. At the moment, the only fields taken into account are the
 // account IDs, amounts and type of operation.
-func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
+func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error) {
 
 	// Verify that we have exactly two operations.
 	if len(operations) != 2 {
@@ -77,11 +77,11 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	receive := operations[1]
 
 	// Validate the currencies specified for deposit and withdrawal.
-	sendSymbol, _, err := p.validate.Currency(send.Amount.Currency)
+	sendSymbol, _, err := t.validate.Currency(send.Amount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sender currency: %w", err)
 	}
-	receiveSymbol, _, err := p.validate.Currency(receive.Amount.Currency)
+	receiveSymbol, _, err := t.validate.Currency(receive.Amount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("invalid receiver currency: %w", err)
 	}
@@ -99,11 +99,11 @@ func (p *Parser) DeriveIntent(operations []object.Operation) (*Intent, error) {
 	}
 
 	// Validate the sender and the receiver account IDs.
-	_, err = p.validate.Account(send.AccountID)
+	_, err = t.validate.Account(send.AccountID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sender account: %w", err)
 	}
-	_, err = p.validate.Account(receive.AccountID)
+	_, err = t.validate.Account(receive.AccountID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid receiver account: %w", err)
 	}

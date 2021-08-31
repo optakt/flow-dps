@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
 import (
 	"encoding/hex"
@@ -25,7 +25,7 @@ import (
 )
 
 // AttachSignature adds the given signature to the transaction.
-func (p *Parser) AttachSignature(tx *flow.Transaction, signature object.Signature) (*flow.Transaction, error) {
+func (t *Transactor) AttachSignature(tx *flow.Transaction, signature object.Signature) (*flow.Transaction, error) {
 
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
 	if len(tx.Authorizers) != authorizersRequired {

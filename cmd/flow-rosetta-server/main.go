@@ -42,7 +42,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/retriever"
 	"github.com/optakt/flow-dps/rosetta/scripts"
 	"github.com/optakt/flow-dps/rosetta/submitter"
-	"github.com/optakt/flow-dps/rosetta/transactions"
+	"github.com/optakt/flow-dps/rosetta/transactor"
 	"github.com/optakt/flow-dps/rosetta/validator"
 )
 
@@ -156,7 +156,7 @@ func run() int {
 	)
 	dataCtrl := rosetta.NewData(config, retrieve)
 
-	parse := transactions.NewParser(validate, generate)
+	parse := transactor.New(validate, generate)
 	submit := submitter.New(accessAPI)
 	constructCtrl := rosetta.NewConstruction(config, parse, retrieve, submit)
 

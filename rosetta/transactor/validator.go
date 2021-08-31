@@ -12,20 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
 import (
-	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-// Intent describes the intent of an array of Rosetta operations.
-type Intent struct {
-	From     flow.Address
-	To       flow.Address
-	Amount   cadence.UFix64
-	Payer    flow.Address
-	Proposer flow.Address
-
-	GasLimit uint64
+type Validator interface {
+	Account(rosAccountID identifier.Account) (address flow.Address, err error)
+	Block(rosBlockID identifier.Block) (height uint64, blockID flow.Identifier, err error)
+	Currency(currency identifier.Currency) (symbol string, decimals uint, err error)
 }

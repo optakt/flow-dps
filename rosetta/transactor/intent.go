@@ -12,13 +12,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package transactions
+package transactor
 
 import (
-	sdk "github.com/onflow/flow-go-sdk"
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-func convertAddress(address sdk.Address) flow.Address {
-	return flow.BytesToAddress(address[:])
+// Intent describes the intent of an array of Rosetta operations.
+type Intent struct {
+	From     flow.Address
+	To       flow.Address
+	Amount   cadence.UFix64
+	Payer    flow.Address
+	Proposer flow.Address
+
+	GasLimit uint64
 }

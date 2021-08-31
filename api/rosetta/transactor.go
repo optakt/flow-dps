@@ -19,13 +19,13 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
-	"github.com/optakt/flow-dps/rosetta/transactions"
+	"github.com/optakt/flow-dps/rosetta/transactor"
 )
 
 // Parser is used by the Rosetta Construction API to handle transaction related operations.
 type Parser interface {
-	DeriveIntent(operations []object.Operation) (intent *transactions.Intent, err error)
-	CompileTransaction(intent *transactions.Intent, metadata object.Metadata) (tx *flow.Transaction, err error)
+	DeriveIntent(operations []object.Operation) (intent *transactor.Intent, err error)
+	CompileTransaction(intent *transactor.Intent, metadata object.Metadata) (tx *flow.Transaction, err error)
 	ParseTransaction(tx *flow.Transaction) (operations []object.Operation, signers []identifier.Account, err error)
 	AttachSignature(unsignedTx *flow.Transaction, signature object.Signature) (tx *flow.Transaction, err error)
 }
