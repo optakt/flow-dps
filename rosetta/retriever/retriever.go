@@ -323,7 +323,7 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	return &transaction, nil
 }
 
-func (r *Retriever) SequenceNumber(rosBlockID identifier.Block, rosAccountID identifier.Account, index int) (uint64, error) {
+func (r *Retriever) Sequence(rosBlockID identifier.Block, rosAccountID identifier.Account, index int) (uint64, error) {
 
 	// Run validation on the block identifier and the address.
 	height, _, err := r.validate.Block(rosBlockID)
