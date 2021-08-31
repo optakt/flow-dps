@@ -57,7 +57,9 @@ const (
 	txEncoding              = "unable to encode transaction"
 	txParsing               = "unable to parse transaction"
 	txSigning               = "unable to sign transaction"
+	keyRetrieval            = "unable to retrieve account key"
 	payloadHashing          = "unable to hash signing payload"
+	signatureVerification   = "unable to verify signature"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It

@@ -134,6 +134,15 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
 	}
 
+	// Verify that the signature is actually valid.
+	err = c.transact.VerifySignature(&tx, signers)
+	if errors.As(err, &isgErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignature(isgErr))
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, internal(signatureVerification, err))
+	}
+
 	metadata := object.Metadata{
 		CurrentBlockID: identifier.Block{
 			Hash: tx.ReferenceBlockID.Hex(),
