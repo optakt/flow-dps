@@ -133,7 +133,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	}
 
 	// Generate signing payload.
-	sp, err := signingPayload(envelopePayload(tx), key.HashAlgo)
+	sp, err := signingPayload(envelopeWithTag(tx), key.HashAlgo)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(payloadDerivation, err))
 	}
@@ -153,8 +153,8 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, res)
 }
 
-// envelopePayload contains the envelope message along with the prepended tag.
-func envelopePayload(tx *flow.Transaction) []byte {
+// envelopeWithTag contains the envelope message along with the prepended tag.
+func envelopeWithTag(tx *flow.Transaction) []byte {
 	message := tx.EnvelopeMessage()
 	message = append(flow.TransactionDomainTag[:], message...)
 	return message
