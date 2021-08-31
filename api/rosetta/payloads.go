@@ -106,12 +106,12 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermination, err))
 	}
 
-	tx, err := c.parser.CompileTransaction(intent, req.Metadata)
+	unsignedTx, err := c.parser.CompileTransaction(intent, req.Metadata)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
 	}
 
-	data, err := json.Marshal(tx)
+	data, err := json.Marshal(unsignedTx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txEncoding, err))
 	}
@@ -119,7 +119,6 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	sender := identifier.Account{
 		Address: intent.From.String(),
 	}
-	// Retrieve the public key for the account.
 	key, err := c.retrieve.Key(sender, 0)
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
@@ -132,8 +131,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(keyRetrieval, err))
 	}
 
-	// Generate signing payload.
-	sp, err := signingPayload(envelopeWithTag(tx), key.HashAlgo)
+	sp, err := signingPayload(envelopeWithTag(unsignedTx), key.HashAlgo)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(payloadDerivation, err))
 	}

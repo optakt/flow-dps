@@ -86,7 +86,6 @@ func (c *Construction) Parse(ctx echo.Context) error {
 
 	// Parse the transaction and recreate the original list of operations, as well as all signers involved.
 	operations, signers, err := c.parser.ParseTransaction(&tx)
-
 	var iaErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
