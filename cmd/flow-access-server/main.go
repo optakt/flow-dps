@@ -121,13 +121,13 @@ func run() int {
 	client := dpsApi.NewAPIClient(conn)
 	index := dpsApi.IndexFromAPI(client, codec)
 
-	invoker, err := invoker.New(index, invoker.WithCacheSize(flagCache))
+	invoke, err := invoker.New(index, invoker.WithCacheSize(flagCache))
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize script invoker")
 		return failure
 	}
 
-	server := accessApi.NewServer(index, codec, invoker)
+	server := accessApi.NewServer(index, codec, invoke)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

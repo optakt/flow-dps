@@ -12,14 +12,12 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package access
+package transactor
 
 import (
-	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go/model/flow"
 )
 
 type Invoker interface {
-	Account(height uint64, address flow.Address) (*flow.Account, error)
-	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
+	Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error)
 }

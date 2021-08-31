@@ -17,8 +17,6 @@ package rosetta
 import (
 	"time"
 
-	"github.com/onflow/flow-go/model/flow"
-
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -30,5 +28,4 @@ type Retriever interface {
 	Transaction(rosBlockID identifier.Block, rosTxID identifier.Transaction) (*object.Transaction, error)
 	Balances(rosBlockID identifier.Block, rosAccountID identifier.Account, rosCurrencies []identifier.Currency) (identifier.Block, []object.Amount, error)
 	SequenceNumber(rosAccountID identifier.Account, keyIndex int) (uint64, error)
-	Key(rosAccountID identifier.Account, keyIndex int) (*flow.AccountPublicKey, error)
 }

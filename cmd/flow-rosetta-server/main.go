@@ -156,7 +156,7 @@ func run() int {
 	)
 	dataCtrl := rosetta.NewData(config, retrieve)
 
-	transact := transactor.New(validate, generate)
+	transact := transactor.New(validate, generate, invoke)
 	submit := submitter.New(accessAPI)
 	constructCtrl := rosetta.NewConstruction(config, transact, retrieve, submit)
 

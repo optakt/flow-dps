@@ -176,7 +176,7 @@ func TestInvoker_Account(t *testing.T) {
 		invoker.vm = vm
 		invoker.index = index
 
-		account, err := invoker.Account(mocks.GenericAccount.Address, mocks.GenericHeight)
+		account, err := invoker.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
 
 		assert.NoError(t, err)
 		assert.Equal(t, &mocks.GenericAccount, account)
@@ -193,7 +193,7 @@ func TestInvoker_Account(t *testing.T) {
 		invoker := baselineInvoker(t)
 		invoker.index = index
 
-		_, err := invoker.Account(mocks.GenericAccount.Address, mocks.GenericHeight)
+		_, err := invoker.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
 
 		assert.Error(t, err)
 	})
@@ -209,7 +209,7 @@ func TestInvoker_Account(t *testing.T) {
 		invoker := baselineInvoker(t)
 		invoker.vm = vm
 
-		_, err := invoker.Account(mocks.GenericAccount.Address, mocks.GenericHeight)
+		_, err := invoker.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
 
 		assert.Error(t, err)
 	})

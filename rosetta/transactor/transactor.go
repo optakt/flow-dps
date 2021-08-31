@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/flow-go-sdk/crypto"
 
 	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go/model/flow"
@@ -47,15 +48,17 @@ const (
 type Transactor struct {
 	validate Validator
 	generate Generator
+	invoke   Invoker
 }
 
 // NewTransactor creates a new transaction Transactor to handle constructing
 // and parsing transactions.
-func New(validate Validator, generate Generator) *Transactor {
+func New(validate Validator, generate Generator, invoke Invoker) *Transactor {
 
 	p := Transactor{
 		validate: validate,
 		generate: generate,
+		invoke:   invoke,
 	}
 
 	return &p
@@ -203,6 +206,31 @@ func (t *Transactor) CompileTransaction(intent *Intent, metadata object.Metadata
 	_ = tx.AddArgument(receiver)
 
 	return tx, nil
+}
+
+func (t *Transactor) HashPayload(tx *sdk.Transaction, signer identifier.Account) ([]byte, error) {
+
+	address, err := t.validate.Account(signer)
+	if err != nil {
+		return nil, failure.InvalidAccount{}
+	}
+
+	key, err := t.invoke.Key(0, address, 0)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve key: %w", err)
+	}
+
+	message := tx.EnvelopeMessage()
+	message = append(flow.TransactionDomainTag[:], message...)
+
+	hasher, err := crypto.NewHasher(key.HashAlgo)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve hasher: %w", err)
+	}
+
+	hash := hasher.ComputeHash(message)
+
+	return hash, nil
 }
 
 // ParseTransactions processes the flow transaction, validates its correctness and translates it
