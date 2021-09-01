@@ -169,7 +169,6 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 		Amount:   cadence.UFix64(amount),
 		Payer:    flow.HexToAddress(send.AccountID.Address),
 		Proposer: flow.HexToAddress(send.AccountID.Address),
-		GasLimit: flow.DefaultMaxTransactionGasLimit,
 	}
 
 	return &intent, nil
@@ -194,7 +193,7 @@ func (t *Transactor) CompileTransaction(rosBlockID identifier.Block, intent *Int
 		SetPayer(sdk.Address(intent.Payer)).
 		SetProposalKey(sdk.Address(intent.Proposer), 0, sequence).
 		AddAuthorizer(sdk.Address(intent.From)).
-		SetGasLimit(intent.GasLimit)
+		SetGasLimit(flow.DefaultMaxTransactionGasLimit)
 
 	receiver := cadence.NewAddress(flow.BytesToAddress(intent.To.Bytes()))
 

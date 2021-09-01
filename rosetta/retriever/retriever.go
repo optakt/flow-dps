@@ -323,6 +323,9 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	return &transaction, nil
 }
 
+// TODO: Add unit test for this function:
+// => https://github.com/optakt/flow-dps/issues/390
+
 func (r *Retriever) Sequence(rosBlockID identifier.Block, rosAccountID identifier.Account, index int) (uint64, error) {
 
 	// Run validation on the Rosetta block identifier. This will infer any
@@ -341,7 +344,7 @@ func (r *Retriever) Sequence(rosBlockID identifier.Block, rosAccountID identifie
 
 	// Retrieve the key at the height of the given block and for the given
 	// address at index 0.
-	key, err := r.invoke.Key(height, address, 0)
+	key, err := r.invoke.Key(height, address, index)
 	if err != nil {
 		return 0, fmt.Errorf("could not retrieve account: %w", err)
 	}

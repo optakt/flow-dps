@@ -26,5 +26,4 @@ type Intent struct {
 	Amount   cadence.UFix64
 	Payer    flow.Address
 	Proposer flow.Address
-	GasLimit uint64
 }
