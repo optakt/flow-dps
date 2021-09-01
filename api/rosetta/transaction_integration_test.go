@@ -32,6 +32,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestAPI_Transaction(t *testing.T) {
@@ -82,19 +83,6 @@ func TestAPI_Transaction(t *testing.T) {
 			name:       "last transaction recorded",
 			request:    requestTransaction(lastHeader, lastTx),
 			validateTx: validateTransfer(t, lastTx, "668b91e2995c2eba", "89c61aa64423504c", 1),
-		},
-		{
-			name: "lookup using height and transaction hash",
-			request: rosetta.TransactionRequest{
-				NetworkID: defaultNetwork(),
-				BlockID: identifier.Block{
-					Index: &multipleTxHeader.Height,
-				},
-				TransactionID: identifier.Transaction{
-					Hash: midBlockTxs[1],
-				},
-			},
-			validateTx: validateTransfer(t, midBlockTxs[1], "89c61aa64423504c", "82ec283f88a62e65", 1),
 		},
 	}
 
@@ -250,7 +238,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				},
 				TransactionID: testTx,
 			},
-			checkErr: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
+			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "invalid block hash",
@@ -271,6 +259,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: getUint64P(lastHeight + 1),
+					Hash:  mocks.GenericBlockQualifier.Hash,
 				},
 				TransactionID: testTx,
 			},
