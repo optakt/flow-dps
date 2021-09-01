@@ -205,28 +205,28 @@ func (t *Transactor) CompileTransaction(rosBlockID identifier.Block, intent *Int
 	return payload, nil
 }
 
-func (t *Transactor) HashPayload(rosBlockID identifier.Block, payload string, signer identifier.Account) ([]byte, error) {
+func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, signer identifier.Account) (string, error) {
 
-	unsignedTx, err := t.decodeTransaction(payload)
+	unsignedTx, err := t.decodeTransaction(unsigned)
 	if err != nil {
-		return nil, fmt.Errorf("could not decode transaction: %w", err)
+		return "", fmt.Errorf("could not decode transaction: %w", err)
 	}
 
 	// Validate block.
 	height, _, err := t.validate.Block(rosBlockID)
 	if err != nil {
-		return nil, fmt.Errorf("could not validate block: %w", err)
+		return "", fmt.Errorf("could not validate block: %w", err)
 	}
 
 	// Validate address.
 	address, err := t.validate.Account(signer)
 	if err != nil {
-		return nil, fmt.Errorf("could not validate account: %w", err)
+		return "", fmt.Errorf("could not validate account: %w", err)
 	}
 
 	key, err := t.invoke.Key(height, address, 0)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve key: %w", err)
+		return "", fmt.Errorf("could not retrieve key: %w", err)
 	}
 
 	message := unsignedTx.EnvelopeMessage()
@@ -234,28 +234,28 @@ func (t *Transactor) HashPayload(rosBlockID identifier.Block, payload string, si
 
 	hasher, err := crypto.NewHasher(key.HashAlgo)
 	if err != nil {
-		return nil, fmt.Errorf("could not create hasher: %w", err)
+		return "", fmt.Errorf("could not create hasher: %w", err)
 	}
 
-	hash := hasher.ComputeHash(message)
+	hash := hex.EncodeToString(hasher.ComputeHash(message))
 
 	return hash, nil
 }
 
 // ParseTransactions processes the flow transaction, validates its correctness and translates it
 // to a list of operations and a list of signers.
-func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []identifier.Account, error) {
+func (t *Transactor) ParseTransaction(payload string) (identifier.Block, uint64, []object.Operation, []identifier.Account, error) {
 
 	tx, err := t.decodeTransaction(payload)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not decode transaction: %w", err)
+		return identifier.Block{}, 0, nil, nil, fmt.Errorf("could not decode transaction: %w", err)
 	}
 
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
 	// For now, the sender must also be the proposer and the payer for the transaction.
 
 	if len(tx.Authorizers) != authorizersRequired {
-		return nil, nil, failure.InvalidAuthorizers{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidAuthorizers{
 			Have:        uint(len(tx.Authorizers)),
 			Want:        authorizersRequired,
 			Description: failure.NewDescription("invalid number of authorizers"),
@@ -270,19 +270,19 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 	// Validate the sender address.
 	_, err = t.validate.Account(sender)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid sender account: %w", err)
+		return identifier.Block{}, 0, nil, nil, fmt.Errorf("invalid sender account: %w", err)
 	}
 
 	// Verify that the sender is the payer and the proposer.
 	if tx.Payer != authorizer {
-		return nil, nil, failure.InvalidPayer{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidPayer{
 			Have:        flow.BytesToAddress(tx.Payer[:]),
 			Want:        flow.BytesToAddress(authorizer[:]),
 			Description: failure.NewDescription("invalid transaction payer"),
 		}
 	}
 	if tx.ProposalKey.Address != authorizer {
-		return nil, nil, failure.InvalidProposer{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidProposer{
 			Have:        flow.BytesToAddress(tx.ProposalKey.Address[:]),
 			Want:        flow.BytesToAddress(authorizer[:]),
 			Description: failure.NewDescription("invalid transaction proposer"),
@@ -292,10 +292,10 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 	// Verify the transaction script is the token transfer script.
 	script, err := t.generate.TransferTokens(dps.FlowSymbol)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not generate transfer script: %w", err)
+		return identifier.Block{}, 0, nil, nil, fmt.Errorf("could not generate transfer script: %w", err)
 	}
 	if !bytes.Equal(script, tx.Script) {
-		return nil, nil, failure.InvalidScript{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidScript{
 			Script:      string(tx.Script),
 			Description: failure.NewDescription("transaction text is not valid token transfer script"),
 		}
@@ -304,7 +304,7 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 	// Verify that the transaction script has the correct number of arguments.
 	args := tx.Arguments
 	if len(args) != argsRequired {
-		return nil, nil, failure.InvalidArguments{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidArguments{
 			Have:        uint(len(args)),
 			Want:        argsRequired,
 			Description: failure.NewDescription("invalid number of arguments"),
@@ -314,7 +314,7 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 	// Parse and validate the amount argument.
 	val, err := cjson.Decode(args[0])
 	if err != nil {
-		return nil, nil, failure.InvalidAmount{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidAmount{
 			Amount: string(args[0]),
 			Description: failure.NewDescription("could not parse transaction amount",
 				failure.WithErr(err)),
@@ -322,7 +322,7 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 	}
 	amountArg, ok := val.ToGoValue().(uint64)
 	if !ok {
-		return nil, nil, failure.InvalidAmount{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidAmount{
 			Amount:      string(args[0]),
 			Description: failure.NewDescription("invalid amount"),
 		}
@@ -332,7 +332,7 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 	// Parse and validate receiver script argument.
 	val, err = cjson.Decode(args[1])
 	if err != nil {
-		return nil, nil, failure.InvalidReceiver{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidReceiver{
 			Receiver: string(args[1]),
 			Description: failure.NewDescription("could not parse transaction receiver address",
 				failure.WithErr(err)),
@@ -344,16 +344,16 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 	}
 	_, err = t.validate.Account(receiver)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid receiver account: %w", err)
+		return identifier.Block{}, 0, nil, nil, fmt.Errorf("invalid receiver account: %w", err)
 	}
 
 	// Validate the reference block identifier.
-	rosBlockID := identifier.Block{
+	refBlockID := identifier.Block{
 		Hash: tx.ReferenceBlockID.String(),
 	}
-	_, _, err = t.validate.Block(rosBlockID)
+	height, blockID, err := t.validate.Block(refBlockID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid reference block: %w", err)
+		return identifier.Block{}, 0, nil, nil, fmt.Errorf("invalid reference block: %w", err)
 	}
 
 	// Create the send operation.
@@ -396,7 +396,7 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 
 	// Since we only support sender as the payer/proposer, we never expect any payload signatures.
 	if len(tx.PayloadSignatures) > 0 {
-		return nil, nil, failure.InvalidSignature{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidSignature{
 			Description: failure.NewDescription("unexpected payload signature found",
 				failure.WithInt("signatures", len(tx.PayloadSignatures))),
 		}
@@ -404,12 +404,12 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 
 	// We may be parsing an unsigned transaction - if that's the case, we're done.
 	if len(tx.EnvelopeSignatures) == 0 {
-		return ops, nil, nil
+		return rosettaBlockID(height, blockID), 0, ops, nil, nil
 	}
 
 	// We don't support multiple signatures.
 	if len(tx.EnvelopeSignatures) > 1 {
-		return nil, nil, failure.InvalidSignature{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidSignature{
 			Description: failure.NewDescription("unexpected envelope signatures found",
 				failure.WithInt("signatures", len(tx.EnvelopeSignatures))),
 		}
@@ -418,7 +418,7 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 	// Validate that it is the sender who signed the transaction.
 	signer := tx.EnvelopeSignatures[0].Address
 	if signer != authorizer {
-		return nil, nil, failure.InvalidSignature{
+		return identifier.Block{}, 0, nil, nil, failure.InvalidSignature{
 			Description: failure.NewDescription("invalid signer account",
 				failure.WithString("have_signer", signer.String()),
 				failure.WithString("want_signer", authorizer.String()),
@@ -426,25 +426,32 @@ func (t *Transactor) ParseTransaction(payload string) ([]object.Operation, []ide
 		}
 	}
 
+	// Check that the signature is valid.
+	address := flow.BytesToAddress(signer[:])
+	err = t.verifySignature(payload, address)
+	if err != nil {
+		return identifier.Block{}, 0, nil, nil, fmt.Errorf("could not verify signature: %w", err)
+	}
+
 	// Create the signers list.
 	signers := []identifier.Account{
 		sender,
 	}
 
-	return ops, signers, nil
+	return rosettaBlockID(height, blockID), tx.ProposalKey.SequenceNumber, ops, signers, nil
 }
 
 // AttachSignature adds the given signature to the transaction.
-func (t *Transactor) AttachSignature(payload string, signature object.Signature) (*sdk.Transaction, error) {
+func (t *Transactor) AttachSignature(unsigned string, signature object.Signature) (string, error) {
 
-	unsignedTx, err := t.decodeTransaction(payload)
+	unsignedTx, err := t.decodeTransaction(unsigned)
 	if err != nil {
-		return nil, fmt.Errorf("could not decode transaction: %w", err)
+		return "", fmt.Errorf("could not decode transaction: %w", err)
 	}
 
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
 	if len(unsignedTx.Authorizers) != authorizersRequired {
-		return nil, failure.InvalidAuthorizers{
+		return "", failure.InvalidAuthorizers{
 			Have:        uint(len(unsignedTx.Authorizers)),
 			Want:        authorizersRequired,
 			Description: failure.NewDescription("invalid number of authorizers"),
@@ -455,7 +462,7 @@ func (t *Transactor) AttachSignature(payload string, signature object.Signature)
 
 	// Verify that the sender is the payer, since it is the payer that needs to sign the envelope.
 	if unsignedTx.Payer != sender {
-		return nil, failure.InvalidPayer{
+		return "", failure.InvalidPayer{
 			Have:        flow.BytesToAddress(unsignedTx.Payer[:]),
 			Want:        flow.BytesToAddress(sender[:]),
 			Description: failure.NewDescription("invalid transaction payer"),
@@ -464,7 +471,7 @@ func (t *Transactor) AttachSignature(payload string, signature object.Signature)
 
 	// Verify that we do not already have signatures.
 	if len(unsignedTx.EnvelopeSignatures) > 0 {
-		return nil, failure.InvalidSignature{
+		return "", failure.InvalidSignature{
 			Description: failure.NewDescription("unexpected envelope signatures found",
 				failure.WithInt("signatures", len(unsignedTx.EnvelopeSignatures))),
 		}
@@ -473,7 +480,7 @@ func (t *Transactor) AttachSignature(payload string, signature object.Signature)
 	// Verify that the signature belongs to the sender.
 	signer := sdk.HexToAddress(signature.SigningPayload.AccountID.Address)
 	if signer != sender {
-		return nil, failure.InvalidSignature{
+		return "", failure.InvalidSignature{
 			Description: failure.NewDescription("invalid signer account",
 				failure.WithString("have_signer", signer.String()),
 				failure.WithString("want_signer", sender.String())),
@@ -482,7 +489,7 @@ func (t *Transactor) AttachSignature(payload string, signature object.Signature)
 
 	bytes, err := hex.DecodeString(signature.HexBytes)
 	if err != nil {
-		return nil, failure.InvalidSignature{
+		return "", failure.InvalidSignature{
 			Description: failure.NewDescription("invalid signature payload",
 				failure.WithErr(err)),
 		}
@@ -491,27 +498,19 @@ func (t *Transactor) AttachSignature(payload string, signature object.Signature)
 	// TODO: allow arbitrary key index
 	// => https://github.com/optakt/flow-dps/issues/369
 	signedTx := unsignedTx.AddEnvelopeSignature(signer, 0, bytes)
+	signed, err := t.encodeTransaction(signedTx)
+	if err != nil {
+		return "", fmt.Errorf("could not encode transaction: %w", err)
+	}
 
-	return signedTx, nil
+	return signed, nil
 }
 
-func (t *Transactor) VerifySignature(payload string, signers []identifier.Account) error {
+func (t *Transactor) verifySignature(signed string, address flow.Address) error {
 
-	signedTx, err := t.decodeTransaction(payload)
+	signedTx, err := t.decodeTransaction(signed)
 	if err != nil {
 		return fmt.Errorf("could not decode transaction: %w", err)
-	}
-
-	if len(signers) == 0 {
-		return nil
-	}
-
-	if len(signers) != authorizersRequired {
-		return failure.InvalidAuthorizers{
-			Have:        uint(len(signedTx.Authorizers)),
-			Want:        authorizersRequired,
-			Description: failure.NewDescription("invalid number of authorizers"),
-		}
 	}
 
 	if len(signedTx.EnvelopeSignatures) != 1 {
@@ -519,12 +518,6 @@ func (t *Transactor) VerifySignature(payload string, signers []identifier.Accoun
 			Description: failure.NewDescription("invalid number of signatures",
 				failure.WithInt("signatures", len(signedTx.EnvelopeSignatures))),
 		}
-	}
-
-	signer := signers[0]
-	address, err := t.validate.Account(signer)
-	if err != nil {
-		return fmt.Errorf("could not validate account: %w", err)
 	}
 
 	rosBlockID := identifier.Block{Hash: signedTx.ReferenceBlockID.Hex()}

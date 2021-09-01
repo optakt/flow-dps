@@ -15,13 +15,10 @@
 package rosetta
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-
-	sdk "github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -68,24 +65,8 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyEmpty))
 	}
 
-	var tx sdk.Transaction
-	err = json.Unmarshal([]byte(req.Transaction), &tx)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyInvalid, withError(err)))
-	}
-
-	// If the transaction is signed, make sure that signatures are provided.
-	if req.Signed && len(tx.EnvelopeSignatures) == 0 {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txNoSignatures))
-	}
-
-	// If the transaction is unsigned, verify that no signatures are present.
-	if !req.Signed && len(tx.EnvelopeSignatures) > 0 {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txExtraSignatures))
-	}
-
 	// Parse the transaction and recreate the original list of operations, as well as all signers involved.
-	operations, signers, err := c.transact.ParseTransaction(&tx)
+	refBlockID, sequence, operations, signers, err := c.transact.ParseTransaction(req.Transaction)
 	var iaErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
@@ -134,20 +115,9 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
 	}
 
-	// Verify that the signature is actually valid.
-	err = c.transact.VerifySignature(&tx, signers)
-	if errors.As(err, &isgErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignature(isgErr))
-	}
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, internal(signatureVerification, err))
-	}
-
 	metadata := object.Metadata{
-		CurrentBlockID: identifier.Block{
-			Hash: tx.ReferenceBlockID.Hex(),
-		},
-		SequenceNumber: tx.ProposalKey.SequenceNumber,
+		CurrentBlockID: refBlockID,
+		SequenceNumber: sequence,
 	}
 
 	res := ParseResponse{

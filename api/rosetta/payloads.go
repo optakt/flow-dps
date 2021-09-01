@@ -15,8 +15,6 @@
 package rosetta
 
 import (
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -101,31 +99,26 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermination, err))
 	}
 
-	unsignedTx, err := c.transact.CompileTransaction(req.Metadata.CurrentBlockID, intent, req.Metadata.SequenceNumber)
+	unsigned, err := c.transact.CompileTransaction(req.Metadata.CurrentBlockID, intent, req.Metadata.SequenceNumber)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txConstruction, err))
-	}
-
-	data, err := json.Marshal(unsignedTx)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txEncoding, err))
 	}
 
 	sender := identifier.Account{
 		Address: intent.From.String(),
 	}
-	payload, err := c.transact.HashPayload(req.Metadata.CurrentBlockID, unsignedTx, sender)
+	hash, err := c.transact.HashPayload(req.Metadata.CurrentBlockID, unsigned, sender)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(payloadHashing, err))
 	}
 
 	// We only support a single signer at the moment, so the account only needs to sign the transaction envelope.
 	res := PayloadsResponse{
-		Transaction: string(data),
+		Transaction: unsigned,
 		Payloads: []object.SigningPayload{
 			{
 				AccountID:     identifier.Account{Address: intent.From.Hex()},
-				HexBytes:      hex.EncodeToString(payload),
+				HexBytes:      hash,
 				SignatureType: FlowSignatureAlgorithm,
 			},
 		},

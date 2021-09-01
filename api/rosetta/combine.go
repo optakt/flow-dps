@@ -15,13 +15,10 @@
 package rosetta
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-
-	sdk "github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -74,13 +71,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txSignatureInvalid))
 	}
 
-	var unsignedTx sdk.Transaction
-	err = json.Unmarshal([]byte(req.UnsignedTransaction), &unsignedTx)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txBodyInvalid, withError(err)))
-	}
-
-	signedTx, err := c.transact.AttachSignature(&unsignedTx, signature)
+	signedTx, err := c.transact.AttachSignature(req.UnsignedTransaction, signature)
 	var iaErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
@@ -97,13 +88,8 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, internal(txSigning, err))
 	}
 
-	data, err := json.Marshal(signedTx)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txEncoding, err))
-	}
-
 	res := CombineResponse{
-		SignedTransaction: string(data),
+		SignedTransaction: signedTx,
 	}
 
 	return ctx.JSON(http.StatusOK, res)

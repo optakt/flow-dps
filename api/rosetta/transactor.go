@@ -15,8 +15,6 @@
 package rosetta
 
 import (
-	sdk "github.com/onflow/flow-go-sdk"
-
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 	"github.com/optakt/flow-dps/rosetta/transactor"
@@ -25,9 +23,8 @@ import (
 // Transactor is used by the Rosetta Construction API to handle transaction related operations.
 type Transactor interface {
 	DeriveIntent(operations []object.Operation) (intent *transactor.Intent, err error)
-	CompileTransaction(refBlockID identifier.Block, intent *transactor.Intent, sequence uint64) (tx *sdk.Transaction, err error)
-	HashPayload(rosBlockID identifier.Block, tx *sdk.Transaction, signer identifier.Account) (payload []byte, err error)
-	ParseTransaction(tx *sdk.Transaction) (operations []object.Operation, signers []identifier.Account, err error)
-	AttachSignature(unsignedTx *sdk.Transaction, signature object.Signature) (tx *sdk.Transaction, err error)
-	VerifySignature(signedTx *sdk.Transaction, signers []identifier.Account) error
+	CompileTransaction(refBlockID identifier.Block, intent *transactor.Intent, sequence uint64) (unsigned string, err error)
+	HashPayload(rosBlockID identifier.Block, unsigned string, signer identifier.Account) (hash string, err error)
+	ParseTransaction(payload string) (refBlockID identifier.Block, sequence uint64, operations []object.Operation, signers []identifier.Account, err error)
+	AttachSignature(unsigned string, signature object.Signature) (signed string, err error)
 }

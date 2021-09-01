@@ -38,8 +38,6 @@ const (
 	txInvalidOps         = "transaction operations are invalid"
 	txBodyEmpty          = "transaction text is empty"
 	txBodyInvalid        = "transaction text is invalid"
-	txNoSignatures       = "required signatures missing for signed transaction"
-	txExtraSignatures    = "superflous signatures found for unsigned transaction"
 	txSignatureInvalid   = "transaction signature algorithm is invalid"
 	signatureListInvalid = "signature list should have only one signature"
 
@@ -54,11 +52,9 @@ const (
 	referenceBlockRetrieval = "unable to retrieve transaction reference block"
 	sequenceNumberRetrieval = "unable to retrieve account key sequence number"
 	txConstruction          = "unable to construct transaction"
-	txEncoding              = "unable to encode transaction"
 	txParsing               = "unable to parse transaction"
 	txSigning               = "unable to sign transaction"
 	payloadHashing          = "unable to hash signing payload"
-	signatureVerification   = "unable to verify signature"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
