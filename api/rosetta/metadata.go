@@ -95,8 +95,6 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 	// In the `parse` endpoint, we parse a transaction to produce the original metadata (and operations).
 	// Since we can only deduce the block hash from the transaction, we will omit the block height from
 	// the identifier here, to keep the data identical.
-	// TODO: perhaps better to have this complete but have the `parse` endpoint do one additional lookup.
-	// => https://github.com/optakt/flow-dps/issues/378
 	res := MetadataResponse{
 		Metadata: object.Metadata{
 			CurrentBlockID: current,

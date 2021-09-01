@@ -12,13 +12,12 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package transactor
 
 import (
 	sdk "github.com/onflow/flow-go-sdk"
 )
 
-// Submitter is used to submit the constructed transaction for execution in a Flow network.
 type Submitter interface {
 	Transaction(tx *sdk.Transaction) error
 }

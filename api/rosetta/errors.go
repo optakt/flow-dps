@@ -28,6 +28,7 @@ const (
 	blockchainEmpty = "blockchain identifier has empty blockchain field"
 	networkEmpty    = "blockchain identifier has empty network field"
 	blockEmpty      = "block identifier has empty index and hash fields"
+	blockNotFull    = "block identifier needs both fields filled for this request"
 	blockLength     = "block identifier has invalid hash field length"
 	addressEmpty    = "account identifier has empty address field"
 	addressLength   = "account identifier has invalid address field length"
@@ -37,7 +38,6 @@ const (
 	txLength        = "transaction identifier has invalid hash filed length"
 	txInvalidOps    = "transaction operations are invalid"
 	txBodyEmpty     = "transaction text is empty"
-	txBodyInvalid   = "transaction text is invalid"
 	signaturesEmpty = "signature list is empty"
 
 	networkCheck            = "unable to check network"

@@ -15,10 +15,17 @@
 package transactor
 
 import (
+	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
+
+func rosettaTxID(txID sdk.Identifier) identifier.Transaction {
+	return identifier.Transaction{
+		Hash: txID.String(),
+	}
+}
 
 func rosettaBlockID(height uint64, blockID flow.Identifier) identifier.Block {
 	return identifier.Block{

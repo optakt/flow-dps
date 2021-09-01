@@ -64,8 +64,8 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	// Metadata object is the response from our metadata endpoint. Thus, the object
 	// should be okay, but let's validate it anyway.
 	rosBlockID := req.Metadata.CurrentBlockID
-	if rosBlockID.Index == nil && rosBlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
+	if rosBlockID.Index == nil || rosBlockID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
 	}
 	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != hexIDSize {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,

@@ -25,7 +25,6 @@ package rosetta
 type Construction struct {
 	config   Configuration
 	transact Transactor
-	submit   Submitter
 
 	// Retrieve is used to get the latest block ID. This is needed since
 	// transactions require a reference block ID, so that their validity
@@ -35,13 +34,11 @@ type Construction struct {
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
-func NewConstruction(config Configuration, transact Transactor, retrieve Retriever, submit Submitter) *Construction {
+func NewConstruction(config Configuration, transact Transactor) *Construction {
 
 	c := Construction{
 		config:   config,
 		transact: transact,
-		retrieve: retrieve,
-		submit:   submit,
 	}
 
 	return &c

@@ -50,15 +50,17 @@ type Transactor struct {
 	validate Validator
 	generate Generator
 	invoke   Invoker
+	submit   Submitter
 }
 
 // New creates a new transactor to handle interactions with Flow transactions.
-func New(validate Validator, generate Generator, invoke Invoker) *Transactor {
+func New(validate Validator, generate Generator, invoke Invoker, submit Submitter) *Transactor {
 
 	p := Transactor{
 		validate: validate,
 		generate: generate,
 		invoke:   invoke,
+		submit:   submit,
 	}
 
 	return &p
@@ -592,6 +594,21 @@ func (t *Transactor) TransactionIdentifier(signed string) (identifier.Transactio
 	}
 
 	return rosTxID, nil
+}
+
+func (t *Transactor) SubmitTransaction(signed string) (identifier.Transaction, error) {
+
+	signedTx, err := t.decodeTransaction(signed)
+	if err != nil {
+		return identifier.Transaction{}, fmt.Errorf("could not decode transaction: %w", err)
+	}
+
+	err = t.submit.Transaction(signedTx)
+	if err != nil {
+		return identifier.Transaction{}, fmt.Errorf("could not submit transaction: %w", err)
+	}
+
+	return rosettaTxID(signedTx.ID()), nil
 }
 
 func (t *Transactor) encodeTransaction(tx *sdk.Transaction) (string, error) {

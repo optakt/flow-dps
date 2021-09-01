@@ -15,12 +15,9 @@
 package rosetta
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-
-	sdk "github.com/onflow/flow-go-sdk"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
@@ -60,21 +57,13 @@ func (c *Construction) Submit(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyEmpty))
 	}
 
-	var signedTx sdk.Transaction
-	err = json.Unmarshal([]byte(req.SignedTransaction), &signedTx)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyInvalid, withError(err)))
-	}
-
-	err = c.submit.Transaction(&signedTx)
+	rosTxID, err := c.transact.SubmitTransaction(req.SignedTransaction)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(txSubmission, err))
 	}
 
 	res := SubmitResponse{
-		TransactionID: identifier.Transaction{
-			Hash: signedTx.ID().Hex(),
-		},
+		TransactionID: rosTxID,
 	}
 
 	return ctx.JSON(http.StatusOK, res)

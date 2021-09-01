@@ -28,4 +28,5 @@ type Transactor interface {
 	ParseTransaction(payload string) (refBlockID identifier.Block, sequence uint64, operations []object.Operation, signers []identifier.Account, err error)
 	AttachSignatures(unsigned string, signatures []object.Signature) (signed string, err error)
 	TransactionIdentifier(signed string) (rosTxID identifier.Transaction, err error)
+	SubmitTransaction(signed string) (rosTxID identifier.Transaction, err error)
 }
