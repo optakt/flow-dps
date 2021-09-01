@@ -30,4 +30,18 @@ var (
 	ErrorUnknownBlock       = meta.ErrorDefinition{Code: 9, Message: "unknown block identifier", Retriable: true}
 	ErrorUnknownCurrency    = meta.ErrorDefinition{Code: 10, Message: "unknown currency identifier", Retriable: false}
 	ErrorUnknownTransaction = meta.ErrorDefinition{Code: 11, Message: "unknown block transaction", Retriable: false}
+
+	// Construction API specific errors.
+	ErrorInvalidIntent      = meta.ErrorDefinition{Code: 12, Message: "invalid transaction intent", Retriable: false}
+	ErrorInvalidAuthorizers = meta.ErrorDefinition{Code: 13, Message: "invalid transaction authorizers", Retriable: false}
+	ErrorInvalidPayer       = meta.ErrorDefinition{Code: 14, Message: "invalid transaction payer", Retriable: false}
+	ErrorInvalidProposer    = meta.ErrorDefinition{Code: 15, Message: "invalid transaction proposer", Retriable: false}
+	ErrorInvalidScript      = meta.ErrorDefinition{Code: 16, Message: "invalid transaction script", Retriable: false}
+	ErrorInvalidArguments   = meta.ErrorDefinition{Code: 17, Message: "invalid transaction arguments", Retriable: false}
+	ErrorInvalidAmount      = meta.ErrorDefinition{Code: 18, Message: "invalid transaction amount", Retriable: false}
+	ErrorInvalidReceiver    = meta.ErrorDefinition{Code: 19, Message: "invalid transaction recipient", Retriable: false}
+	ErrorInvalidSignature   = meta.ErrorDefinition{Code: 20, Message: "invalid transaction signature", Retriable: false}
+	ErrorInvalidKey         = meta.ErrorDefinition{Code: 21, Message: "invalid transaction signer key", Retriable: false}
+	ErrorInvalidPayload     = meta.ErrorDefinition{Code: 22, Message: "invalid transaction payload", Retriable: false}
+	ErrorInvalidSignatures  = meta.ErrorDefinition{Code: 23, Message: "invalid transaction signatures", Retriable: false}
 )

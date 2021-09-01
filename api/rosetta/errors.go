@@ -15,6 +15,8 @@
 package rosetta
 
 import (
+	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/meta"
@@ -25,21 +27,33 @@ const (
 
 	blockchainEmpty = "blockchain identifier has empty blockchain field"
 	networkEmpty    = "blockchain identifier has empty network field"
-	blockEmpty      = "block identifier has empty index and hash fields"
+	blockNotFull    = "block identifier needs both fields filled for this request"
 	blockLength     = "block identifier has invalid hash field length"
 	addressEmpty    = "account identifier has empty address field"
 	addressLength   = "account identifier has invalid address field length"
 	currenciesEmpty = "currency identifier list is empty"
 	symbolEmpty     = "currency identifier has empty symbol field"
-	txEmpty         = "transaction identifier has empty hash field"
-	txLength        = "transaction identifier has invalid hash field length"
+	txHashEmpty     = "transaction identifier has empty hash field"
+	txLength        = "transaction identifier has invalid hash filed length"
+	txInvalidOps    = "transaction operations are invalid"
+	txBodyEmpty     = "transaction text is empty"
+	signaturesEmpty = "signature list is empty"
 
-	networkCheck      = "unable to check network"
-	blockRetrieval    = "unable to retrieve block"
-	balancesRetrieval = "unable to retrieve balances"
-	oldestRetrieval   = "unable to retrieve oldest block"
-	currentRetrieval  = "unable to retrieve current block"
-	txRetrieval       = "unable to retrieve transaction"
+	networkCheck            = "unable to check network"
+	blockRetrieval          = "unable to retrieve block"
+	balancesRetrieval       = "unable to retrieve balances"
+	oldestRetrieval         = "unable to retrieve oldest block"
+	currentRetrieval        = "unable to retrieve current block"
+	txSubmission            = "unable to submit transaction"
+	txRetrieval             = "unable to retrieve transaction"
+	intentDetermination     = "unable to determine transaction intent"
+	referenceBlockRetrieval = "unable to retrieve transaction reference block"
+	sequenceNumberRetrieval = "unable to retrieve account key sequence number"
+	txConstruction          = "unable to construct transaction"
+	txParsing               = "unable to parse transaction"
+	txSigning               = "unable to sign transaction"
+	payloadHashing          = "unable to hash signing payload"
+	txIdentifier            = "unable to retrieve transaction identifier"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
@@ -64,6 +78,12 @@ func withError(err error) detailFunc {
 func withDetail(key string, val interface{}) detailFunc {
 	return func(details map[string]interface{}) {
 		details[key] = val
+	}
+}
+
+func withAddress(key string, val flow.Address) detailFunc {
+	return func(details map[string]interface{}) {
+		details[key] = val.Hex()
 	}
 }
 
@@ -175,5 +195,98 @@ func unknownTransaction(fail failure.UnknownTransaction) Error {
 		configuration.ErrorUnknownTransaction,
 		fail.Description,
 		withDetail("hash", fail.Hash),
+	)
+}
+
+func invalidIntent(fail failure.InvalidIntent) Error {
+	return convertError(
+		configuration.ErrorInvalidIntent,
+		fail.Description,
+	)
+}
+
+func invalidAuthorizers(fail failure.InvalidAuthorizers) Error {
+	return convertError(
+		configuration.ErrorInvalidAuthorizers,
+		fail.Description,
+		withDetail("have_authorizers", fail.Have),
+		withDetail("want_authorizers", fail.Want),
+	)
+}
+
+func invalidSignatures(fail failure.InvalidSignatures) Error {
+	return convertError(
+		configuration.ErrorInvalidSignatures,
+		fail.Description,
+		withDetail("have_signatures", fail.Have),
+		withDetail("want_signatures", fail.Want),
+	)
+}
+
+func invalidPayer(fail failure.InvalidPayer) Error {
+	return convertError(
+		configuration.ErrorInvalidPayer,
+		fail.Description,
+		withAddress("have_payer", fail.Have),
+		withAddress("want_payer", fail.Want),
+	)
+}
+
+func invalidProposer(fail failure.InvalidProposer) Error {
+	return convertError(
+		configuration.ErrorInvalidProposer,
+		fail.Description,
+		withAddress("have_proposer", fail.Have),
+		withAddress("want_proposer", fail.Want),
+	)
+}
+
+func invalidScript(fail failure.InvalidScript) Error {
+	return convertError(
+		configuration.ErrorInvalidScript,
+		fail.Description,
+		withDetail("script", fail.Script),
+	)
+}
+
+func invalidArguments(fail failure.InvalidArguments) Error {
+	return convertError(
+		configuration.ErrorInvalidArguments,
+		fail.Description,
+		withDetail("have_arguments", fail.Have),
+		withDetail("want_arguments", fail.Want),
+	)
+}
+
+func invalidAmount(fail failure.InvalidAmount) Error {
+	return convertError(
+		configuration.ErrorInvalidAmount,
+		fail.Description,
+		withDetail("amount", fail.Amount),
+	)
+}
+
+func invalidReceiver(fail failure.InvalidReceiver) Error {
+	return convertError(
+		configuration.ErrorInvalidReceiver,
+		fail.Description,
+		withDetail("receiver", fail.Receiver),
+	)
+}
+
+func invalidSignature(fail failure.InvalidSignature) Error {
+	return convertError(
+		configuration.ErrorInvalidSignature,
+		fail.Description,
+	)
+}
+
+func invalidKey(fail failure.InvalidKey) Error {
+	return convertError(
+		configuration.ErrorInvalidKey,
+		fail.Description,
+		withDetail("height", fail.Height),
+		withAddress("account", fail.Address),
+		withDetail("index", fail.Index),
 	)
 }

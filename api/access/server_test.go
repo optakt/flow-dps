@@ -853,9 +853,9 @@ func TestServer_GetAccount(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
-			assert.Equal(t, mocks.GenericAccount.Address, address)
+		invoker.AccountFunc = func(height uint64, address flow.Address) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericAccount.Address, address)
 
 			return &mocks.GenericAccount, nil
 		}
@@ -895,7 +895,7 @@ func TestServer_GetAccount(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
+		invoker.AccountFunc = func(uint64, flow.Address) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -921,9 +921,9 @@ func TestServer_GetAccountAtLatestBlock(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
-			assert.Equal(t, mocks.GenericAccount.Address, address)
+		invoker.AccountFunc = func(height uint64, address flow.Address) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericAccount.Address, address)
 
 			return &mocks.GenericAccount, nil
 		}
@@ -963,7 +963,7 @@ func TestServer_GetAccountAtLatestBlock(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
+		invoker.AccountFunc = func(uint64, flow.Address) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -989,9 +989,9 @@ func TestServer_GetAccountAtBlockHeight(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(address flow.Address, height uint64) (*flow.Account, error) {
-			assert.Equal(t, mocks.GenericAccount.Address, address)
+		invoker.AccountFunc = func(height uint64, address flow.Address) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericHeight+999, height)
+			assert.Equal(t, mocks.GenericAccount.Address, address)
 
 			return &mocks.GenericAccount, nil
 		}
@@ -1017,7 +1017,7 @@ func TestServer_GetAccountAtBlockHeight(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.GetAccountFunc = func(flow.Address, uint64) (*flow.Account, error) {
+		invoker.AccountFunc = func(uint64, flow.Address) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 

@@ -98,9 +98,10 @@ func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operat
 	// Convert the address bytes into a native Flow address.
 	address := flow.Address(bAddress)
 
+	netIndex := uint(event.EventIndex)
 	op := object.Operation{
 		ID: identifier.Operation{
-			NetworkIndex: uint(event.EventIndex),
+			NetworkIndex: &netIndex,
 		},
 		Status: dps.StatusCompleted,
 		AccountID: identifier.Account{

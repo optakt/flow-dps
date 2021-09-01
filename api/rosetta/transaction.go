@@ -56,8 +56,8 @@ func (d *Data) Transaction(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
-	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
+	if req.BlockID.Index == nil || req.BlockID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
@@ -67,7 +67,7 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	}
 
 	if req.TransactionID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txEmpty))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txHashEmpty))
 	}
 	if len(req.TransactionID.Hash) != hexIDSize {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txLength,
@@ -86,7 +86,6 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	}
 
 	transaction, err := d.retrieve.Transaction(req.BlockID, req.TransactionID)
-
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))

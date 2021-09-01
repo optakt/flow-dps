@@ -323,6 +323,35 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	return &transaction, nil
 }
 
+// TODO: Add unit test for this function:
+// => https://github.com/optakt/flow-dps/issues/390
+
+func (r *Retriever) Sequence(rosBlockID identifier.Block, rosAccountID identifier.Account, index int) (uint64, error) {
+
+	// Run validation on the Rosetta block identifier. This will infer any
+	// missing data and return the height and block ID.
+	height, _, err := r.validate.Block(rosBlockID)
+	if err != nil {
+		return 0, fmt.Errorf("could not validate block: %w", err)
+	}
+
+	// Run validation on the Rosetta account identifier. This will return the
+	// native Flow address.
+	address, err := r.validate.Account(rosAccountID)
+	if err != nil {
+		return 0, fmt.Errorf("could not validate account: %w", err)
+	}
+
+	// Retrieve the key at the height of the given block and for the given
+	// address at index 0.
+	key, err := r.invoke.Key(height, address, index)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve account: %w", err)
+	}
+
+	return key.SeqNumber, nil
+}
+
 // operations allows us to extract the operations for a transaction ID by using the given list of
 // events. In general, we retrieve all events for the block in question, so those should be passed in order to avoid
 // querying events for each transaction in a block.

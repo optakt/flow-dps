@@ -122,9 +122,10 @@ func TestConverter_EventToOperation(t *testing.T) {
 	).WithType(withdrawalType)
 	withdrawalEventPayload := json.MustEncode(withdrawalEvent)
 
+	depositNetIndex := uint(1)
 	testDepositOp := object.Operation{
 		ID: identifier.Operation{
-			NetworkIndex: 1,
+			NetworkIndex: &depositNetIndex,
 		},
 		Type:   dps.OperationTransfer,
 		Status: dps.StatusCompleted,
@@ -139,9 +140,10 @@ func TestConverter_EventToOperation(t *testing.T) {
 			},
 		},
 	}
+	withdrawalNetIndex := uint(2)
 	testWithdrawalOp := object.Operation{
 		ID: identifier.Operation{
-			NetworkIndex: 2,
+			NetworkIndex: &withdrawalNetIndex,
 		},
 		Type:   dps.OperationTransfer,
 		Status: dps.StatusCompleted,

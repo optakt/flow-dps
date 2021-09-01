@@ -16,6 +16,7 @@ package retriever
 
 import (
 	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 

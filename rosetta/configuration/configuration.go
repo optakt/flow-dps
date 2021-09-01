@@ -63,6 +63,20 @@ func New(chain flow.ChainID) *Configuration {
 		ErrorInvalidTransaction,
 		ErrorUnknownBlock,
 		ErrorUnknownCurrency,
+		ErrorUnknownTransaction,
+
+		ErrorInvalidIntent,
+		ErrorInvalidAuthorizers,
+		ErrorInvalidPayer,
+		ErrorInvalidProposer,
+		ErrorInvalidScript,
+		ErrorInvalidArguments,
+		ErrorInvalidAmount,
+		ErrorInvalidReceiver,
+		ErrorInvalidSignature,
+		ErrorInvalidKey,
+		ErrorInvalidPayload,
+		ErrorInvalidSignatures,
 	}
 
 	c := Configuration{

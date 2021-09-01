@@ -58,9 +58,6 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
-	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
-	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
 			withDetail("have_length", len(req.BlockID.Hash)),
@@ -101,7 +98,6 @@ func (d *Data) Balance(ctx echo.Context) error {
 	}
 
 	rosBlockID, balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
-
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
@@ -110,12 +106,10 @@ func (d *Data) Balance(ctx echo.Context) error {
 	if errors.As(err, &ubErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
 	}
-
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
 	}
-
 	var icErr failure.InvalidCurrency
 	if errors.As(err, &icErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidCurrency(icErr))
@@ -124,7 +118,6 @@ func (d *Data) Balance(ctx echo.Context) error {
 	if errors.As(err, &ucErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownCurrency(ucErr))
 	}
-
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(balancesRetrieval, err))
 	}
