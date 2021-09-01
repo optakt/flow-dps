@@ -27,4 +27,5 @@ type Transactor interface {
 	HashPayload(rosBlockID identifier.Block, unsigned string, signer identifier.Account) (algo string, hash string, err error)
 	ParseTransaction(payload string) (refBlockID identifier.Block, sequence uint64, operations []object.Operation, signers []identifier.Account, err error)
 	AttachSignatures(unsigned string, signatures []object.Signature) (signed string, err error)
+	TransactionIdentifier(signed string) (rosTxID identifier.Transaction, err error)
 }

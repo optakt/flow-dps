@@ -580,6 +580,20 @@ func (t *Transactor) verifySignature(signed string, address flow.Address) error 
 	return nil
 }
 
+func (t *Transactor) TransactionIdentifier(signed string) (identifier.Transaction, error) {
+
+	signedTx, err := t.decodeTransaction(signed)
+	if err != nil {
+		return identifier.Transaction{}, fmt.Errorf("could not decode transaction: %w", err)
+	}
+
+	rosTxID := identifier.Transaction{
+		Hash: signedTx.ID().Hex(),
+	}
+
+	return rosTxID, nil
+}
+
 func (t *Transactor) encodeTransaction(tx *sdk.Transaction) (string, error) {
 
 	data, err := json.Marshal(tx)

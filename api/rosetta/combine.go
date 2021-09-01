@@ -63,7 +63,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 	}
 
 	if len(req.Signatures) == 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(signatureListInvalid))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(signaturesEmpty))
 	}
 
 	signed, err := c.transact.AttachSignatures(req.UnsignedTransaction, req.Signatures)

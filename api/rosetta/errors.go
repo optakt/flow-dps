@@ -25,21 +25,20 @@ import (
 const (
 	invalidJSON = "request does not contain valid JSON-encoded body"
 
-	blockchainEmpty      = "blockchain identifier has empty blockchain field"
-	networkEmpty         = "blockchain identifier has empty network field"
-	blockEmpty           = "block identifier has empty index and hash fields"
-	blockLength          = "block identifier has invalid hash field length"
-	addressEmpty         = "account identifier has empty address field"
-	addressLength        = "account identifier has invalid address field length"
-	currenciesEmpty      = "currency identifier list is empty"
-	symbolEmpty          = "currency identifier has empty symbol field"
-	txHashEmpty          = "transaction identifier has empty hash field"
-	txLength             = "transaction identifier has invalid hash filed length"
-	txInvalidOps         = "transaction operations are invalid"
-	txBodyEmpty          = "transaction text is empty"
-	txBodyInvalid        = "transaction text is invalid"
-	txSignatureInvalid   = "transaction signature algorithm is invalid"
-	signatureListInvalid = "signature list should have only one signature"
+	blockchainEmpty = "blockchain identifier has empty blockchain field"
+	networkEmpty    = "blockchain identifier has empty network field"
+	blockEmpty      = "block identifier has empty index and hash fields"
+	blockLength     = "block identifier has invalid hash field length"
+	addressEmpty    = "account identifier has empty address field"
+	addressLength   = "account identifier has invalid address field length"
+	currenciesEmpty = "currency identifier list is empty"
+	symbolEmpty     = "currency identifier has empty symbol field"
+	txHashEmpty     = "transaction identifier has empty hash field"
+	txLength        = "transaction identifier has invalid hash filed length"
+	txInvalidOps    = "transaction operations are invalid"
+	txBodyEmpty     = "transaction text is empty"
+	txBodyInvalid   = "transaction text is invalid"
+	signaturesEmpty = "signature list is empty"
 
 	networkCheck            = "unable to check network"
 	blockRetrieval          = "unable to retrieve block"
@@ -55,6 +54,7 @@ const (
 	txParsing               = "unable to parse transaction"
 	txSigning               = "unable to sign transaction"
 	payloadHashing          = "unable to hash signing payload"
+	txIdentifier            = "unable to retrieve transaction identifier"
 )
 
 // Error represents an error as defined by the Rosetta API specification. It
