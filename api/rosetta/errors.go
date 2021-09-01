@@ -205,7 +205,7 @@ func unknownTransaction(fail failure.UnknownTransaction) Error {
 
 func invalidIntent(fail failure.InvalidIntent) Error {
 	return convertError(
-		configuration.ErrorInvalidTransactionIntent,
+		configuration.ErrorInvalidIntent,
 		fail.Description,
 	)
 }
@@ -279,7 +279,7 @@ func invalidSignature(fail failure.InvalidSignature) Error {
 
 func invalidKey(fail failure.InvalidKey) Error {
 	return convertError(
-		configuration.ErrorInvalidProposalKey,
+		configuration.ErrorInvalidKey,
 		fail.Description,
 		withDetail("height", fail.Height),
 		withAddress("account", fail.Address),

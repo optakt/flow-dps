@@ -32,15 +32,14 @@ var (
 	ErrorUnknownTransaction = meta.ErrorDefinition{Code: 11, Message: "unknown block transaction", Retriable: false}
 
 	// Construction API specific errors.
-	ErrorInvalidTransactionIntent = meta.ErrorDefinition{Code: 12, Message: "invalid transaction intent", Retriable: false}
-	ErrorInvalidAuthorizers       = meta.ErrorDefinition{Code: 13, Message: "invalid transaction authorizers", Retriable: false}
-	ErrorInvalidPayer             = meta.ErrorDefinition{Code: 14, Message: "invalid transaction payer", Retriable: false}
-	ErrorInvalidProposer          = meta.ErrorDefinition{Code: 15, Message: "invalid transaction proposer", Retriable: false}
-	ErrorInvalidScript            = meta.ErrorDefinition{Code: 16, Message: "invalid transaction script", Retriable: false}
-	ErrorInvalidArguments         = meta.ErrorDefinition{Code: 17, Message: "invalid transaction arguments", Retriable: false}
-	ErrorInvalidAmount            = meta.ErrorDefinition{Code: 18, Message: "invalid transaction amount", Retriable: false}
-	ErrorInvalidReceiver          = meta.ErrorDefinition{Code: 19, Message: "invalid transaction recipient", Retriable: false}
-	ErrorInvalidSignature         = meta.ErrorDefinition{Code: 20, Message: "invalid transaction signature", Retriable: false}
-	ErrorInvalidProposalKey       = meta.ErrorDefinition{Code: 21, Message: "invalid transaction proposal key", Retriable: false}
-	ErrorInvalidAuthorizerKey     = meta.ErrorDefinition{Code: 22, Message: "invalid transaction authorizer key", Retriable: false}
+	ErrorInvalidIntent      = meta.ErrorDefinition{Code: 12, Message: "invalid transaction intent", Retriable: false}
+	ErrorInvalidAuthorizers = meta.ErrorDefinition{Code: 13, Message: "invalid transaction authorizers", Retriable: false}
+	ErrorInvalidPayer       = meta.ErrorDefinition{Code: 14, Message: "invalid transaction payer", Retriable: false}
+	ErrorInvalidProposer    = meta.ErrorDefinition{Code: 15, Message: "invalid transaction proposer", Retriable: false}
+	ErrorInvalidScript      = meta.ErrorDefinition{Code: 16, Message: "invalid transaction script", Retriable: false}
+	ErrorInvalidArguments   = meta.ErrorDefinition{Code: 17, Message: "invalid transaction arguments", Retriable: false}
+	ErrorInvalidAmount      = meta.ErrorDefinition{Code: 18, Message: "invalid transaction amount", Retriable: false}
+	ErrorInvalidReceiver    = meta.ErrorDefinition{Code: 19, Message: "invalid transaction recipient", Retriable: false}
+	ErrorInvalidSignature   = meta.ErrorDefinition{Code: 20, Message: "invalid transaction signature", Retriable: false}
+	ErrorInvalidKey         = meta.ErrorDefinition{Code: 21, Message: "invalid transaction key", Retriable: false}
 )
