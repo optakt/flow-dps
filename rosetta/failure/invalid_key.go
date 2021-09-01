@@ -28,5 +28,5 @@ type InvalidKey struct {
 }
 
 func (i InvalidKey) Error() string {
-	return fmt.Sprintf("invalid signer key (height: %d, address: %s, key index: %d): %s", i.Height, i.Address, i.Index, i.Description)
+	return fmt.Sprintf("invalid signer key (height: %d, address: %s, key index: %d): %s", i.Height, i.Address.Hex(), i.Index, i.Description)
 }

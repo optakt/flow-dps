@@ -37,7 +37,7 @@ func TestAPI_Options(t *testing.T) {
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const wantErrorCount = 10
+	const wantErrorCount = 23
 
 	// verify version string is in the format of x.y.z
 	versionRe := regexp.MustCompile(`\d+\.\d+\.\d+`)
@@ -129,6 +129,58 @@ func TestAPI_Options(t *testing.T) {
 			case configuration.ErrorUnknownCurrency.Code:
 				assert.Equal(t, configuration.ErrorUnknownCurrency.Message, rosettaErr.Message)
 				assert.Equal(t, configuration.ErrorUnknownCurrency.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorUnknownTransaction.Code:
+				assert.Equal(t, configuration.ErrorUnknownTransaction.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorUnknownTransaction.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidIntent.Code:
+				assert.Equal(t, configuration.ErrorInvalidIntent.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidIntent.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidAuthorizers.Code:
+				assert.Equal(t, configuration.ErrorInvalidAuthorizers.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidAuthorizers.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidPayer.Code:
+				assert.Equal(t, configuration.ErrorInvalidPayer.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidPayer.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidProposer.Code:
+				assert.Equal(t, configuration.ErrorInvalidProposer.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidProposer.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidScript.Code:
+				assert.Equal(t, configuration.ErrorInvalidScript.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidScript.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidArguments.Code:
+				assert.Equal(t, configuration.ErrorInvalidArguments.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidArguments.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidAmount.Code:
+				assert.Equal(t, configuration.ErrorInvalidAmount.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidAmount.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidReceiver.Code:
+				assert.Equal(t, configuration.ErrorInvalidReceiver.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidReceiver.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidSignature.Code:
+				assert.Equal(t, configuration.ErrorInvalidSignature.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidSignature.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidKey.Code:
+				assert.Equal(t, configuration.ErrorInvalidKey.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidKey.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidPayload.Code:
+				assert.Equal(t, configuration.ErrorInvalidPayload.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidPayload.Retriable, rosettaErr.Retriable)
+
+			case configuration.ErrorInvalidSignatures.Code:
+				assert.Equal(t, configuration.ErrorInvalidSignatures.Message, rosettaErr.Message)
+				assert.Equal(t, configuration.ErrorInvalidSignatures.Retriable, rosettaErr.Retriable)
 
 			default:
 				t.Errorf("unknown rosetta error received: (code: %v, message: '%v', retriable: %v", rosettaErr.Code, rosettaErr.Message, rosettaErr.Retriable)

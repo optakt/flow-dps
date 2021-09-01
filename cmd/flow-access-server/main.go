@@ -38,8 +38,8 @@ import (
 	accessApi "github.com/optakt/flow-dps/api/access"
 	dpsApi "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/invoker"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/service/invoker"
 )
 
 const (

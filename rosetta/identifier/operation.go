@@ -17,6 +17,6 @@ package identifier
 // Operation uniquely identifies an operation within a transaction. No network index is
 // needed because of the absence Flow does not support sharding.
 type Operation struct {
-	Index        uint `json:"index"`
-	NetworkIndex uint `json:"network_index,omitempty"`
+	Index        uint  `json:"index"`
+	NetworkIndex *uint `json:"network_index,omitempty"`
 }

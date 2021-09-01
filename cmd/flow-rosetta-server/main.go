@@ -35,7 +35,6 @@ import (
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/invoker"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/converter"
@@ -44,6 +43,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/submitter"
 	"github.com/optakt/flow-dps/rosetta/transactor"
 	"github.com/optakt/flow-dps/rosetta/validator"
+	"github.com/optakt/flow-dps/service/invoker"
 )
 
 const (
