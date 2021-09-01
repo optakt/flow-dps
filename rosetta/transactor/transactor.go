@@ -194,6 +194,8 @@ func (t *Transactor) CompileTransaction(rosBlockID identifier.Block, intent *Int
 	receiver := cadence.NewAddress(flow.BytesToAddress(intent.To.Bytes()))
 
 	// Add the script arguments - the amount and the receiver.
+	// NOTE: This can only fail if the argument can not be encoded using the
+	// Cadence JSON encoder, which will never happen here.
 	_ = unsignedTx.AddArgument(intent.Amount)
 	_ = unsignedTx.AddArgument(receiver)
 
@@ -249,6 +251,9 @@ func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, s
 
 // ParseTransactions processes the flow transaction, validates its correctness and translates it
 // to a list of operations and a list of signers.
+// TODO: Refactor this function, probably into several smaller function with a small amount of
+// return values:
+// => https://github.com/optakt/flow-dps/issues/392
 func (t *Transactor) ParseTransaction(payload string) (identifier.Block, uint64, []object.Operation, []identifier.Account, error) {
 
 	tx, err := t.decodeTransaction(payload)
@@ -364,7 +369,8 @@ func (t *Transactor) ParseTransaction(payload string) (identifier.Block, uint64,
 	// Create the send operation.
 	sendOp := object.Operation{
 		ID: identifier.Operation{
-			Index: 0,
+			Index:        0,
+			NetworkIndex: nil, // optional, omitted for now
 		},
 		AccountID: sender,
 		Type:      dps.OperationTransfer,
@@ -375,12 +381,14 @@ func (t *Transactor) ParseTransaction(payload string) (identifier.Block, uint64,
 				Decimals: dps.FlowDecimals,
 			},
 		},
+		Status: "", // must NOT be set for non-submitted transactions
 	}
 
 	// Create the receive operation.
 	receiveOp := object.Operation{
 		ID: identifier.Operation{
-			Index: 1,
+			Index:        1,
+			NetworkIndex: nil, // optional, omitted for now
 		},
 		AccountID: receiver,
 		Type:      dps.OperationTransfer,
@@ -391,6 +399,7 @@ func (t *Transactor) ParseTransaction(payload string) (identifier.Block, uint64,
 				Decimals: dps.FlowDecimals,
 			},
 		},
+		Status: "", // must NOT be set for non-submitted transactions
 	}
 
 	// Create the operations list.

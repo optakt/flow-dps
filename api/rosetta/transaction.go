@@ -56,8 +56,8 @@ func (d *Data) Transaction(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
 	}
 
-	if req.BlockID.Index == nil && req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockEmpty))
+	if req.BlockID.Index == nil || req.BlockID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
 	}
 	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,

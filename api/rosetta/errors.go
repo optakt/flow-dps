@@ -27,7 +27,6 @@ const (
 
 	blockchainEmpty = "blockchain identifier has empty blockchain field"
 	networkEmpty    = "blockchain identifier has empty network field"
-	blockEmpty      = "block identifier has empty index and hash fields"
 	blockNotFull    = "block identifier needs both fields filled for this request"
 	blockLength     = "block identifier has invalid hash field length"
 	addressEmpty    = "account identifier has empty address field"
