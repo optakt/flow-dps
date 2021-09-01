@@ -25,9 +25,8 @@ import (
 
 	"github.com/onflow/cadence"
 	cjson "github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/flow-go-sdk/crypto"
-
 	sdk "github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -43,9 +42,9 @@ const (
 	requiredAlgorithm   = "ecdsa" // transactions are signed with ECSDA
 )
 
-// Transactor has the capabilities to determine transaction intent from an array
-// of Rosetta operations, create a Flow transaction from a transaction intent
-// and transate a Flow transaction back to an array of Rosetta operations.
+// Transactor can determine the transaction intent from an array of Rosetta
+// operations, create a Flow transaction from a transaction intent and
+// translate a Flow transaction back to an array of Rosetta operations.
 type Transactor struct {
 	validate Validator
 	generate Generator
@@ -81,9 +80,8 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 		}
 	}
 
-	amounts := make(map[int]int64)
-
 	// Parse amounts.
+	amounts := make([]int64, requiredOperations)
 	for i, op := range operations {
 		amount, err := strconv.ParseInt(op.Amount.Value, 10, 64)
 		if err != nil {
@@ -94,7 +92,6 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 				),
 			}
 		}
-
 		amounts[i] = amount
 	}
 
@@ -109,14 +106,16 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 	}
 
 	// Sort the operations so that the send operation (negative amount) comes first.
-	sort.Slice(operations, func(i, j int) bool {
+	sort.Slice(operations, func(i int, j int) bool {
+		return amounts[i] < amounts[j]
+	})
+	sort.Slice(amounts, func(i int, j int) bool {
 		return amounts[i] < amounts[j]
 	})
 
+	// Validate the currencies specified for deposit and withdrawal.
 	send := operations[0]
 	receive := operations[1]
-
-	// Validate the currencies specified for deposit and withdrawal.
 	sendSymbol, _, err := t.validate.Currency(send.Amount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sender currency: %w", err)
@@ -128,7 +127,6 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 
 	// Make sure that both the send and receive operations are for FLOW tokens.
 	if sendSymbol != dps.FlowSymbol || receiveSymbol != dps.FlowSymbol {
-
 		return nil, failure.InvalidIntent{
 			Description: failure.NewDescription("invalid currencies found",
 				failure.WithString("sender", send.AccountID.Address),
@@ -158,11 +156,9 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 		}
 	}
 
-	amount := amounts[0]
-	if amount < 0 {
-		amount = -amount
-	}
-
+	// The smalle amount is first, so the second one should always have the
+	// positive number.
+	amount := amounts[1]
 	intent := Intent{
 		From:     flow.HexToAddress(send.AccountID.Address),
 		To:       flow.HexToAddress(receive.AccountID.Address),
