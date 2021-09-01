@@ -18,10 +18,11 @@ import (
 	"fmt"
 )
 
-type InvalidIntent struct {
+type InvalidPayload struct {
 	Description Description
+	Encoding    string
 }
 
-func (i InvalidIntent) Error() string {
-	return fmt.Sprintf("invalid transaction intent: %s", i.Description)
+func (i InvalidPayload) Error() string {
+	return fmt.Sprintf("invalid transaction payload (encoding: %s): %s", i.Encoding, i.Description)
 }
