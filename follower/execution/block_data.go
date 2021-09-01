@@ -21,7 +21,8 @@ import (
 )
 
 type BlockData struct {
-	Block       *flow.Block `validate:"required"`
+	Header      *flow.Header         `validate:"required"`
+	Commit      flow.StateCommitment `validate:"required"`
 	Collections []*entity.CompleteCollection
 	TxResults   []*flow.TransactionResult
 	Events      []*flow.Event

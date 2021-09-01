@@ -17,132 +17,165 @@ package follower
 import (
 	"fmt"
 
-	"github.com/dgraph-io/badger/v2"
+	"github.com/gammazero/deque"
+	"github.com/optakt/flow-dps/follower/execution"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/onflow/flow-go/storage/badger/operation"
-
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Source struct {
-	log zerolog.Logger
-
-	db        *badger.DB
+	log       zerolog.Logger
 	execution ExecutionFollower
-	consensus ConsensusFollower
-
-	blockID flow.Identifier
+	queue     *deque.Deque
+	data      map[flow.Identifier]item
 }
 
-func NewSource(log zerolog.Logger, execution ExecutionFollower, consensus ConsensusFollower, db *badger.DB) *Source {
+type item struct {
+	height       uint64
+	commit       flow.StateCommitment
+	collections  []*flow.LightCollection
+	transactions []*flow.TransactionBody
+	results      []*flow.TransactionResult
+	events       []flow.Event
+}
+
+func NewSource(log zerolog.Logger, execution ExecutionFollower) *Source {
+
 	s := Source{
-		log: log,
-
-		db:        db,
+		log:       log,
 		execution: execution,
-		consensus: consensus,
-
-		blockID: flow.ZeroID,
+		queue:     deque.New(),
 	}
 
 	return &s
 }
 
 func (s *Source) Update() (*ledger.TrieUpdate, error) {
-	update, err := s.execution.Update()
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve trie update: %w", err)
+
+	// If we have updates available in the queue, let's get the oldest one and
+	// feed it to the indexer.
+	if s.queue.Len() != 0 {
+		update := s.queue.PopBack()
+		return update.(*ledger.TrieUpdate), nil
 	}
-	return update, nil
+
+	// Get the next block data available from the execution follower and push
+	// all of the trie updates into the queue.
+	blockData, err := s.execution.Next()
+	if err != nil {
+		return nil, fmt.Errorf("could not get block data: %w", err)
+	}
+	for _, update := range blockData.TrieUpdates {
+		s.queue.PushBack(update)
+	}
+
+	// We should then also index the block data by block ID, so we can provide
+	// it to the chain interface as needed.
+	err = s.indexBlockData(blockData)
+	if err != nil {
+		return nil, fmt.Errorf("could not index block data: %w", err)
+	}
+
+	return s.Update()
 }
 
-func (s *Source) Root() (uint64, error) {
-	var height uint64
-	err := s.db.View(operation.RetrieveRootHeight(&height))
-	if err != nil {
-		return 0, fmt.Errorf("could not look up root height: %w", err)
+// commit => execution follower
+// collections => execution follower
+// results => execution follower
+// events => execution follower
+// transactions => execution follower
+
+func (s *Source) Prune(height uint64) {
+	for blockID, data := range s.data {
+		if data.height <= height {
+			delete(s.data, blockID)
+		}
 	}
-	return height, nil
 }
 
-func (s *Source) Commit(height uint64) (flow.StateCommitment, error) {
-	if height > s.consensus.Height() {
-		return flow.StateCommitment{}, dps.ErrUnavailable
+func (s *Source) Commit(blockID flow.Identifier) (flow.StateCommitment, bool) {
+	it, ok := s.data[blockID]
+	if !ok {
+		return flow.StateCommitment{}, false
 	}
-
-	blockID := s.consensus.BlockID()
-
-	var commit flow.StateCommitment
-	err := s.db.View(operation.LookupStateCommitment(blockID, &commit))
-	if err != nil {
-		return flow.StateCommitment{}, fmt.Errorf("could not look up commit: %w", err)
-	}
-
-	return commit, nil
+	return it.commit, true
 }
 
-func (s *Source) Header(height uint64) (*flow.Header, error) {
-	header, err := s.execution.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve header: %w", err)
+func (s *Source) Collections(blockID flow.Identifier) ([]*flow.LightCollection, bool) {
+	it, ok := s.data[blockID]
+	if !ok {
+		return nil, false
 	}
-
-	return header, nil
+	return it.collections, true
 }
 
-func (s *Source) Collections(height uint64) ([]*flow.LightCollection, error) {
-	collections, err := s.execution.Collections(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve collections: %w", err)
+func (s *Source) Transactions(blockID flow.Identifier) ([]*flow.TransactionBody, bool) {
+	it, ok := s.data[blockID]
+	if !ok {
+		return nil, false
 	}
-
-	return collections, nil
+	return it.transactions, true
 }
 
-func (s *Source) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
-	guarantees, err := s.execution.Guarantees(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve guarantees: %w", err)
+func (s *Source) Results(blockID flow.Identifier) ([]*flow.TransactionResult, bool) {
+	it, ok := s.data[blockID]
+	if !ok {
+		return nil, false
 	}
-
-	return guarantees, nil
+	return it.results, true
 }
 
-func (s *Source) Transactions(height uint64) ([]*flow.TransactionBody, error) {
-	transactions, err := s.execution.Transactions(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve transactions: %w", err)
+func (s *Source) Events(blockID flow.Identifier) ([]flow.Event, bool) {
+	it, ok := s.data[blockID]
+	if !ok {
+		return nil, false
 	}
-
-	return transactions, nil
+	return it.events, true
 }
 
-func (s *Source) Results(height uint64) ([]*flow.TransactionResult, error) {
-	txResults, err := s.execution.Results(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve transaction results: %w", err)
+func (s *Source) indexBlockData(blockData *execution.BlockData) error {
+
+	// Extract the block ID from the block data.
+	blockID := blockData.Header.ID()
+	_, ok := s.data[blockID]
+	if ok {
+		return fmt.Errorf("duplicate block ID for block data (block: %x)", blockID)
 	}
 
-	return txResults, nil
-}
-
-func (s *Source) Seals(height uint64) ([]*flow.Seal, error) {
-	seals, err := s.execution.Seals(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve seals: %w", err)
+	// Extract the light collections from the block data.
+	numTransactions := 0
+	collections := make([]*flow.LightCollection, 0, len(blockData.Collections))
+	for _, collection := range blockData.Collections {
+		light := collection.Collection().Light()
+		collections = append(collections, &light)
+		numTransactions += len(light.Transactions)
 	}
 
-	return seals, nil
-}
-
-func (s *Source) Events(height uint64) ([]flow.Event, error) {
-	events, err := s.execution.Events(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve events: %w", err)
+	// Extract the transactions from the block data.
+	transactions := make([]*flow.TransactionBody, 0, numTransactions)
+	for _, collection := range blockData.Collections {
+		transactions = append(transactions, collection.Transactions...)
 	}
 
-	return events, nil
+	// Extract the events from the block data.
+	events := make([]flow.Event, 0, len(blockData.Events))
+	for _, event := range blockData.Events {
+		events = append(events, *event)
+	}
+
+	// Create and store the item.
+	it := item{
+		height:       blockData.Header.Height, // needed only for pruning
+		commit:       blockData.Commit,
+		collections:  collections,
+		transactions: transactions,
+		results:      blockData.TxResults,
+		events:       events,
+	}
+
+	s.data[blockID] = it
+
+	return nil
 }

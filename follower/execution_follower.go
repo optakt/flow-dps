@@ -17,9 +17,11 @@ package follower
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/follower/execution"
 )
 
 type ExecutionFollower interface {
+	Next() (*execution.BlockData, error)
 	Update() (*ledger.TrieUpdate, error)
 	Header(height uint64) (*flow.Header, error)
 	Collections(height uint64) ([]*flow.LightCollection, error)

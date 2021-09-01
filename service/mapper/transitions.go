@@ -352,6 +352,10 @@ func (t *Transitions) IndexChain(s *State) error {
 	s.last = s.next
 	s.next = commit
 
+	// header => consensus follower
+	// guarantees => consensus follower
+	// seals => consensus follower
+
 	// After that, we index all chain data that is configured for being indexed
 	// currently.
 	if t.cfg.IndexCommit {
