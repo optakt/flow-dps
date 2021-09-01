@@ -215,6 +215,15 @@ func invalidAuthorizers(fail failure.InvalidAuthorizers) Error {
 	)
 }
 
+func invalidSignatures(fail failure.InvalidSignatures) Error {
+	return convertError(
+		configuration.ErrorInvalidSignatures,
+		fail.Description,
+		withDetail("have_signatures", fail.Have),
+		withDetail("want_signatures", fail.Want),
+	)
+}
+
 func invalidPayer(fail failure.InvalidPayer) Error {
 	return convertError(
 		configuration.ErrorInvalidPayer,

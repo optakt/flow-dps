@@ -62,19 +62,18 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyEmpty))
 	}
 
-	if len(req.Signatures) != 1 {
+	if len(req.Signatures) == 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(signatureListInvalid))
 	}
 
-	signature := req.Signatures[0]
-	if signature.SignatureType != FlowSignatureAlgorithm {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txSignatureInvalid))
-	}
-
-	signedTx, err := c.transact.AttachSignature(req.UnsignedTransaction, signature)
+	signed, err := c.transact.AttachSignatures(req.UnsignedTransaction, req.Signatures)
 	var iaErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
+	}
+	var ixErr failure.InvalidSignatures
+	if errors.As(err, &ixErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignatures(ixErr))
 	}
 	var ipErr failure.InvalidPayer
 	if errors.As(err, &ipErr) {
@@ -89,7 +88,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 	}
 
 	res := CombineResponse{
-		SignedTransaction: signedTx,
+		SignedTransaction: signed,
 	}
 
 	return ctx.JSON(http.StatusOK, res)

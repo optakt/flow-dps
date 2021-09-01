@@ -14,11 +14,6 @@
 
 package rosetta
 
-const (
-	// FlowSignatureAlgorithm is the signing algorithm supported by Flow.
-	FlowSignatureAlgorithm = "ecdsa"
-)
-
 // TODO: Sender is also the proposer and the payer. Consider allowing more granular control.
 // => https://github.com/optakt/flow-dps/issues/331
 

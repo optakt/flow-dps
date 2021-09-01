@@ -18,12 +18,12 @@ import (
 	"fmt"
 )
 
-type InvalidOperations struct {
+type InvalidSignatures struct {
 	Description Description
 	Want        uint
 	Have        uint
 }
 
-func (i InvalidOperations) Error() string {
-	return fmt.Sprintf("invalid operations (want: %d, have: %d): %s", i.Want, i.Have, i.Description)
+func (i InvalidSignatures) Error() string {
+	return fmt.Sprintf("invalid signatures (want: %d, have: %d): %s", i.Want, i.Have, i.Description)
 }

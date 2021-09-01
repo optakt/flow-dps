@@ -37,8 +37,10 @@ import (
 )
 
 const (
-	authorizersRequired = 1 // we only support one authorizer per transaction
-	argsRequired        = 2 // transactions need to arguments (amount & receiver)
+	requiredAuthorizers = 1       // we only support one authorizer per transaction
+	requiredArguments   = 2       // transactions need to arguments (amount & receiver)
+	requiredOperations  = 2       // transactions are made of two operations (deposit & withdrawal)
+	requiredAlgorithm   = "ecdsa" // transactions are signed with ECSDA
 )
 
 // Transactor has the capabilities to determine transaction intent from an array
@@ -69,10 +71,11 @@ func New(validate Validator, generate Generator, invoke Invoker) *Transactor {
 func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error) {
 
 	// Verify that we have exactly two operations.
-	if len(operations) != 2 {
+	if len(operations) != requiredOperations {
 		return nil, failure.InvalidOperations{
 			Description: failure.NewDescription("invalid number of operations"),
-			Count:       len(operations),
+			Want:        requiredOperations,
+			Have:        uint(len(operations)),
 		}
 	}
 
@@ -205,28 +208,28 @@ func (t *Transactor) CompileTransaction(rosBlockID identifier.Block, intent *Int
 	return payload, nil
 }
 
-func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, signer identifier.Account) (string, error) {
+func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, signer identifier.Account) (string, string, error) {
 
 	unsignedTx, err := t.decodeTransaction(unsigned)
 	if err != nil {
-		return "", fmt.Errorf("could not decode transaction: %w", err)
+		return "", "", fmt.Errorf("could not decode transaction: %w", err)
 	}
 
 	// Validate block.
 	height, _, err := t.validate.Block(rosBlockID)
 	if err != nil {
-		return "", fmt.Errorf("could not validate block: %w", err)
+		return "", "", fmt.Errorf("could not validate block: %w", err)
 	}
 
 	// Validate address.
 	address, err := t.validate.Account(signer)
 	if err != nil {
-		return "", fmt.Errorf("could not validate account: %w", err)
+		return "", "", fmt.Errorf("could not validate account: %w", err)
 	}
 
 	key, err := t.invoke.Key(height, address, 0)
 	if err != nil {
-		return "", fmt.Errorf("could not retrieve key: %w", err)
+		return "", "", fmt.Errorf("could not retrieve key: %w", err)
 	}
 
 	message := unsignedTx.EnvelopeMessage()
@@ -234,12 +237,12 @@ func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, s
 
 	hasher, err := crypto.NewHasher(key.HashAlgo)
 	if err != nil {
-		return "", fmt.Errorf("could not create hasher: %w", err)
+		return "", "", fmt.Errorf("could not create hasher: %w", err)
 	}
 
 	hash := hex.EncodeToString(hasher.ComputeHash(message))
 
-	return hash, nil
+	return requiredAlgorithm, hash, nil
 }
 
 // ParseTransactions processes the flow transaction, validates its correctness and translates it
@@ -254,10 +257,10 @@ func (t *Transactor) ParseTransaction(payload string) (identifier.Block, uint64,
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
 	// For now, the sender must also be the proposer and the payer for the transaction.
 
-	if len(tx.Authorizers) != authorizersRequired {
+	if len(tx.Authorizers) != requiredAuthorizers {
 		return identifier.Block{}, 0, nil, nil, failure.InvalidAuthorizers{
 			Have:        uint(len(tx.Authorizers)),
-			Want:        authorizersRequired,
+			Want:        requiredAuthorizers,
 			Description: failure.NewDescription("invalid number of authorizers"),
 		}
 	}
@@ -303,10 +306,10 @@ func (t *Transactor) ParseTransaction(payload string) (identifier.Block, uint64,
 
 	// Verify that the transaction script has the correct number of arguments.
 	args := tx.Arguments
-	if len(args) != argsRequired {
+	if len(args) != requiredArguments {
 		return identifier.Block{}, 0, nil, nil, failure.InvalidArguments{
 			Have:        uint(len(args)),
-			Want:        argsRequired,
+			Want:        requiredArguments,
 			Description: failure.NewDescription("invalid number of arguments"),
 		}
 	}
@@ -441,8 +444,8 @@ func (t *Transactor) ParseTransaction(payload string) (identifier.Block, uint64,
 	return rosettaBlockID(height, blockID), tx.ProposalKey.SequenceNumber, ops, signers, nil
 }
 
-// AttachSignature adds the given signature to the transaction.
-func (t *Transactor) AttachSignature(unsigned string, signature object.Signature) (string, error) {
+// AttachSignatures adds the given signatures to the transaction.
+func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signature) (string, error) {
 
 	unsignedTx, err := t.decodeTransaction(unsigned)
 	if err != nil {
@@ -450,17 +453,26 @@ func (t *Transactor) AttachSignature(unsigned string, signature object.Signature
 	}
 
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
-	if len(unsignedTx.Authorizers) != authorizersRequired {
+	if len(unsignedTx.Authorizers) != requiredAuthorizers {
 		return "", failure.InvalidAuthorizers{
 			Have:        uint(len(unsignedTx.Authorizers)),
-			Want:        authorizersRequired,
+			Want:        requiredAuthorizers,
 			Description: failure.NewDescription("invalid number of authorizers"),
 		}
 	}
 
-	sender := unsignedTx.Authorizers[0]
+	// We expect one signature for the one signer.
+	if len(unsignedTx.Authorizers) != len(signatures) {
+		return "", failure.InvalidSignatures{
+			Have:        uint(len(signatures)),
+			Want:        uint(len(unsignedTx.Authorizers)),
+			Description: failure.NewDescription("invalid number of signatures"),
+		}
+	}
 
 	// Verify that the sender is the payer, since it is the payer that needs to sign the envelope.
+	sender := unsignedTx.Authorizers[0]
+	signature := signatures[0]
 	if unsignedTx.Payer != sender {
 		return "", failure.InvalidPayer{
 			Have:        flow.BytesToAddress(unsignedTx.Payer[:]),
@@ -482,8 +494,18 @@ func (t *Transactor) AttachSignature(unsigned string, signature object.Signature
 	if signer != sender {
 		return "", failure.InvalidSignature{
 			Description: failure.NewDescription("invalid signer account",
-				failure.WithString("have_signer", signer.String()),
-				failure.WithString("want_signer", sender.String())),
+				failure.WithString("have_signer", signer.Hex()),
+				failure.WithString("want_signer", sender.Hex()),
+			),
+		}
+	}
+
+	if signature.SignatureType != requiredAlgorithm {
+		return "", failure.InvalidSignature{
+			Description: failure.NewDescription("invalid signature algorithm",
+				failure.WithString("have_algo", signature.SignatureType),
+				failure.WithString("want_algo", requiredAlgorithm),
+			),
 		}
 	}
 

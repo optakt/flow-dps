@@ -107,7 +107,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	sender := identifier.Account{
 		Address: intent.From.String(),
 	}
-	hash, err := c.transact.HashPayload(req.Metadata.CurrentBlockID, unsigned, sender)
+	algo, hash, err := c.transact.HashPayload(req.Metadata.CurrentBlockID, unsigned, sender)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, internal(payloadHashing, err))
 	}
@@ -119,7 +119,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 			{
 				AccountID:     identifier.Account{Address: intent.From.Hex()},
 				HexBytes:      hash,
-				SignatureType: FlowSignatureAlgorithm,
+				SignatureType: algo,
 			},
 		},
 	}
