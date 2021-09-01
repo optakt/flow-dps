@@ -9,6 +9,7 @@
 /data/
 /index/
 /trie/
+/flow-go/
 *.cdc
 *.log
 *.checkpoint

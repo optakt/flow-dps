@@ -43,7 +43,7 @@ In order to build the live binary, the following extra steps and dependencies ar
 
 * [`CMake`](https://cmake.org/install/)
 
-Please note that the flow-go repository should be cloned in the same folder as the DPS with its default name, so that the Go module replace statement works as intended: `replace github.com/onflow/flow-go/crypto => ../flow-go/crypto`.
+Please note that the flow-go repository should be cloned in the same folder as the DPS with its default name, so that the Go module replace statement works as intended: `replace github.com/onflow/flow-go/crypto => ./flow-go/crypto`.
 
 * `git clone git@github.com:onflow/flow-go.git`
 * `cd flow-go/crypto`
