@@ -12,37 +12,13 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package follower
 
-type Status uint8
-
-const (
-	StatusEmpty Status = iota + 1
-	StatusUpdating
-	StatusMatched
-	StatusCollected
-	StatusIndexed
-	StatusForwarded
-	StatusWaiting
+import (
+	"github.com/onflow/flow-go/model/flow"
 )
 
-func (s Status) String() string {
-	switch s {
-	case StatusEmpty:
-		return "empty"
-	case StatusUpdating:
-		return "updating"
-	case StatusMatched:
-		return "matched"
-	case StatusCollected:
-		return "collected"
-	case StatusIndexed:
-		return "indexed"
-	case StatusForwarded:
-		return "forwarded"
-	case StatusWaiting:
-		return "waiting"
-	default:
-		return "invalid"
-	}
+type ConsensusFollower interface {
+	Height() uint64
+	BlockID() flow.Identifier
 }

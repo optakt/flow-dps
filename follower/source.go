@@ -27,34 +27,17 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-type executionFollower interface {
-	Update() (*ledger.TrieUpdate, error)
-	Header(height uint64) (*flow.Header, error)
-	Collections(height uint64) ([]*flow.LightCollection, error)
-	Guarantees(height uint64) ([]*flow.CollectionGuarantee, error)
-	Seals(height uint64) ([]*flow.Seal, error)
-	Transactions(height uint64) ([]*flow.TransactionBody, error)
-	Results(height uint64) ([]*flow.TransactionResult, error)
-	Events(height uint64) ([]flow.Event, error)
-}
-
-type consensusFollower interface {
-	Height() uint64
-	BlockID() flow.Identifier
-}
-
 type Source struct {
 	log zerolog.Logger
 
 	db        *badger.DB
-	execution executionFollower
-	consensus consensusFollower
+	execution ExecutionFollower
+	consensus ConsensusFollower
 
 	blockID flow.Identifier
-	height  uint64
 }
 
-func NewSource(log zerolog.Logger, execution executionFollower, consensus consensusFollower, db *badger.DB) *Source {
+func NewSource(log zerolog.Logger, execution ExecutionFollower, consensus ConsensusFollower, db *badger.DB) *Source {
 	s := Source{
 		log: log,
 
@@ -73,7 +56,6 @@ func (s *Source) Update() (*ledger.TrieUpdate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve trie update: %w", err)
 	}
-
 	return update, nil
 }
 

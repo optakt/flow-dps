@@ -25,12 +25,13 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/models/dps"
 )
 
 const cacheSize = 1024
 
-type blockReader interface {
+type BlockReader interface {
 	Notify() <-chan string
 	Read(filename string) ([]byte, error)
 }
@@ -38,7 +39,7 @@ type blockReader interface {
 type Follower struct {
 	log zerolog.Logger
 
-	blocks   blockReader
+	blocks   BlockReader
 	codec    dps.Codec
 	db       *badger.DB
 	validate *validator.Validate
@@ -52,7 +53,7 @@ type Follower struct {
 	stop chan struct{}
 }
 
-func New(log zerolog.Logger, blocks blockReader, codec dps.Codec, db *badger.DB) *Follower {
+func New(log zerolog.Logger, blocks BlockReader, codec dps.Codec, db *badger.DB) *Follower {
 	f := Follower{
 		log: log,
 

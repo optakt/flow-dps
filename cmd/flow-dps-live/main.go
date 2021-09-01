@@ -240,7 +240,6 @@ func run() int {
 		mapper.WithIndexEvents(true),
 		mapper.WithIndexPayloads(true),
 		mapper.WithIndexSeals(true),
-		mapper.WithSkipBootstrap(false),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
@@ -251,6 +250,7 @@ func run() int {
 		mapper.WithTransition(mapper.StatusCollected, transitions.IndexRegisters),
 		mapper.WithTransition(mapper.StatusIndexed, transitions.ForwardHeight),
 		mapper.WithTransition(mapper.StatusForwarded, transitions.IndexChain),
+		mapper.WithTransition(mapper.StatusWaiting, transitions.WaitForUpdate),
 	)
 
 	// GRPC API initialization.

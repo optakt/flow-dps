@@ -14,6 +14,10 @@
 
 package mapper
 
+import (
+	"time"
+)
+
 // DefaultConfig has the default values of the config set.
 var DefaultConfig = Config{
 	IndexCommit:       false,
@@ -26,6 +30,7 @@ var DefaultConfig = Config{
 	IndexPayloads:     false,
 	IndexSeals:        false,
 	SkipBootstrap:     false,
+	WaitInterval:      100 * time.Millisecond,
 }
 
 // Config contains optional parameters for the mapper.
@@ -40,75 +45,84 @@ type Config struct {
 	IndexPayloads     bool
 	IndexSeals        bool
 	SkipBootstrap     bool
+	WaitInterval      time.Duration
 }
 
 // WithIndexCommit sets up the mapper to build the commits index.
-func WithIndexCommit(b bool) func(*Config) {
+func WithIndexCommit(do bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.IndexCommit = b
+		cfg.IndexCommit = do
 	}
 }
 
 // WithIndexHeader sets up the mapper to build the headers index.
-func WithIndexHeader(b bool) func(*Config) {
+func WithIndexHeader(do bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.IndexHeader = b
+		cfg.IndexHeader = do
 	}
 }
 
 // WithIndexCollections sets up the mapper to build the collections index.
-func WithIndexCollections(b bool) func(*Config) {
+func WithIndexCollections(do bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.IndexCollections = b
+		cfg.IndexCollections = do
 	}
 }
 
 // WithIndexGuarantees sets up the mapper to build the guarantees index.
-func WithIndexGuarantees(b bool) func(*Config) {
+func WithIndexGuarantees(do bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.IndexGuarantees = b
+		cfg.IndexGuarantees = do
 	}
 }
 
 // WithIndexTransactions sets up the mapper to build the transactions index.
-func WithIndexTransactions(b bool) func(*Config) {
+func WithIndexTransactions(do bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.IndexTransactions = b
+		cfg.IndexTransactions = do
 	}
 }
 
 // WithIndexResults sets up the mapper to build the transaction results index.
-func WithIndexResults(b bool) func(*Config) {
+func WithIndexResults(do bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.IndexResults = b
+		cfg.IndexResults = do
 	}
 }
 
 // WithIndexEvents sets up the mapper to build the events index.
-func WithIndexEvents(b bool) func(*Config) {
+func WithIndexEvents(do bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.IndexEvents = b
+		cfg.IndexEvents = do
 	}
 }
 
 // WithIndexPayloads sets up the mapper to build the payloads index.
-func WithIndexPayloads(b bool) func(*Config) {
+func WithIndexPayloads(do bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.IndexPayloads = b
+		cfg.IndexPayloads = do
 	}
 }
 
 // WithIndexSeals sets up the mapper to build the seals index.
-func WithIndexSeals(b bool) func(*Config) {
+func WithIndexSeals(do bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.IndexSeals = b
+		cfg.IndexSeals = do
 	}
 }
 
 // WithSkipBootstrap sets the mapper up to skip indexing the registers from the
 // initial checkpoint.
-func WithSkipBootstrap(b bool) func(*Config) {
+func WithSkipBootstrap(skip bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.SkipBootstrap = b
+		cfg.SkipBootstrap = skip
+	}
+}
+
+// WithWaitInterval sets the wait interval that we will wait before retrying
+// to retrieve a trie update when it wasn't available.
+func WithWaitInterval(interval time.Duration) func(*Config) {
+	return func(cfg *Config) {
+		cfg.WaitInterval = interval
 	}
 }

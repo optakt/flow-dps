@@ -12,37 +12,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package follower
 
-type Status uint8
-
-const (
-	StatusEmpty Status = iota + 1
-	StatusUpdating
-	StatusMatched
-	StatusCollected
-	StatusIndexed
-	StatusForwarded
-	StatusWaiting
+import (
+	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
 )
 
-func (s Status) String() string {
-	switch s {
-	case StatusEmpty:
-		return "empty"
-	case StatusUpdating:
-		return "updating"
-	case StatusMatched:
-		return "matched"
-	case StatusCollected:
-		return "collected"
-	case StatusIndexed:
-		return "indexed"
-	case StatusForwarded:
-		return "forwarded"
-	case StatusWaiting:
-		return "waiting"
-	default:
-		return "invalid"
-	}
+type ExecutionFollower interface {
+	Update() (*ledger.TrieUpdate, error)
+	Header(height uint64) (*flow.Header, error)
+	Collections(height uint64) ([]*flow.LightCollection, error)
+	Guarantees(height uint64) ([]*flow.CollectionGuarantee, error)
+	Seals(height uint64) ([]*flow.Seal, error)
+	Transactions(height uint64) ([]*flow.TransactionBody, error)
+	Results(height uint64) ([]*flow.TransactionResult, error)
+	Events(height uint64) ([]flow.Event, error)
 }
