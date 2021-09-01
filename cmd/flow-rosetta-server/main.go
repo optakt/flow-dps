@@ -71,8 +71,8 @@ func run() int {
 		flagTransactions uint
 	)
 
-	pflag.StringVarP(&flagDPSAPI, "dps-api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
-	pflag.StringVarP(&flagAccessAPI, "access-api", "f", "", "host URL for Flow network's Access API endpoint")
+	pflag.StringVarP(&flagDPSAPI, "dps-api", "a", "127.0.0.1:5005", "host address for GRPC API endpoint")
+	pflag.StringVarP(&flagAccessAPI, "access-api", "c", "access.canary.nodes.onflow.org:9000", "host address for Flow network's Access API endpoint")
 	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
@@ -122,15 +122,13 @@ func run() int {
 	}
 
 	// Initialize the SDK client.
-
 	if flagAccessAPI == "" {
 		log.Error().Msg("Flow Access API endpoint is missing")
 		return failure
 	}
-
 	accessAPI, err := client.New(flagAccessAPI, grpc.WithInsecure())
 	if err != nil {
-		log.Error().Str("api", flagAccessAPI).Err(err).Msg("could not dial Flow Access API host")
+		log.Error().Str("address", flagAccessAPI).Err(err).Msg("could not dial Flow Access API address")
 		return failure
 	}
 	defer accessAPI.Close()

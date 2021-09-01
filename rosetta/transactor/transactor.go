@@ -231,7 +231,12 @@ func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, s
 
 	key, err := t.invoke.Key(height, address, 0)
 	if err != nil {
-		return "", "", fmt.Errorf("could not retrieve key: %w", err)
+		return "", "", failure.InvalidKey{
+			Description: failure.NewDescription("invalid account key", failure.WithErr(err)),
+			Height:      height,
+			Address:     address,
+			Index:       0,
+		}
 	}
 
 	message := unsignedTx.EnvelopeMessage()

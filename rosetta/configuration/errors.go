@@ -41,7 +41,7 @@ var (
 	ErrorInvalidAmount      = meta.ErrorDefinition{Code: 18, Message: "invalid transaction amount", Retriable: false}
 	ErrorInvalidReceiver    = meta.ErrorDefinition{Code: 19, Message: "invalid transaction recipient", Retriable: false}
 	ErrorInvalidSignature   = meta.ErrorDefinition{Code: 20, Message: "invalid transaction signature", Retriable: false}
-	ErrorInvalidKey         = meta.ErrorDefinition{Code: 21, Message: "invalid transaction key", Retriable: false}
+	ErrorInvalidKey         = meta.ErrorDefinition{Code: 21, Message: "invalid transaction signer key", Retriable: false}
 	ErrorInvalidPayload     = meta.ErrorDefinition{Code: 22, Message: "invalid transaction payload", Retriable: false}
 	ErrorInvalidSignatures  = meta.ErrorDefinition{Code: 23, Message: "invalid transaction signatures", Retriable: false}
 )

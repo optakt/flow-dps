@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/rosetta/failure"
 )
 
 type Invoker struct {
@@ -77,37 +76,25 @@ func New(index dps.Reader, options ...func(*Config)) (*Invoker, error) {
 
 func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
 
-	// Retrieve the account at the latest block.
+	// Retrieve the account at the specified block height.
 	account, err := i.Account(height, address)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve account: %w", err)
 	}
 
-	// Create a key lookup map.
+	// Create a key lookup map and check if the requested key exists.
 	keys := make(map[int]flow.AccountPublicKey)
 	for _, key := range account.Keys {
 		keys[key.Index] = key
 	}
-
-	// Lookup the specified key.
 	key, ok := keys[index]
 	if !ok {
-		return nil, failure.InvalidKey{
-			Height:      height,
-			Address:     address,
-			Index:       index,
-			Description: failure.NewDescription("account key not found"),
-		}
+		return nil, fmt.Errorf("account key with given index not found")
 	}
 
 	// Check if the key is still valid.
 	if key.Revoked {
-		return nil, failure.InvalidKey{
-			Height:      height,
-			Address:     address,
-			Index:       index,
-			Description: failure.NewDescription("account key was revoked"),
-		}
+		return nil, fmt.Errorf("account key with given index has been revoked")
 	}
 
 	return &key, nil
