@@ -15,10 +15,24 @@
 package follower
 
 import (
-	"github.com/onflow/flow-go/model/flow"
+	"io"
+	"testing"
+
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/optakt/flow-dps/testing/helpers"
 )
 
-type ConsensusFollower interface {
-	Height() uint64
-	BlockID() flow.Identifier
+func TestNewConsensus(t *testing.T) {
+	log := zerolog.New(io.Discard)
+	db := helpers.InMemoryDB(t)
+
+	// FIXME
+	follower := NewConsensus(log, db, nil)
+
+	require.NotNil(t, follower)
+	assert.Equal(t, follower.log, log)
+	assert.Equal(t, follower.db, db)
 }

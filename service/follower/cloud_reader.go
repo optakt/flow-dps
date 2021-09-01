@@ -12,26 +12,8 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package consensus
+package follower
 
-import (
-	"io"
-	"testing"
-
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/optakt/flow-dps/testing/helpers"
-)
-
-func TestNew(t *testing.T) {
-	log := zerolog.New(io.Discard)
-	db := helpers.InMemoryDB(t)
-
-	follower := New(log, db)
-
-	require.NotNil(t, follower)
-	assert.Equal(t, follower.log, log)
-	assert.Equal(t, follower.db, db)
+type CloudReader interface {
+	NextRecord() (*Record, error)
 }

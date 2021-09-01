@@ -17,17 +17,14 @@ package follower
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/follower/execution"
+	"github.com/onflow/flow-go/module/mempool/entity"
 )
 
-type ExecutionFollower interface {
-	Next() (*execution.BlockData, error)
-	Update() (*ledger.TrieUpdate, error)
-	Header(height uint64) (*flow.Header, error)
-	Collections(height uint64) ([]*flow.LightCollection, error)
-	Guarantees(height uint64) ([]*flow.CollectionGuarantee, error)
-	Seals(height uint64) ([]*flow.Seal, error)
-	Transactions(height uint64) ([]*flow.TransactionBody, error)
-	Results(height uint64) ([]*flow.TransactionResult, error)
-	Events(height uint64) ([]flow.Event, error)
+type Record struct {
+	Header      *flow.Header         `validate:"required"`
+	Commit      flow.StateCommitment `validate:"required"`
+	Collections []*entity.CompleteCollection
+	TxResults   []*flow.TransactionResult
+	Events      []*flow.Event
+	TrieUpdates []*ledger.TrieUpdate
 }

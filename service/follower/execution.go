@@ -18,18 +18,17 @@ import (
 	"fmt"
 
 	"github.com/gammazero/deque"
-	"github.com/optakt/flow-dps/follower/execution"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type Source struct {
-	log       zerolog.Logger
-	execution ExecutionFollower
-	queue     *deque.Deque
-	data      map[flow.Identifier]item
+type Execution struct {
+	log    zerolog.Logger
+	reader CloudReader
+	queue  *deque.Deque
+	data   map[flow.Identifier]item
 }
 
 type item struct {
@@ -41,44 +40,45 @@ type item struct {
 	events       []flow.Event
 }
 
-func NewSource(log zerolog.Logger, execution ExecutionFollower) *Source {
+func NewExecution(log zerolog.Logger, reader CloudReader) *Execution {
 
-	s := Source{
-		log:       log,
-		execution: execution,
-		queue:     deque.New(),
+	s := Execution{
+		log:    log,
+		reader: reader,
+		queue:  deque.New(),
+		data:   make(map[flow.Identifier]item),
 	}
 
 	return &s
 }
 
-func (s *Source) Update() (*ledger.TrieUpdate, error) {
+func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 
 	// If we have updates available in the queue, let's get the oldest one and
 	// feed it to the indexer.
-	if s.queue.Len() != 0 {
-		update := s.queue.PopBack()
+	if e.queue.Len() != 0 {
+		update := e.queue.PopBack()
 		return update.(*ledger.TrieUpdate), nil
 	}
 
 	// Get the next block data available from the execution follower and push
 	// all of the trie updates into the queue.
-	blockData, err := s.execution.Next()
+	record, err := e.reader.NextRecord()
 	if err != nil {
 		return nil, fmt.Errorf("could not get block data: %w", err)
 	}
-	for _, update := range blockData.TrieUpdates {
-		s.queue.PushBack(update)
+	for _, update := range record.TrieUpdates {
+		e.queue.PushBack(update)
 	}
 
 	// We should then also index the block data by block ID, so we can provide
 	// it to the chain interface as needed.
-	err = s.indexBlockData(blockData)
+	err = e.indexRecord(record)
 	if err != nil {
 		return nil, fmt.Errorf("could not index block data: %w", err)
 	}
 
-	return s.Update()
+	return e.Update()
 }
 
 // commit => execution follower
@@ -87,67 +87,67 @@ func (s *Source) Update() (*ledger.TrieUpdate, error) {
 // events => execution follower
 // transactions => execution follower
 
-func (s *Source) Prune(height uint64) {
-	for blockID, data := range s.data {
+func (e *Execution) Prune(height uint64) {
+	for blockID, data := range e.data {
 		if data.height <= height {
-			delete(s.data, blockID)
+			delete(e.data, blockID)
 		}
 	}
 }
 
-func (s *Source) Commit(blockID flow.Identifier) (flow.StateCommitment, bool) {
-	it, ok := s.data[blockID]
+func (e *Execution) Commit(blockID flow.Identifier) (flow.StateCommitment, bool) {
+	it, ok := e.data[blockID]
 	if !ok {
 		return flow.StateCommitment{}, false
 	}
 	return it.commit, true
 }
 
-func (s *Source) Collections(blockID flow.Identifier) ([]*flow.LightCollection, bool) {
-	it, ok := s.data[blockID]
+func (e *Execution) Collections(blockID flow.Identifier) ([]*flow.LightCollection, bool) {
+	it, ok := e.data[blockID]
 	if !ok {
 		return nil, false
 	}
 	return it.collections, true
 }
 
-func (s *Source) Transactions(blockID flow.Identifier) ([]*flow.TransactionBody, bool) {
-	it, ok := s.data[blockID]
+func (e *Execution) Transactions(blockID flow.Identifier) ([]*flow.TransactionBody, bool) {
+	it, ok := e.data[blockID]
 	if !ok {
 		return nil, false
 	}
 	return it.transactions, true
 }
 
-func (s *Source) Results(blockID flow.Identifier) ([]*flow.TransactionResult, bool) {
-	it, ok := s.data[blockID]
+func (e *Execution) Results(blockID flow.Identifier) ([]*flow.TransactionResult, bool) {
+	it, ok := e.data[blockID]
 	if !ok {
 		return nil, false
 	}
 	return it.results, true
 }
 
-func (s *Source) Events(blockID flow.Identifier) ([]flow.Event, bool) {
-	it, ok := s.data[blockID]
+func (e *Execution) Events(blockID flow.Identifier) ([]flow.Event, bool) {
+	it, ok := e.data[blockID]
 	if !ok {
 		return nil, false
 	}
 	return it.events, true
 }
 
-func (s *Source) indexBlockData(blockData *execution.BlockData) error {
+func (e *Execution) indexRecord(record *Record) error {
 
 	// Extract the block ID from the block data.
-	blockID := blockData.Header.ID()
-	_, ok := s.data[blockID]
+	blockID := record.Header.ID()
+	_, ok := e.data[blockID]
 	if ok {
 		return fmt.Errorf("duplicate block ID for block data (block: %x)", blockID)
 	}
 
 	// Extract the light collections from the block data.
 	numTransactions := 0
-	collections := make([]*flow.LightCollection, 0, len(blockData.Collections))
-	for _, collection := range blockData.Collections {
+	collections := make([]*flow.LightCollection, 0, len(record.Collections))
+	for _, collection := range record.Collections {
 		light := collection.Collection().Light()
 		collections = append(collections, &light)
 		numTransactions += len(light.Transactions)
@@ -155,27 +155,27 @@ func (s *Source) indexBlockData(blockData *execution.BlockData) error {
 
 	// Extract the transactions from the block data.
 	transactions := make([]*flow.TransactionBody, 0, numTransactions)
-	for _, collection := range blockData.Collections {
+	for _, collection := range record.Collections {
 		transactions = append(transactions, collection.Transactions...)
 	}
 
 	// Extract the events from the block data.
-	events := make([]flow.Event, 0, len(blockData.Events))
-	for _, event := range blockData.Events {
+	events := make([]flow.Event, 0, len(record.Events))
+	for _, event := range record.Events {
 		events = append(events, *event)
 	}
 
 	// Create and store the item.
 	it := item{
-		height:       blockData.Header.Height, // needed only for pruning
-		commit:       blockData.Commit,
+		height:       record.Header.Height, // needed only for pruning
+		commit:       record.Commit,
 		collections:  collections,
 		transactions: transactions,
-		results:      blockData.TxResults,
+		results:      record.TxResults,
 		events:       events,
 	}
 
-	s.data[blockID] = it
+	e.data[blockID] = it
 
 	return nil
 }
