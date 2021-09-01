@@ -35,11 +35,8 @@ import (
 )
 
 const (
-	// Transactions should have exactly one authorizer.
-	authorizersRequired = 1
-
-	// Transaction script should have exactly two arguments.
-	argsRequired = 2
+	authorizersRequired = 1 // we only support one authorizer per transaction
+	argsRequired        = 2 // transactions need to arguments (amount & receiver)
 )
 
 // Transactor has the capabilities to determine transaction intent from an array
@@ -263,15 +260,15 @@ func (t *Transactor) ParseTransaction(tx *sdk.Transaction) ([]object.Operation, 
 	// Verify that the sender is the payer and the proposer.
 	if tx.Payer != authorizer {
 		return nil, nil, failure.InvalidPayer{
-			Have:        convertAddress(tx.Payer),
-			Want:        convertAddress(authorizer),
+			Have:        flow.BytesToAddress(tx.Payer[:]),
+			Want:        flow.BytesToAddress(authorizer[:]),
 			Description: failure.NewDescription("invalid transaction payer"),
 		}
 	}
 	if tx.ProposalKey.Address != authorizer {
 		return nil, nil, failure.InvalidProposer{
-			Have:        convertAddress(tx.ProposalKey.Address),
-			Want:        convertAddress(authorizer),
+			Have:        flow.BytesToAddress(tx.ProposalKey.Address[:]),
+			Want:        flow.BytesToAddress(authorizer[:]),
 			Description: failure.NewDescription("invalid transaction proposer"),
 		}
 	}
@@ -438,8 +435,8 @@ func (t *Transactor) AttachSignature(tx *sdk.Transaction, signature object.Signa
 	// Verify that the sender is the payer, since it is the payer that needs to sign the envelope.
 	if tx.Payer != sender {
 		return nil, failure.InvalidPayer{
-			Have:        convertAddress(tx.Payer),
-			Want:        convertAddress(sender),
+			Have:        flow.BytesToAddress(tx.Payer[:]),
+			Want:        flow.BytesToAddress(sender[:]),
 			Description: failure.NewDescription("invalid transaction payer"),
 		}
 	}

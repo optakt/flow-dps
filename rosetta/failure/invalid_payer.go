@@ -27,5 +27,5 @@ type InvalidPayer struct {
 }
 
 func (i InvalidPayer) Error() string {
-	return fmt.Sprintf("invalid transaction payer (have: %s, want: %s): %s", i.Have.String(), i.Want.String(), i.Description)
+	return fmt.Sprintf("invalid transaction payer (have: %s, want: %s): %s", i.Have.Hex(), i.Want.Hex(), i.Description)
 }

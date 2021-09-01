@@ -27,5 +27,5 @@ type InvalidProposer struct {
 }
 
 func (i InvalidProposer) Error() string {
-	return fmt.Sprintf("invalid transaction proposer (have: %s, want: %s): %s", i.Have.String(), i.Want.String(), i.Description)
+	return fmt.Sprintf("invalid transaction proposer (have: %s, want: %s): %s", i.Have.Hex(), i.Want.Hex(), i.Description)
 }
