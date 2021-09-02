@@ -160,6 +160,7 @@ func TestServer_GetLast(t *testing.T) {
 }
 
 func TestServer_GetHeightForBlock(t *testing.T) {
+	want := mocks.GenericHeader.ID()
 	tests := []struct {
 		name string
 
@@ -175,12 +176,12 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 			name: "nominal case",
 
 			req: &GetHeightForBlockRequest{
-				BlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				BlockID: mocks.ByteSlice(want),
 			},
 
 			mockErr: nil,
 
-			wantBlockID: mocks.GenericIdentifier(0),
+			wantBlockID: want,
 
 			checkErr: require.NoError,
 		},
@@ -195,7 +196,7 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 			name: "error handling",
 
 			req: &GetHeightForBlockRequest{
-				BlockID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				BlockID: mocks.ByteSlice(want),
 			},
 
 			mockErr: mocks.GenericError,
@@ -677,7 +678,7 @@ func TestServer_ListCollectionsForHeight(t *testing.T) {
 
 			reqHeight: mocks.GenericHeight,
 
-			mockCollections: mocks.GenericIdentifiers(5),
+			mockCollections: mocks.GenericCollectionIDs(5),
 
 			checkErr: require.NoError,
 		},
@@ -725,6 +726,7 @@ func TestServer_ListCollectionsForHeight(t *testing.T) {
 }
 
 func TestServer_GetGuarantee(t *testing.T) {
+	want := mocks.GenericGuarantee(0)
 	tests := []struct {
 		name string
 
@@ -740,10 +742,10 @@ func TestServer_GetGuarantee(t *testing.T) {
 			name: "nominal case",
 
 			req: &GetGuaranteeRequest{
-				CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				CollectionID: mocks.ByteSlice(want.CollectionID),
 			},
 
-			wantGuarantee: mocks.GenericGuarantee(0),
+			wantGuarantee: want,
 			checkErr:      require.NoError,
 		},
 		{
@@ -759,7 +761,7 @@ func TestServer_GetGuarantee(t *testing.T) {
 			name: "handles index failure",
 
 			req: &GetGuaranteeRequest{
-				CollectionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				CollectionID: mocks.ByteSlice(want.CollectionID),
 			},
 
 			mockErr: mocks.GenericError,
@@ -796,6 +798,7 @@ func TestServer_GetGuarantee(t *testing.T) {
 }
 
 func TestServer_GetTransaction(t *testing.T) {
+	tx := mocks.GenericTransaction(0)
 	tests := []struct {
 		name string
 
@@ -811,10 +814,10 @@ func TestServer_GetTransaction(t *testing.T) {
 			name: "nominal case",
 
 			req: &GetTransactionRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				TransactionID: mocks.ByteSlice(tx.ID()),
 			},
 
-			wantTransaction: mocks.GenericTransaction(0),
+			wantTransaction: tx,
 			checkErr:        require.NoError,
 		},
 		{
@@ -830,7 +833,7 @@ func TestServer_GetTransaction(t *testing.T) {
 			name: "handles index failure",
 
 			req: &GetTransactionRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				TransactionID: mocks.ByteSlice(tx.ID()),
 			},
 
 			mockErr: mocks.GenericError,
@@ -860,7 +863,7 @@ func TestServer_GetTransaction(t *testing.T) {
 			test.checkErr(t, gotErr)
 
 			if test.wantTransaction != nil {
-				assert.Equal(t, gotRes.TransactionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
+				assert.Equal(t, gotRes.TransactionID, mocks.ByteSlice(tx.ID()))
 				assert.NotEmpty(t, gotRes.Data)
 			}
 		})
@@ -868,6 +871,7 @@ func TestServer_GetTransaction(t *testing.T) {
 }
 
 func TestServer_GetHeightForTransaction(t *testing.T) {
+	want := mocks.GenericHeader.ID()
 	tests := []struct {
 		name string
 
@@ -883,12 +887,12 @@ func TestServer_GetHeightForTransaction(t *testing.T) {
 			name: "nominal case",
 
 			req: &GetHeightForTransactionRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				TransactionID: mocks.ByteSlice(want),
 			},
 
 			mockErr: nil,
 
-			wantTxID: mocks.GenericIdentifier(0),
+			wantTxID: want,
 
 			checkErr: require.NoError,
 		},
@@ -905,7 +909,7 @@ func TestServer_GetHeightForTransaction(t *testing.T) {
 			name: "error handling",
 
 			req: &GetHeightForTransactionRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				TransactionID: mocks.ByteSlice(want),
 			},
 
 			mockErr: mocks.GenericError,
@@ -956,7 +960,7 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 
 			reqHeight: mocks.GenericHeight,
 
-			mockTransactions: mocks.GenericIdentifiers(5),
+			mockTransactions: mocks.GenericTransactionIDs(5),
 
 			checkErr: require.NoError,
 		},
@@ -1004,6 +1008,7 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 }
 
 func TestServer_GetResult(t *testing.T) {
+	want := mocks.GenericResult(0)
 	tests := []struct {
 		name string
 
@@ -1012,20 +1017,17 @@ func TestServer_GetResult(t *testing.T) {
 		mockResult *flow.TransactionResult
 		mockErr    error
 
-		wantResult *flow.TransactionResult
-
 		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
 			req: &GetResultRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				TransactionID: mocks.ByteSlice(want.TransactionID),
 			},
 
-			mockResult: mocks.GenericResult(0),
+			mockResult: want,
 
-			wantResult: mocks.GenericResult(0),
 			checkErr:   require.NoError,
 		},
 		{
@@ -1041,7 +1043,7 @@ func TestServer_GetResult(t *testing.T) {
 			name: "handles index failure",
 
 			req: &GetResultRequest{
-				TransactionID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				TransactionID: mocks.ByteSlice(want.TransactionID),
 			},
 
 			mockErr: mocks.GenericError,
@@ -1070,7 +1072,7 @@ func TestServer_GetResult(t *testing.T) {
 
 			test.checkErr(t, gotErr)
 			if gotErr == nil {
-				assert.Equal(t, gotRes.TransactionID, mocks.ByteSlice(mocks.GenericIdentifier(0)))
+				assert.Equal(t, gotRes.TransactionID, mocks.ByteSlice(want.TransactionID))
 				assert.NotEmpty(t, gotRes.Data)
 			}
 		})
@@ -1078,6 +1080,7 @@ func TestServer_GetResult(t *testing.T) {
 }
 
 func TestServer_GetSeal(t *testing.T) {
+	want := mocks.GenericSeal(0)
 	tests := []struct {
 		name string
 
@@ -1086,20 +1089,17 @@ func TestServer_GetSeal(t *testing.T) {
 		mockSeal *flow.Seal
 		mockErr  error
 
-		wantSeal *flow.Seal
-
 		checkErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "nominal case",
 
 			req: &GetSealRequest{
-				SealID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				SealID: mocks.ByteSlice(want.ID()),
 			},
 
-			mockSeal: mocks.GenericSeal(0),
+			mockSeal: want,
 
-			wantSeal: mocks.GenericSeal(0),
 			checkErr: require.NoError,
 		},
 		{
@@ -1115,7 +1115,7 @@ func TestServer_GetSeal(t *testing.T) {
 			name: "handles index failure",
 
 			req: &GetSealRequest{
-				SealID: mocks.ByteSlice(mocks.GenericIdentifier(0)),
+				SealID: mocks.ByteSlice(want.ID()),
 			},
 			mockErr: mocks.GenericError,
 
@@ -1152,6 +1152,7 @@ func TestServer_GetSeal(t *testing.T) {
 }
 
 func TestServer_ListSealsForHeight(t *testing.T) {
+	want := mocks.GenericSealIDs(5)
 	tests := []struct {
 		name string
 
@@ -1160,8 +1161,6 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 		mockSeals []flow.Identifier
 		mockErr   error
 
-		wantSeals []flow.Identifier
-
 		checkErr require.ErrorAssertionFunc
 	}{
 		{
@@ -1169,7 +1168,7 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 
 			reqHeight: mocks.GenericHeight,
 
-			mockSeals: mocks.GenericIdentifiers(5),
+			mockSeals: want,
 
 			checkErr: require.NoError,
 		},

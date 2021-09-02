@@ -111,12 +111,14 @@ func TestServer_GetLatestBlockHeader(t *testing.T) {
 }
 
 func TestServer_GetBlockHeaderByID(t *testing.T) {
+	blockID := mocks.GenericHeader.ID()
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
 		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), blockID)
+			assert.Equal(t, mocks.GenericHeader.ID(), blockID)
 
 			return mocks.GenericHeight, nil
 		}
@@ -129,12 +131,12 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(blockID)}
 		resp, err := s.GetBlockHeaderByID(context.Background(), req)
 
 		assert.NoError(t, err)
 
-		assert.Equal(t, mocks.ByteSlice(mocks.GenericHeader.ID()), resp.Block.Id)
+		assert.Equal(t, mocks.ByteSlice(blockID), resp.Block.Id)
 		assert.Equal(t, mocks.GenericHeader.Height, resp.Block.Height)
 	})
 
@@ -149,7 +151,7 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(blockID)}
 		_, err := s.GetBlockHeaderByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -169,7 +171,7 @@ func TestServer_GetBlockHeaderByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetBlockHeaderByIDRequest{Id: mocks.ByteSlice(blockID)}
 		_, err := s.GetBlockHeaderByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -218,6 +220,8 @@ func TestServer_GetBlockHeaderByHeight(t *testing.T) {
 }
 
 func TestServer_GetTransaction(t *testing.T) {
+	txID := mocks.GenericTransaction(0).ID()
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
@@ -225,7 +229,7 @@ func TestServer_GetTransaction(t *testing.T) {
 
 		index := mocks.BaselineReader(t)
 		index.TransactionFunc = func(txID flow.Identifier) (*flow.TransactionBody, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), txID)
+			assert.Equal(t, tx.ID(), txID)
 
 			return tx, nil
 		}
@@ -233,7 +237,7 @@ func TestServer_GetTransaction(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(txID)}
 		resp, err := s.GetTransaction(context.Background(), req)
 
 		assert.NoError(t, err)
@@ -253,7 +257,7 @@ func TestServer_GetTransaction(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(txID)}
 		_, err := s.GetTransaction(context.Background(), req)
 
 		assert.Error(t, err)
@@ -261,6 +265,8 @@ func TestServer_GetTransaction(t *testing.T) {
 }
 
 func TestServer_GetTransactionResult(t *testing.T) {
+	txID := mocks.GenericHeader.ID()
+
 	t.Run("nominal case with status sealed", func(t *testing.T) {
 		t.Parallel()
 
@@ -362,7 +368,7 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(txID)}
 		_, err := s.GetTransactionResult(context.Background(), req)
 
 		assert.Error(t, err)
@@ -379,7 +385,7 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(txID)}
 		_, err := s.GetTransactionResult(context.Background(), req)
 
 		assert.Error(t, err)
@@ -396,7 +402,7 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(txID)}
 		_, err := s.GetTransactionResult(context.Background(), req)
 
 		assert.Error(t, err)
@@ -413,7 +419,7 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(txID)}
 		_, err := s.GetTransactionResult(context.Background(), req)
 
 		assert.Error(t, err)
@@ -430,7 +436,7 @@ func TestServer_GetTransactionResult(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetTransactionRequest{Id: mocks.ByteSlice(txID)}
 		_, err := s.GetTransactionResult(context.Background(), req)
 
 		assert.Error(t, err)
@@ -438,17 +444,17 @@ func TestServer_GetTransactionResult(t *testing.T) {
 }
 
 func TestServer_GetEventsForBlockIDs(t *testing.T) {
+	events := mocks.GenericEvents(6)
+	blockIDs := mocks.GenericBlockIDs(4)
+	blocks := map[flow.Identifier]uint64{
+		blockIDs[0]: mocks.GenericHeight,
+		blockIDs[1]: mocks.GenericHeight + 1,
+		blockIDs[2]: mocks.GenericHeight + 2,
+		blockIDs[3]: mocks.GenericHeight + 3,
+	}
+
 	t.Run("nominal case with event type", func(t *testing.T) {
 		t.Parallel()
-
-		events := mocks.GenericEvents(6)
-		blockIDs := mocks.GenericIdentifiers(4)
-		blocks := map[flow.Identifier]uint64{
-			blockIDs[0]: mocks.GenericHeight,
-			blockIDs[1]: mocks.GenericHeight + 1,
-			blockIDs[2]: mocks.GenericHeight + 2,
-			blockIDs[3]: mocks.GenericHeight + 3,
-		}
 
 		index := mocks.BaselineReader(t)
 		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
@@ -491,15 +497,6 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 
 	t.Run("nominal case without event type", func(t *testing.T) {
 		t.Parallel()
-
-		events := mocks.GenericEvents(6)
-		blockIDs := mocks.GenericIdentifiers(4)
-		blocks := map[flow.Identifier]uint64{
-			blockIDs[0]: mocks.GenericHeight,
-			blockIDs[1]: mocks.GenericHeight + 1,
-			blockIDs[2]: mocks.GenericHeight + 2,
-			blockIDs[3]: mocks.GenericHeight + 3,
-		}
 
 		index := mocks.BaselineReader(t)
 		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
@@ -552,7 +549,7 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 		s.index = index
 
 		var ids [][]byte
-		for _, id := range mocks.GenericIdentifiers(4) {
+		for _, id := range blockIDs {
 			ids = append(ids, id[:])
 		}
 		req := &access.GetEventsForBlockIDsRequest{
@@ -576,7 +573,7 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 		s.index = index
 
 		var ids [][]byte
-		for _, id := range mocks.GenericIdentifiers(4) {
+		for _, id := range blockIDs {
 			ids = append(ids, id[:])
 		}
 		req := &access.GetEventsForBlockIDsRequest{
@@ -600,7 +597,7 @@ func TestServer_GetEventsForBlockIDs(t *testing.T) {
 		s.index = index
 
 		var ids [][]byte
-		for _, id := range mocks.GenericIdentifiers(4) {
+		for _, id := range blockIDs {
 			ids = append(ids, id[:])
 		}
 		req := &access.GetEventsForBlockIDsRequest{
@@ -794,28 +791,27 @@ func TestServer_GetNetworkParameters(t *testing.T) {
 }
 
 func TestServer_GetCollectionByID(t *testing.T) {
+	collection := mocks.GenericCollection(0)
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
 		index.CollectionFunc = func(collID flow.Identifier) (*flow.LightCollection, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), collID)
+			assert.Equal(t, collection.ID(), collID)
 
-			return mocks.GenericCollection(0), nil
+			return collection, nil
 		}
 
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetCollectionByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetCollectionByIDRequest{Id: mocks.ByteSlice(collection.ID())}
 		resp, err := s.GetCollectionByID(context.Background(), req)
 
-		assert.NoError(t, err)
-
-		assert.NotNil(t, resp.Collection)
-		for i, txID := range resp.Collection.TransactionIds {
-			assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(i)), txID)
-		}
+		require.NoError(t, err)
+		require.NotNil(t, resp.Collection)
+		assert.Len(t, resp.Collection.TransactionIds, 2)
 	})
 
 	t.Run("handles indexer failure on collection", func(t *testing.T) {
@@ -829,7 +825,7 @@ func TestServer_GetCollectionByID(t *testing.T) {
 		s := baselineServer(t)
 		s.index = index
 
-		req := &access.GetCollectionByIDRequest{Id: mocks.ByteSlice(mocks.GenericIdentifier(0))}
+		req := &access.GetCollectionByIDRequest{Id: mocks.ByteSlice(collection.ID())}
 		_, err := s.GetCollectionByID(context.Background(), req)
 
 		assert.Error(t, err)
@@ -1092,6 +1088,8 @@ func TestServer_ExecuteScriptAtBlockHeight(t *testing.T) {
 }
 
 func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
+	want := mocks.GenericHeader.ID()
+
 	cadenceValue := cadence.NewUInt64(mocks.GenericHeight)
 	cadenceValueBytes, err := json.Encode(cadenceValue)
 	require.NoError(t, err)
@@ -1112,8 +1110,8 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		}
 
 		index := mocks.BaselineReader(t)
-		index.HeightForBlockFunc = func(blockID flow.Identifier) (uint64, error) {
-			assert.Equal(t, mocks.GenericIdentifier(0), blockID)
+		index.HeightForBlockFunc = func(got flow.Identifier) (uint64, error) {
+			assert.Equal(t, want, got)
 
 			return mocks.GenericHeight, nil
 		}
@@ -1123,14 +1121,13 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		s.invoker = invoker
 
 		req := &access.ExecuteScriptAtBlockIDRequest{
-			BlockId:   mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			BlockId:   mocks.ByteSlice(want),
 			Script:    mocks.GenericBytes,
 			Arguments: [][]byte{cadenceValueBytes},
 		}
 		resp, err := s.ExecuteScriptAtBlockID(context.Background(), req)
 
-		assert.NoError(t, err)
-
+		require.NoError(t, err)
 		assert.Equal(t, genericAmountBytes, resp.Value)
 	})
 
@@ -1146,7 +1143,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		s.index = index
 
 		req := &access.ExecuteScriptAtBlockIDRequest{
-			BlockId:   mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			BlockId:   mocks.ByteSlice(want),
 			Script:    mocks.GenericBytes,
 			Arguments: [][]byte{cadenceValueBytes},
 		}
@@ -1167,7 +1164,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		s.invoker = invoker
 
 		req := &access.ExecuteScriptAtBlockIDRequest{
-			BlockId:   mocks.ByteSlice(mocks.GenericIdentifier(0)),
+			BlockId:   mocks.ByteSlice(want),
 			Script:    mocks.GenericBytes,
 			Arguments: [][]byte{cadenceValueBytes},
 		}
@@ -1254,6 +1251,8 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 
 func TestServer_GetLatestBlock(t *testing.T) {
 	blockID := mocks.ByteSlice(mocks.GenericHeader.ID())
+	sealIDs := mocks.GenericSealIDs(6)
+	collIDs := mocks.GenericCollectionIDs(6)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -1273,10 +1272,10 @@ func TestServer_GetLatestBlock(t *testing.T) {
 		index.SealsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
-			return mocks.GenericIdentifiers(6), nil
+			return sealIDs, nil
 		}
 		index.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
-			assert.Equal(t, mocks.GenericIdentifier(sealCalled), sealID)
+			assert.Contains(t, sealIDs, sealID)
 
 			seal := mocks.GenericSeal(sealCalled)
 			sealCalled++
@@ -1286,10 +1285,10 @@ func TestServer_GetLatestBlock(t *testing.T) {
 		index.CollectionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
-			return mocks.GenericIdentifiers(6), nil
+			return collIDs, nil
 		}
 		index.CollectionFunc = func(collID flow.Identifier) (*flow.LightCollection, error) {
-			assert.Equal(t, mocks.GenericIdentifier(collCalled), collID)
+			assert.Contains(t, collIDs, collID)
 
 			coll := mocks.GenericCollection(collCalled)
 			collCalled++
@@ -1309,7 +1308,7 @@ func TestServer_GetLatestBlock(t *testing.T) {
 		assert.Equal(t, mocks.GenericHeader.ParentID[:], resp.Block.ParentId)
 		assert.NotZero(t, resp.Block.Timestamp)
 
-		for i, id := range mocks.GenericIdentifiers(6) {
+		for i, collID := range collIDs {
 			seal := mocks.GenericSeal(i)
 			wantSeal := &entities.BlockSeal{
 				BlockId:                    seal.BlockID[:],
@@ -1320,7 +1319,7 @@ func TestServer_GetLatestBlock(t *testing.T) {
 
 			guarantee := mocks.GenericGuarantee(i)
 			wantGuarantee := &entities.CollectionGuarantee{
-				CollectionId: id[:],
+				CollectionId: collID[:],
 				Signatures:   [][]byte{guarantee.Signature},
 			}
 			assert.Contains(t, resp.Block.CollectionGuarantees, wantGuarantee)
@@ -1398,6 +1397,8 @@ func TestServer_GetLatestBlock(t *testing.T) {
 
 func TestServer_GetBlockByID(t *testing.T) {
 	wantBlockID := mocks.ByteSlice(mocks.GenericHeader.ID())
+	sealIDs := mocks.GenericSealIDs(6)
+	collIDs := mocks.GenericCollectionIDs(6)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -1417,10 +1418,10 @@ func TestServer_GetBlockByID(t *testing.T) {
 		index.SealsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
-			return mocks.GenericIdentifiers(6), nil
+			return sealIDs, nil
 		}
 		index.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
-			assert.Equal(t, mocks.GenericIdentifier(sealCalled), sealID)
+			assert.Contains(t, sealIDs, sealID)
 
 			seal := mocks.GenericSeal(sealCalled)
 			sealCalled++
@@ -1430,10 +1431,10 @@ func TestServer_GetBlockByID(t *testing.T) {
 		index.CollectionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
-			return mocks.GenericIdentifiers(6), nil
+			return collIDs, nil
 		}
 		index.CollectionFunc = func(collID flow.Identifier) (*flow.LightCollection, error) {
-			assert.Equal(t, mocks.GenericIdentifier(collCalled), collID)
+			assert.Contains(t, collIDs, collID)
 
 			coll := mocks.GenericCollection(collCalled)
 			collCalled++
@@ -1453,7 +1454,7 @@ func TestServer_GetBlockByID(t *testing.T) {
 		assert.Equal(t, mocks.GenericHeader.ParentID[:], resp.Block.ParentId)
 		assert.NotZero(t, resp.Block.Timestamp)
 
-		for i, id := range mocks.GenericIdentifiers(6) {
+		for i, collID := range collIDs {
 			seal := mocks.GenericSeal(i)
 			wantSeal := &entities.BlockSeal{
 				BlockId:                    seal.BlockID[:],
@@ -1464,7 +1465,7 @@ func TestServer_GetBlockByID(t *testing.T) {
 
 			guarantee := mocks.GenericGuarantee(i)
 			wantGuarantee := &entities.CollectionGuarantee{
-				CollectionId: id[:],
+				CollectionId: collID[:],
 				Signatures:   [][]byte{guarantee.Signature},
 			}
 			assert.Contains(t, resp.Block.CollectionGuarantees, wantGuarantee)
@@ -1576,6 +1577,8 @@ func TestServer_GetBlockByID(t *testing.T) {
 
 func TestServer_GetBlockByHeight(t *testing.T) {
 	wantBlockID := mocks.GenericHeader.ID()
+	sealIDs := mocks.GenericSealIDs(6)
+	collIDs := mocks.GenericCollectionIDs(6)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -1595,10 +1598,10 @@ func TestServer_GetBlockByHeight(t *testing.T) {
 		index.SealsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
-			return mocks.GenericIdentifiers(6), nil
+			return sealIDs, nil
 		}
 		index.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
-			assert.Equal(t, mocks.GenericIdentifier(sealCalled), sealID)
+			assert.Contains(t, sealIDs, sealID)
 
 			seal := mocks.GenericSeal(sealCalled)
 			sealCalled++
@@ -1608,10 +1611,10 @@ func TestServer_GetBlockByHeight(t *testing.T) {
 		index.CollectionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
-			return mocks.GenericIdentifiers(6), nil
+			return collIDs, nil
 		}
 		index.CollectionFunc = func(collID flow.Identifier) (*flow.LightCollection, error) {
-			assert.Equal(t, mocks.GenericIdentifier(collCalled), collID)
+			assert.Contains(t, collIDs, collID)
 
 			coll := mocks.GenericCollection(collCalled)
 			collCalled++
@@ -1631,7 +1634,7 @@ func TestServer_GetBlockByHeight(t *testing.T) {
 		assert.Equal(t, mocks.GenericHeader.ParentID[:], resp.Block.ParentId)
 		assert.NotZero(t, resp.Block.Timestamp)
 
-		for i, id := range mocks.GenericIdentifiers(6) {
+		for i, collID := range collIDs {
 			seal := mocks.GenericSeal(i)
 			wantSeal := &entities.BlockSeal{
 				BlockId:                    seal.BlockID[:],
@@ -1642,7 +1645,7 @@ func TestServer_GetBlockByHeight(t *testing.T) {
 
 			guarantee := mocks.GenericGuarantee(i)
 			wantGuarantee := &entities.CollectionGuarantee{
-				CollectionId: id[:],
+				CollectionId: collID[:],
 				Signatures:   [][]byte{guarantee.Signature},
 			}
 			assert.Contains(t, resp.Block.CollectionGuarantees, wantGuarantee)

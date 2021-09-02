@@ -67,11 +67,12 @@ func TestIndex(t *testing.T) {
 
 		reader, writer := setupIndex(t)
 
-		assert.NoError(t, writer.Height(mocks.GenericIdentifier(0), mocks.GenericHeight))
+		blockID := mocks.GenericHeader.ID()
+		assert.NoError(t, writer.Height(blockID, mocks.GenericHeight))
 		// Close the writer to make it commit its transactions.
 		assert.NoError(t, writer.Close())
 
-		got, err := reader.HeightForBlock(mocks.GenericIdentifier(0))
+		got, err := reader.HeightForBlock(blockID)
 
 		assert.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
@@ -114,6 +115,7 @@ func TestIndex(t *testing.T) {
 
 		paths := mocks.GenericLedgerPaths(4)
 		payloads := mocks.GenericLedgerPayloads(4)
+		want := mocks.GenericLedgerValues(4)
 
 		assert.NoError(t, writer.First(mocks.GenericHeight))
 		assert.NoError(t, writer.Last(mocks.GenericHeight))
@@ -124,7 +126,7 @@ func TestIndex(t *testing.T) {
 		got, err := reader.Values(mocks.GenericHeight, paths)
 
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, mocks.GenericLedgerValues(4), got)
+		assert.ElementsMatch(t, want, got)
 	})
 
 	t.Run("collections", func(t *testing.T) {
@@ -174,10 +176,11 @@ func TestIndex(t *testing.T) {
 		// Close the writer to make it commit its transactions.
 		assert.NoError(t, writer.Close())
 
-		got, err := reader.Guarantee(mocks.GenericIdentifier(0))
+		want := mocks.GenericGuarantee(0)
+		got, err := reader.Guarantee(want.ID())
 
 		assert.NoError(t, err)
-		assert.Equal(t, mocks.GenericGuarantee(0), got)
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("transactions", func(t *testing.T) {
@@ -267,12 +270,13 @@ func TestIndex(t *testing.T) {
 		t.Run("type specified", func(t *testing.T) {
 			t.Parallel()
 
-			got1, err := reader.Events(mocks.GenericHeight, mocks.GenericEventType(0))
+			eventTypes := mocks.GenericEventTypes(2)
+			got1, err := reader.Events(mocks.GenericHeight, eventTypes[0])
 
 			assert.NoError(t, err)
 			assert.Len(t, got1, 2)
 
-			got2, err := reader.Events(mocks.GenericHeight, mocks.GenericEventType(1))
+			got2, err := reader.Events(mocks.GenericHeight, eventTypes[1])
 
 			assert.NoError(t, err)
 			assert.Len(t, got1, 2)

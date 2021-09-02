@@ -68,11 +68,12 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		err := db.Update(lib.IndexHeightForBlock(mocks.GenericIdentifier(0), mocks.GenericHeight))
+		blockID := mocks.GenericHeader.ID()
+		err := db.Update(lib.IndexHeightForBlock(blockID, mocks.GenericHeight))
 		assert.NoError(t, err)
 
 		var got uint64
-		err = db.View(lib.LookupHeightForBlock(mocks.GenericIdentifier(0), &got))
+		err = db.View(lib.LookupHeightForBlock(blockID, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
@@ -221,7 +222,7 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		txIDs := mocks.GenericIdentifiers(4)
+		txIDs := mocks.GenericTransactionIDs(4)
 
 		err := db.Update(lib.IndexTransactionsForHeight(mocks.GenericHeight, txIDs))
 		assert.NoError(t, err)
@@ -238,8 +239,8 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		txIDs := mocks.GenericIdentifiers(4)
-		collID := mocks.GenericIdentifier(1)
+		txIDs := mocks.GenericTransactionIDs(4)
+		collID := mocks.GenericCollection(0).ID()
 
 		err := db.Update(lib.IndexTransactionsForCollection(collID, txIDs))
 		assert.NoError(t, err)
@@ -256,7 +257,7 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		collIDs := mocks.GenericIdentifiers(4)
+		collIDs := mocks.GenericCollectionIDs(4)
 
 		err := db.Update(lib.IndexCollectionsForHeight(mocks.GenericHeight, collIDs))
 		assert.NoError(t, err)
@@ -324,7 +325,7 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		sealIDs := mocks.GenericIdentifiers(4)
+		sealIDs := mocks.GenericSealIDs(4)
 
 		err := db.Update(lib.IndexSealsForHeight(mocks.GenericHeight, sealIDs))
 		assert.NoError(t, err)

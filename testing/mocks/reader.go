@@ -69,7 +69,7 @@ func BaselineReader(t *testing.T) *Reader {
 			return GenericCollection(0), nil
 		},
 		CollectionsByHeightFunc: func(height uint64) ([]flow.Identifier, error) {
-			return GenericIdentifiers(5), nil
+			return GenericCollectionIDs(5), nil
 		},
 		GuaranteeFunc: func(collID flow.Identifier) (*flow.CollectionGuarantee, error) {
 			return GenericGuarantee(0), nil
@@ -81,7 +81,7 @@ func BaselineReader(t *testing.T) *Reader {
 			return GenericHeight, nil
 		},
 		TransactionsByHeightFunc: func(height uint64) ([]flow.Identifier, error) {
-			return GenericIdentifiers(5), nil
+			return GenericTransactionIDs(5), nil
 		},
 		ResultFunc: func(txID flow.Identifier) (*flow.TransactionResult, error) {
 			return GenericResult(0), nil
@@ -90,7 +90,7 @@ func BaselineReader(t *testing.T) *Reader {
 			return GenericSeal(0), nil
 		},
 		SealsByHeightFunc: func(height uint64) ([]flow.Identifier, error) {
-			return GenericIdentifiers(5), nil
+			return GenericSealIDs(5), nil
 		},
 	}
 

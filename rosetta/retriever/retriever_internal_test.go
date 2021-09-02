@@ -344,7 +344,7 @@ func TestRetriever_Block(t *testing.T) {
 		}
 		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			return mocks.GenericIdentifiers(5), nil
+			return mocks.GenericTransactionIDs(5), nil
 		}
 
 		validator := mocks.BaselineValidator(t)
@@ -406,7 +406,7 @@ func TestRetriever_Block(t *testing.T) {
 		}
 		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			return mocks.GenericIdentifiers(5), nil
+			return mocks.GenericTransactionIDs(5), nil
 		}
 
 		validator := mocks.BaselineValidator(t)
@@ -468,7 +468,7 @@ func TestRetriever_Block(t *testing.T) {
 		}
 		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			return mocks.GenericIdentifiers(6), nil
+			return mocks.GenericTransactionIDs(6), nil
 		}
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
@@ -664,6 +664,9 @@ func TestRetriever_Block(t *testing.T) {
 }
 
 func TestRetriever_Transaction(t *testing.T) {
+	txQual := mocks.GenericTransactionQualifier(0)
+	txIDs := mocks.GenericTransactionIDs(5)
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
@@ -673,8 +676,8 @@ func TestRetriever_Transaction(t *testing.T) {
 			return mocks.GenericHeader.Height, mocks.GenericHeader.ID(), nil
 		}
 		validator.TransactionFunc = func(transaction identifier.Transaction) (flow.Identifier, error) {
-			assert.Equal(t, mocks.GenericTransactionQualifier(0), transaction)
-			return mocks.GenericIdentifier(0), nil
+			assert.Equal(t, txQual, transaction)
+			return txIDs[0], nil
 		}
 
 		generator := mocks.BaselineGenerator(t)
@@ -698,7 +701,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		}
 		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			return mocks.GenericIdentifiers(5), nil
+			return txIDs, nil
 		}
 
 		convert := mocks.BaselineConverter(t)
@@ -724,10 +727,10 @@ func TestRetriever_Transaction(t *testing.T) {
 		ret.index = index
 		ret.convert = convert
 
-		got, err := ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
+		got, err := ret.Transaction(mocks.GenericBlockQualifier, txQual)
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericTransactionQualifier(0), got.ID)
+		assert.Equal(t, txQual, got.ID)
 		assert.Len(t, got.Operations, 2)
 	})
 
@@ -739,7 +742,8 @@ func TestRetriever_Transaction(t *testing.T) {
 			return []flow.Event{
 				{
 					Type:          mocks.GenericEventType(0),
-					TransactionID: mocks.GenericIdentifier(4),
+					// Here we use the wrong resource ID on purpose so that it does not match any of transaction ID.
+					TransactionID: mocks.GenericSeal(0).ID(),
 				},
 			}, nil
 		}
@@ -749,7 +753,7 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret.index = index
 
-		got, err := ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
+		got, err := ret.Transaction(mocks.GenericBlockQualifier, txQual)
 
 		require.NoError(t, err)
 		assert.Empty(t, got.Operations)

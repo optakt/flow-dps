@@ -129,7 +129,7 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 }
 
 func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
-	id := mocks.GenericIdentifier(0)
+	id := mocks.GenericHeader.ID()
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()

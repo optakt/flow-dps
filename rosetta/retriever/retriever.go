@@ -266,7 +266,7 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	}
 
 	// Run validation on the transaction qualifier. If it is valid, this will return
-	// the associoted Flow transaction ID.
+	// the associated Flow transaction ID.
 	txID, err := r.validate.Transaction(rosTxID)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate transaction: %w", err)
