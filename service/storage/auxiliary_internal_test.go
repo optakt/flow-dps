@@ -72,9 +72,9 @@ func TestLibrary_Retrieve(t *testing.T) {
 		var got uint64
 		err := db.View(l.retrieve([]byte{13, 37}, &got))
 
-		if assert.Error(t, err) {
-			assert.True(t, errors.Is(err, badger.ErrKeyNotFound))
-		}
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, badger.ErrKeyNotFound))
+
 	})
 
 	t.Run("badly encoded value, should fail", func(t *testing.T) {

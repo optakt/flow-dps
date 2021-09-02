@@ -176,4 +176,3 @@ func TestCombine(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
-

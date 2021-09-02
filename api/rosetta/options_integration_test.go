@@ -70,124 +70,118 @@ func TestAPI_Options(t *testing.T) {
 
 	assert.True(t, options.Allow.HistoricalBalanceLookup)
 
-	if assert.Len(t, options.Allow.OperationStatuses, 1) {
+	require.Len(t, options.Allow.OperationStatuses, 1)
 
-		status := options.Allow.OperationStatuses[0]
-		assert.Equal(t, status.Status, dps.StatusCompleted)
-		assert.True(t, status.Successful)
-	}
+	status := options.Allow.OperationStatuses[0]
+	assert.Equal(t, status.Status, dps.StatusCompleted)
+	assert.True(t, status.Successful)
 
-	if assert.Len(t, options.Allow.OperationTypes, 1) {
-		assert.Equal(t, options.Allow.OperationTypes[0], dps.OperationTransfer)
-	}
+	require.Len(t, options.Allow.OperationTypes, 1)
+	assert.Equal(t, options.Allow.OperationTypes[0], dps.OperationTransfer)
 
-	if assert.Len(t, options.Allow.Errors, wantErrorCount) {
+	require.Len(t, options.Allow.Errors, wantErrorCount)
 
-		for i := uint(0); i < wantErrorCount; i++ {
+	for i := uint(0); i < wantErrorCount; i++ {
+		rosettaErr := options.Allow.Errors[i]
 
-			rosettaErr := options.Allow.Errors[i]
+		expectedCode := i + 1 // error codes start from 1
+		assert.Equal(t, expectedCode, rosettaErr.Code)
 
-			expectedCode := i + 1 // error codes start from 1
+		switch expectedCode {
+		case configuration.ErrorInternal.Code:
+			assert.Equal(t, configuration.ErrorInternal.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInternal.Retriable, rosettaErr.Retriable)
 
-			assert.Equal(t, expectedCode, rosettaErr.Code)
+		case configuration.ErrorInvalidEncoding.Code:
+			assert.Equal(t, configuration.ErrorInvalidEncoding.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidEncoding.Retriable, rosettaErr.Retriable)
 
-			switch expectedCode {
+		case configuration.ErrorInvalidFormat.Code:
+			assert.Equal(t, configuration.ErrorInvalidFormat.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidFormat.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInternal.Code:
-				assert.Equal(t, configuration.ErrorInternal.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInternal.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidNetwork.Code:
+			assert.Equal(t, configuration.ErrorInvalidNetwork.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidNetwork.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidEncoding.Code:
-				assert.Equal(t, configuration.ErrorInvalidEncoding.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidEncoding.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidAccount.Code:
+			assert.Equal(t, configuration.ErrorInvalidAccount.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidAccount.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidFormat.Code:
-				assert.Equal(t, configuration.ErrorInvalidFormat.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidFormat.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidCurrency.Code:
+			assert.Equal(t, configuration.ErrorInvalidCurrency.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidCurrency.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidNetwork.Code:
-				assert.Equal(t, configuration.ErrorInvalidNetwork.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidNetwork.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidBlock.Code:
+			assert.Equal(t, configuration.ErrorInvalidBlock.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidBlock.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidAccount.Code:
-				assert.Equal(t, configuration.ErrorInvalidAccount.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidAccount.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidTransaction.Code:
+			assert.Equal(t, configuration.ErrorInvalidTransaction.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidTransaction.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidCurrency.Code:
-				assert.Equal(t, configuration.ErrorInvalidCurrency.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidCurrency.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorUnknownBlock.Code:
+			assert.Equal(t, configuration.ErrorUnknownBlock.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorUnknownBlock.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidBlock.Code:
-				assert.Equal(t, configuration.ErrorInvalidBlock.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidBlock.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorUnknownCurrency.Code:
+			assert.Equal(t, configuration.ErrorUnknownCurrency.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorUnknownCurrency.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidTransaction.Code:
-				assert.Equal(t, configuration.ErrorInvalidTransaction.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidTransaction.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorUnknownTransaction.Code:
+			assert.Equal(t, configuration.ErrorUnknownTransaction.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorUnknownTransaction.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorUnknownBlock.Code:
-				assert.Equal(t, configuration.ErrorUnknownBlock.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorUnknownBlock.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidIntent.Code:
+			assert.Equal(t, configuration.ErrorInvalidIntent.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidIntent.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorUnknownCurrency.Code:
-				assert.Equal(t, configuration.ErrorUnknownCurrency.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorUnknownCurrency.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidAuthorizers.Code:
+			assert.Equal(t, configuration.ErrorInvalidAuthorizers.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidAuthorizers.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorUnknownTransaction.Code:
-				assert.Equal(t, configuration.ErrorUnknownTransaction.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorUnknownTransaction.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidPayer.Code:
+			assert.Equal(t, configuration.ErrorInvalidPayer.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidPayer.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidIntent.Code:
-				assert.Equal(t, configuration.ErrorInvalidIntent.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidIntent.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidProposer.Code:
+			assert.Equal(t, configuration.ErrorInvalidProposer.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidProposer.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidAuthorizers.Code:
-				assert.Equal(t, configuration.ErrorInvalidAuthorizers.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidAuthorizers.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidScript.Code:
+			assert.Equal(t, configuration.ErrorInvalidScript.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidScript.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidPayer.Code:
-				assert.Equal(t, configuration.ErrorInvalidPayer.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidPayer.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidArguments.Code:
+			assert.Equal(t, configuration.ErrorInvalidArguments.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidArguments.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidProposer.Code:
-				assert.Equal(t, configuration.ErrorInvalidProposer.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidProposer.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidAmount.Code:
+			assert.Equal(t, configuration.ErrorInvalidAmount.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidAmount.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidScript.Code:
-				assert.Equal(t, configuration.ErrorInvalidScript.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidScript.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidReceiver.Code:
+			assert.Equal(t, configuration.ErrorInvalidReceiver.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidReceiver.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidArguments.Code:
-				assert.Equal(t, configuration.ErrorInvalidArguments.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidArguments.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidSignature.Code:
+			assert.Equal(t, configuration.ErrorInvalidSignature.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidSignature.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidAmount.Code:
-				assert.Equal(t, configuration.ErrorInvalidAmount.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidAmount.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidKey.Code:
+			assert.Equal(t, configuration.ErrorInvalidKey.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidKey.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidReceiver.Code:
-				assert.Equal(t, configuration.ErrorInvalidReceiver.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidReceiver.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidPayload.Code:
+			assert.Equal(t, configuration.ErrorInvalidPayload.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidPayload.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidSignature.Code:
-				assert.Equal(t, configuration.ErrorInvalidSignature.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidSignature.Retriable, rosettaErr.Retriable)
+		case configuration.ErrorInvalidSignatures.Code:
+			assert.Equal(t, configuration.ErrorInvalidSignatures.Message, rosettaErr.Message)
+			assert.Equal(t, configuration.ErrorInvalidSignatures.Retriable, rosettaErr.Retriable)
 
-			case configuration.ErrorInvalidKey.Code:
-				assert.Equal(t, configuration.ErrorInvalidKey.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidKey.Retriable, rosettaErr.Retriable)
-
-			case configuration.ErrorInvalidPayload.Code:
-				assert.Equal(t, configuration.ErrorInvalidPayload.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidPayload.Retriable, rosettaErr.Retriable)
-
-			case configuration.ErrorInvalidSignatures.Code:
-				assert.Equal(t, configuration.ErrorInvalidSignatures.Message, rosettaErr.Message)
-				assert.Equal(t, configuration.ErrorInvalidSignatures.Retriable, rosettaErr.Retriable)
-
-			default:
-				t.Errorf("unknown rosetta error received: (code: %v, message: '%v', retriable: %v", rosettaErr.Code, rosettaErr.Message, rosettaErr.Retriable)
-			}
+		default:
+			t.Errorf("unknown rosetta error received: (code: %v, message: '%v', retriable: %v", rosettaErr.Code, rosettaErr.Message, rosettaErr.Retriable)
 		}
 	}
 }

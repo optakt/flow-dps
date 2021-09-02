@@ -39,14 +39,13 @@ func TestNew(t *testing.T) {
 
 	r := New(params, index, validate, generator, invoke, convert)
 
-	if assert.NotNil(t, r) {
-		assert.Equal(t, params, r.params)
-		assert.Equal(t, index, r.index)
-		assert.Equal(t, validate, r.validate)
-		assert.Equal(t, generator, r.generator)
-		assert.Equal(t, invoke, r.invoke)
-		assert.Equal(t, convert, r.convert)
-	}
+	require.NotNil(t, r)
+	assert.Equal(t, params, r.params)
+	assert.Equal(t, index, r.index)
+	assert.Equal(t, validate, r.validate)
+	assert.Equal(t, generator, r.generator)
+	assert.Equal(t, invoke, r.invoke)
+	assert.Equal(t, convert, r.convert)
 }
 
 func TestRetriever_Oldest(t *testing.T) {
@@ -66,14 +65,13 @@ func TestRetriever_Oldest(t *testing.T) {
 
 		blockID, blockTime, err := ret.Oldest()
 
-		if assert.NoError(t, err) {
-			wantBlockID := identifier.Block{
-				Index: &mocks.GenericHeader.Height,
-				Hash:  mocks.GenericHeader.ID().String(),
-			}
-			assert.Equal(t, wantBlockID, blockID)
-			assert.Equal(t, mocks.GenericHeader.Timestamp, blockTime)
+		require.NoError(t, err)
+		wantBlockID := identifier.Block{
+			Index: &mocks.GenericHeader.Height,
+			Hash:  mocks.GenericHeader.ID().String(),
 		}
+		assert.Equal(t, wantBlockID, blockID)
+		assert.Equal(t, mocks.GenericHeader.Timestamp, blockTime)
 	})
 
 	t.Run("handles index.First failure", func(t *testing.T) {
@@ -130,10 +128,9 @@ func TestRetriever_Current(t *testing.T) {
 
 		blockID, blockTime, err := ret.Current()
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericHeader.ID().String(), blockID.Hash)
-			assert.Equal(t, mocks.GenericHeader.Timestamp, blockTime)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericHeader.ID().String(), blockID.Hash)
+		assert.Equal(t, mocks.GenericHeader.Timestamp, blockTime)
 	})
 
 	t.Run("handles index.Last failure", func(t *testing.T) {
@@ -202,9 +199,8 @@ func TestRetriever_Balances(t *testing.T) {
 		invoker.ScriptFunc = func(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error) {
 			assert.Equal(t, mocks.GenericBlockQualifier.Index, &height)
 			assert.Equal(t, []byte(`test`), script)
-			if assert.Len(t, parameters, 1) {
-				assert.Equal(t, cadence.NewAddress(mocks.GenericAccount.Address), parameters[0])
-			}
+			require.Len(t, parameters, 1)
+			assert.Equal(t, cadence.NewAddress(mocks.GenericAccount.Address), parameters[0])
 			return mocks.GenericAmount(0), nil
 		}
 
@@ -221,14 +217,13 @@ func TestRetriever_Balances(t *testing.T) {
 			[]identifier.Currency{mocks.GenericCurrency},
 		)
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericBlockQualifier, blockID)
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericBlockQualifier, blockID)
 
-			wantAmounts := []object.Amount{
-				mocks.GenericOperation(0).Amount,
-			}
-			assert.Equal(t, wantAmounts, amounts)
+		wantAmounts := []object.Amount{
+			mocks.GenericOperation(0).Amount,
 		}
+		assert.Equal(t, wantAmounts, amounts)
 	})
 
 	t.Run("handles invalid block", func(t *testing.T) {
@@ -394,12 +389,11 @@ func TestRetriever_Block(t *testing.T) {
 
 		block, extra, err := ret.Block(mocks.GenericBlockQualifier)
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
-			assert.Len(t, block.Transactions, 5)
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
+		assert.Len(t, block.Transactions, 5)
 
-			assert.Empty(t, extra)
-		}
+		assert.Empty(t, extra)
 	})
 
 	t.Run("nominal case with limit reached exactly", func(t *testing.T) {
@@ -457,12 +451,11 @@ func TestRetriever_Block(t *testing.T) {
 
 		block, extra, err := ret.Block(mocks.GenericBlockQualifier)
 
-		if assert.NoError(t, err) {
-			assert.Len(t, block.Transactions, 5)
-			assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
+		require.NoError(t, err)
+		assert.Len(t, block.Transactions, 5)
+		assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
 
-			assert.Empty(t, extra)
-		}
+		assert.Empty(t, extra)
 	})
 
 	t.Run("nominal case with more transactions than limit", func(t *testing.T) {
@@ -517,12 +510,11 @@ func TestRetriever_Block(t *testing.T) {
 
 		block, extra, err := ret.Block(mocks.GenericBlockQualifier)
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
-			assert.Len(t, block.Transactions, 5)
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericBlockQualifier, block.ID)
+		assert.Len(t, block.Transactions, 5)
 
-			assert.Len(t, extra, 1)
-		}
+		assert.Len(t, extra, 1)
 	})
 
 	t.Run("handles block without transactions", func(t *testing.T) {
@@ -638,10 +630,9 @@ func TestRetriever_Block(t *testing.T) {
 		index := mocks.BaselineReader(t)
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			if assert.Len(t, types, 2) {
-				assert.Equal(t, mocks.GenericEventType(0), types[0])
-				assert.Equal(t, mocks.GenericEventType(1), types[1])
-			}
+			require.Len(t, types, 2)
+			assert.Equal(t, mocks.GenericEventType(0), types[0])
+			assert.Equal(t, mocks.GenericEventType(1), types[1])
 			return nil, mocks.GenericError
 		}
 
@@ -699,10 +690,9 @@ func TestRetriever_Transaction(t *testing.T) {
 		index := mocks.BaselineReader(t)
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			if assert.Len(t, types, 2) {
-				assert.Equal(t, mocks.GenericEventType(0), types[0])
-				assert.Equal(t, mocks.GenericEventType(1), types[1])
-			}
+			require.Len(t, types, 2)
+			assert.Equal(t, mocks.GenericEventType(0), types[0])
+			assert.Equal(t, mocks.GenericEventType(1), types[1])
 
 			return mocks.GenericEvents(4), nil
 		}
@@ -736,10 +726,9 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		got, err := ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericTransactionQualifier(0), got.ID)
-			assert.Len(t, got.Operations, 2)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericTransactionQualifier(0), got.ID)
+		assert.Len(t, got.Operations, 2)
 	})
 
 	t.Run("handles transaction with no relevant operations", func(t *testing.T) {
@@ -762,9 +751,8 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		got, err := ret.Transaction(mocks.GenericBlockQualifier, mocks.GenericTransactionQualifier(0))
 
-		if assert.NoError(t, err) {
-			assert.Empty(t, got.Operations)
-		}
+		require.NoError(t, err)
+		assert.Empty(t, got.Operations)
 	})
 
 	t.Run("handles invalid block", func(t *testing.T) {

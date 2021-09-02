@@ -33,10 +33,9 @@ func TestIndexFromAPI(t *testing.T) {
 
 	index := IndexFromAPI(mock, codec)
 
-	if assert.NotNil(t, index) {
-		assert.Equal(t, mock, index.client)
-		assert.NotNil(t, mock, index.codec)
-	}
+	require.NotNil(t, index)
+	assert.Equal(t, mock, index.client)
+	assert.NotNil(t, mock, index.codec)
 }
 
 func TestIndex_First(t *testing.T) {
@@ -57,9 +56,9 @@ func TestIndex_First(t *testing.T) {
 
 		got, err := index.First()
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericHeight, got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericHeight, got)
+
 	})
 
 	t.Run("handles index failure", func(t *testing.T) {
@@ -98,9 +97,9 @@ func TestIndex_Last(t *testing.T) {
 
 		got, err := index.Last()
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericHeight, got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericHeight, got)
+
 	})
 
 	t.Run("handles index failure", func(t *testing.T) {
@@ -155,9 +154,9 @@ func TestIndex_Header(t *testing.T) {
 
 		got, err := index.Header(mocks.GenericHeader.Height)
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericHeader, got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericHeader, got)
+
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -224,9 +223,9 @@ func TestIndex_Commit(t *testing.T) {
 
 		got, err := index.Commit(mocks.GenericHeight)
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericCommit(0), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericCommit(0), got)
+
 	})
 
 	codec := mocks.BaselineCodec(t)
@@ -282,13 +281,11 @@ func TestIndex_Values(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetRegisterValuesFunc: func(_ context.Context, in *GetRegisterValuesRequest, _ ...grpc.CallOption) (*GetRegisterValuesResponse, error) {
-					if assert.Len(t, in.Paths, 6) {
+					require.Len(t, in.Paths, 6)
+					codec := mocks.BaselineCodec(t)
+					codec.UnmarshalFunc = cbor.Unmarshal
 
-						codec := mocks.BaselineCodec(t)
-						codec.UnmarshalFunc = cbor.Unmarshal
-
-						assert.Equal(t, convert.PathsToBytes(mocks.GenericLedgerPaths(6)), in.Paths)
-					}
+					assert.Equal(t, convert.PathsToBytes(mocks.GenericLedgerPaths(6)), in.Paths)
 					assert.Equal(t, in.Height, mocks.GenericHeight)
 
 					return &GetRegisterValuesResponse{
@@ -302,9 +299,9 @@ func TestIndex_Values(t *testing.T) {
 
 		got, err := index.Values(mocks.GenericHeight, mocks.GenericLedgerPaths(6))
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericLedgerValues(6), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericLedgerValues(6), got)
+
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -348,9 +345,9 @@ func TestIndex_Height(t *testing.T) {
 
 		got, err := index.HeightForBlock(mocks.GenericIdentifier(0))
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericHeight, got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericHeight, got)
+
 	})
 
 	codec := mocks.BaselineCodec(t)
@@ -401,9 +398,9 @@ func TestIndex_Collection(t *testing.T) {
 
 		got, err := index.Collection(mocks.GenericIdentifier(0))
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericCollection(0), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericCollection(0), got)
+
 	})
 
 	t.Run("handles index failure on GetCollection", func(t *testing.T) {
@@ -454,9 +451,9 @@ func TestIndex_ListCollectionsForHeight(t *testing.T) {
 		}
 
 		got, err := index.CollectionsByHeight(mocks.GenericHeight)
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericIdentifiers(4), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericIdentifiers(4), got)
+
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -504,9 +501,9 @@ func TestIndex_Guarantee(t *testing.T) {
 
 		got, err := index.Guarantee(mocks.GenericIdentifier(0))
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericGuarantee(0), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericGuarantee(0), got)
+
 	})
 
 	t.Run("handles index failure on GetGuarantee", func(t *testing.T) {
@@ -558,9 +555,9 @@ func TestIndex_Transaction(t *testing.T) {
 
 		got, err := index.Transaction(mocks.GenericIdentifier(0))
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericTransaction(0), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericTransaction(0), got)
+
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -612,9 +609,9 @@ func TestIndex_Result(t *testing.T) {
 
 		got, err := index.Result(mocks.GenericIdentifier(0))
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericResult(0), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericResult(0), got)
+
 	})
 
 	codec := mocks.BaselineCodec(t)
@@ -667,9 +664,9 @@ func TestIndex_Events(t *testing.T) {
 
 		got, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes(2)...)
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericEvents(4), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericEvents(4), got)
+
 	})
 	t.Run("handles index failures", func(t *testing.T) {
 		t.Parallel()
@@ -747,9 +744,9 @@ func TestIndex_Seals(t *testing.T) {
 		}
 
 		got, err := index.Seal(mocks.GenericIdentifier(0))
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericSeal(0), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericSeal(0), got)
+
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -796,9 +793,9 @@ func TestIndex_ListSealsForHeight(t *testing.T) {
 		}
 
 		got, err := index.SealsByHeight(mocks.GenericHeight)
-		if assert.NoError(t, err) {
-			assert.Equal(t, mocks.GenericIdentifiers(4), got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericIdentifiers(4), got)
+
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {

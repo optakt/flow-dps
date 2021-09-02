@@ -135,13 +135,12 @@ func TestAPI_Balance(t *testing.T) {
 
 			test.validateBlock(balanceResponse.BlockID)
 
-			if assert.Len(t, balanceResponse.Balances, 1) {
-				balance := balanceResponse.Balances[0]
+			require.Len(t, balanceResponse.Balances, 1)
+			balance := balanceResponse.Balances[0]
 
-				assert.Equal(t, test.request.Currencies[0].Symbol, balance.Currency.Symbol)
-				assert.Equal(t, test.request.Currencies[0].Decimals, balance.Currency.Decimals)
-				assert.Equal(t, test.wantBalance, balance.Value)
-			}
+			assert.Equal(t, test.request.Currencies[0].Symbol, balance.Currency.Symbol)
+			assert.Equal(t, test.request.Currencies[0].Decimals, balance.Currency.Decimals)
+			assert.Equal(t, test.wantBalance, balance.Value)
 		})
 	}
 }

@@ -184,9 +184,8 @@ func validateBlock(t *testing.T, height uint64, hash string) validateBlockFunc {
 	t.Helper()
 
 	return func(rosBlockID identifier.Block) {
-		if assert.NotNil(t, rosBlockID.Index) {
-			assert.Equal(t, height, *rosBlockID.Index)
-		}
+		require.NotNil(t, rosBlockID.Index)
+		assert.Equal(t, height, *rosBlockID.Index)
 		assert.Equal(t, hash, rosBlockID.Hash)
 	}
 }
