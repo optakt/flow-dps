@@ -15,12 +15,10 @@
 package rosetta
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -61,37 +59,13 @@ func (d *Data) Balance(ctx echo.Context) error {
 	// => https://github.com/optakt/flow-dps/issues/164
 
 	err = d.config.Check(req.NetworkID)
-	var netErr failure.InvalidNetwork
-	if errors.As(err, &netErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(netErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(networkCheck, err))
+		return echo.NewHTTPError(apiError(networkCheck, err))
 	}
 
 	rosBlockID, balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
-	var ibErr failure.InvalidBlock
-	if errors.As(err, &ibErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
-	}
-	var ubErr failure.UnknownBlock
-	if errors.As(err, &ubErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
-	}
-	var iaErr failure.InvalidAccount
-	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
-	}
-	var icErr failure.InvalidCurrency
-	if errors.As(err, &icErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidCurrency(icErr))
-	}
-	var ucErr failure.UnknownCurrency
-	if errors.As(err, &ucErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownCurrency(ucErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(balancesRetrieval, err))
+		return echo.NewHTTPError(apiError(balancesRetrieval, err))
 	}
 
 	res := BalanceResponse{

@@ -308,3 +308,107 @@ func validationError(err error) *echo.HTTPError {
 	}
 	return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 }
+
+func invalidPayload(fail failure.InvalidPayload) Error {
+	return convertError(
+		configuration.ErrorInvalidPayload,
+		fail.Description,
+		withDetail("encoding", fail.Encoding),
+	)
+}
+
+// apiError will take a general error and try to classify it based on its type
+// and return the appropriate HTTP status code and Rosetta Error.
+func apiError(description string, err error) (int, Error) {
+
+	// TODO - check - this one was a special case so far; perhaps it can be still.
+	var inErr failure.InvalidNetwork
+	if errors.As(err, &inErr) {
+		return http.StatusUnprocessableEntity, invalidNetwork(inErr)
+	}
+	var ibErr failure.InvalidBlock
+	if errors.As(err, &ibErr) {
+		return http.StatusUnprocessableEntity, invalidBlock(ibErr)
+	}
+	var ubErr failure.UnknownBlock
+	if errors.As(err, &ubErr) {
+		return http.StatusUnprocessableEntity, unknownBlock(ubErr)
+	}
+	var iaErr failure.InvalidAccount
+	if errors.As(err, &iaErr) {
+		return http.StatusUnprocessableEntity, invalidAccount(iaErr)
+	}
+	var icErr failure.InvalidCurrency
+	if errors.As(err, &icErr) {
+		return http.StatusUnprocessableEntity, invalidCurrency(icErr)
+	}
+	var ucErr failure.UnknownCurrency
+	if errors.As(err, &ucErr) {
+		return http.StatusUnprocessableEntity, unknownCurrency(ucErr)
+	}
+	var itErr failure.InvalidTransaction
+	if errors.As(err, &itErr) {
+		return http.StatusUnprocessableEntity, invalidTransaction(itErr)
+	}
+	var utErr failure.UnknownTransaction
+	if errors.As(err, &utErr) {
+		return http.StatusUnprocessableEntity, unknownTransaction(utErr)
+	}
+
+	// Construction API specific errors.
+
+	var iautErr failure.InvalidAuthorizers
+	if errors.As(err, &iaErr) {
+		return http.StatusUnprocessableEntity, invalidAuthorizers(iautErr)
+	}
+	var ipyErr failure.InvalidPayer
+	if errors.As(err, &ipyErr) {
+		return http.StatusUnprocessableEntity, invalidPayer(ipyErr)
+	}
+	var iprErr failure.InvalidProposer
+	if errors.As(err, &iprErr) {
+		return http.StatusUnprocessableEntity, invalidProposer(iprErr)
+	}
+	var isgErr failure.InvalidSignature
+	if errors.As(err, &isgErr) {
+		return http.StatusUnprocessableEntity, invalidSignature(isgErr)
+	}
+	var isgsErr failure.InvalidSignatures
+	if errors.As(err, &isgsErr) {
+		return http.StatusUnprocessableEntity, invalidSignatures(isgsErr)
+	}
+	var opErr failure.InvalidOperations
+	if errors.As(err, &opErr) {
+		return http.StatusUnprocessableEntity, invalidFormat(TxInvalidOps)
+	}
+	var intErr failure.InvalidIntent
+	if errors.As(err, &intErr) {
+		return http.StatusUnprocessableEntity, invalidIntent(intErr)
+	}
+	var ikErr failure.InvalidKey
+	if errors.As(err, &ipyErr) {
+		return http.StatusUnprocessableEntity, invalidKey(ikErr)
+	}
+	var isErr failure.InvalidScript
+	if errors.As(err, &isErr) {
+		return http.StatusUnprocessableEntity, invalidScript(isErr)
+	}
+	var iargErr failure.InvalidArguments
+	if errors.As(err, &iargErr) {
+		return http.StatusUnprocessableEntity, invalidArguments(iargErr)
+	}
+	var imErr failure.InvalidAmount
+	if errors.As(err, &imErr) {
+		return http.StatusUnprocessableEntity, invalidAmount(imErr)
+	}
+	var irErr failure.InvalidReceiver
+	if errors.As(err, &irErr) {
+		return http.StatusUnprocessableEntity, invalidReceiver(irErr)
+	}
+	var iplErr failure.InvalidPayload
+	if errors.As(err, &iplErr) {
+		return http.StatusUnprocessableEntity, invalidPayload(iplErr)
+	}
+
+	return http.StatusInternalServerError, internal(description, err)
+}

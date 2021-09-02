@@ -52,9 +52,14 @@ func (c *Construction) Submit(ctx echo.Context) error {
 		return validationError(err)
 	}
 
+	err = c.config.Check(req.NetworkID)
+	if err != nil {
+		return echo.NewHTTPError(apiError(networkCheck, err))
+	}
+
 	rosTxID, err := c.transact.SubmitTransaction(req.SignedTransaction)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txSubmission, err))
+		return echo.NewHTTPError(apiError(txSubmission, err))
 	}
 
 	res := SubmitResponse{

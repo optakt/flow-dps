@@ -51,9 +51,14 @@ func (c *Construction) Hash(ctx echo.Context) error {
 		return validationError(err)
 	}
 
+	err = c.config.Check(req.NetworkID)
+	if err != nil {
+		return echo.NewHTTPError(apiError(networkCheck, err))
+	}
+
 	rosTxID, err := c.transact.TransactionIdentifier(req.SignedTransaction)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txIdentifier, err))
+		return echo.NewHTTPError(apiError(txIdentifier, err))
 	}
 
 	res := HashResponse{
