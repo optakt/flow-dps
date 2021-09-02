@@ -12,18 +12,19 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package convert
+package convert_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestPathsToBytes(t *testing.T) {
-	got := PathsToBytes(mocks.GenericLedgerPaths(3))
+	got := convert.PathsToBytes(mocks.GenericLedgerPaths(3))
 
 	assert.Equal(t, [][]byte{
 		mocks.ByteSlice(mocks.GenericLedgerPath(0)),
@@ -44,7 +45,7 @@ func TestBytesToPaths(t *testing.T) {
 			mocks.ByteSlice(mocks.GenericLedgerPath(2)),
 		}
 
-		got, err := BytesToPaths(bb)
+		got, err := convert.BytesToPaths(bb)
 
 		assert.NoError(t, err)
 		assert.Equal(t, wantPaths, got)
@@ -56,7 +57,7 @@ func TestBytesToPaths(t *testing.T) {
 		invalidPath := []byte{0x1a, 0x04, 0x57, 0x70, 0x00}
 
 		bb := [][]byte{invalidPath}
-		_, err := BytesToPaths(bb)
+		_, err := convert.BytesToPaths(bb)
 
 		assert.Error(t, err)
 	})
@@ -67,7 +68,7 @@ func TestBytesToPaths(t *testing.T) {
 		invalidPath := []byte("")
 
 		bb := [][]byte{invalidPath}
-		_, err := BytesToPaths(bb)
+		_, err := convert.BytesToPaths(bb)
 
 		assert.Error(t, err)
 	})

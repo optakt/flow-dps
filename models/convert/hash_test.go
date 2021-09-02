@@ -12,22 +12,23 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package convert
+package convert_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestIDToHash(t *testing.T) {
-	got := IDToHash(mocks.GenericIdentifier(0))
+	got := convert.IDToHash(mocks.GenericIdentifier(0))
 	assert.Equal(t, mocks.ByteSlice(mocks.GenericIdentifier(0)), got)
 }
 
 func TestCommitToHash(t *testing.T) {
-	got := CommitToHash(mocks.GenericCommit(0))
+	got := convert.CommitToHash(mocks.GenericCommit(0))
 	assert.Equal(t, mocks.ByteSlice(mocks.GenericCommit(0)), got)
 }

@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package convert
+package convert_test
 
 import (
 	"testing"
@@ -20,6 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/flow-go/ledger"
+
+	"github.com/optakt/flow-dps/models/convert"
 )
 
 func TestValuesToBytes(t *testing.T) {
@@ -33,7 +35,7 @@ func TestValuesToBytes(t *testing.T) {
 
 	vals := []ledger.Value{val1, val2, val3}
 
-	got := ValuesToBytes(vals)
+	got := convert.ValuesToBytes(vals)
 
 	assert.Equal(t, [][]byte{val1b, val2b, val3b}, got)
 }
@@ -51,7 +53,7 @@ func TestBytesToValues(t *testing.T) {
 
 	bb := [][]byte{val1b, val2b, val3b}
 
-	got := BytesToValues(bb)
+	got := convert.BytesToValues(bb)
 
 	assert.Equal(t, wantVals, got)
 }
