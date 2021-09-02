@@ -25,7 +25,7 @@ type Transactor interface {
 	DeriveIntent(operations []object.Operation) (intent *transactor.Intent, err error)
 	CompileTransaction(refBlockID identifier.Block, intent *transactor.Intent, sequence uint64) (unsigned string, err error)
 	HashPayload(rosBlockID identifier.Block, unsigned string, signer identifier.Account) (algo string, hash string, err error)
-	ParseTransaction(payload string) (refBlockID identifier.Block, sequence uint64, operations []object.Operation, signers []identifier.Account, err error)
+	Parse(payload string) (transactor.Parser, error)
 	AttachSignatures(unsigned string, signatures []object.Signature) (signed string, err error)
 	TransactionIdentifier(signed string) (rosTxID identifier.Transaction, err error)
 	SubmitTransaction(signed string) (rosTxID identifier.Transaction, err error)

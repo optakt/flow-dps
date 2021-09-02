@@ -15,7 +15,6 @@
 package transactor
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -24,7 +23,6 @@ import (
 	"strconv"
 
 	"github.com/onflow/cadence"
-	cjson "github.com/onflow/cadence/encoding/json"
 	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go/model/flow"
@@ -50,6 +48,13 @@ type Transactor struct {
 	generate Generator
 	invoke   Invoker
 	submit   Submitter
+}
+
+type Parser interface {
+	BlockID() (identifier.Block, error)
+	Sequence() uint64
+	Signers() ([]identifier.Account, error)
+	Operations() ([]object.Operation, error)
 }
 
 // New creates a new transactor to handle interactions with Flow transactions.
@@ -125,7 +130,7 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 		return nil, fmt.Errorf("invalid receiver currency: %w", err)
 	}
 
-	// Make sure that both the send and receive operations are for FLOW tokens.
+	// Make sure that both operations are for FLOW tokens.
 	if sendSymbol != dps.FlowSymbol || receiveSymbol != dps.FlowSymbol {
 		return nil, failure.InvalidIntent{
 			Description: failure.NewDescription("invalid currencies found",
@@ -156,7 +161,7 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 		}
 	}
 
-	// The smalle amount is first, so the second one should always have the
+	// The smaller amount is first, so the second one should always have the
 	// positive number.
 	amount := amounts[1]
 	intent := Intent{
@@ -249,212 +254,6 @@ func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, s
 	return requiredAlgorithm, hash, nil
 }
 
-// ParseTransactions processes the flow transaction, validates its correctness and translates it
-// to a list of operations and a list of signers.
-// TODO: Refactor this function, probably into several smaller function with a small amount of
-// return values:
-// => https://github.com/optakt/flow-dps/issues/392
-func (t *Transactor) ParseTransaction(payload string) (identifier.Block, uint64, []object.Operation, []identifier.Account, error) {
-
-	tx, err := t.decodeTransaction(payload)
-	if err != nil {
-		return identifier.Block{}, 0, nil, nil, fmt.Errorf("could not decode transaction: %w", err)
-	}
-
-	// Validate the transaction actors. We expect a single authorizer - the sender account.
-	// For now, the sender must also be the proposer and the payer for the transaction.
-
-	if len(tx.Authorizers) != requiredAuthorizers {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidAuthorizers{
-			Have:        uint(len(tx.Authorizers)),
-			Want:        requiredAuthorizers,
-			Description: failure.NewDescription("invalid number of authorizers"),
-		}
-	}
-
-	authorizer := tx.Authorizers[0]
-	sender := identifier.Account{
-		Address: authorizer.String(),
-	}
-
-	// Validate the sender address.
-	_, err = t.validate.Account(sender)
-	if err != nil {
-		return identifier.Block{}, 0, nil, nil, fmt.Errorf("invalid sender account: %w", err)
-	}
-
-	// Verify that the sender is the payer and the proposer.
-	if tx.Payer != authorizer {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidPayer{
-			Have:        flow.BytesToAddress(tx.Payer[:]),
-			Want:        flow.BytesToAddress(authorizer[:]),
-			Description: failure.NewDescription("invalid transaction payer"),
-		}
-	}
-	if tx.ProposalKey.Address != authorizer {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidProposer{
-			Have:        flow.BytesToAddress(tx.ProposalKey.Address[:]),
-			Want:        flow.BytesToAddress(authorizer[:]),
-			Description: failure.NewDescription("invalid transaction proposer"),
-		}
-	}
-
-	// Verify the transaction script is the token transfer script.
-	script, err := t.generate.TransferTokens(dps.FlowSymbol)
-	if err != nil {
-		return identifier.Block{}, 0, nil, nil, fmt.Errorf("could not generate transfer script: %w", err)
-	}
-	if !bytes.Equal(script, tx.Script) {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidScript{
-			Script:      string(tx.Script),
-			Description: failure.NewDescription("transaction text is not valid token transfer script"),
-		}
-	}
-
-	// Verify that the transaction script has the correct number of arguments.
-	args := tx.Arguments
-	if len(args) != requiredArguments {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidArguments{
-			Have:        uint(len(args)),
-			Want:        requiredArguments,
-			Description: failure.NewDescription("invalid number of arguments"),
-		}
-	}
-
-	// Parse and validate the amount argument.
-	val, err := cjson.Decode(args[0])
-	if err != nil {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidAmount{
-			Amount: string(args[0]),
-			Description: failure.NewDescription("could not parse transaction amount",
-				failure.WithErr(err)),
-		}
-	}
-	amountArg, ok := val.ToGoValue().(uint64)
-	if !ok {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidAmount{
-			Amount:      string(args[0]),
-			Description: failure.NewDescription("invalid amount"),
-		}
-	}
-	amount := strconv.FormatUint(amountArg, 10)
-
-	// Parse and validate receiver script argument.
-	val, err = cjson.Decode(args[1])
-	if err != nil {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidReceiver{
-			Receiver: string(args[1]),
-			Description: failure.NewDescription("could not parse transaction receiver address",
-				failure.WithErr(err)),
-		}
-	}
-	addr := flow.HexToAddress(val.String())
-	receiver := identifier.Account{
-		Address: addr.String(),
-	}
-	_, err = t.validate.Account(receiver)
-	if err != nil {
-		return identifier.Block{}, 0, nil, nil, fmt.Errorf("invalid receiver account: %w", err)
-	}
-
-	// Validate the reference block identifier.
-	refBlockID := identifier.Block{
-		Hash: tx.ReferenceBlockID.String(),
-	}
-	height, blockID, err := t.validate.Block(refBlockID)
-	if err != nil {
-		return identifier.Block{}, 0, nil, nil, fmt.Errorf("invalid reference block: %w", err)
-	}
-
-	// Create the send operation.
-	sendOp := object.Operation{
-		ID: identifier.Operation{
-			Index:        0,
-			NetworkIndex: nil, // optional, omitted for now
-		},
-		AccountID: sender,
-		Type:      dps.OperationTransfer,
-		Amount: object.Amount{
-			Value: "-" + amount,
-			Currency: identifier.Currency{
-				Symbol:   dps.FlowSymbol,
-				Decimals: dps.FlowDecimals,
-			},
-		},
-		Status: "", // must NOT be set for non-submitted transactions
-	}
-
-	// Create the receive operation.
-	receiveOp := object.Operation{
-		ID: identifier.Operation{
-			Index:        1,
-			NetworkIndex: nil, // optional, omitted for now
-		},
-		AccountID: receiver,
-		Type:      dps.OperationTransfer,
-		Amount: object.Amount{
-			Value: amount,
-			Currency: identifier.Currency{
-				Symbol:   dps.FlowSymbol,
-				Decimals: dps.FlowDecimals,
-			},
-		},
-		Status: "", // must NOT be set for non-submitted transactions
-	}
-
-	// Create the operations list.
-	ops := []object.Operation{
-		sendOp,
-		receiveOp,
-	}
-
-	// Since we only support sender as the payer/proposer, we never expect any payload signatures.
-	if len(tx.PayloadSignatures) > 0 {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidSignature{
-			Description: failure.NewDescription("unexpected payload signature found",
-				failure.WithInt("signatures", len(tx.PayloadSignatures))),
-		}
-	}
-
-	// We may be parsing an unsigned transaction - if that's the case, we're done.
-	if len(tx.EnvelopeSignatures) == 0 {
-		return rosettaBlockID(height, blockID), 0, ops, nil, nil
-	}
-
-	// We don't support multiple signatures.
-	if len(tx.EnvelopeSignatures) > 1 {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidSignature{
-			Description: failure.NewDescription("unexpected envelope signatures found",
-				failure.WithInt("signatures", len(tx.EnvelopeSignatures))),
-		}
-	}
-
-	// Validate that it is the sender who signed the transaction.
-	signer := tx.EnvelopeSignatures[0].Address
-	if signer != authorizer {
-		return identifier.Block{}, 0, nil, nil, failure.InvalidSignature{
-			Description: failure.NewDescription("invalid signer account",
-				failure.WithString("have_signer", signer.String()),
-				failure.WithString("want_signer", authorizer.String()),
-				failure.WithString("signature", hex.EncodeToString(tx.EnvelopeSignatures[0].Signature))),
-		}
-	}
-
-	// Check that the signature is valid.
-	address := flow.BytesToAddress(signer[:])
-	err = t.verifySignature(payload, address)
-	if err != nil {
-		return identifier.Block{}, 0, nil, nil, fmt.Errorf("could not verify signature: %w", err)
-	}
-
-	// Create the signers list.
-	signers := []identifier.Account{
-		sender,
-	}
-
-	return rosettaBlockID(height, blockID), tx.ProposalKey.SequenceNumber, ops, signers, nil
-}
-
 // AttachSignatures adds the given signatures to the transaction.
 func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signature) (string, error) {
 
@@ -539,58 +338,6 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 	return signed, nil
 }
 
-func (t *Transactor) verifySignature(signed string, address flow.Address) error {
-
-	signedTx, err := t.decodeTransaction(signed)
-	if err != nil {
-		return fmt.Errorf("could not decode transaction: %w", err)
-	}
-
-	if len(signedTx.EnvelopeSignatures) != 1 {
-		return failure.InvalidSignature{
-			Description: failure.NewDescription("invalid number of signatures",
-				failure.WithInt("signatures", len(signedTx.EnvelopeSignatures))),
-		}
-	}
-
-	rosBlockID := identifier.Block{Hash: signedTx.ReferenceBlockID.Hex()}
-	height, _, err := t.validate.Block(rosBlockID)
-	if err != nil {
-		return fmt.Errorf("could not validate block: %w", err)
-	}
-
-	key, err := t.invoke.Key(height, address, 0)
-	if err != nil {
-		return fmt.Errorf("could not retrieve key: %w", err)
-	}
-
-	// NOTE: signature verification is ported from the DefaultSignatureVerifier
-	// => https://github.com/onflow/flow-go/blob/master/fvm/crypto/crypto.go
-	hasher, err := crypto.NewHasher(key.HashAlgo)
-	if err != nil {
-		return fmt.Errorf("could not get new hasher: %w", err)
-	}
-
-	message := signedTx.EnvelopeMessage()
-	message = append(sdk.TransactionDomainTag[:], message...)
-
-	signature := signedTx.EnvelopeSignatures[0].Signature
-
-	valid, err := key.PublicKey.Verify(signature, message, hasher)
-	if err != nil {
-		return fmt.Errorf("could not verify transaction signature: %w", err)
-	}
-
-	if !valid {
-		return failure.InvalidSignature{
-			Description: failure.NewDescription("provided signature is not valid",
-				failure.WithString("signature", hex.EncodeToString(signature))),
-		}
-	}
-
-	return nil
-}
-
 func (t *Transactor) TransactionIdentifier(signed string) (identifier.Transaction, error) {
 
 	signedTx, err := t.decodeTransaction(signed)
@@ -651,4 +398,24 @@ func (t *Transactor) decodeTransaction(payload string) (*sdk.Transaction, error)
 	}
 
 	return &tx, nil
+}
+
+// Parse processes the flow transaction, validates its correctness and translates it
+// to a list of operations and a list of signers.
+func (t *Transactor) Parse(payload string) (Parser, error) {
+	tx, err := t.decodeTransaction(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	p := TransactionParser{
+		tx:       tx,
+		validate: t.validate,
+		generate: t.generate,
+		invoke:   t.invoke,
+	}
+
+	return &p, nil
+
+	return nil, err
 }

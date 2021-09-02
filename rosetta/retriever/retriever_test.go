@@ -181,7 +181,6 @@ func TestRetriever_Balances(t *testing.T) {
 			assert.Equal(t, []byte(`test`), script)
 			require.Len(t, parameters, 1)
 			assert.Equal(t, address, parameters[0])
-
 			return mocks.GenericAmount(0), nil
 		}
 
@@ -470,6 +469,10 @@ func TestRetriever_Block(t *testing.T) {
 			return mocks.GenericTransactionIDs(6), nil
 		}
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return events, nil
+		}
+		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 			assert.Equal(t, header.Height, height)
 
 			return events, nil
@@ -638,6 +641,29 @@ func TestRetriever_Block(t *testing.T) {
 	t.Run("handles event converter failure", func(t *testing.T) {
 		t.Parallel()
 
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return mocks.GenericHeader, nil
+		}
+		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return mocks.GenericTransactionIDs(6), nil
+		}
+		validator := mocks.BaselineValidator(t)
+		validator.BlockFunc = func(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
+			assert.Equal(t, mocks.GenericRosBlockID, rosBlockID)
+			return mocks.GenericHeader.Height, mocks.GenericHeader.ID(), nil
+		}
+		generator := mocks.BaselineGenerator(t)
+		generator.TokensDepositedFunc = func(symbol string) (string, error) {
+			assert.Equal(t, symbol, dps.FlowSymbol)
+			return string(mocks.GenericEventType(0)), nil
+		}
+		generator.TokensWithdrawnFunc = func(symbol string) (string, error) {
+			assert.Equal(t, symbol, dps.FlowSymbol)
+			return string(mocks.GenericEventType(1)), nil
+		}
 		convert := mocks.BaselineConverter(t)
 		convert.EventToOperationFunc = func(flow.Event) (*object.Operation, error) {
 			return nil, mocks.GenericError
@@ -869,7 +895,114 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		ret := retriever.BaselineRetriever(t, retriever.WithConverter(convert))
 
-		_, err := ret.Transaction(rosBlockID, mocks.GenericTransactionQualifier(0))
+		_, err := ret.Transaction(mocks.GenericRosBlockID, mocks.GenericTransactionQualifier(0))
+
+		assert.Error(t, err)
+	})
+}
+
+func TestRetriever_Sequence(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		validator := mocks.BaselineValidator(t)
+		validator.BlockFunc = func(blockID identifier.Block) (uint64, flow.Identifier, error) {
+			assert.Equal(t, mocks.GenericRosBlockID, blockID)
+
+			return mocks.GenericHeight, flow.ZeroID, nil
+		}
+		validator.AccountFunc = func(accountID identifier.Account) (flow.Address, error) {
+			assert.Equal(t, mocks.GenericAccountID(0), accountID)
+
+			return mocks.GenericAddress(0), nil
+		}
+
+		invoker := mocks.BaselineInvoker(t)
+		invoker.KeyFunc = func(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			assert.Equal(t, mocks.GenericAddress(0), address)
+			assert.Equal(t, 0, index)
+
+			return &mocks.GenericAccount.Keys[0], nil
+		}
+
+		ret := retriever.New(
+			mocks.GenericParams,
+			mocks.BaselineReader(t),
+			validator,
+			mocks.BaselineGenerator(t),
+			invoker,
+			mocks.BaselineConverter(t),
+		)
+
+		seqNum, err := ret.Sequence(mocks.GenericRosBlockID, mocks.GenericAccountID(0), 0)
+
+		assert.NoError(t, err)
+		assert.Equal(t, mocks.GenericAccount.Keys[0].SeqNumber, seqNum)
+	})
+
+	t.Run("handles validator failure on block", func(t *testing.T) {
+		t.Parallel()
+
+		validator := mocks.BaselineValidator(t)
+		validator.BlockFunc = func(identifier.Block) (uint64, flow.Identifier, error) {
+			return 0, flow.ZeroID, mocks.GenericError
+		}
+
+		ret := retriever.New(
+			mocks.GenericParams,
+			mocks.BaselineReader(t),
+			validator,
+			mocks.BaselineGenerator(t),
+			mocks.BaselineInvoker(t),
+			mocks.BaselineConverter(t),
+		)
+
+		_, err := ret.Sequence(mocks.GenericRosBlockID, mocks.GenericAccountID(0), 0)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles validator failure on account", func(t *testing.T) {
+		t.Parallel()
+
+		validator := mocks.BaselineValidator(t)
+		validator.AccountFunc = func(identifier.Account) (flow.Address, error) {
+			return flow.EmptyAddress, mocks.GenericError
+		}
+
+		ret := retriever.New(
+			mocks.GenericParams,
+			mocks.BaselineReader(t),
+			validator,
+			mocks.BaselineGenerator(t),
+			mocks.BaselineInvoker(t),
+			mocks.BaselineConverter(t),
+		)
+
+		_, err := ret.Sequence(mocks.GenericRosBlockID, mocks.GenericAccountID(0), 0)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles invoker failure on key", func(t *testing.T) {
+		t.Parallel()
+
+		invoker := mocks.BaselineInvoker(t)
+		invoker.KeyFunc = func(uint64, flow.Address, int) (*flow.AccountPublicKey, error) {
+			return nil, mocks.GenericError
+		}
+
+		ret := retriever.New(
+			mocks.GenericParams,
+			mocks.BaselineReader(t),
+			mocks.BaselineValidator(t),
+			mocks.BaselineGenerator(t),
+			invoker,
+			mocks.BaselineConverter(t),
+		)
+
+		_, err := ret.Sequence(mocks.GenericRosBlockID, mocks.GenericAccountID(0), 0)
 
 		assert.Error(t, err)
 	})
