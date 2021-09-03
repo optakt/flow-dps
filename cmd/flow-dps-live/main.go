@@ -141,8 +141,8 @@ func run() int {
 
 	// Initialize the index reader and check whether there is already an index
 	// in the database at the provided index database directory.
-	reader := index.NewReader(db, storage)
-	_, err = reader.First()
+	read := index.NewReader(db, storage)
+	_, err = read.First()
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		log.Error().Err(err).Msg("could not get first height from index reader")
 		return failure
@@ -173,7 +173,7 @@ func run() int {
 		}
 	}()
 	bucket := client.Bucket(flagBucket)
-	stream := cloud.NewGCPStream(log, bucket)
+	stream := cloud.NewGCPStreamer(log, bucket)
 	execution := follower.NewExecution(log, stream)
 
 	// Initialize the consensus follower, which uses the protocol state to
@@ -274,7 +274,7 @@ func run() int {
 			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
 		),
 	)
-	server := api.NewServer(reader, codec)
+	server := api.NewServer(read, codec)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

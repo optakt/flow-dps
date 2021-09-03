@@ -33,7 +33,7 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-type GCPStream struct {
+type GCPStreamer struct {
 	log      zerolog.Logger
 	bucket   *storage.BucketHandle
 	validate *validator.Validate
@@ -43,9 +43,9 @@ type GCPStream struct {
 	limit    uint
 }
 
-func NewGCPStream(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStream {
+func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStreamer {
 
-	g := GCPStream{
+	g := GCPStreamer{
 		log:      log,
 		bucket:   bucket,
 		validate: validator.New(),
@@ -58,7 +58,7 @@ func NewGCPStream(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStream {
 	return &g
 }
 
-func (g *GCPStream) Next() (*uploader.BlockData, error) {
+func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
 	g.wg.Add(1)
 	go g.poll()
 
@@ -74,7 +74,7 @@ func (g *GCPStream) Next() (*uploader.BlockData, error) {
 	return record.(*uploader.BlockData), nil
 }
 
-func (g *GCPStream) poll() {
+func (g *GCPStreamer) poll() {
 	defer g.wg.Done()
 
 	err := g.pull()
@@ -83,7 +83,7 @@ func (g *GCPStream) poll() {
 	}
 }
 
-func (g *GCPStream) pull() error {
+func (g *GCPStreamer) pull() error {
 
 	// We only want to retrieve and process files until the buffer is full. We
 	// do not need to have a big buffer, we just want to avoid HTTP request
@@ -143,7 +143,7 @@ func (g *GCPStream) pull() error {
 	return nil
 }
 
-func (g *GCPStream) pullRecord(name string) (*uploader.BlockData, error) {
+func (g *GCPStreamer) pullRecord(name string) (*uploader.BlockData, error) {
 
 	object := g.bucket.Object(name)
 	reader, err := object.NewReader(context.Background())
