@@ -82,10 +82,10 @@ func run() int {
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
-	pflag.StringVarP(&flagBootstrap, "bootstrap", "b", "", "path to directory with public bootstrap information for the spork")
+	pflag.StringVarP(&flagBootstrap, "bootstrap", "b", "bootstrap", "path to directory with public bootstrap information for the spork")
 	pflag.StringVarP(&flagBucket, "bucket", "u", "", "name of the Google Cloud Storage bucket which contains the block data")
-	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
-	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "checkpoint file for state trie")
+	pflag.StringVarP(&flagData, "data", "d", "data", "database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
