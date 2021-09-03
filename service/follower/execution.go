@@ -28,10 +28,10 @@ type Execution struct {
 	log    zerolog.Logger
 	reader CloudReader
 	queue  *deque.Deque
-	data   map[flow.Identifier]item
+	data   map[flow.Identifier]exeItem
 }
 
-type item struct {
+type exeItem struct {
 	height       uint64
 	commit       flow.StateCommitment
 	collections  []*flow.LightCollection
@@ -46,7 +46,7 @@ func NewExecution(log zerolog.Logger, reader CloudReader) *Execution {
 		log:    log,
 		reader: reader,
 		queue:  deque.New(),
-		data:   make(map[flow.Identifier]item),
+		data:   make(map[flow.Identifier]exeItem),
 	}
 
 	return &s
@@ -81,24 +81,10 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 	return e.Update()
 }
 
-// commit => execution follower
-// collections => execution follower
-// results => execution follower
-// events => execution follower
-// transactions => execution follower
-
-func (e *Execution) Prune(height uint64) {
-	for blockID, data := range e.data {
-		if data.height <= height {
-			delete(e.data, blockID)
-		}
-	}
-}
-
 func (e *Execution) Commit(blockID flow.Identifier) (flow.StateCommitment, bool) {
 	it, ok := e.data[blockID]
 	if !ok {
-		return flow.StateCommitment{}, false
+		return flow.DummyStateCommitment, false
 	}
 	return it.commit, true
 }
@@ -141,7 +127,7 @@ func (e *Execution) indexRecord(record *Record) error {
 	blockID := record.Header.ID()
 	_, ok := e.data[blockID]
 	if ok {
-		return fmt.Errorf("duplicate block ID for block data (block: %x)", blockID)
+		return fmt.Errorf("execution data duplicate (block: %x)", blockID)
 	}
 
 	// Extract the light collections from the block data.
@@ -166,7 +152,7 @@ func (e *Execution) indexRecord(record *Record) error {
 	}
 
 	// Create and store the item.
-	it := item{
+	it := exeItem{
 		height:       record.Header.Height, // needed only for pruning
 		commit:       record.Commit,
 		collections:  collections,

@@ -139,7 +139,7 @@ func TestLibrary_SaveAndRetrieveCommit(t *testing.T) {
 
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
-			assert.IsType(t, flow.StateCommitment{}, v)
+			assert.IsType(t, flow.DummyStateCommitment, v)
 			return mocks.GenericLedgerValue(0), nil
 		}
 
@@ -161,7 +161,7 @@ func TestLibrary_SaveAndRetrieveCommit(t *testing.T) {
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
 			assert.Equal(t, mocks.GenericBytes, b)
-			assert.IsType(t, &flow.StateCommitment{}, v)
+			assert.IsType(t, &flow.DummyStateCommitment, v)
 			decodeCallCount++
 
 			return nil

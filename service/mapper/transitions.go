@@ -72,12 +72,12 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// block. We thus introduce an empty tree, with no paths and an
 	// irrelevant previous commit.
 	empty := trie.NewEmptyMTrie()
-	s.forest.Save(empty, nil, flow.StateCommitment{})
+	s.forest.Save(empty, nil, flow.DummyStateCommitment)
 
 	// The chain indexing will forward last to next and next to current height,
 	// which will be the one for the checkpoint.
 	first := flow.StateCommitment(empty.RootHash())
-	s.last = flow.StateCommitment{}
+	s.last = flow.DummyStateCommitment
 	s.next = first
 
 	t.log.Info().Hex("commit", first[:]).Msg("added empty tree to forest")
@@ -351,10 +351,6 @@ func (t *Transitions) IndexChain(s *State) error {
 	}
 	s.last = s.next
 	s.next = commit
-
-	// header => consensus follower
-	// guarantees => consensus follower
-	// seals => consensus follower
 
 	// After that, we index all chain data that is configured for being indexed
 	// currently.

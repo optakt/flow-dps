@@ -36,8 +36,8 @@ func EmptyState(forest Forest) *State {
 		forest:    forest,
 		status:    StatusEmpty,
 		height:    math.MaxUint64,
-		last:      flow.StateCommitment{},
-		next:      flow.StateCommitment{},
+		last:      flow.DummyStateCommitment,
+		next:      flow.DummyStateCommitment,
 		registers: make(map[ledger.Path]*ledger.Payload),
 		done:      make(chan struct{}),
 	}

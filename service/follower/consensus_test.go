@@ -16,7 +16,6 @@ package follower_test
 
 import (
 	"bytes"
-	"io"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -25,7 +24,7 @@ import (
 
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/optakt/flow-dps/follower/consensus"
+	"github.com/optakt/flow-dps/service/follower"
 	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
@@ -42,10 +41,11 @@ func TestFollower_OnBlockFinalized(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		require.NoError(t, db.Update(operation.InsertFinalizedHeight(mocks.GenericHeight)))
 
-		follower := consensus.New(log, db)
-		require.NotNil(t, follower)
+		// FIXME: inject execution
+		follow := follower.NewConsensus(log, db, nil)
+		require.NotNil(t, follow)
 
-		follower.OnBlockFinalized(want)
+		follow.OnBlockFinalized(want)
 
 		assert.Empty(t, buffer.Bytes())
 	})
@@ -60,47 +60,12 @@ func TestFollower_OnBlockFinalized(t *testing.T) {
 		// Do not insert finalized height to trigger the failure.
 		db := helpers.InMemoryDB(t)
 
-		follower := consensus.New(log, db)
-		require.NotNil(t, follower)
+		// FIXME: inject execution
+		follow := follower.NewConsensus(log, db, nil)
+		require.NotNil(t, follow)
 
-		follower.OnBlockFinalized(blockID)
+		follow.OnBlockFinalized(blockID)
 
 		assert.NotEmpty(t, buffer.Bytes())
 	})
-}
-
-func TestFollower_Height(t *testing.T) {
-	want := mocks.GenericHeight
-
-	log := zerolog.New(io.Discard)
-
-	db := helpers.InMemoryDB(t)
-	require.NoError(t, db.Update(operation.InsertFinalizedHeight(want)))
-
-	follower := consensus.New(log, db)
-	require.NotNil(t, follower)
-
-	follower.OnBlockFinalized(mocks.GenericIdentifier(0))
-
-	got := follower.Height()
-
-	assert.Equal(t, mocks.GenericHeight, got)
-}
-
-func TestFollower_BlockID(t *testing.T) {
-	want := mocks.GenericIdentifier(0)
-
-	log := zerolog.New(io.Discard)
-
-	db := helpers.InMemoryDB(t)
-	require.NoError(t, db.Update(operation.InsertFinalizedHeight(mocks.GenericHeight)))
-
-	follower := consensus.New(log, db)
-	require.NotNil(t, follower)
-
-	follower.OnBlockFinalized(want)
-
-	got := follower.BlockID()
-
-	assert.Equal(t, want, got)
 }

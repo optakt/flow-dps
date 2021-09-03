@@ -17,109 +17,12 @@ package execution
 import (
 	"errors"
 	"fmt"
-	"math"
-
-	"github.com/dgraph-io/badger/v2"
-	"github.com/go-playground/validator/v10"
-	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
-
-const cacheSize = 1024
-
-type BlockReader interface {
-	Notify() <-chan string
-	Read(filename string) ([]byte, error)
-}
-
-type Follower struct {
-	log zerolog.Logger
-
-	blocks   BlockReader
-	codec    dps.Codec
-	db       *badger.DB
-	validate *validator.Validate
-
-	// FIXME: Index by block ID instead of height.
-	data    map[uint64]*BlockData
-	current *BlockData
-	height  uint64
-	index   int
-
-	stop chan struct{}
-}
-
-func New(log zerolog.Logger, blocks BlockReader, codec dps.Codec, db *badger.DB) *Follower {
-	f := Follower{
-		log: log,
-
-		blocks:   blocks,
-		codec:    codec,
-		db:       db,
-		validate: validator.New(),
-
-		height: math.MaxUint64,
-		data:   make(map[uint64]*BlockData, cacheSize),
-
-		stop: make(chan struct{}),
-	}
-
-	return &f
-}
-
-// Run launches the execution follower.
-func (f *Follower) Run() error {
-	for {
-		select {
-		case <-f.stop:
-			return nil
-		default:
-		}
-
-		// If cache is already full, wait for items to get consumed.
-		if len(f.data) == cacheSize {
-			continue
-		}
-
-		// If cache has available space, wait for new block data to be available.
-		select {
-		case <-f.stop:
-			return nil
-		case file := <-f.blocks.Notify():
-			b, err := f.blocks.Read(file)
-			if err != nil {
-				return fmt.Errorf("could not read block data: %w", err)
-			}
-
-			var data BlockData
-			err = f.codec.Unmarshal(b, &data)
-			if err != nil {
-				return fmt.Errorf("could not decode block data: %w", err)
-			}
-			err = f.validate.Struct(data)
-			if err != nil {
-				return fmt.Errorf("invalid block data: %w", err)
-			}
-
-			f.data[data.Block.Header.Height] = &data
-
-			// FIXME: Rewrite this in a more elegant way
-			// This should only ever happen once, when we get the oldest available block.
-			if data.Block.Header.Height < f.height {
-				if f.height != math.MaxUint64 {
-					// This should never happen, it would mean we received blocks in an
-					// incorrect order!
-					return fmt.Errorf("fatal discrepancy: received block data in incorrect order")
-				}
-				f.height = data.Block.Header.Height
-			}
-		}
-	}
-}
 
 // Update returns the next trie update, in chronological order. It is also in charge of moving onto the next
 func (f *Follower) Update() (*ledger.TrieUpdate, error) {

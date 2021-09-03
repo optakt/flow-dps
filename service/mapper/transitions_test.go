@@ -670,7 +670,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 		chain := mocks.BaselineChain(t)
 		chain.CommitFunc = func(height uint64) (flow.StateCommitment, error) {
-			return flow.StateCommitment{}, mocks.GenericError
+			return flow.DummyStateCommitment, mocks.GenericError
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
