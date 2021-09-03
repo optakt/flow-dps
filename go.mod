@@ -3,7 +3,7 @@ module github.com/optakt/flow-dps
 go 1.16
 
 require (
-	cloud.google.com/go/storage v1.10.0
+	cloud.google.com/go/storage v1.16.0
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/dgraph-io/badger/v2 v2.2007.2
@@ -19,7 +19,7 @@ require (
 	github.com/klauspost/compress v1.12.2
 	github.com/labstack/echo/v4 v4.3.0
 	github.com/onflow/cadence v0.18.1-0.20210730161646-b891a21c51fd
-	github.com/onflow/flow-go v0.19.0-rc2.0.20210821041734-ac090a188c97
+	github.com/onflow/flow-go v0.21.1-0.20210902191426-dc8cab22d99b
 	github.com/onflow/flow-go-sdk v0.21.0
 	github.com/onflow/flow/protobuf/go/flow v0.2.2
 	github.com/prometheus/tsdb v0.7.1
@@ -30,8 +30,8 @@ require (
 	github.com/ziflex/lecho/v2 v2.3.1
 	golang.org/x/mod v0.4.2
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/api v0.31.0
-	google.golang.org/grpc v1.37.1
+	google.golang.org/api v0.49.0
+	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.27.1
 )
 

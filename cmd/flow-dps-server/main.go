@@ -16,7 +16,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -56,14 +55,14 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagLevel string
-		flagIndex string
-		flagPort  uint16
+		flagAddress string
+		flagLevel   string
+		flagIndex   string
 	)
 
+	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
 
 	pflag.Parse()
 
@@ -109,9 +108,9 @@ func run() int {
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
-	listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
+	listener, err := net.Listen("tcp", flagAddress)
 	if err != nil {
-		log.Error().Uint16("port", flagPort).Err(err).Msg("could not listen")
+		log.Error().Str("address", flagAddress).Err(err).Msg("could not create listener")
 		return failure
 	}
 	done := make(chan struct{})

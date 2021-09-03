@@ -15,7 +15,6 @@
 package mapper
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -68,7 +67,7 @@ func (f *FSM) Run() error {
 	}
 }
 
-func (f *FSM) Stop(ctx context.Context) error {
+func (f *FSM) Stop() error {
 	close(f.state.done)
 	f.wg.Wait()
 	return nil

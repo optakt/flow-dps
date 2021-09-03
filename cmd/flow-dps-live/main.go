@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -37,12 +36,9 @@ import (
 
 	"github.com/onflow/flow-go-sdk/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
-	"github.com/onflow/flow-go/model/flow"
 
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/metrics/output"
-	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/cloud"
 	"github.com/optakt/flow-dps/service/follower"
@@ -50,7 +46,6 @@ import (
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
-	"github.com/optakt/flow-dps/service/metrics"
 	"github.com/optakt/flow-dps/service/storage"
 )
 
@@ -71,34 +66,30 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagBindAddr        string
-		flagBucket          string
-		flagCheckpoint      string
-		flagData            string
-		flagForce           bool
-		flagIndex           string
-		flagLevel           string
-		flagMetrics         bool
-		flagMetricsInterval time.Duration
-		flagNodeID          string
-		flagPeerAddr        string
-		flagPeerKey         string
-		flagPort            uint16
+		flagAddress     string
+		flagIndex       string
+		flagLevel       string
+		flagData        string
+		flagBucket      string
+		flagCheckpoint  string
+		flagForce       bool
+		flagSeedAddress string
+		flagSeedKey     string
+		flagPrivateKey  string
 	)
 
-	pflag.StringVar(&flagBindAddr, "bind-addr", "127.0.0.1:5006", "address on which to bind the FIXME")
+	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVar(&flagBucket, "bucket", "", "name of the Google Cloud Storage bucket which contains the block data")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.BoolVarP(&flagMetrics, "metrics", "m", false, "enable metrics collection and output")
-	pflag.DurationVar(&flagMetricsInterval, "metrics-interval", 5*time.Minute, "defines the interval of metrics output to log")
-	pflag.StringVarP(&flagNodeID, "node-id", "n", "", "node id to use for the DPS")
-	pflag.StringVar(&flagPeerAddr, "access-address", "", "address (host:port) of the peer to connect to")
-	pflag.StringVar(&flagPeerKey, "access-key", "", "network public key of the peer to connect to")
-	pflag.Uint16VarP(&flagPort, "port", "p", 5005, "port to serve GRPC API on")
+	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus (host:port)")
+	pflag.StringVar(&flagSeedKey, "seed-key", "", "public network key of the seed node to follow unstaked consensus (hex)")
+	pflag.StringVar(&flagPrivateKey, "private-key", "", "path to private network key to follow unstaked consensus (file)")
 
 	pflag.Parse()
 
@@ -116,121 +107,134 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// Open index database.
+	// Open DPS index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index database")
 		return failure
 	}
-	defer db.Close()
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close index database")
+		}
+	}()
 
 	// Open protocol state database.
 	data, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
-		log.Error().Err(err).Msg("could not open blockchain database")
+		log.Error().Err(err).Msg("could not open protocol state database")
 		return failure
 	}
-	defer data.Close()
-
-	// We initialize a metrics logger regardless of whether metrics are enabled;
-	// it will just do nothing if there are no registered metrics.
-	mout := output.New(log, flagMetricsInterval)
+	defer func() {
+		err := data.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close protocol state database")
+		}
+	}()
 
 	// The storage library is initialized with a codec and provides functions to
 	// interact with a Badger database while encoding and compressing
 	// transparently.
-	var codec dps.Codec
-	codec = zbor.NewCodec()
-	if flagMetrics {
-		size := rcrowley.NewSize("store")
-		mout.Register(size)
-		codec = metrics.NewCodec(codec, size)
-	}
+	codec := zbor.NewCodec()
 	storage := storage.New(codec)
 
-	// Check if index already exists.
-	_, err = index.NewReader(db, storage).First()
+	// Initialize the index reader and check whether there is already an index
+	// in the database at the provided index database directory.
+	reader := index.NewReader(db, storage)
+	_, err = reader.First()
+	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+		log.Error().Err(err).Msg("could not get first height from index reader")
+		return failure
+	}
 	indexExists := err == nil
 	if indexExists && !flagForce {
 		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
 		return failure
 	}
 
-	// The loader component is responsible for loading and decoding the checkpoint.
+	// Initialize the loader component, which is responsible for loading,
+	// decoding and providing indexing for the root checkpoint.
 	load := loader.New(
 		loader.WithCheckpointPath(flagCheckpoint),
 	)
 
-	nodeID, err := flow.HexStringToIdentifier(flagNodeID)
-	if err != nil {
-		log.Error().Err(err).Msg("invalid node ID")
-		return failure
-	}
-
-	ctx := context.Background()
-	client, err := googlecloud.NewClient(ctx)
+	// Initialize the execution follower that will read block records from the
+	// Google Cloud Platform bucket.
+	client, err := googlecloud.NewClient(context.Background())
 	if err != nil {
 		log.Error().Err(err).Msg("could not connect to Google Cloud Platform")
 		return failure
 	}
-
-	// Initialize the execution follower that will read block records from the
-	// Google Cloud Platform bucket.
+	defer func() {
+		err := client.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close google cloud client")
+		}
+	}()
 	bucket := client.Bucket(flagBucket)
 	stream := cloud.NewGCPStream(log, bucket, codec)
 	execution := follower.NewExecution(log, stream)
 
-	// Initialize the consensus follower that will use the unstaked consensus
-	// follower from Flow Go to track finalized block information.
-	host, portStr, err := net.SplitHostPort(flagPeerAddr)
-	if err != nil {
-		log.Error().Err(err).Str("address", flagPeerAddr).Msg("could not parse peer address")
-		return failure
-	}
-	port, err := strconv.ParseUint(portStr, 10, 64)
-	if err != nil {
-		log.Error().Err(err).Str("address", flagPeerAddr).Msg("could not parse peer port")
-		return failure
-	}
-	key, err := crypto.DecodePublicKeyHex(crypto.ECDSA_P256, flagPeerKey)
-	if err != nil {
-		log.Error().Err(err).Str("key", flagPeerKey).Msg("could not parse peer public key")
-		return failure
-	}
-	accessNodeIdentity := unstaked.BootstrapNodeInfo{
-		Host:             host,
-		Port:             uint(port),
-		NetworkPublicKey: key,
-	}
-	// FIXME: Inject the protocol state database once it is exposed.
-	consensus := follower.NewConsensus(log, nil, execution)
+	// Initialize the consensus follower, which uses the protocol state to
+	// retrieve data from consensus and the execution follower to complement
+	// the data with complete blocks.
+	consensus := follower.NewConsensus(log, data, execution)
 
-	follower, err := unstaked.NewConsensusFollower(nodeID, []unstaked.BootstrapNodeInfo{accessNodeIdentity}, flagBindAddr, unstaked.WithDataDir(flagData))
+	// Initialize the unstaked consensus follower. It connects to a staked
+	// access node for bootstrapping the peer-to-peer network with other
+	// staked access nodes and unstaked consensus followers. For every finalized
+	// block, it calls the provided callback, which lets the DPS consensus
+	// follower update its data.
+	seedHost, port, err := net.SplitHostPort(flagSeedAddress)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Str("bucket", flagBucket).
-			Msg("could not create consensus follower")
+		log.Error().Err(err).Str("address", flagSeedAddress).Msg("could not parse seed node address")
+		return failure
+	}
+	seedPort, err := strconv.ParseUint(port, 10, 16)
+	if err != nil {
+		log.Error().Err(err).Str("port", port).Msg("could not parse seed node port")
+		return failure
+	}
+	seedKey, err := crypto.DecodePublicKeyHex(crypto.ECDSA_P256, flagSeedKey)
+	if err != nil {
+		log.Error().Err(err).Str("key", flagSeedKey).Msg("could not parse seed node network public key")
+		return failure
+	}
+	seedNode := unstaked.BootstrapNodeInfo{
+		Host:             seedHost,
+		Port:             uint(seedPort),
+		NetworkPublicKey: seedKey,
+	}
+	privKey, err := crypto.DecodePrivateKeyHex(crypto.ECDSA_P256, flagPrivateKey)
+	if err != nil {
+		log.Error().Err(err).Str("key", flagPrivateKey).Msg("could not parse network private key")
+		return failure
+	}
+	follower, err := unstaked.NewConsensusFollower(
+		privKey,
+		flagAddress,
+		[]unstaked.BootstrapNodeInfo{seedNode},
+		unstaked.WithDB(db),
+	)
+	if err != nil {
+		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
 		return failure
 	}
 	follower.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
-	// Writer is responsible for writing the index data to the index database.
-	writer := index.NewWriter(db, storage)
+	// Initialize the index writer, which is responsible for writing the chain
+	// and execution data to the index database.
+	write := index.NewWriter(db, storage)
 	defer func() {
-		err := writer.Close()
+		err := write.Close()
 		if err != nil {
-			log.Error().Err(err).Msg("could not close index")
+			log.Error().Err(err).Msg("could not close index writer")
 		}
 	}()
-	write := dps.Writer(writer)
-	if flagMetrics {
-		time := rcrowley.NewTime("write")
-		mout.Register(time)
-		write = metrics.NewWriter(write, time)
-	}
 
-	// Initialize the transitions with the dependencies and add them to the FSM.
+	// Initialize the state transition library, the finite-state machine (FSM)
+	// and then register the desired state transitions with the FSM.
 	transitions := mapper.NewTransitions(log, load, consensus, execution, write,
 		mapper.WithIndexCommit(true),
 		mapper.WithIndexHeader(true),
@@ -253,7 +257,7 @@ func run() int {
 		mapper.WithTransition(mapper.StatusForwarded, transitions.IndexChain),
 	)
 
-	// GRPC API initialization.
+	// Initialize the GRPC server for the DPS API.
 	opts := []logging.Option{
 		logging.WithLevels(logging.DefaultServerCodeToLevel),
 	}
@@ -267,15 +271,14 @@ func run() int {
 			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
 		),
 	)
-	reader := index.NewReader(db, storage)
 	server := api.NewServer(reader, codec)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
-	listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
+	listener, err := net.Listen("tcp", flagAddress)
 	if err != nil {
-		log.Error().Uint16("port", flagPort).Err(err).Msg("could not listen")
+		log.Error().Str("address", flagAddress).Err(err).Msg("could not create listener")
 		return failure
 	}
 	done := make(chan struct{})
@@ -306,17 +309,6 @@ func run() int {
 		}
 		log.Info().Msg("Flow DPS Live Server stopped")
 	}()
-	ctx, cancel := context.WithCancel(ctx)
-	go func() {
-		log.Info().Msg("Consensus follower starting")
-		follower.Run(ctx)
-		log.Info().Msg("Consensus follower stopped")
-	}()
-
-	// Start metrics output.
-	if flagMetrics {
-		mout.Run()
-	}
 
 	select {
 	case <-sig:
@@ -325,7 +317,6 @@ func run() int {
 		log.Info().Msg("Flow DPS Indexer done")
 	case <-failed:
 		log.Warn().Msg("Flow DPS Indexer aborted")
-		cancel()
 		return failure
 	}
 	go func() {
@@ -337,21 +328,11 @@ func run() int {
 	// First, stop the DPS API to avoid failed requests.
 	gsvr.GracefulStop()
 
-	// Stop metrics output.
-	if flagMetrics {
-		mout.Stop()
-	}
-
-	// Stop consensus follower.
-	cancel()
-
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the
 	// allocated shutdown time. Otherwise, we will force the shutdown and log
 	// an error. We then wait for shutdown on each component to complete.
-	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	err = fsm.Stop(ctx)
+	err = fsm.Stop()
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
 		return failure

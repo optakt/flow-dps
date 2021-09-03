@@ -15,7 +15,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"runtime"
@@ -281,9 +280,7 @@ func run() int {
 	// sure that the main executing components are shutting down within the
 	// allocated shutdown time. Otherwise, we will force the shutdown and log
 	// an error. We then wait for shutdown on each component to complete.
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	err = fsm.Stop(ctx)
+	err = fsm.Stop()
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
 		return failure
