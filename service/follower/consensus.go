@@ -55,6 +55,7 @@ func NewConsensus(log zerolog.Logger, db *badger.DB, execution *Execution) *Cons
 
 // Header returns the header for the given height, if available.
 func (c *Consensus) Header(height uint64) (*flow.Header, error) {
+	c.purge(height)
 	it, ok := c.data[height]
 	if !ok {
 		return nil, dps.ErrUnavailable
@@ -199,4 +200,12 @@ func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 		seals:      seals,
 	}
 	c.data[header.Height] = it
+}
+
+func (c *Consensus) purge(threshold uint64) {
+	for height := range c.data {
+		if height < threshold {
+			delete(c.data, height)
+		}
+	}
 }

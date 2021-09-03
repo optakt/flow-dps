@@ -86,6 +86,7 @@ func (e *Execution) Commit(blockID flow.Identifier) (flow.StateCommitment, bool)
 	if !ok {
 		return flow.DummyStateCommitment, false
 	}
+	e.purge(it.height)
 	return it.commit, true
 }
 
@@ -164,4 +165,12 @@ func (e *Execution) indexRecord(record *Record) error {
 	e.data[blockID] = it
 
 	return nil
+}
+
+func (e *Execution) purge(threshold uint64) {
+	for blockID, it := range e.data {
+		if it.height < threshold {
+			delete(e.data, blockID)
+		}
+	}
 }
