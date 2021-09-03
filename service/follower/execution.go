@@ -70,6 +70,9 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 		return nil, fmt.Errorf("could not index block record: %w", err)
 	}
 
+	// This is a recursive function call. It allows us to skip past blocks which
+	// don't contain trie updates. It will stop recursing once a block has
+	// trie updates or when no more blocks are available from the streamer.
 	return e.Update()
 }
 

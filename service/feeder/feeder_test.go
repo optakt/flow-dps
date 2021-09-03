@@ -22,6 +22,7 @@ import (
 
 	"github.com/onflow/flow-go/ledger/common/encoding"
 	"github.com/onflow/flow-go/ledger/complete/wal"
+
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
 )

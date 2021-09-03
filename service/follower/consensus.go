@@ -26,8 +26,12 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-// Consensus is a wrapper around the database that the Flow consensus follower populates. It is used to
-// expose the current height and block ID of the consensus follower's last finalized block.
+// Consensus is the DPS consensus follower, which uses a local protocol state
+// database to retrieve consensus-dependent data, while falling back on an
+// record holder to complement the rest of the data. It provides a callback for
+// the unstaked consensus follower on the Flow network that allows it to update
+// the cached data each time a block is finalized.
+// Consensus implements the `Chain` interface needed by the DPS indexer.
 type Consensus struct {
 	log      zerolog.Logger
 	db       *badger.DB
@@ -35,7 +39,9 @@ type Consensus struct {
 	payloads map[uint64]*Payload
 }
 
-// NewConsensus returns a new Consensus instance.
+// NewConsensus returns a new instance of the DPS consensus follower, reading
+// from the provided protocol state database and the provided block record
+// holder.
 func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) *Consensus {
 	f := Consensus{
 		log:      log,
@@ -103,6 +109,8 @@ func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
 	return flow.DummyStateCommitment, nil
 }
 
+// Collections returns the light collections for the finalized block at the
+// given height.
 func (c *Consensus) Collections(height uint64) ([]*flow.LightCollection, error) {
 	payload, ok := c.payloads[height]
 	if !ok {
@@ -120,6 +128,8 @@ func (c *Consensus) Collections(height uint64) ([]*flow.LightCollection, error) 
 	return collections, nil
 }
 
+// Transactions returns the transaction bodies for the finalized block at the
+// given height.
 func (c *Consensus) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	payload, ok := c.payloads[height]
 	if !ok {
@@ -136,6 +146,8 @@ func (c *Consensus) Transactions(height uint64) ([]*flow.TransactionBody, error)
 	return transactions, nil
 }
 
+// Results returns the transaction results for the finalized block at the
+// given height.
 func (c *Consensus) Results(height uint64) ([]*flow.TransactionResult, error) {
 	payload, ok := c.payloads[height]
 	if !ok {
@@ -148,6 +160,8 @@ func (c *Consensus) Results(height uint64) ([]*flow.TransactionResult, error) {
 	return record.TxResults, nil
 }
 
+// Events returns the transaction events for the finalized block at the
+// given height.
 func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 	payload, ok := c.payloads[height]
 	if !ok {
@@ -164,7 +178,8 @@ func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 	return events, nil
 }
 
-// OnBlockFinalized is a callback that is used to update the state of the Consensus.
+// OnBlockFinalized is a callback that notifies the consensus follower of a new
+// finalized block.
 func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 	err := c.indexPayload(finalID)
 	if err != nil {
