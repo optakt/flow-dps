@@ -164,13 +164,13 @@ func run() int {
 	// Google Cloud Platform bucket.
 	client, err := googlecloud.NewClient(context.Background())
 	if err != nil {
-		log.Error().Err(err).Msg("could not connect to Google Cloud Platform")
+		log.Error().Err(err).Msg("could not connect GCP client")
 		return failure
 	}
 	defer func() {
 		err := client.Close()
 		if err != nil {
-			log.Error().Err(err).Msg("could not close google cloud client")
+			log.Error().Err(err).Msg("could not close GCP client")
 		}
 	}()
 	bucket := client.Bucket(flagBucket)
