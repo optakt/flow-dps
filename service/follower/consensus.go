@@ -63,7 +63,9 @@ func (c *Consensus) Root() (uint64, error) {
 	return height, nil
 }
 
-// Header returns the header for the given height, if available.
+// Header returns the header for the given height, if available. Once a header
+// has been successfully retrieved, all block payload data at a height lower
+// than the returned payload are purged from the cache.
 func (c *Consensus) Header(height uint64) (*flow.Header, error) {
 	c.purge(height)
 	payload, ok := c.payloads[height]

@@ -25,6 +25,10 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Execution is the DPS execution follower, which keeps track of updates to the
+// execution state. It retrieves block records (block data updates) from a
+// streamer and extracts the trie updates for consumers. It also makes the rest
+// of the block record data available for external consumers by block ID.
 type Execution struct {
 	log     zerolog.Logger
 	queue   *deque.Deque
@@ -32,6 +36,8 @@ type Execution struct {
 	records map[flow.Identifier]*uploader.BlockData
 }
 
+// NewExecution creates a new DPS execution follower, relying on the provided
+// stream of block records (block data updates).
 func NewExecution(log zerolog.Logger, stream RecordStreamer) *Execution {
 
 	s := Execution{
@@ -44,6 +50,9 @@ func NewExecution(log zerolog.Logger, stream RecordStreamer) *Execution {
 	return &s
 }
 
+// Update provides the next trie update from the stream of block records. Trie
+// updates are returned sequentially without regard for the boundary between
+// blocks.
 func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 
 	// If we have updates available in the queue, let's get the oldest one and
@@ -76,6 +85,9 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 	return e.Update()
 }
 
+// Record returns the block record for the given block ID, if it is available.
+// Once a block record is returned, all block records at a height lower than
+// the height of the returned record are purged from the cache.
 func (e *Execution) Record(blockID flow.Identifier) (*uploader.BlockData, bool) {
 	record, ok := e.records[blockID]
 	if !ok {
