@@ -58,7 +58,7 @@ func NewGCPStream(log zerolog.Logger, bucket *storage.BucketHandle, codec dps.Co
 
 func (g *GCPStream) Next() (*follower.Record, error) {
 	g.wg.Add(1)
-	defer g.poll()
+	go g.poll()
 
 	if g.buffer.Len() == 0 {
 		g.wg.Wait()
