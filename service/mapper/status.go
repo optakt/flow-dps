@@ -23,7 +23,6 @@ const (
 	StatusCollected
 	StatusIndexed
 	StatusForwarded
-	StatusWaiting
 )
 
 func (s Status) String() string {
@@ -40,8 +39,6 @@ func (s Status) String() string {
 		return "indexed"
 	case StatusForwarded:
 		return "forwarded"
-	case StatusWaiting:
-		return "waiting"
 	default:
 		return "invalid"
 	}

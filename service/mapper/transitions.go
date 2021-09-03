@@ -15,6 +15,7 @@
 package mapper
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -143,7 +144,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// branch of the execution forest.
 	update, err := t.feed.Update()
 	if err == dps.ErrUnavailable {
-		s.status = StatusWaiting
+		time.Sleep(t.cfg.WaitInterval)
 		return nil
 	}
 	if err != nil {
@@ -169,21 +170,6 @@ func (t *Transitions) UpdateTree(s *State) error {
 	hash := tree.RootHash()
 	log.Info().Hex("commit", hash[:]).Int("registers", len(paths)).Msg("updated tree with register payloads")
 
-	return nil
-}
-
-func (t *Transitions) WaitForUpdate(s *State) error {
-
-	// We should only go into the wait state when it was actually set properly.
-	if s.status != StatusWaiting {
-		return fmt.Errorf("invalid states for waiting for updates (%s)", s.status)
-	}
-
-	// We wait for the configured amount of time before going back to the
-	// updating status to retry.
-	time.Sleep(t.cfg.WaitInterval)
-
-	s.status = StatusUpdating
 	return nil
 }
 
@@ -346,6 +332,10 @@ func (t *Transitions) IndexChain(s *State) error {
 	// As we have only just forwarded to this height, we need to set the commit
 	// of the next finalized block as the sentinel we will be looking for.
 	commit, err := t.chain.Commit(s.height)
+	if errors.Is(err, dps.ErrUnavailable) {
+		time.Sleep(t.cfg.WaitInterval)
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("could not get commit: %w", err)
 	}
