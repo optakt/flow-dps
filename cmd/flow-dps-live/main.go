@@ -87,9 +87,9 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus (host:port)")
-	pflag.StringVar(&flagSeedKey, "seed-key", "", "public network key of the seed node to follow unstaked consensus (hex)")
-	pflag.StringVar(&flagPrivateKey, "private-key", "", "path to private network key to follow unstaked consensus (file)")
+	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
+	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
+	pflag.StringVar(&flagPrivateKey, "private-key", "", "hex-encoded private network key for the DPS to follow unstaked consensus")
 
 	pflag.Parse()
 

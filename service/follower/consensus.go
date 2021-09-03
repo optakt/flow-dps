@@ -18,11 +18,12 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/optakt/flow-dps/models/dps"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Consensus is a wrapper around the database that the Flow consensus follower populates. It is used to
@@ -163,9 +164,6 @@ func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 	err := c.indexPayload(finalID)
 	if err != nil {
 		c.log.Error().Err(err).Msg("could not index block payload")
-	}
-	if err != nil {
-		return
 	}
 }
 
