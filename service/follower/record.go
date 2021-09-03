@@ -22,7 +22,7 @@ import (
 
 type Record struct {
 	Block       *flow.Block          `validate:"required"`
-	Commit      flow.StateCommitment `validate:"required,len=32"`
+	Commit      flow.StateCommitment `validate:"required"`
 	Collections []*entity.CompleteCollection
 	TxResults   []*flow.TransactionResult
 	Events      []*flow.Event

@@ -24,6 +24,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/gammazero/deque"
+	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
 	"google.golang.org/api/iterator"
 
@@ -32,25 +33,27 @@ import (
 )
 
 type GCPStream struct {
-	log    zerolog.Logger
-	bucket *storage.BucketHandle
-	codec  dps.Codec
-	buffer *deque.Deque
-	last   time.Time
-	wg     *sync.WaitGroup
-	limit  uint
+	log      zerolog.Logger
+	bucket   *storage.BucketHandle
+	codec    dps.Codec
+	validate *validator.Validate
+	buffer   *deque.Deque
+	last     time.Time
+	wg       *sync.WaitGroup
+	limit    uint
 }
 
 func NewGCPStream(log zerolog.Logger, bucket *storage.BucketHandle, codec dps.Codec) *GCPStream {
 
 	g := GCPStream{
-		log:    log,
-		bucket: bucket,
-		codec:  codec,
-		buffer: deque.New(),
-		last:   time.Time{},
-		wg:     &sync.WaitGroup{},
-		limit:  8,
+		log:      log,
+		bucket:   bucket,
+		codec:    codec,
+		validate: validator.New(),
+		buffer:   deque.New(),
+		last:     time.Time{},
+		wg:       &sync.WaitGroup{},
+		limit:    8,
 	}
 
 	return &g
@@ -159,6 +162,11 @@ func (g *GCPStream) pullRecord(name string) (*follower.Record, error) {
 	err = g.codec.Decode(data, &record)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode record: %w", err)
+	}
+
+	err = g.validate.Struct(record)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate record: %w", err)
 	}
 
 	return &record, nil
