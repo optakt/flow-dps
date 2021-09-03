@@ -224,7 +224,7 @@ func run() int {
 	}
 	follow, err := unstaked.NewConsensusFollower(
 		privKey,
-		flagAddress,
+		"0.0.0.0:0", // automatically choose port, listen on all IPs
 		[]unstaked.BootstrapNodeInfo{seedNode},
 		unstaked.WithBootstrapDir(flagBootstrap),
 		// FIXME: We can uncomment this once the PR is merged to inject the
