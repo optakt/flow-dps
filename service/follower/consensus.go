@@ -152,7 +152,7 @@ func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 	err := c.indexPayload(finalID)
 	if err != nil {
-		c.log.Error().Err(err).Msg("could not load consensus data")
+		c.log.Error().Err(err).Msg("could not index block payload")
 	}
 	if err != nil {
 		return
@@ -206,8 +206,13 @@ func (c *Consensus) indexPayload(finalID flow.Identifier) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("could not load header data: %w", err)
+		return fmt.Errorf("could not retrieve payload data: %w", err)
 	}
+
+	// TODO: Do a sanity check of the sealed state commitment from each seal
+	// against the state commitment we already stored from the execution data
+	// for that block:
+	// => https://github.com/optakt/flow-dps/issues/395
 
 	payload := Payload{
 		Header:     &header,

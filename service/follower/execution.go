@@ -59,14 +59,14 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 		return nil, fmt.Errorf("could not read record: %w", err)
 	}
 	for _, update := range record.TrieUpdates {
-		e.queue.PushBack(update)
+		e.queue.PushFront(update)
 	}
 
 	// We should then also index the block data by block ID, so we can provide
 	// it to the chain interface as needed.
 	err = e.indexRecord(record)
 	if err != nil {
-		return nil, fmt.Errorf("could not index block data: %w", err)
+		return nil, fmt.Errorf("could not index block record: %w", err)
 	}
 
 	return e.Update()
