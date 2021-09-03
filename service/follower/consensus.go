@@ -144,6 +144,16 @@ func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 
 // OnBlockFinalized is a callback that is used to update the state of the Consensus.
 func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
+	err := c.indexHeader(finalID)
+	if err != nil {
+		c.log.Error().Err(err).Msg("could not load consensus data")
+	}
+	if err != nil {
+		return
+	}
+}
+
+func (c *Consensus) indexHeader(finalID flow.Identifier) error {
 
 	var header flow.Header
 	var guarantees []*flow.CollectionGuarantee
@@ -190,8 +200,7 @@ func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 		return nil
 	})
 	if err != nil {
-		c.log.Error().Err(err).Msg("could not load consensus data")
-		return
+		return fmt.Errorf("could not load header data: %w", err)
 	}
 
 	it := conItem{
@@ -199,7 +208,10 @@ func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 		guarantees: guarantees,
 		seals:      seals,
 	}
+
 	c.data[header.Height] = it
+
+	return nil
 }
 
 func (c *Consensus) purge(threshold uint64) {
