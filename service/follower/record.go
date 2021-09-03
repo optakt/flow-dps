@@ -21,10 +21,18 @@ import (
 )
 
 type Record struct {
-	Header      *flow.Header         `validate:"required"`
-	Commit      flow.StateCommitment `validate:"required"`
+	Block       *flow.Block          `validate:"required"`
+	Commit      flow.StateCommitment `validate:"required,len=32"`
 	Collections []*entity.CompleteCollection
 	TxResults   []*flow.TransactionResult
 	Events      []*flow.Event
 	TrieUpdates []*ledger.TrieUpdate
+}
+
+type RecordStreamer interface {
+	Next() (*Record, error)
+}
+
+type RecordHolder interface {
+	ByHeight(height uint64) (*Record, error)
 }
