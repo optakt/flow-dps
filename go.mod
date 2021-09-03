@@ -21,6 +21,7 @@ require (
 	github.com/onflow/cadence v0.18.1-0.20210730161646-b891a21c51fd
 	github.com/onflow/flow-go v0.21.1-0.20210902230851-cd710a1464fc
 	github.com/onflow/flow-go-sdk v0.21.0
+	github.com/onflow/flow-go/crypto v0.18.0
 	github.com/onflow/flow/protobuf/go/flow v0.2.2
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475

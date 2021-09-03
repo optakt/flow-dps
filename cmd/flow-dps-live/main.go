@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"net"
 	"net/http"
@@ -34,7 +35,9 @@ import (
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 
-	"github.com/onflow/flow-go-sdk/crypto"
+	sdk "github.com/onflow/flow-go-sdk/crypto"
+	"github.com/onflow/flow-go/cmd/bootstrap/utils"
+	"github.com/onflow/flow-go/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
 
 	api "github.com/optakt/flow-dps/api/dps"
@@ -67,23 +70,20 @@ func run() int {
 	// Command line parameter initialization.
 	var (
 		flagAddress     string
+		flagBootstrap   string
+		flagBucket      string
+		flagCheckpoint  string
+		flagData        string
+		flagForce       bool
 		flagIndex       string
 		flagLevel       string
-		flagData        string
-		flagBucket      string
-		flagBootstrap   string
-		flagCheckpoint  string
-		flagForce       bool
 		flagSeedAddress string
 		flagSeedKey     string
-		flagPrivateKey  string
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
-	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagBucket, "cloud-bucket", "c", "", "name of the Google Cloud Storage bucket which contains the block data")
-	pflag.StringVarP(&flagBootstrap, "bootstrap-dir", "b", "", "path to directory with public bootstrap information for the spork")
+	pflag.StringVarP(&flagBootstrap, "bootstrap", "b", "", "path to directory with public bootstrap information for the spork")
+	pflag.StringVarP(&flagBucket, "bucket", "u", "", "name of the Google Cloud Storage bucket which contains the block data")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
@@ -91,7 +91,6 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
-	pflag.StringVar(&flagPrivateKey, "private-key", "", "hex-encoded private network key for the DPS to follow unstaked consensus")
 
 	pflag.Parse()
 
@@ -183,6 +182,21 @@ func run() int {
 	// the data with complete blocks.
 	consensus := follower.NewConsensus(log, data, execution)
 
+	// Initialize the private key for joining the unstaked peer-to-peer network.
+	// This is just needed for security, not authentication, so we can just
+	// generate a new one each time we start.
+	seed := make([]byte, crypto.KeyGenSeedMinLenECDSASecp256k1)
+	n, err := rand.Read(seed)
+	if err != nil || n != crypto.KeyGenSeedMinLenECDSASecp256k1 {
+		log.Error().Err(err).Msg("could not generate private key seed")
+		return failure
+	}
+	privKey, err := utils.GenerateUnstakedNetworkingKey(seed)
+	if err != nil {
+		log.Error().Err(err).Msg("could not generate private network key")
+		return failure
+	}
+
 	// Initialize the unstaked consensus follower. It connects to a staked
 	// access node for bootstrapping the peer-to-peer network with other
 	// staked access nodes and unstaked consensus followers. For every finalized
@@ -198,7 +212,7 @@ func run() int {
 		log.Error().Err(err).Str("port", port).Msg("could not parse seed node port")
 		return failure
 	}
-	seedKey, err := crypto.DecodePublicKeyHex(crypto.ECDSA_P256, flagSeedKey)
+	seedKey, err := sdk.DecodePublicKeyHex(sdk.ECDSA_P256, flagSeedKey)
 	if err != nil {
 		log.Error().Err(err).Str("key", flagSeedKey).Msg("could not parse seed node network public key")
 		return failure
@@ -207,11 +221,6 @@ func run() int {
 		Host:             seedHost,
 		Port:             uint(seedPort),
 		NetworkPublicKey: seedKey,
-	}
-	privKey, err := crypto.DecodePrivateKeyHex(crypto.ECDSA_P256, flagPrivateKey)
-	if err != nil {
-		log.Error().Err(err).Str("key", flagPrivateKey).Msg("could not parse network private key")
-		return failure
 	}
 	follow, err := unstaked.NewConsensusFollower(
 		privKey,
