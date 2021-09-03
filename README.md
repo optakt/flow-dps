@@ -39,6 +39,8 @@ If you want to make changes to the GRPC API, the two following binaries are requ
 * `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1`
 * `go install github.com/srikrsna/protoc-gen-gotag@v0.6.1`
 
+Once they are installed, you can run `go generate ./...` from the root of this repository to update the generated protobuf files.
+
 In order to build the live binary, the following extra steps and dependencies are required:
 
 * [`CMake`](https://cmake.org/install/)
@@ -51,8 +53,6 @@ Please note that the flow-go repository should be cloned in the same folder as t
 * `go generate`
 
 You can then verify that the installation of the flow-go crypto package has been successful by running the tests of the project.
-
-Once they are installed, you can run `go generate ./...` from the root of this repository to update the generated protobuf files.
 
 ## Road Map
 
