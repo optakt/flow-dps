@@ -46,6 +46,16 @@ func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) *Consens
 	return &f
 }
 
+// Root returns the root height from the underlying protocol state.
+func (c *Consensus) Root() (uint64, error) {
+	var height uint64
+	err := c.db.View(operation.RetrieveRootHeight(&height))
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve root height: %w", err)
+	}
+	return height, nil
+}
+
 // Header returns the header for the given height, if available.
 func (c *Consensus) Header(height uint64) (*flow.Header, error) {
 	c.purge(height)

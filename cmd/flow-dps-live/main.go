@@ -36,18 +36,16 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/onflow/flow-go-sdk/crypto"
-	"github.com/onflow/flow-go/follower"
+	unstaked "github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/flow"
 
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
-	source "github.com/optakt/flow-dps/follower"
-	"github.com/optakt/flow-dps/follower/consensus"
-	"github.com/optakt/flow-dps/follower/execution"
-	"github.com/optakt/flow-dps/gcs"
 	"github.com/optakt/flow-dps/metrics/output"
 	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/service/cloud"
+	"github.com/optakt/flow-dps/service/follower"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
@@ -176,33 +174,38 @@ func run() int {
 		return failure
 	}
 
-	blockData := client.Bucket(flagBucket)
-	poller := gcs.NewPoller(blockData)
+	// Initialize the execution follower that will read block records from the
+	// Google Cloud Platform bucket.
+	bucket := client.Bucket(flagBucket)
+	stream := cloud.NewGCPStream(log, bucket, codec)
+	execution := follower.NewExecution(log, stream)
 
+	// Initialize the consensus follower that will use the unstaked consensus
+	// follower from Flow Go to track finalized block information.
 	host, portStr, err := net.SplitHostPort(flagPeerAddr)
 	if err != nil {
-		log.Error().Err(err).Str("peer_addr", flagPeerAddr).Msg("could not parse peer address")
+		log.Error().Err(err).Str("address", flagPeerAddr).Msg("could not parse peer address")
 		return failure
 	}
 	port, err := strconv.ParseUint(portStr, 10, 64)
 	if err != nil {
-		log.Error().Err(err).Str("peer_addr", flagPeerAddr).Msg("could not parse peer port")
+		log.Error().Err(err).Str("address", flagPeerAddr).Msg("could not parse peer port")
 		return failure
 	}
 	key, err := crypto.DecodePublicKeyHex(crypto.ECDSA_P256, flagPeerKey)
 	if err != nil {
-		log.Error().Err(err).Str("peer_key", flagPeerKey).Msg("could not parse peer public key")
+		log.Error().Err(err).Str("key", flagPeerKey).Msg("could not parse peer public key")
 		return failure
 	}
-	accessNodeIdentity := follower.BootstrapNodeInfo{
+	accessNodeIdentity := unstaked.BootstrapNodeInfo{
 		Host:             host,
 		Port:             uint(port),
 		NetworkPublicKey: key,
 	}
+	// FIXME: Inject the protocol state database once it is exposed.
+	consensus := follower.NewConsensus(log, nil, execution)
 
-	execution := execution.New(log, poller, codec, data)
-	consensus := consensus.New(log, data)
-	follower, err := follower.NewConsensusFollower(nodeID, []follower.BootstrapNodeInfo{accessNodeIdentity}, flagBindAddr, follower.WithDataDir(flagData))
+	follower, err := unstaked.NewConsensusFollower(nodeID, []unstaked.BootstrapNodeInfo{accessNodeIdentity}, flagBindAddr, unstaked.WithDataDir(flagData))
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -211,8 +214,6 @@ func run() int {
 		return failure
 	}
 	follower.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
-
-	source := source.NewSource(log, execution, consensus, data)
 
 	// Writer is responsible for writing the index data to the index database.
 	writer := index.NewWriter(db, storage)
@@ -230,7 +231,7 @@ func run() int {
 	}
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	transitions := mapper.NewTransitions(log, load, source, source, write,
+	transitions := mapper.NewTransitions(log, load, consensus, execution, write,
 		mapper.WithIndexCommit(true),
 		mapper.WithIndexHeader(true),
 		mapper.WithIndexCollections(true),
@@ -250,7 +251,6 @@ func run() int {
 		mapper.WithTransition(mapper.StatusCollected, transitions.IndexRegisters),
 		mapper.WithTransition(mapper.StatusIndexed, transitions.ForwardHeight),
 		mapper.WithTransition(mapper.StatusForwarded, transitions.IndexChain),
-		mapper.WithTransition(mapper.StatusWaiting, transitions.WaitForUpdate),
 	)
 
 	// GRPC API initialization.
@@ -312,17 +312,6 @@ func run() int {
 		follower.Run(ctx)
 		log.Info().Msg("Consensus follower stopped")
 	}()
-	go func() {
-		log.Info().Msg("Google Cloud Storage poller starting")
-		err = poller.Run()
-		if err != nil {
-			log.Warn().Err(err).Msg("Google Cloud Storage poller failed")
-			close(failed)
-		} else {
-			close(done)
-		}
-		log.Info().Msg("Google Cloud Storage poller stopped")
-	}()
 
 	// Start metrics output.
 	if flagMetrics {
@@ -355,9 +344,6 @@ func run() int {
 
 	// Stop consensus follower.
 	cancel()
-
-	// Stop poller from downloading new files.
-	poller.Stop()
 
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the
