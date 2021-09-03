@@ -841,7 +841,8 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	// TODO: Add tests for Guarantees
+	// TODO: Add tests for guarantees:
+	// => https://github.com/optakt/flow-dps/issues/333
 
 	t.Run("handles chain failure to retrieve events", func(t *testing.T) {
 		t.Parallel()
