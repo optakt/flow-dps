@@ -30,14 +30,14 @@ type Feeder struct {
 // FromWAL creates a trie update feeder that sources state deltas from a WAL reader.
 func FromWAL(reader WALReader) *Feeder {
 
-	l := Feeder{
+	f := Feeder{
 		reader: reader,
 	}
 
-	return &l
+	return &f
 }
 
-func (d *Feeder) Update() (*ledger.TrieUpdate, error) {
+func (f *Feeder) Update() (*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip
@@ -47,15 +47,15 @@ func (d *Feeder) Update() (*ledger.TrieUpdate, error) {
 		// This part reads the next entry from the WAL, makes sure we didn't
 		// encounter an error when reading or decoding and ensures that it's a
 		// trie update.
-		next := d.reader.Next()
-		err := d.reader.Err()
+		next := f.reader.Next()
+		err := f.reader.Err()
 		if !next && err != nil {
 			return nil, fmt.Errorf("could not read next record: %w", err)
 		}
 		if !next {
 			return nil, dps.ErrUnavailable
 		}
-		record := d.reader.Record()
+		record := f.reader.Record()
 		operation, _, update, err := wal.Decode(record)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode record: %w", err)
