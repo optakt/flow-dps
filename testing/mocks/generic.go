@@ -341,18 +341,22 @@ func GenericCadenceEvent(index int) cadence.Event {
 	return GenericCadenceEvents(index + 1)[index]
 }
 
-func GenericEvents(number int) []flow.Event {
-	txIDs := GenericTransactionIDs(number / 2)
+func GenericEvents(number int, types ...flow.EventType) []flow.Event {
+	txIDs := GenericTransactionIDs(number)
 
 	var events []flow.Event
 	for i := 0; i < number; i++ {
 
-		// We want only two types of events to simulate deposit/withdrawal.
-		eventType := GenericEventType(i % 2)
+		// If types were provided, alternate between them. Otherwise, assume a type of 0.
+		eventType := GenericEventType(0)
+		if len(types) != 0 {
+			typeIdx := i % len(types)
+			eventType = types[typeIdx]
+		}
 
-		// We want each pair of events to be related to a single transaction.
 		event := flow.Event{
-			TransactionID: txIDs[i/2],
+			// We want each pair of events to be related to a single transaction.
+			TransactionID: txIDs[i],
 			EventIndex:    uint32(i),
 			Type:          eventType,
 			Payload:       json.MustEncode(GenericCadenceEvent(i)),

@@ -250,7 +250,11 @@ func TestIndex(t *testing.T) {
 
 		reader, writer := setupIndex(t)
 
-		events := mocks.GenericEvents(4)
+		withdrawalType := mocks.GenericEventType(0)
+		depositType := mocks.GenericEventType(1)
+		withdrawals := mocks.GenericEvents(2, withdrawalType)
+		deposits := mocks.GenericEvents(2, depositType)
+		events := append(withdrawals, deposits...)
 
 		assert.NoError(t, writer.First(mocks.GenericHeight))
 		assert.NoError(t, writer.Last(mocks.GenericHeight))
@@ -270,13 +274,12 @@ func TestIndex(t *testing.T) {
 		t.Run("type specified", func(t *testing.T) {
 			t.Parallel()
 
-			eventTypes := mocks.GenericEventTypes(2)
-			got1, err := reader.Events(mocks.GenericHeight, eventTypes[0])
+			got1, err := reader.Events(mocks.GenericHeight, withdrawalType)
 
 			assert.NoError(t, err)
 			assert.Len(t, got1, 2)
 
-			got2, err := reader.Events(mocks.GenericHeight, eventTypes[1])
+			got2, err := reader.Events(mocks.GenericHeight, depositType)
 
 			assert.NoError(t, err)
 			assert.Len(t, got1, 2)

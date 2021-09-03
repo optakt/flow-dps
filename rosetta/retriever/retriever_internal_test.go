@@ -334,6 +334,13 @@ func TestRetriever_Balances(t *testing.T) {
 }
 
 func TestRetriever_Block(t *testing.T) {
+	transactions := mocks.GenericTransactionIDs(5)
+	withdrawalType := mocks.GenericEventType(0)
+	depositType := mocks.GenericEventType(1)
+	withdrawals := mocks.GenericEvents(2, withdrawalType)
+	deposits := mocks.GenericEvents(2, depositType)
+	events := append(withdrawals, deposits...)
+
 	t.Run("nominal case with limit not reached", func(t *testing.T) {
 		t.Parallel()
 
@@ -344,7 +351,11 @@ func TestRetriever_Block(t *testing.T) {
 		}
 		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
-			return mocks.GenericTransactionIDs(5), nil
+			return transactions, nil
+		}
+		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return events, nil
 		}
 
 		validator := mocks.BaselineValidator(t)
@@ -356,22 +367,22 @@ func TestRetriever_Block(t *testing.T) {
 		generator := mocks.BaselineGenerator(t)
 		generator.TokensDepositedFunc = func(symbol string) (string, error) {
 			assert.Equal(t, symbol, dps.FlowSymbol)
-			return string(mocks.GenericEventType(0)), nil
+			return string(withdrawalType), nil
 		}
 		generator.TokensWithdrawnFunc = func(symbol string) (string, error) {
 			assert.Equal(t, symbol, dps.FlowSymbol)
-			return string(mocks.GenericEventType(1)), nil
+			return string(depositType), nil
 		}
 
 		convert := mocks.BaselineConverter(t)
 		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
-			assert.Contains(t, mocks.GenericEvents(4), event)
-
 			var op object.Operation
 			switch event.Type {
-			case mocks.GenericEventType(0):
+			case withdrawalType:
+				assert.Contains(t, withdrawals, event)
 				op = mocks.GenericOperation(0)
-			case mocks.GenericEventType(1):
+			case depositType:
+				assert.Contains(t, deposits, event)
 				op = mocks.GenericOperation(1)
 			}
 
@@ -408,6 +419,10 @@ func TestRetriever_Block(t *testing.T) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			return mocks.GenericTransactionIDs(5), nil
 		}
+		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return events, nil
+		}
 
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
@@ -427,13 +442,14 @@ func TestRetriever_Block(t *testing.T) {
 
 		convert := mocks.BaselineConverter(t)
 		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
-			assert.Contains(t, mocks.GenericEvents(4), event)
 
 			var op object.Operation
 			switch event.Type {
-			case mocks.GenericEventType(0):
+			case withdrawalType:
+				assert.Contains(t, withdrawals, event)
 				op = mocks.GenericOperation(0)
-			case mocks.GenericEventType(1):
+			case depositType:
+				assert.Contains(t, deposits, event)
 				op = mocks.GenericOperation(1)
 			}
 
@@ -470,11 +486,17 @@ func TestRetriever_Block(t *testing.T) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			return mocks.GenericTransactionIDs(6), nil
 		}
+		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return events, nil
+		}
+
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericBlockQualifier, rosBlockID)
 			return mocks.GenericHeader.Height, mocks.GenericHeader.ID(), nil
 		}
+
 		generator := mocks.BaselineGenerator(t)
 		generator.TokensDepositedFunc = func(symbol string) (string, error) {
 			assert.Equal(t, symbol, dps.FlowSymbol)
@@ -484,15 +506,17 @@ func TestRetriever_Block(t *testing.T) {
 			assert.Equal(t, symbol, dps.FlowSymbol)
 			return string(mocks.GenericEventType(1)), nil
 		}
+
 		convert := mocks.BaselineConverter(t)
 		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
-			assert.Contains(t, mocks.GenericEvents(4), event)
 
 			var op object.Operation
 			switch event.Type {
-			case mocks.GenericEventType(0):
+			case withdrawalType:
+				assert.Contains(t, withdrawals, event)
 				op = mocks.GenericOperation(0)
-			case mocks.GenericEventType(1):
+			case depositType:
+				assert.Contains(t, deposits, event)
 				op = mocks.GenericOperation(1)
 			}
 
@@ -648,14 +672,40 @@ func TestRetriever_Block(t *testing.T) {
 	t.Run("handles event converter failure", func(t *testing.T) {
 		t.Parallel()
 
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return mocks.GenericHeader, nil
+		}
+		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return mocks.GenericTransactionIDs(6), nil
+		}
+		validator := mocks.BaselineValidator(t)
+		validator.BlockFunc = func(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
+			assert.Equal(t, mocks.GenericBlockQualifier, rosBlockID)
+			return mocks.GenericHeader.Height, mocks.GenericHeader.ID(), nil
+		}
+		generator := mocks.BaselineGenerator(t)
+		generator.TokensDepositedFunc = func(symbol string) (string, error) {
+			assert.Equal(t, symbol, dps.FlowSymbol)
+			return string(mocks.GenericEventType(0)), nil
+		}
+		generator.TokensWithdrawnFunc = func(symbol string) (string, error) {
+			assert.Equal(t, symbol, dps.FlowSymbol)
+			return string(mocks.GenericEventType(1)), nil
+		}
 		convert := mocks.BaselineConverter(t)
-		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
+		convert.EventToOperationFunc = func(flow.Event) (*object.Operation, error) {
 			return nil, mocks.GenericError
 		}
 
 		ret, err := baselineRetriever(t)
 		require.NoError(t, err)
 
+		ret.index = index
+		ret.validate = validator
+		ret.generator = generator
 		ret.convert = convert
 
 		_, _, err = ret.Block(mocks.GenericBlockQualifier)
@@ -664,6 +714,12 @@ func TestRetriever_Block(t *testing.T) {
 }
 
 func TestRetriever_Transaction(t *testing.T) {
+	withdrawalType := mocks.GenericEventType(0)
+	depositType := mocks.GenericEventType(1)
+	withdrawals := mocks.GenericEvents(2, withdrawalType)
+	deposits := mocks.GenericEvents(2, depositType)
+	events := append(withdrawals, deposits...)
+
 	txQual := mocks.GenericTransactionQualifier(0)
 	txIDs := mocks.GenericTransactionIDs(5)
 
@@ -683,21 +739,21 @@ func TestRetriever_Transaction(t *testing.T) {
 		generator := mocks.BaselineGenerator(t)
 		generator.TokensDepositedFunc = func(symbol string) (string, error) {
 			assert.Equal(t, dps.FlowSymbol, symbol)
-			return string(mocks.GenericEventType(0)), nil
+			return string(withdrawalType), nil
 		}
 		generator.TokensWithdrawnFunc = func(symbol string) (string, error) {
 			assert.Equal(t, dps.FlowSymbol, symbol)
-			return string(mocks.GenericEventType(1)), nil
+			return string(depositType), nil
 		}
 
 		index := mocks.BaselineReader(t)
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			require.Len(t, types, 2)
-			assert.Equal(t, mocks.GenericEventType(0), types[0])
-			assert.Equal(t, mocks.GenericEventType(1), types[1])
+			assert.Equal(t, withdrawalType, types[0])
+			assert.Equal(t, depositType, types[1])
 
-			return mocks.GenericEvents(4), nil
+			return events, nil
 		}
 		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
@@ -706,13 +762,14 @@ func TestRetriever_Transaction(t *testing.T) {
 
 		convert := mocks.BaselineConverter(t)
 		convert.EventToOperationFunc = func(event flow.Event) (*object.Operation, error) {
-			assert.Contains(t, mocks.GenericEvents(4), event)
 
 			var op object.Operation
 			switch event.Type {
-			case mocks.GenericEventType(0):
+			case withdrawalType:
+				assert.Contains(t, withdrawals, event)
 				op = mocks.GenericOperation(0)
-			case mocks.GenericEventType(1):
+			case depositType:
+				assert.Contains(t, deposits, event)
 				op = mocks.GenericOperation(1)
 			}
 
@@ -741,7 +798,7 @@ func TestRetriever_Transaction(t *testing.T) {
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 			return []flow.Event{
 				{
-					Type:          mocks.GenericEventType(0),
+					Type: mocks.GenericEventType(0),
 					// Here we use the wrong resource ID on purpose so that it does not match any of transaction ID.
 					TransactionID: mocks.GenericSeal(0).ID(),
 				},

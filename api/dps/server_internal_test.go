@@ -1028,7 +1028,7 @@ func TestServer_GetResult(t *testing.T) {
 
 			mockResult: want,
 
-			checkErr:   require.NoError,
+			checkErr: require.NoError,
 		},
 		{
 			name: "handles invalid transaction ID",

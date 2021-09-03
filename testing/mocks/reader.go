@@ -60,7 +60,7 @@ func BaselineReader(t *testing.T) *Reader {
 			return GenericHeader, nil
 		},
 		EventsFunc: func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
-			return GenericEvents(4), nil
+			return GenericEvents(4, GenericEventTypes(2)...), nil
 		},
 		ValuesFunc: func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
 			return GenericLedgerValues(6), nil

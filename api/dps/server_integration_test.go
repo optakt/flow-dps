@@ -290,7 +290,12 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 }
 
 func TestIntegrationServer_GetEvents(t *testing.T) {
-	events := mocks.GenericEvents(4)
+	withdrawalType := mocks.GenericEventType(0)
+	depositType := mocks.GenericEventType(1)
+	withdrawals := mocks.GenericEvents(2, withdrawalType)
+	deposits := mocks.GenericEvents(2, depositType)
+	events := append(withdrawals, deposits...)
+
 	height := mocks.GenericHeight
 
 	t.Run("nominal case without type specified", func(t *testing.T) {
@@ -344,12 +349,8 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 
 		server := dps.NewServer(reader, codec)
 
-		// Only request one of the types of the events. Since the generic events are
-		// of two types (to simulate deposit/withdrawal), we should get half of the
-		// events as a result of this request.
-		// TODO: https://github.com/optakt/flow-dps/issues/333
 		req := &dps.GetEventsRequest{
-			Types:  []string{string(events[0].Type)},
+			Types:  []string{string(withdrawalType)},
 			Height: height,
 		}
 		resp, err := server.GetEvents(context.Background(), req)
@@ -359,10 +360,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 
 		var got []flow.Event
 		require.NoError(t, codec.Unmarshal(resp.Data, &got))
-		assert.Contains(t, got, events[0])
-		assert.NotContains(t, got, events[1])
-		assert.Contains(t, got, events[2])
-		assert.NotContains(t, got, events[3])
+		assert.ElementsMatch(t, withdrawals, got)
 	})
 
 	t.Run("handles indexer failure on Events", func(t *testing.T) {
