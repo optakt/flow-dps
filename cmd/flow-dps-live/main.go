@@ -71,6 +71,7 @@ func run() int {
 		flagLevel       string
 		flagData        string
 		flagBucket      string
+		flagBootstrap   string
 		flagCheckpoint  string
 		flagForce       bool
 		flagSeedAddress string
@@ -81,7 +82,8 @@ func run() int {
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVar(&flagBucket, "bucket", "", "name of the Google Cloud Storage bucket which contains the block data")
+	pflag.StringVarP(&flagBucket, "cloud-bucket", "c", "", "name of the Google Cloud Storage bucket which contains the block data")
+	pflag.StringVarP(&flagBootstrap, "bootstrap-dir", "b", "", "path to directory with public bootstrap information for the spork")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
@@ -215,6 +217,7 @@ func run() int {
 		privKey,
 		flagAddress,
 		[]unstaked.BootstrapNodeInfo{seedNode},
+		unstaked.WithBootstrapDir(flagBootstrap),
 		// FIXME: We can uncomment this once the PR is merged to inject the
 		// protocol state database is merged:
 		// => https://github.com/onflow/flow-go/pull/1228
