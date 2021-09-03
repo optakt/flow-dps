@@ -28,26 +28,19 @@ import (
 // Consensus is a wrapper around the database that the Flow consensus follower populates. It is used to
 // expose the current height and block ID of the consensus follower's last finalized block.
 type Consensus struct {
-	log zerolog.Logger
-
-	db        *badger.DB
-	execution *Execution
-	data      map[uint64]conItem
-}
-
-type conItem struct {
-	header     *flow.Header
-	guarantees []*flow.CollectionGuarantee
-	seals      []*flow.Seal
+	log      zerolog.Logger
+	db       *badger.DB
+	hold     RecordHolder
+	payloads map[uint64]*Payload
 }
 
 // NewConsensus returns a new Consensus instance.
-func NewConsensus(log zerolog.Logger, db *badger.DB, execution *Execution) *Consensus {
+func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) *Consensus {
 	f := Consensus{
-		log:       log,
-		db:        db,
-		execution: execution,
-		data:      make(map[uint64]conItem),
+		log:      log,
+		db:       db,
+		hold:     hold,
+		payloads: make(map[uint64]*Payload),
 	}
 
 	return &f
@@ -56,95 +49,108 @@ func NewConsensus(log zerolog.Logger, db *badger.DB, execution *Execution) *Cons
 // Header returns the header for the given height, if available.
 func (c *Consensus) Header(height uint64) (*flow.Header, error) {
 	c.purge(height)
-	it, ok := c.data[height]
+	payload, ok := c.payloads[height]
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
-	return it.header, nil
+	return payload.Header, nil
 }
 
 // Guarantees returns the collection guarantees for the given height, if available.
 func (c *Consensus) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
-	it, ok := c.data[height]
+	payload, ok := c.payloads[height]
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
-	return it.guarantees, nil
+	return payload.Guarantees, nil
 }
 
 // Seals returns the block seals for the given height, if available.
 func (c *Consensus) Seals(height uint64) ([]*flow.Seal, error) {
-	it, ok := c.data[height]
+	payload, ok := c.payloads[height]
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
-	return it.seals, nil
+	return payload.Seals, nil
 }
 
 // Commit returns the state commitment for the given height, if available.
 func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
-	it, ok := c.data[height]
+	payload, ok := c.payloads[height]
 	if !ok {
 		return flow.DummyStateCommitment, dps.ErrUnavailable
 	}
-	commit, ok := c.execution.Commit(it.header.ID())
+	record, ok := c.hold.Record(payload.Header.ID())
 	if !ok {
 		return flow.DummyStateCommitment, dps.ErrUnavailable
 	}
-	return commit, nil
+	return record.Commit, nil
 }
 
 func (c *Consensus) Collections(height uint64) ([]*flow.LightCollection, error) {
-	it, ok := c.data[height]
+	payload, ok := c.payloads[height]
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
-	collections, ok := c.execution.Collections(it.header.ID())
+	record, ok := c.hold.Record(payload.Header.ID())
 	if !ok {
 		return nil, dps.ErrUnavailable
+	}
+	collections := make([]*flow.LightCollection, 0, len(record.Collections))
+	for _, complete := range record.Collections {
+		collection := complete.Collection().Light()
+		collections = append(collections, &collection)
 	}
 	return collections, nil
 }
 
 func (c *Consensus) Transactions(height uint64) ([]*flow.TransactionBody, error) {
-	it, ok := c.data[height]
+	payload, ok := c.payloads[height]
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
-	transactions, ok := c.execution.Transactions(it.header.ID())
+	record, ok := c.hold.Record(payload.Header.ID())
 	if !ok {
 		return nil, dps.ErrUnavailable
+	}
+	transactions := make([]*flow.TransactionBody, 0, len(record.Collections))
+	for _, complete := range record.Collections {
+		transactions = append(transactions, complete.Transactions...)
 	}
 	return transactions, nil
 }
 
 func (c *Consensus) Results(height uint64) ([]*flow.TransactionResult, error) {
-	it, ok := c.data[height]
+	payload, ok := c.payloads[height]
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
-	results, ok := c.execution.Results(it.header.ID())
+	record, ok := c.hold.Record(payload.Header.ID())
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
-	return results, nil
+	return record.TxResults, nil
 }
 
 func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
-	it, ok := c.data[height]
+	payload, ok := c.payloads[height]
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
-	events, ok := c.execution.Events(it.header.ID())
+	record, ok := c.hold.Record(payload.Header.ID())
 	if !ok {
 		return nil, dps.ErrUnavailable
+	}
+	events := make([]flow.Event, 0, len(record.Events))
+	for _, event := range record.Events {
+		events = append(events, *event)
 	}
 	return events, nil
 }
 
 // OnBlockFinalized is a callback that is used to update the state of the Consensus.
 func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
-	err := c.indexHeader(finalID)
+	err := c.indexPayload(finalID)
 	if err != nil {
 		c.log.Error().Err(err).Msg("could not load consensus data")
 	}
@@ -153,7 +159,7 @@ func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 	}
 }
 
-func (c *Consensus) indexHeader(finalID flow.Identifier) error {
+func (c *Consensus) indexPayload(finalID flow.Identifier) error {
 
 	var header flow.Header
 	var guarantees []*flow.CollectionGuarantee
@@ -203,21 +209,21 @@ func (c *Consensus) indexHeader(finalID flow.Identifier) error {
 		return fmt.Errorf("could not load header data: %w", err)
 	}
 
-	it := conItem{
-		header:     &header,
-		guarantees: guarantees,
-		seals:      seals,
+	payload := Payload{
+		Header:     &header,
+		Guarantees: guarantees,
+		Seals:      seals,
 	}
 
-	c.data[header.Height] = it
+	c.payloads[header.Height] = &payload
 
 	return nil
 }
 
 func (c *Consensus) purge(threshold uint64) {
-	for height := range c.data {
+	for height := range c.payloads {
 		if height < threshold {
-			delete(c.data, height)
+			delete(c.payloads, height)
 		}
 	}
 }

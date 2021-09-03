@@ -72,58 +72,13 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 	return e.Update()
 }
 
-func (e *Execution) Commit(blockID flow.Identifier) (flow.StateCommitment, bool) {
+func (e *Execution) Record(blockID flow.Identifier) (*Record, bool) {
 	record, ok := e.records[blockID]
 	if !ok {
-		return flow.DummyStateCommitment, false
+		return nil, false
 	}
 	e.purge(record.Block.Header.Height)
-	return record.Commit, true
-}
-
-func (e *Execution) Collections(blockID flow.Identifier) ([]*flow.LightCollection, bool) {
-	record, ok := e.records[blockID]
-	if !ok {
-		return nil, false
-	}
-	collections := make([]*flow.LightCollection, 0, len(record.Collections))
-	for _, collection := range record.Collections {
-		light := collection.Collection().Light()
-		collections = append(collections, &light)
-	}
-	return collections, true
-}
-
-func (e *Execution) Transactions(blockID flow.Identifier) ([]*flow.TransactionBody, bool) {
-	record, ok := e.records[blockID]
-	if !ok {
-		return nil, false
-	}
-	transactions := make([]*flow.TransactionBody, 0, len(record.Collections))
-	for _, collection := range record.Collections {
-		transactions = append(transactions, collection.Transactions...)
-	}
-	return transactions, true
-}
-
-func (e *Execution) Results(blockID flow.Identifier) ([]*flow.TransactionResult, bool) {
-	record, ok := e.records[blockID]
-	if !ok {
-		return nil, false
-	}
-	return record.TxResults, true
-}
-
-func (e *Execution) Events(blockID flow.Identifier) ([]flow.Event, bool) {
-	record, ok := e.records[blockID]
-	if !ok {
-		return nil, false
-	}
-	events := make([]flow.Event, 0, len(record.Events))
-	for _, event := range record.Events {
-		events = append(events, *event)
-	}
-	return events, true
+	return record, true
 }
 
 func (e *Execution) indexRecord(record *Record) error {
