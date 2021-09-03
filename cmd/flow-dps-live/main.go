@@ -173,7 +173,7 @@ func run() int {
 		}
 	}()
 	bucket := client.Bucket(flagBucket)
-	stream := cloud.NewGCPStream(log, bucket, codec)
+	stream := cloud.NewGCPStream(log, bucket)
 	execution := follower.NewExecution(log, stream)
 
 	// Initialize the consensus follower, which uses the protocol state to
@@ -211,17 +211,20 @@ func run() int {
 		log.Error().Err(err).Str("key", flagPrivateKey).Msg("could not parse network private key")
 		return failure
 	}
-	follower, err := unstaked.NewConsensusFollower(
+	follow, err := unstaked.NewConsensusFollower(
 		privKey,
 		flagAddress,
 		[]unstaked.BootstrapNodeInfo{seedNode},
-		unstaked.WithDB(db),
+		// FIXME: We can uncomment this once the PR is merged to inject the
+		// protocol state database is merged:
+		// => https://github.com/onflow/flow-go/pull/1228
+		// unstaked.WithDB(db),
 	)
 	if err != nil {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
 		return failure
 	}
-	follower.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
+	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
 	// Initialize the index writer, which is responsible for writing the chain
 	// and execution data to the index database.

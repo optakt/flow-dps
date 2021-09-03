@@ -15,24 +15,14 @@
 package follower
 
 import (
-	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/onflow/flow-go/module/mempool/entity"
 )
 
-type Record struct {
-	Block       *flow.Block          `validate:"required"`
-	Commit      flow.StateCommitment `validate:"required"`
-	Collections []*entity.CompleteCollection
-	TxResults   []*flow.TransactionResult
-	Events      []*flow.Event
-	TrieUpdates []*ledger.TrieUpdate
-}
-
 type RecordStreamer interface {
-	Next() (*Record, error)
+	Next() (*uploader.BlockData, error)
 }
 
 type RecordHolder interface {
-	Record(blockID flow.Identifier) (*Record, bool)
+	Record(blockID flow.Identifier) (*uploader.BlockData, bool)
 }

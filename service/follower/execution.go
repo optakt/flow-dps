@@ -20,6 +20,7 @@ import (
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
 
+	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
@@ -28,7 +29,7 @@ type Execution struct {
 	log     zerolog.Logger
 	queue   *deque.Deque
 	stream  RecordStreamer
-	records map[flow.Identifier]*Record
+	records map[flow.Identifier]*uploader.BlockData
 }
 
 func NewExecution(log zerolog.Logger, stream RecordStreamer) *Execution {
@@ -37,7 +38,7 @@ func NewExecution(log zerolog.Logger, stream RecordStreamer) *Execution {
 		log:     log,
 		stream:  stream,
 		queue:   deque.New(),
-		records: make(map[flow.Identifier]*Record),
+		records: make(map[flow.Identifier]*uploader.BlockData),
 	}
 
 	return &s
@@ -72,7 +73,7 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 	return e.Update()
 }
 
-func (e *Execution) Record(blockID flow.Identifier) (*Record, bool) {
+func (e *Execution) Record(blockID flow.Identifier) (*uploader.BlockData, bool) {
 	record, ok := e.records[blockID]
 	if !ok {
 		return nil, false
@@ -81,7 +82,7 @@ func (e *Execution) Record(blockID flow.Identifier) (*Record, bool) {
 	return record, true
 }
 
-func (e *Execution) indexRecord(record *Record) error {
+func (e *Execution) indexRecord(record *uploader.BlockData) error {
 
 	// Extract the block ID from the block data.
 	blockID := record.Block.Header.ID()

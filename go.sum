@@ -260,6 +260,7 @@ github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8 h1:bnGFnszovsk
 github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8/go.mod h1:TA1xS00nchWmaBnEIxPSE5oHLuJBAVvqrtAnWBwBCVo=
 github.com/gammazero/deque v0.1.0 h1:f9LnNmq66VDeuAlSAapemq/U7hJ2jpIWa4c09q8Dlik=
 github.com/gammazero/deque v0.1.0/go.mod h1:KQw7vFau1hHuM8xmI9RbgKFbAsQFWmBpqQ2KenFLk6M=
+github.com/gammazero/workerpool v1.1.2 h1:vuioDQbgrz4HoaCi2q1HLlOXdpbap5AET7xu5/qj87g=
 github.com/gammazero/workerpool v1.1.2/go.mod h1:UelbXcO0zCIGFcufcirHhq2/xtLXJdQ29qZNlXG9OjQ=
 github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff/go.mod h1:x7DCsMOv1taUwEWCzT4cmDeAkigA5/QCwUodaVOe8Ww=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
@@ -1016,10 +1017,6 @@ github.com/onflow/flow-emulator v0.20.3/go.mod h1:xNdVsrMJiAaYJ59Dwo+xvj0ENdvk/b
 github.com/onflow/flow-ft/lib/go/contracts v0.5.0 h1:Cg4gHGVblxcejfNNG5Mfj98Wf4zbY76O0Y28QB0766A=
 github.com/onflow/flow-ft/lib/go/contracts v0.5.0/go.mod h1:1zoTjp1KzNnOPkyqKmWKerUyf0gciw+e6tAEt0Ks3JE=
 github.com/onflow/flow-go v0.18.0/go.mod h1:cQpvFoqth9PR7tarWDa36R/dDOqUK5QYfeYzCdXPLII=
-github.com/onflow/flow-go v0.21.0 h1:Q1t0T+QtnMh8h4wp4MY8iZMXE44pfIph72nfKpgixmg=
-github.com/onflow/flow-go v0.21.0/go.mod h1:yRVjO3XNGgNqC0WnPDVw3tYdvym4a3e6JXBMy5HYHfA=
-github.com/onflow/flow-go v0.21.1-0.20210902191426-dc8cab22d99b h1:sisALDhg4C1nPHhD+w8F/T2g9YSknjlQnvIA8Fs6Vj0=
-github.com/onflow/flow-go v0.21.1-0.20210902191426-dc8cab22d99b/go.mod h1:yRVjO3XNGgNqC0WnPDVw3tYdvym4a3e6JXBMy5HYHfA=
 github.com/onflow/flow-go v0.21.1-0.20210902230851-cd710a1464fc h1:CItXJe1ETGntSaJQrHD3qGIsUOC4sKP/pT/+G+yave0=
 github.com/onflow/flow-go v0.21.1-0.20210902230851-cd710a1464fc/go.mod h1:yRVjO3XNGgNqC0WnPDVw3tYdvym4a3e6JXBMy5HYHfA=
 github.com/onflow/flow-go-sdk v0.20.0-alpha.1/go.mod h1:52QZyLwU3p3UZ2FXOy+sRl4JPdtvJoae1spIUBOFxA8=

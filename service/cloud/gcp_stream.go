@@ -23,19 +23,19 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/gammazero/deque"
 	"github.com/go-playground/validator/v10"
+	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 	"github.com/rs/zerolog"
 	"google.golang.org/api/iterator"
 
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/follower"
 )
 
 type GCPStream struct {
 	log      zerolog.Logger
 	bucket   *storage.BucketHandle
-	codec    dps.Codec
 	validate *validator.Validate
 	buffer   *deque.Deque
 	last     time.Time
@@ -43,12 +43,11 @@ type GCPStream struct {
 	limit    uint
 }
 
-func NewGCPStream(log zerolog.Logger, bucket *storage.BucketHandle, codec dps.Codec) *GCPStream {
+func NewGCPStream(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStream {
 
 	g := GCPStream{
 		log:      log,
 		bucket:   bucket,
-		codec:    codec,
 		validate: validator.New(),
 		buffer:   deque.New(),
 		last:     time.Time{},
@@ -59,7 +58,7 @@ func NewGCPStream(log zerolog.Logger, bucket *storage.BucketHandle, codec dps.Co
 	return &g
 }
 
-func (g *GCPStream) Next() (*follower.Record, error) {
+func (g *GCPStream) Next() (*uploader.BlockData, error) {
 	g.wg.Add(1)
 	go g.poll()
 
@@ -72,7 +71,7 @@ func (g *GCPStream) Next() (*follower.Record, error) {
 	}
 
 	record := g.buffer.PopBack()
-	return record.(*follower.Record), nil
+	return record.(*uploader.BlockData), nil
 }
 
 func (g *GCPStream) poll() {
@@ -144,7 +143,7 @@ func (g *GCPStream) pull() error {
 	return nil
 }
 
-func (g *GCPStream) pullRecord(name string) (*follower.Record, error) {
+func (g *GCPStream) pullRecord(name string) (*uploader.BlockData, error) {
 
 	object := g.bucket.Object(name)
 	reader, err := object.NewReader(context.Background())
@@ -158,8 +157,8 @@ func (g *GCPStream) pullRecord(name string) (*follower.Record, error) {
 		return nil, fmt.Errorf("could not read object data: %w", err)
 	}
 
-	var record follower.Record
-	err = g.codec.Decode(data, &record)
+	var record uploader.BlockData
+	err = cbor.Unmarshal(data, &record)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode record: %w", err)
 	}

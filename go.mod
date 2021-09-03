@@ -19,7 +19,7 @@ require (
 	github.com/klauspost/compress v1.12.2
 	github.com/labstack/echo/v4 v4.3.0
 	github.com/onflow/cadence v0.18.1-0.20210730161646-b891a21c51fd
-	github.com/onflow/flow-go v0.21.1-0.20210902191426-dc8cab22d99b
+	github.com/onflow/flow-go v0.21.1-0.20210902230851-cd710a1464fc
 	github.com/onflow/flow-go-sdk v0.21.0
 	github.com/onflow/flow/protobuf/go/flow v0.2.2
 	github.com/prometheus/tsdb v0.7.1
