@@ -453,10 +453,6 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 }
 
 func requestTransaction(header flow.Header, txID string) rosetta.TransactionRequest {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
-
 	return rosetta.TransactionRequest{
 		NetworkID: defaultNetwork(),
 		BlockID: identifier.Block{
