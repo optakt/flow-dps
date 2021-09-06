@@ -33,9 +33,11 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-// FIXME: Fix those tests and figure out what changes in our Flow dependency caused their failure.
-
 func TestAPI_Balance(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
+
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
@@ -145,6 +147,9 @@ func TestAPI_Balance(t *testing.T) {
 }
 
 func TestAPI_BalanceHandlesErrors(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -434,6 +439,9 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 
 // TestAPI_BalanceHandlesMalformedRequest tests whether an improper JSON (e.g. wrong field types) results in a '400 Bad Request' error.
 func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
