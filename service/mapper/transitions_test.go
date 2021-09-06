@@ -164,7 +164,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
 			assert.NotZero(t, tree)
 
-			assert.Len(t, paths, 6)
+			assert.Len(t, paths, 5)
 
 			// Parent is RootHash of the mocks.GenericTrie.
 			assert.Equal(t, mocks.GenericTrieUpdate.RootHash[:], parent[:])

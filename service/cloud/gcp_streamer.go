@@ -26,9 +26,10 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/gammazero/deque"
 	"github.com/go-playground/validator/v10"
-	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 	"github.com/rs/zerolog"
 	"google.golang.org/api/iterator"
+
+	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -110,7 +111,7 @@ func (g *GCPStreamer) pull() error {
 		if err != nil {
 			return fmt.Errorf("could not read next object: %w", err)
 		}
-		if !object.Created.After(g.last) {
+		if object.Created.Before(g.last) {
 			// This filters out all objects we already processed.
 			continue
 		}
@@ -134,7 +135,6 @@ func (g *GCPStreamer) pull() error {
 		g.last = object.Created
 
 		g.buffer.PushFront(record)
-
 		if uint(g.buffer.Len()) >= g.limit {
 			break
 		}
