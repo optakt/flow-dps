@@ -31,7 +31,7 @@ type BalanceRequest struct {
 	NetworkID  identifier.Network    `json:"network_identifier"`
 	BlockID    identifier.Block      `json:"block_identifier"`
 	AccountID  identifier.Account    `json:"account_identifier"`
-	Currencies []identifier.Currency `json:"currencies"`
+	Currencies []identifier.Currency `json:"currencies" validate:"required,gt=0,dive"`
 }
 
 // BalanceResponse implements the successful response schema for /account/balance.
@@ -51,37 +51,22 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
-	}
-	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
-	}
-
-	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
+	// TODO: check - failure on the empty currency list validation
+	err = d.Validate(req)
+	if errors.Is(err, errBlockLength) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
 			withDetail("have_length", len(req.BlockID.Hash)),
 			withDetail("want_length", hexIDSize),
 		))
 	}
-
-	if req.AccountID.Address == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(addressEmpty))
-	}
-	if len(req.AccountID.Address) != hexAddressSize {
+	if errors.Is(err, errAddressLength) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(addressLength,
 			withDetail("have_length", len(req.AccountID.Address)),
 			withDetail("want_length", hexAddressSize),
 		))
 	}
-
-	if len(req.Currencies) == 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(currenciesEmpty))
-	}
-	for _, currency := range req.Currencies {
-		if currency.Symbol == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(symbolEmpty))
-		}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 	}
 
 	// TODO: Check if we can set up validation middleware to remove the

@@ -49,31 +49,26 @@ func (d *Data) Transaction(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
-	}
-	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
-	}
-
-	if req.BlockID.Index == nil || req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
-	}
-	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
+	err = d.Validate(req)
+	// PR comment - special handling only needed to add case-specific parameters.
+	if errors.Is(err, errBlockLength) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
 			withDetail("have_length", len(req.BlockID.Hash)),
 			withDetail("want_length", hexIDSize),
 		))
 	}
-
-	if req.TransactionID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txHashEmpty))
-	}
-	if len(req.TransactionID.Hash) != hexIDSize {
+	if errors.Is(err, errTxLength) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txLength,
 			withDetail("have_length", len(req.TransactionID.Hash)),
 			withDetail("want_length", hexIDSize),
 		))
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+	}
+
+	if req.BlockID.Index == nil || req.BlockID.Hash == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
 	}
 
 	err = d.config.Check(req.NetworkID)
