@@ -15,7 +15,6 @@
 package mapper
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -140,7 +139,7 @@ func TestFSM_Stop(t *testing.T) {
 		wg: &sync.WaitGroup{},
 	}
 
-	err := f.Stop(context.Background())
+	err := f.Stop()
 
 	assert.NoError(t, err)
 }

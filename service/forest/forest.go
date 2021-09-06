@@ -71,7 +71,7 @@ func (f *Forest) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
 func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool) {
 	s, ok := f.steps[commit]
 	if !ok {
-		return flow.StateCommitment{}, false
+		return flow.DummyStateCommitment, false
 	}
 	return s.parent, true
 }

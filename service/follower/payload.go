@@ -12,34 +12,14 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package follower
 
 import (
-	"math"
-
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type State struct {
-	forest    Forest
-	status    Status
-	height    uint64
-	last      flow.StateCommitment
-	next      flow.StateCommitment
-	registers map[ledger.Path]*ledger.Payload
-	done      chan struct{}
-}
-
-func EmptyState(forest Forest) *State {
-	s := &State{
-		forest:    forest,
-		status:    StatusEmpty,
-		height:    math.MaxUint64,
-		last:      flow.DummyStateCommitment,
-		next:      flow.DummyStateCommitment,
-		registers: make(map[ledger.Path]*ledger.Payload),
-		done:      make(chan struct{}),
-	}
-	return s
+type Payload struct {
+	Header     *flow.Header
+	Guarantees []*flow.CollectionGuarantee
+	Seals      []*flow.Seal
 }

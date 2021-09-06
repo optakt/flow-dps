@@ -15,6 +15,12 @@ jobs:
       - name: Check out source code
         uses: actions/checkout@v2
 
+      - name: Check out FlowGo
+        uses: actions/checkout@v2
+        with:
+          repository: onflow/flow-go
+          path: flow-go
+
       - name: Install Go
         uses: actions/setup-go@v2
         with:
@@ -52,6 +58,24 @@ jobs:
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
           go install github.com/srikrsna/protoc-gen-gotag@v0.6.1
 
+      # Since building relic takes some time, we want to cache it.
+      - name: Cache Crypto package
+        uses: actions/cache@v2
+        with:
+          path: ./flow-go/crypto
+          key: ${{ runner.os }}-crypto
+          restore-keys: |
+            ${{ runner.os }}-crypto
+
+      # In order to be able to build with flow-go and the relic tag, we need to
+      # run its go generate target.
+      - name: Install Flow Go's crypto
+        run: |
+          cd ./flow-go/crypto
+          git fetch
+          git checkout ac090a188c979fbcd1b1711271f5b7d1281f76d9
+          go generate .
+
       # This check makes sure that the `go.mod` and `go.sum` files for Go
       # modules are always up-to-date.
       - name: Verify Go modules
@@ -70,14 +94,14 @@ jobs:
       # This check makes sure that we can compile the binary as a pure Go binary
       # without CGO support.
       - name: Verify compilation
-        run: CGO_ENABLED=0 go build ./...
+        run: go build -tags relic ./...
 
       # This check runs all unit tests with verbose output and ensures that all
       # of the tests pass successfully.
       - name: Verify unit tests
-        run: go test -v ./...
+        run: go test -tags relic -v ./...
 
       # This check runs all integration tests with verbose output and ensures
       # that they pass successfully.
       - name: Verify integration tests
-        run: go test -v -tags integration ./...
+        run: go test -v -tags="relic integration" ./...

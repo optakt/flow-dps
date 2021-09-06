@@ -15,7 +15,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"runtime"
@@ -191,11 +190,7 @@ func run() int {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
 		return failure
 	}
-	feed, err := feeder.FromDisk(wal.NewReader(segments))
-	if err != nil {
-		log.Error().Str("trie", flagTrie).Err(err).Msg("could not initialize feeder")
-		return failure
-	}
+	feed := feeder.FromWAL(wal.NewReader(segments))
 
 	// Writer is responsible for writing the index data to the index database.
 	index := index.NewWriter(db, storage)
@@ -285,9 +280,7 @@ func run() int {
 	// sure that the main executing components are shutting down within the
 	// allocated shutdown time. Otherwise, we will force the shutdown and log
 	// an error. We then wait for shutdown on each component to complete.
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	err = fsm.Stop(ctx)
+	err = fsm.Stop()
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
 		return failure

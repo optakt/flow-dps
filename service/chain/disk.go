@@ -57,16 +57,16 @@ func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 
 	blockID, err := d.block(height)
 	if errors.Is(err, storage.ErrNotFound) {
-		return flow.StateCommitment{}, dps.ErrFinished
+		return flow.DummyStateCommitment, dps.ErrFinished
 	}
 	if err != nil {
-		return flow.StateCommitment{}, fmt.Errorf("could not get block for height: %w", err)
+		return flow.DummyStateCommitment, fmt.Errorf("could not get block for height: %w", err)
 	}
 
 	var commit flow.StateCommitment
 	err = d.db.View(operation.LookupStateCommitment(blockID, &commit))
 	if err != nil {
-		return flow.StateCommitment{}, fmt.Errorf("could not look up commit: %w", err)
+		return flow.DummyStateCommitment, fmt.Errorf("could not look up commit: %w", err)
 	}
 
 	return commit, nil

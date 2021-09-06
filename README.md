@@ -31,14 +31,29 @@ staked and delegated tokens, for accounts which deploy these custom resources.
 ## Dependencies
 
 Go `v1.16` or higher is required to compile `flow-dps`.
+Please note that it is also required to make sure that your `GOPATH` is exported in your environment in order to generate the DPS API.
 
 If you want to make changes to the GRPC API, the two following binaries are required as well.
 
 * [`protoc`](https://grpc.io/docs/protoc-installation/) version `3.17.0`
 * `go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26`
 * `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1`
+* `go install github.com/srikrsna/protoc-gen-gotag@v0.6.1`
 
 Once they are installed, you can run `go generate ./...` from the root of this repository to update the generated protobuf files.
+
+In order to build the live binary, the following extra steps and dependencies are required:
+
+* [`CMake`](https://cmake.org/install/)
+
+Please note that the flow-go repository should be cloned in the same folder as the DPS with its default name, so that the Go module replace statement works as intended: `replace github.com/onflow/flow-go/crypto => ./flow-go/crypto`.
+
+* `git clone git@github.com:onflow/flow-go.git`
+* `cd flow-go/crypto`
+* `git checkout ac090a188c979fbcd1b1711271f5b7d1281f76d9`
+* `go generate`
+
+You can then verify that the installation of the flow-go crypto package has been successful by running the tests of the project.
 
 ## Road Map
 

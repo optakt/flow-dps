@@ -40,6 +40,9 @@ type validateBlockFunc func(identifier.Block)
 type validateTxFunc func([]*object.Transaction)
 
 func TestAPI_Block(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -197,6 +200,9 @@ func TestAPI_Block(t *testing.T) {
 }
 
 func TestAPI_BlockHandlesErrors(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -354,6 +360,9 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 }
 
 func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)

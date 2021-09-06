@@ -28,6 +28,9 @@ import (
 )
 
 func TestAPI_Networks(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)

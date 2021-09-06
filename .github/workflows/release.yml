@@ -15,6 +15,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check out FlowGo
+        uses: actions/checkout@v2
+        with:
+          repository: onflow/flow-go
+          path: flow-go
+
       - name: Install Go
         uses: actions/setup-go@v2
         with:
@@ -51,6 +57,14 @@ jobs:
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
           go install github.com/srikrsna/protoc-gen-gotag@v0.6.1
+
+      # In order to be able to build with flow-go and the relic tag, we need to
+      # run its go generate target.
+      - name: Install Flow Go's crypto
+        run: |
+          cd ./flow-go/crypto
+          git checkout ac090a188c979fbcd1b1711271f5b7d1281f76d9
+          go generate .
 
       # This check makes sure that the `go.mod` and `go.sum` files for Go
       # modules are always up-to-date.

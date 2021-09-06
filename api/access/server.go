@@ -188,7 +188,7 @@ func (s *Server) GetBlockByHeight(_ context.Context, in *access.GetBlockByHeight
 		Timestamp:            timestamppb.New(header.Timestamp),
 		CollectionGuarantees: collections,
 		BlockSeals:           seals,
-		Signatures:           [][]byte{header.ParentVoterSig},
+		Signatures:           [][]byte{header.ParentVoterSigData},
 	}
 
 	resp := access.BlockResponse{
@@ -504,6 +504,10 @@ func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkPar
 	}
 
 	return &access.GetNetworkParametersResponse{ChainId: header.ChainID.String()}, nil
+}
+
+func (s *Server) GetExecutionResultForBlockID(_ context.Context, req *access.GetExecutionResultForBlockIDRequest) (*access.ExecutionResultForBlockIDResponse, error) {
+	return nil, errors.New("GetExecutionResultForBlockID is not implemented by the Flow DPS API; please use the Flow Access API on a Flow access node directly")
 }
 
 func (s *Server) SendTransaction(ctx context.Context, in *access.SendTransactionRequest) (*access.SendTransactionResponse, error) {

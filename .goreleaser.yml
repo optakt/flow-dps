@@ -4,32 +4,32 @@
 builds:
   - id: dps-client
     binary: dps-client
-    env:
-      - CGO_ENABLED=0
     goarch:
       - amd64
     main: ./cmd/flow-dps-client
 
   - id: dps-indexer
     binary: dps-indexer
-    env:
-      - CGO_ENABLED=0
     goarch:
       - amd64
     main: ./cmd/flow-dps-indexer
 
   - id: dps-server
     binary: dps-server
-    env:
-      - CGO_ENABLED=0
     goarch:
       - amd64
     main: ./cmd/flow-dps-server
 
+  - id: dps-live
+    binary: dps-live
+    goarch:
+      - amd64
+    main: ./cmd/flow-dps-live
+    flags:
+      - -tags=relic
+
   - id: rosetta-server
     binary: rosetta-server
-    env:
-      - CGO_ENABLED=0
     goarch:
       - amd64
     main: ./cmd/flow-rosetta-server

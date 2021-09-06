@@ -23,6 +23,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/optakt/flow-dps/testing/mocks"
 )
@@ -163,7 +164,6 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
 			assert.NotZero(t, tree)
 
-			// Expect the 5 deduplicated paths from mocks.
 			assert.Len(t, paths, 5)
 
 			// Parent is RootHash of the mocks.GenericTrie.
@@ -180,6 +180,44 @@ func TestTransitions_UpdateTree(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, StatusUpdating, st.status)
+	})
+
+	t.Run("nominal case with no available update temporarily", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusUpdating)
+
+		// Set up the mock feeder to return an unavailable error on the first call and return successfully
+		// to subsequent calls.
+		var updateCalled bool
+		feeder := mocks.BaselineFeeder(t)
+		feeder.UpdateFunc = func() (*ledger.TrieUpdate, error) {
+			if !updateCalled {
+				updateCalled = true
+				return nil, dps.ErrUnavailable
+			}
+			return mocks.GenericTrieUpdate, nil
+		}
+		tr.feed = feeder
+
+		forest := mocks.BaselineForest(t, true)
+		forest.HasFunc = func(flow.StateCommitment) bool {
+			return updateCalled
+		}
+		st.forest = forest
+
+		// The first call should not error but should not change the status of the FSM to updating. It should
+		// instead remain Updating until a match is found.
+		err := tr.UpdateTree(st)
+
+		assert.NoError(t, err)
+		assert.Equal(t, StatusUpdating, st.status)
+
+		// The second call is now successful and matches.
+		err = tr.UpdateTree(st)
+
+		assert.NoError(t, err)
+		assert.Equal(t, StatusMatched, st.status)
 	})
 
 	t.Run("nominal case with match", func(t *testing.T) {
@@ -632,7 +670,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 		chain := mocks.BaselineChain(t)
 		chain.CommitFunc = func(height uint64) (flow.StateCommitment, error) {
-			return flow.StateCommitment{}, mocks.GenericError
+			return flow.DummyStateCommitment, mocks.GenericError
 		}
 
 		tr, st := baselineFSM(t, StatusForwarded)
@@ -803,7 +841,8 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	// FIXME: Add tests for Guarantees
+	// TODO: Add tests for guarantees:
+	// => https://github.com/optakt/flow-dps/issues/333
 
 	t.Run("handles chain failure to retrieve events", func(t *testing.T) {
 		t.Parallel()

@@ -17,30 +17,27 @@ package feeder
 import (
 	"fmt"
 
-	pwal "github.com/prometheus/tsdb/wal"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-type Disk struct {
-	reader *pwal.Reader
+type Feeder struct {
+	reader WALReader
 }
 
-// FromDisk creates a trie update feeder that sources state deltas
-// directly from an execution node's trie directory.
-func FromDisk(reader *pwal.Reader) (*Disk, error) {
+// FromWAL creates a trie update feeder that sources state deltas from a WAL reader.
+func FromWAL(reader WALReader) *Feeder {
 
-	l := Disk{
+	f := Feeder{
 		reader: reader,
 	}
 
-	return &l, nil
+	return &f
 }
 
-func (d *Disk) Update() (*ledger.TrieUpdate, error) {
+func (f *Feeder) Update() (*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip
@@ -50,15 +47,15 @@ func (d *Disk) Update() (*ledger.TrieUpdate, error) {
 		// This part reads the next entry from the WAL, makes sure we didn't
 		// encounter an error when reading or decoding and ensures that it's a
 		// trie update.
-		next := d.reader.Next()
-		err := d.reader.Err()
+		next := f.reader.Next()
+		err := f.reader.Err()
 		if !next && err != nil {
 			return nil, fmt.Errorf("could not read next record: %w", err)
 		}
 		if !next {
 			return nil, dps.ErrUnavailable
 		}
-		record := d.reader.Record()
+		record := f.reader.Record()
 		operation, _, update, err := wal.Decode(record)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode record: %w", err)

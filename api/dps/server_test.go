@@ -267,7 +267,7 @@ func TestServer_GetCommit(t *testing.T) {
 				Height: mocks.GenericHeight,
 			},
 
-			mockCommit: flow.StateCommitment{},
+			mockCommit: flow.DummyStateCommitment,
 			mockErr:    mocks.GenericError,
 
 			wantRes: nil,

@@ -36,6 +36,9 @@ import (
 )
 
 func TestAPI_Transaction(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -110,6 +113,9 @@ func TestAPI_Transaction(t *testing.T) {
 }
 
 func TestAPI_TransactionHandlesErrors(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -345,6 +351,9 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 }
 
 func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -444,7 +453,6 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 }
 
 func requestTransaction(header flow.Header, txID string) rosetta.TransactionRequest {
-
 	return rosetta.TransactionRequest{
 		NetworkID: defaultNetwork(),
 		BlockID: identifier.Block{

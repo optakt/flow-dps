@@ -15,8 +15,10 @@
 package mapper
 
 import (
+	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -71,12 +73,12 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// block. We thus introduce an empty tree, with no paths and an
 	// irrelevant previous commit.
 	empty := trie.NewEmptyMTrie()
-	s.forest.Save(empty, nil, flow.StateCommitment{})
+	s.forest.Save(empty, nil, flow.DummyStateCommitment)
 
 	// The chain indexing will forward last to next and next to current height,
 	// which will be the one for the checkpoint.
 	first := flow.StateCommitment(empty.RootHash())
-	s.last = flow.StateCommitment{}
+	s.last = flow.DummyStateCommitment
 	s.next = first
 
 	t.log.Info().Hex("commit", first[:]).Msg("added empty tree to forest")
@@ -141,12 +143,17 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// it to in the forest. This usually means that it was meant for a pruned
 	// branch of the execution forest.
 	update, err := t.feed.Update()
+	if err == dps.ErrUnavailable {
+		time.Sleep(t.cfg.WaitInterval)
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("could not feed update: %w", err)
 	}
 	parent := flow.StateCommitment(update.RootHash)
 	tree, ok := s.forest.Tree(parent)
 	if !ok {
+		log.Warn().Msg("state commitment mismatch, retrieving next trie update")
 		return nil
 	}
 
@@ -323,8 +330,12 @@ func (t *Transitions) IndexChain(s *State) error {
 	}
 
 	// As we have only just forwarded to this height, we need to set the commit
-	// of the next finalized block as the sentinal we will be looking for.
+	// of the next finalized block as the sentinel we will be looking for.
 	commit, err := t.chain.Commit(s.height)
+	if errors.Is(err, dps.ErrUnavailable) {
+		time.Sleep(t.cfg.WaitInterval)
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("could not get commit: %w", err)
 	}

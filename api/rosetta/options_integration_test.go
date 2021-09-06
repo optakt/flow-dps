@@ -33,6 +33,9 @@ import (
 )
 
 func TestAPI_Options(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -187,10 +190,12 @@ func TestAPI_Options(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestAPI_OptionsHandlesErrors(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -266,6 +271,9 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 }
 
 func TestAPI_OptionsHandlesMalformedRequest(t *testing.T) {
+	// TODO: Repair integration tests
+	//       See https://github.com/optakt/flow-dps/issues/333
+	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
