@@ -42,6 +42,7 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -66,6 +67,7 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -89,6 +91,7 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -113,6 +116,7 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -137,6 +141,7 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -163,6 +168,7 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -189,6 +195,7 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -216,6 +223,7 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -242,6 +250,7 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -272,6 +281,7 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -304,6 +314,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -336,6 +347,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -369,6 +381,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -397,6 +410,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -432,6 +446,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -460,6 +475,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -488,6 +504,7 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -518,6 +535,7 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -545,6 +563,7 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -577,6 +596,7 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -604,6 +624,7 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -634,6 +655,7 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -661,6 +683,7 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -691,6 +714,7 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -718,6 +742,7 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -745,6 +770,7 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -772,6 +798,7 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -804,6 +831,7 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -831,6 +859,7 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -861,6 +890,7 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -888,6 +918,7 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -918,6 +949,7 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -945,6 +977,7 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -977,6 +1010,7 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)

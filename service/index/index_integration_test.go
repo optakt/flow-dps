@@ -19,6 +19,7 @@ package index_test
 import (
 	"testing"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/flow-go/model/flow"
@@ -35,7 +36,8 @@ func TestIndex(t *testing.T) {
 	t.Run("first", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		assert.NoError(t, writer.First(mocks.GenericHeight))
 		// Close the writer to make it commit its transactions.
@@ -50,7 +52,8 @@ func TestIndex(t *testing.T) {
 	t.Run("last", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		assert.NoError(t, writer.Last(mocks.GenericHeight))
 		// Close the writer to make it commit its transactions.
@@ -65,7 +68,8 @@ func TestIndex(t *testing.T) {
 	t.Run("height", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		blockID := mocks.GenericHeader.ID()
 		assert.NoError(t, writer.Height(blockID, mocks.GenericHeight))
@@ -81,7 +85,8 @@ func TestIndex(t *testing.T) {
 	t.Run("commit", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		assert.NoError(t, writer.Commit(mocks.GenericHeight, mocks.GenericCommit(0)))
 		// Close the writer to make it commit its transactions.
@@ -96,7 +101,8 @@ func TestIndex(t *testing.T) {
 	t.Run("header", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		assert.NoError(t, writer.Header(mocks.GenericHeight, mocks.GenericHeader))
 		// Close the writer to make it commit its transactions.
@@ -111,7 +117,8 @@ func TestIndex(t *testing.T) {
 	t.Run("payloads", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		paths := mocks.GenericLedgerPaths(4)
 		payloads := mocks.GenericLedgerPayloads(4)
@@ -134,15 +141,14 @@ func TestIndex(t *testing.T) {
 
 		collections := mocks.GenericCollections(4)
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		assert.NoError(t, writer.Collections(mocks.GenericHeight, collections))
 		// Close the writer to make it commit its transactions.
 		assert.NoError(t, writer.Close())
 
 		t.Run("retrieve collection by ID", func(t *testing.T) {
-			t.Parallel()
-
 			got, err := reader.Collection(collections[0].ID())
 
 			assert.NoError(t, err)
@@ -150,8 +156,6 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("retrieve collections by height", func(t *testing.T) {
-			t.Parallel()
-
 			got, err := reader.CollectionsByHeight(mocks.GenericHeight)
 
 			assert.NoError(t, err)
@@ -170,7 +174,8 @@ func TestIndex(t *testing.T) {
 	t.Run("guarantees", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		assert.NoError(t, writer.Guarantees(mocks.GenericHeight, mocks.GenericGuarantees(4)))
 		// Close the writer to make it commit its transactions.
@@ -186,7 +191,8 @@ func TestIndex(t *testing.T) {
 	t.Run("transactions", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		transactions := mocks.GenericTransactions(4)
 		txIDs := []flow.Identifier{
@@ -201,8 +207,6 @@ func TestIndex(t *testing.T) {
 		assert.NoError(t, writer.Close())
 
 		t.Run("retrieve transactions by height", func(t *testing.T) {
-			t.Parallel()
-
 			gotTxIDs, err := reader.TransactionsByHeight(mocks.GenericHeight)
 
 			assert.NoError(t, err)
@@ -210,8 +214,6 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("retrieve transaction by ID", func(t *testing.T) {
-			t.Parallel()
-
 			gotTx, err := reader.Transaction(transactions[0].ID())
 
 			assert.NoError(t, err)
@@ -219,8 +221,6 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("retrieve height for transaction", func(t *testing.T) {
-			t.Parallel()
-
 			gotTx, err := reader.HeightForTransaction(transactions[0].ID())
 
 			assert.NoError(t, err)
@@ -231,7 +231,8 @@ func TestIndex(t *testing.T) {
 	t.Run("results", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		results := mocks.GenericResults(4)
 
@@ -248,7 +249,8 @@ func TestIndex(t *testing.T) {
 	t.Run("events", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		withdrawalType := mocks.GenericEventType(0)
 		depositType := mocks.GenericEventType(1)
@@ -263,8 +265,6 @@ func TestIndex(t *testing.T) {
 		assert.NoError(t, writer.Close())
 
 		t.Run("no types specified", func(t *testing.T) {
-			t.Parallel()
-
 			got, err := reader.Events(mocks.GenericHeight)
 
 			assert.NoError(t, err)
@@ -272,8 +272,6 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("type specified", func(t *testing.T) {
-			t.Parallel()
-
 			got1, err := reader.Events(mocks.GenericHeight, withdrawalType)
 
 			assert.NoError(t, err)
@@ -291,7 +289,8 @@ func TestIndex(t *testing.T) {
 	t.Run("seals", func(t *testing.T) {
 		t.Parallel()
 
-		reader, writer := setupIndex(t)
+		reader, writer, db := setupIndex(t)
+		defer db.Close()
 
 		seals := mocks.GenericSeals(4)
 
@@ -300,8 +299,6 @@ func TestIndex(t *testing.T) {
 		assert.NoError(t, writer.Close())
 
 		t.Run("retrieve seal by ID", func(t *testing.T) {
-			t.Parallel()
-
 			got, err := reader.Seal(seals[0].ID())
 
 			assert.NoError(t, err)
@@ -309,8 +306,6 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("retrieve seals by height", func(t *testing.T) {
-			t.Parallel()
-
 			got, err := reader.SealsByHeight(mocks.GenericHeight)
 
 			assert.NoError(t, err)
@@ -323,16 +318,17 @@ func TestIndex(t *testing.T) {
 	})
 }
 
-func setupIndex(t *testing.T) (*index.Reader, *index.Writer) {
+func setupIndex(t *testing.T) (*index.Reader, *index.Writer, *badger.DB) {
 	t.Helper()
 
 	codec := zbor.NewCodec()
 
 	db := helpers.InMemoryDB(t)
+
 	lib := storage.New(codec)
 
 	reader := index.NewReader(db, lib)
 	writer := index.NewWriter(db, lib, index.WithConcurrentTransactions(4))
 
-	return reader, writer
+	return reader, writer, db
 }

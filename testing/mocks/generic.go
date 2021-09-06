@@ -368,6 +368,10 @@ func GenericEvents(number int, types ...flow.EventType) []flow.Event {
 	return events
 }
 
+func GenericEvent(index int) flow.Event {
+	return GenericEvents(index + 1)[index]
+}
+
 func GenericTransactionQualifier(index int) identifier.Transaction {
 	txID := GenericTransaction(index).ID()
 	return identifier.Transaction{Hash: txID.String()}
@@ -407,11 +411,11 @@ func GenericOperation(index int) object.Operation {
 }
 
 func GenericCollections(number int) []*flow.LightCollection {
-	txIDs := GenericTransactionIDs(2)
+	txIDs := GenericTransactionIDs(number * 2)
 
 	var collections []*flow.LightCollection
 	for i := 0; i < number; i++ {
-		collections = append(collections, &flow.LightCollection{Transactions: txIDs})
+		collections = append(collections, &flow.LightCollection{Transactions: txIDs[i*2 : i*2+2]})
 	}
 
 	return collections
