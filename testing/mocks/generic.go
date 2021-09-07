@@ -136,6 +136,8 @@ var (
 		Index: &GenericHeight,
 		Hash:  GenericHeader.ID().String(),
 	}
+
+	GenericParams = dps.Params{ChainID: dps.FlowTestnet}
 )
 
 func GenericBlockIDs(number int) []flow.Identifier {
