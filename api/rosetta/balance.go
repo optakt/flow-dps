@@ -31,7 +31,7 @@ type BalanceRequest struct {
 	NetworkID  identifier.Network    `json:"network_identifier"`
 	BlockID    identifier.Block      `json:"block_identifier"`
 	AccountID  identifier.Account    `json:"account_identifier"`
-	Currencies []identifier.Currency `json:"currencies" validate:"required,gt=0,dive"`
+	Currencies []identifier.Currency `json:"currencies"`
 }
 
 // BalanceResponse implements the successful response schema for /account/balance.

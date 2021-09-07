@@ -47,7 +47,8 @@ func NewValidator() *Validator {
 	v.RegisterStructValidation(networkValidator, identifier.Network{})
 	v.RegisterStructValidation(accountValidator, identifier.Account{})
 	v.RegisterStructValidation(transactionValidator, identifier.Transaction{})
-	v.RegisterStructValidation(currencyValidator, identifier.Currency{})
+	// Register custom top-level validators.
+	v.RegisterStructValidation(balanceValidator, BalanceRequest{})
 
 	validator := Validator{
 		validate: v,

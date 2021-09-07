@@ -27,6 +27,7 @@ const (
 	networkField    = "network"
 	addressField    = "address"
 	txField         = "transaction_id"
+	currencyField   = "currency"
 	symbolField     = "symbol"
 )
 
@@ -83,13 +84,19 @@ func transactionValidator(sl validator.StructLevel) {
 	}
 }
 
-func currencyValidator(sl validator.StructLevel) {
-	currency, ok := sl.Current().Interface().(identifier.Currency)
+func balanceValidator(sl validator.StructLevel) {
+	req, ok := sl.Current().Interface().(BalanceRequest)
 	if !ok {
 		return
 	}
 
-	if currency.Symbol == "" {
-		sl.ReportError(currency.Symbol, symbolField, symbolField, symbolEmpty, "")
+	if len(req.Currencies) == 0 {
+		sl.ReportError(req.Currencies, currencyField, currencyField, currenciesEmpty, "")
+	}
+
+	for _, currency := range req.Currencies {
+		if currency.Symbol == "" {
+			sl.ReportError(currency.Symbol, symbolField, symbolField, symbolEmpty, "")
+		}
 	}
 }
