@@ -50,7 +50,6 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	}
 
 	err = d.Validate(req)
-	// PR comment - special handling only needed to add case-specific parameters.
 	if errors.Is(err, errBlockLength) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
 			withDetail("have_length", len(req.BlockID.Hash)),

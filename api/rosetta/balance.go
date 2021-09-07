@@ -51,7 +51,6 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	// TODO: check - failure on the empty currency list validation
 	err = d.Validate(req)
 	if errors.Is(err, errBlockLength) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
