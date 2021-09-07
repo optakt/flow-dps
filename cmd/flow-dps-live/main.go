@@ -219,20 +219,17 @@ func run() int {
 		log.Error().Err(err).Str("key", flagSeedKey).Msg("could not parse seed node network public key")
 		return failure
 	}
-	seedNode := unstaked.BootstrapNodeInfo{
+	seedNodes := []unstaked.BootstrapNodeInfo{{
 		Host:             seedHost,
 		Port:             uint(seedPort),
 		NetworkPublicKey: seedKey,
-	}
+	}}
 	follow, err := unstaked.NewConsensusFollower(
 		privKey,
 		"0.0.0.0:0", // automatically choose port, listen on all IPs
-		[]unstaked.BootstrapNodeInfo{seedNode},
+		seedNodes,
 		unstaked.WithBootstrapDir(flagBootstrap),
-		// FIXME: We can uncomment this once the PR is merged to inject the
-		// protocol state database is merged:
-		// => https://github.com/onflow/flow-go/pull/1228
-		// unstaked.WithDB(db),
+		unstaked.WithDB(db),
 	)
 	if err != nil {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")

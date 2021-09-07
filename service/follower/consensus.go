@@ -103,12 +103,7 @@ func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
 	if !ok {
 		return flow.DummyStateCommitment, dps.ErrUnavailable
 	}
-	// FIXME: Return the `FinalStateCommitment` from the block record once the
-	// feature is backported / the PR merged into master.
-	// => https://github.com/onflow/flow-go/pull/1239
-	// return record.FinalStateCommitment, nil
-	_ = record
-	return flow.DummyStateCommitment, nil
+	return record.FinalStateCommitment, nil
 }
 
 // Collections returns the light collections for the finalized block at the
