@@ -106,22 +106,14 @@ func (v *Validator) Validate(request interface{}) error {
 }
 
 func blockValidator(sl validator.StructLevel) {
-	rosBlockID, ok := sl.Current().Interface().(identifier.Block)
-	if !ok {
-		return
-	}
-
+	rosBlockID := sl.Current().Interface().(identifier.Block)
 	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != hexIDSize {
 		sl.ReportError(rosBlockID.Hash, blockHashField, blockHashField, blockLength, "")
 	}
 }
 
 func networkValidator(sl validator.StructLevel) {
-	network, ok := sl.Current().Interface().(identifier.Network)
-	if !ok {
-		return
-	}
-
+	network := sl.Current().Interface().(identifier.Network)
 	if network.Blockchain == "" {
 		sl.ReportError(network.Blockchain, blockchainField, blockchainField, blockchainEmpty, "")
 	}
@@ -131,11 +123,7 @@ func networkValidator(sl validator.StructLevel) {
 }
 
 func accountValidator(sl validator.StructLevel) {
-	rosAccountID, ok := sl.Current().Interface().(identifier.Account)
-	if !ok {
-		return
-	}
-
+	rosAccountID := sl.Current().Interface().(identifier.Account)
 	if rosAccountID.Address == "" {
 		sl.ReportError(rosAccountID.Address, addressField, addressField, addressEmpty, "")
 	}
@@ -145,11 +133,7 @@ func accountValidator(sl validator.StructLevel) {
 }
 
 func transactionValidator(sl validator.StructLevel) {
-	rosTxID, ok := sl.Current().Interface().(identifier.Transaction)
-	if !ok {
-		return
-	}
-
+	rosTxID := sl.Current().Interface().(identifier.Transaction)
 	if rosTxID.Hash == "" {
 		sl.ReportError(rosTxID.Hash, txField, txField, txHashEmpty, "")
 	}
@@ -159,15 +143,10 @@ func transactionValidator(sl validator.StructLevel) {
 }
 
 func balanceValidator(sl validator.StructLevel) {
-	req, ok := sl.Current().Interface().(BalanceRequest)
-	if !ok {
-		return
-	}
-
+	req := sl.Current().Interface().(BalanceRequest)
 	if len(req.Currencies) == 0 {
 		sl.ReportError(req.Currencies, currencyField, currencyField, currenciesEmpty, "")
 	}
-
 	for _, currency := range req.Currencies {
 		if currency.Symbol == "" {
 			sl.ReportError(currency.Symbol, symbolField, symbolField, symbolEmpty, "")
@@ -176,22 +155,14 @@ func balanceValidator(sl validator.StructLevel) {
 }
 
 func parseValidator(sl validator.StructLevel) {
-	req, ok := sl.Current().Interface().(ParseRequest)
-	if !ok {
-		return
-	}
-
+	req := sl.Current().Interface().(ParseRequest)
 	if req.Transaction == "" {
 		sl.ReportError(req.Transaction, transactionField, transactionField, txBodyEmpty, "")
 	}
 }
 
 func combineValidator(sl validator.StructLevel) {
-	req, ok := sl.Current().Interface().(CombineRequest)
-	if !ok {
-		return
-	}
-
+	req := sl.Current().Interface().(CombineRequest)
 	if req.UnsignedTransaction == "" {
 		sl.ReportError(req.UnsignedTransaction, transactionField, transactionField, txBodyEmpty, "")
 	}
@@ -202,22 +173,14 @@ func combineValidator(sl validator.StructLevel) {
 }
 
 func submitValidator(sl validator.StructLevel) {
-	req, ok := sl.Current().Interface().(SubmitRequest)
-	if !ok {
-		return
-	}
-
+	req := sl.Current().Interface().(SubmitRequest)
 	if req.SignedTransaction == "" {
 		sl.ReportError(req.SignedTransaction, transactionField, transactionField, txBodyEmpty, "")
 	}
 }
 
 func hashValidator(sl validator.StructLevel) {
-	req, ok := sl.Current().Interface().(HashRequest)
-	if !ok {
-		return
-	}
-
+	req := sl.Current().Interface().(HashRequest)
 	if req.SignedTransaction == "" {
 		sl.ReportError(req.SignedTransaction, transactionField, transactionField, txBodyEmpty, "")
 	}
