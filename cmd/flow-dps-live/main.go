@@ -299,6 +299,11 @@ func run() int {
 	done := make(chan struct{})
 	failed := make(chan struct{})
 	go func() {
+		follow.Run(context.Background())
+		close(done)
+	}()
+	go func() {
+		<-follow.NodeBuilder.Ready()
 		start := time.Now()
 		log.Info().Time("start", start).Msg("Flow DPS Live Indexer starting")
 		err := fsm.Run()
