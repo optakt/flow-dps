@@ -25,7 +25,7 @@ import (
 
 var (
 	// Special case in the validator library that shouldn't really happen with correct usage.
-	errInvalidValidation = errors.New("invalid validation")
+	errInvalidValidation = errors.New("invalid validation input")
 
 	errBlockLength   = errors.New(blockLength)
 	errAddressLength = errors.New(addressLength)
@@ -45,8 +45,6 @@ const (
 	signaturesField  = "signatures"
 )
 
-// PR comment - this could be unexported, but then there are name conflicts.
-// I didn't come up with a nice name which didn't lead to N instances of validate/validator.
 type Validator struct {
 	validate *validator.Validate
 }
@@ -81,9 +79,6 @@ func (v *Validator) Validate(request interface{}) error {
 		return nil
 	}
 
-	// PR comment - this only happens if an invalid argument was given to the struct validation
-	// functions. Still, since we're doing type assertsions, I thought it's safer to check it here
-	// and ignore on the callers side.
 	_, ok := err.(*validator.InvalidValidationError)
 	if ok {
 		return errInvalidValidation
