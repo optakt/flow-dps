@@ -34,13 +34,15 @@ var (
 
 // Field names needed by the validator library, not needed or used by our code at the moment.
 const (
-	blockHashField  = "block_hash"
-	blockchainField = "blockchain"
-	networkField    = "network"
-	addressField    = "address"
-	txField         = "transaction_id"
-	currencyField   = "currency"
-	symbolField     = "symbol"
+	blockHashField   = "block_hash"
+	blockchainField  = "blockchain"
+	networkField     = "network"
+	addressField     = "address"
+	txField          = "transaction_id"
+	currencyField    = "currency"
+	symbolField      = "symbol"
+	transactionField = "transaction"
+	signaturesField  = "signatures"
 )
 
 // PR comment - this could be unexported, but then there are name conflicts.
@@ -60,6 +62,10 @@ func NewValidator() *Validator {
 	v.RegisterStructValidation(transactionValidator, identifier.Transaction{})
 	// Register custom top-level validators.
 	v.RegisterStructValidation(balanceValidator, BalanceRequest{})
+	v.RegisterStructValidation(parseValidator, ParseRequest{})
+	v.RegisterStructValidation(combineValidator, CombineRequest{})
+	v.RegisterStructValidation(submitValidator, SubmitRequest{})
+	v.RegisterStructValidation(hashValidator, HashRequest{})
 
 	validator := Validator{
 		validate: v,
@@ -166,5 +172,53 @@ func balanceValidator(sl validator.StructLevel) {
 		if currency.Symbol == "" {
 			sl.ReportError(currency.Symbol, symbolField, symbolField, symbolEmpty, "")
 		}
+	}
+}
+
+func parseValidator(sl validator.StructLevel) {
+	req, ok := sl.Current().Interface().(ParseRequest)
+	if !ok {
+		return
+	}
+
+	if req.Transaction == "" {
+		sl.ReportError(req.Transaction, transactionField, transactionField, txBodyEmpty, "")
+	}
+}
+
+func combineValidator(sl validator.StructLevel) {
+	req, ok := sl.Current().Interface().(CombineRequest)
+	if !ok {
+		return
+	}
+
+	if req.UnsignedTransaction == "" {
+		sl.ReportError(req.UnsignedTransaction, transactionField, transactionField, txBodyEmpty, "")
+	}
+
+	if len(req.Signatures) == 0 {
+		sl.ReportError(req.Signatures, signaturesField, signaturesField, signaturesEmpty, "")
+	}
+}
+
+func submitValidator(sl validator.StructLevel) {
+	req, ok := sl.Current().Interface().(SubmitRequest)
+	if !ok {
+		return
+	}
+
+	if req.SignedTransaction == "" {
+		sl.ReportError(req.SignedTransaction, transactionField, transactionField, txBodyEmpty, "")
+	}
+}
+
+func hashValidator(sl validator.StructLevel) {
+	req, ok := sl.Current().Interface().(HashRequest)
+	if !ok {
+		return
+	}
+
+	if req.SignedTransaction == "" {
+		sl.ReportError(req.SignedTransaction, transactionField, transactionField, txBodyEmpty, "")
 	}
 }

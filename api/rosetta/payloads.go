@@ -54,11 +54,15 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
+	err = c.Validate(req)
+	if errors.Is(err, errBlockLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
+			withDetail("have_length", len(req.Metadata.CurrentBlockID.Hash)),
+			withDetail("want_length", hexIDSize),
+		))
 	}
-	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 	}
 
 	// Metadata object is the response from our metadata endpoint. Thus, the object
@@ -66,12 +70,6 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	rosBlockID := req.Metadata.CurrentBlockID
 	if rosBlockID.Index == nil || rosBlockID.Hash == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
-	}
-	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
-			withDetail("have_length", len(rosBlockID.Hash)),
-			withDetail("want_length", hexIDSize),
-		))
 	}
 
 	intent, err := c.transact.DeriveIntent(req.Operations)

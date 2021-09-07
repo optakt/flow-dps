@@ -54,15 +54,9 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
-	}
-	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
-	}
-
-	if req.Transaction == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txBodyEmpty))
+	err = c.Validate(req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 	}
 
 	// Parse the transaction and recreate the original list of operations, as well as all signers involved.

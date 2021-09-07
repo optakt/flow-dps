@@ -52,11 +52,9 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
-	}
-	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
+	err = c.Validate(req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 	}
 
 	intent, err := c.transact.DeriveIntent(req.Operations)
