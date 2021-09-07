@@ -79,6 +79,7 @@ func run() int {
 		flagLevel       string
 		flagSeedAddress string
 		flagSeedKey     string
+		flagSkip        bool
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
@@ -91,6 +92,7 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
+	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip bootstrapping of root checkpoint registers")
 
 	pflag.Parse()
 
@@ -260,6 +262,7 @@ func run() int {
 		mapper.WithIndexEvents(true),
 		mapper.WithIndexPayloads(true),
 		mapper.WithIndexSeals(true),
+		mapper.WithSkipBootstrap(flagSkip),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
