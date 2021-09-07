@@ -32,6 +32,17 @@ var (
 	errTxLength      = errors.New(txLength)
 )
 
+// Field names needed by the validator library, not needed or used by our code at the moment.
+const (
+	blockHashField  = "block_hash"
+	blockchainField = "blockchain"
+	networkField    = "network"
+	addressField    = "address"
+	txField         = "transaction_id"
+	currencyField   = "currency"
+	symbolField     = "symbol"
+)
+
 // PR comment - this could be unexported, but then there are name conflicts.
 // I didn't come up with a nice name which didn't lead to N instances of validate/validator.
 type Validator struct {
@@ -85,5 +96,75 @@ func (v *Validator) Validate(request interface{}) error {
 		return errTxLength
 	default:
 		return fmt.Errorf(msg)
+	}
+}
+
+func blockValidator(sl validator.StructLevel) {
+	rosBlockID, ok := sl.Current().Interface().(identifier.Block)
+	if !ok {
+		return
+	}
+
+	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != hexIDSize {
+		sl.ReportError(rosBlockID.Hash, blockHashField, blockHashField, blockLength, "")
+	}
+}
+
+func networkValidator(sl validator.StructLevel) {
+	network, ok := sl.Current().Interface().(identifier.Network)
+	if !ok {
+		return
+	}
+
+	if network.Blockchain == "" {
+		sl.ReportError(network.Blockchain, blockchainField, blockchainField, blockchainEmpty, "")
+	}
+	if network.Network == "" {
+		sl.ReportError(network.Network, networkField, networkField, networkEmpty, "")
+	}
+}
+
+func accountValidator(sl validator.StructLevel) {
+	rosAccountID, ok := sl.Current().Interface().(identifier.Account)
+	if !ok {
+		return
+	}
+
+	if rosAccountID.Address == "" {
+		sl.ReportError(rosAccountID.Address, addressField, addressField, addressEmpty, "")
+	}
+	if len(rosAccountID.Address) != hexAddressSize {
+		sl.ReportError(rosAccountID.Address, addressField, addressField, addressLength, "")
+	}
+}
+
+func transactionValidator(sl validator.StructLevel) {
+	rosTxID, ok := sl.Current().Interface().(identifier.Transaction)
+	if !ok {
+		return
+	}
+
+	if rosTxID.Hash == "" {
+		sl.ReportError(rosTxID.Hash, txField, txField, txHashEmpty, "")
+	}
+	if len(rosTxID.Hash) != hexIDSize {
+		sl.ReportError(rosTxID.Hash, txField, txField, txLength, "")
+	}
+}
+
+func balanceValidator(sl validator.StructLevel) {
+	req, ok := sl.Current().Interface().(BalanceRequest)
+	if !ok {
+		return
+	}
+
+	if len(req.Currencies) == 0 {
+		sl.ReportError(req.Currencies, currencyField, currencyField, currenciesEmpty, "")
+	}
+
+	for _, currency := range req.Currencies {
+		if currency.Symbol == "" {
+			sl.ReportError(currency.Symbol, symbolField, symbolField, symbolEmpty, "")
+		}
 	}
 }
