@@ -229,7 +229,7 @@ func run() int {
 		"0.0.0.0:0", // automatically choose port, listen on all IPs
 		seedNodes,
 		unstaked.WithBootstrapDir(flagBootstrap),
-		unstaked.WithDB(db),
+		unstaked.WithDB(data),
 	)
 	if err != nil {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
