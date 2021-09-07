@@ -24,7 +24,6 @@ import (
 )
 
 var (
-	// Special case in the validator library that shouldn't really happen with correct usage.
 	errInvalidValidation = errors.New("invalid validation input")
 
 	errBlockLength   = errors.New(blockLength)
@@ -32,7 +31,10 @@ var (
 	errTxLength      = errors.New(txLength)
 )
 
-// Field names needed by the validator library, not needed or used by our code at the moment.
+// Field names are displayed if the code deals with the plain `error` types instead of the structured validation errors.
+// When dealing with plain errors, the validation error reads "Field validation for 'FieldName' failed on the 'X' tag".
+// Since in our code we are dealing with structured errors, these field names are not actually used.
+// However, they are mandatory arguments for the `ReportError` method from the validator library.
 const (
 	blockHashField   = "block_hash"
 	blockchainField  = "blockchain"
@@ -54,11 +56,17 @@ func NewValidator() *Validator {
 	v := validator.New()
 
 	// Register custom validators for known types.
+	// We register a single type per validator, so we can safely perform type
+	// assertion of the provided `validator.StructLevel` to the correct type.
 	v.RegisterStructValidation(blockValidator, identifier.Block{})
 	v.RegisterStructValidation(networkValidator, identifier.Network{})
 	v.RegisterStructValidation(accountValidator, identifier.Account{})
 	v.RegisterStructValidation(transactionValidator, identifier.Transaction{})
-	// Register custom top-level validators.
+
+	// Register custom top-level validators. These validate the entire request
+	// object, compared to the ones above which validate a specific type
+	// within the request. This way we can validate some standard types (strings)
+	// or complex ones (array of currencies) in a structured way.
 	v.RegisterStructValidation(balanceValidator, BalanceRequest{})
 	v.RegisterStructValidation(parseValidator, ParseRequest{})
 	v.RegisterStructValidation(combineValidator, CombineRequest{})
@@ -79,6 +87,8 @@ func (v *Validator) Validate(request interface{}) error {
 		return nil
 	}
 
+	// InvalidValidationError is returned by the validation library in cases of invalid usage,
+	// more precisely, passing a non-struct to `validate.Struct()` method.
 	_, ok := err.(*validator.InvalidValidationError)
 	if ok {
 		return errInvalidValidation

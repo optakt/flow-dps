@@ -17,22 +17,22 @@ package rosetta
 // Data implements the Rosetta Data API specification.
 // See https://www.rosetta-api.org/docs/data_api_introduction.html
 type Data struct {
-	config    Configuration
-	retrieve  Retriever
-	validator *Validator
+	config   Configuration
+	retrieve Retriever
+	validate *Validator
 }
 
 // NewData creates a new instance of the Data API using the given configuration to answer configuration queries
 // and the given retriever to answer blockchain data queries.
 func NewData(config Configuration, retrieve Retriever) *Data {
 	d := Data{
-		config:    config,
-		retrieve:  retrieve,
-		validator: NewValidator(),
+		config:   config,
+		retrieve: retrieve,
+		validate: NewValidator(),
 	}
 	return &d
 }
 
 func (d *Data) Validate(request interface{}) error {
-	return d.validator.Validate(request)
+	return d.validate.Validate(request)
 }

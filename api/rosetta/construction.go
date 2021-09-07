@@ -23,9 +23,9 @@ package rosetta
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html
 type Construction struct {
-	config    Configuration
-	transact  Transactor
-	validator *Validator
+	config   Configuration
+	transact Transactor
+	validate *Validator
 
 	// Retrieve is used to get the latest block ID. This is needed since
 	// transactions require a reference block ID, so that their validity
@@ -40,15 +40,15 @@ type Construction struct {
 func NewConstruction(config Configuration, transact Transactor, retriever Retriever) *Construction {
 
 	c := Construction{
-		config:    config,
-		transact:  transact,
-		retrieve:  retriever,
-		validator: NewValidator(),
+		config:   config,
+		transact: transact,
+		retrieve: retriever,
+		validate: NewValidator(),
 	}
 
 	return &c
 }
 
 func (c *Construction) Validate(request interface{}) error {
-	return c.validator.Validate(request)
+	return c.validate.Validate(request)
 }
