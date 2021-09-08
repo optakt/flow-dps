@@ -43,7 +43,6 @@ import (
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/cloud"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
@@ -183,8 +182,7 @@ func run() int {
 	// Initialize the consensus tracker, which uses the protocol state to
 	// retrieve data from consensus and the execution follower to complement
 	// the data with complete blocks.
-	chain := chain.FromDisk(data)
-	consensus, err := tracker.NewConsensus(log, chain, execution)
+	consensus, err := tracker.NewConsensus(log, data, execution)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize consensus tracker")
 		return failure

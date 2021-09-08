@@ -53,17 +53,6 @@ func (d *Disk) Root() (uint64, error) {
 	return height, nil
 }
 
-func (d *Disk) Height(blockID flow.Identifier) (uint64, error) {
-
-	var header flow.Header
-	err := d.db.View(operation.RetrieveHeader(blockID, &header))
-	if err != nil {
-		return 0, fmt.Errorf("could not retrieve header: %w", err)
-	}
-
-	return header.Height, nil
-}
-
 func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 
 	blockID, err := d.block(height)

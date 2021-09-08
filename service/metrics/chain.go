@@ -38,11 +38,6 @@ func (c *Chain) Root() (uint64, error) {
 	return c.chain.Root()
 }
 
-func (c *Chain) Height(blockID flow.Identifier) (uint64, error) {
-	defer c.time.Duration("height")()
-	return c.chain.Height(blockID)
-}
-
 func (c *Chain) Commit(height uint64) (flow.StateCommitment, error) {
 	defer c.time.Duration("commit")()
 	return c.chain.Commit(height)

@@ -22,7 +22,6 @@ import (
 
 type Chain struct {
 	RootFunc         func() (uint64, error)
-	HeightFunc       func(blockID flow.Identifier) (uint64, error)
 	HeaderFunc       func(height uint64) (*flow.Header, error)
 	CommitFunc       func(height uint64) (flow.StateCommitment, error)
 	CollectionsFunc  func(height uint64) ([]*flow.LightCollection, error)
@@ -38,9 +37,6 @@ func BaselineChain(t *testing.T) *Chain {
 
 	c := Chain{
 		RootFunc: func() (uint64, error) {
-			return GenericHeight, nil
-		},
-		HeightFunc: func(blockID flow.Identifier) (uint64, error) {
 			return GenericHeight, nil
 		},
 		HeaderFunc: func(height uint64) (*flow.Header, error) {
@@ -74,10 +70,6 @@ func BaselineChain(t *testing.T) *Chain {
 
 func (c *Chain) Root() (uint64, error) {
 	return c.RootFunc()
-}
-
-func (c *Chain) Height(blockID flow.Identifier) (uint64, error) {
-	return c.HeightFunc(blockID)
 }
 
 func (c *Chain) Header(height uint64) (*flow.Header, error) {

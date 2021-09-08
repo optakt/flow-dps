@@ -17,9 +17,11 @@ package tracker
 import (
 	"fmt"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/storage/badger/operation"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -31,22 +33,28 @@ import (
 // the cached data each time a block is finalized.
 // Consensus implements the `Chain` interface needed by the DPS indexer.
 type Consensus struct {
-	log   zerolog.Logger
-	chain dps.Chain
-	hold  RecordHolder
-	last  uint64
+	log  zerolog.Logger
+	db   *badger.DB
+	hold RecordHolder
+	last uint64
 }
 
 // NewConsensus returns a new instance of the DPS consensus follower, reading
 // from the provided protocol state database and the provided block record
 // holder.
-func NewConsensus(log zerolog.Logger, chain dps.Chain, hold RecordHolder) (*Consensus, error) {
+func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) (*Consensus, error) {
+
+	var last uint64
+	err := db.View(operation.RetrieveFinalizedHeight(&last))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve finalized height: %w", err)
+	}
 
 	c := Consensus{
-		log:   log.With().Str("component", "consensus_tracker").Logger(),
-		chain: chain,
-		hold:  hold,
-		last:  0,
+		log:  log.With().Str("component", "consensus_tracker").Logger(),
+		db:   db,
+		hold: hold,
+		last: 0,
 	}
 
 	return &c, nil
@@ -54,64 +62,144 @@ func NewConsensus(log zerolog.Logger, chain dps.Chain, hold RecordHolder) (*Cons
 
 // Root returns the root height from the underlying protocol state.
 func (c *Consensus) Root() (uint64, error) {
-	root, err := c.chain.Root()
-	c.last = root
-	c.log.Debug().Uint64("height", root).Msg("root initialization processed")
-	return root, err
-}
 
-// Height returns the height for the given block ID.
-func (c *Consensus) Height(blockID flow.Identifier) (uint64, error) {
-	return c.chain.Height(blockID)
+	var root uint64
+	err := c.db.View(operation.RetrieveRootHeight(&root))
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve root height: %w", err)
+	}
+
+	return root, err
 }
 
 // Header returns the header for the given height, if available. Once a header
 // has been successfully retrieved, all block payload data at a height lower
 // than the returned payload are purged from the cache.
 func (c *Consensus) Header(height uint64) (*flow.Header, error) {
+
 	if height > c.last {
 		return nil, dps.ErrUnavailable
 	}
-	return c.chain.Header(height)
+
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+
+	var header flow.Header
+	err = c.db.View(operation.RetrieveHeader(blockID, &header))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve header: %w", err)
+	}
+
+	return &header, nil
 }
 
 // Guarantees returns the collection guarantees for the given height, if available.
 func (c *Consensus) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
+
 	if height > c.last {
 		return nil, dps.ErrUnavailable
 	}
-	return c.chain.Guarantees(height)
+
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+
+	var collIDs []flow.Identifier
+	err = c.db.View(operation.LookupPayloadGuarantees(blockID, &collIDs))
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup collections: %w", err)
+	}
+
+	guarantees := make([]*flow.CollectionGuarantee, 0, len(collIDs))
+	for _, collID := range collIDs {
+		var guarantee flow.CollectionGuarantee
+		err := c.db.View(operation.RetrieveGuarantee(collID, &guarantee))
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve guarantee (%x): %w", collID, err)
+		}
+		guarantees = append(guarantees, &guarantee)
+	}
+
+	return guarantees, nil
 }
 
 // Seals returns the block seals for the given height, if available.
 func (c *Consensus) Seals(height uint64) ([]*flow.Seal, error) {
+
 	if height > c.last {
 		return nil, dps.ErrUnavailable
 	}
-	return c.chain.Seals(height)
+
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+
+	var sealIDs []flow.Identifier
+	err = c.db.View(operation.LookupPayloadSeals(blockID, &sealIDs))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve seal IDs: %w", err)
+	}
+
+	if len(sealIDs) == 0 {
+		return nil, nil
+	}
+
+	seals := make([]*flow.Seal, 0, len(sealIDs))
+	for _, sealID := range sealIDs {
+		var seal flow.Seal
+		err = c.db.View(operation.RetrieveSeal(sealID, &seal))
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve seal: %w", err)
+		}
+		seals = append(seals, &seal)
+	}
+
+	return seals, nil
 }
 
 // Commit returns the state commitment for the given height, if available.
 func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
-	header, err := c.Header(height)
-	if err != nil {
-		return flow.DummyStateCommitment, fmt.Errorf("could not get header for height: %w", err)
+
+	if height > c.last {
+		return flow.DummyStateCommitment, dps.ErrUnavailable
 	}
-	record, ok := c.hold.Record(header.ID())
+
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return flow.DummyStateCommitment, fmt.Errorf("could not look up block: %w", err)
+	}
+
+	record, ok := c.hold.Record(blockID)
 	if !ok {
 		return flow.DummyStateCommitment, dps.ErrUnavailable
 	}
+
 	return record.FinalStateCommitment, nil
 }
 
 // Collections returns the light collections for the finalized block at the
 // given height.
 func (c *Consensus) Collections(height uint64) ([]*flow.LightCollection, error) {
-	header, err := c.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get header for height: %w", err)
+
+	if height > c.last {
+		return nil, dps.ErrUnavailable
 	}
-	record, ok := c.hold.Record(header.ID())
+
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+
+	record, ok := c.hold.Record(blockID)
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
@@ -120,17 +208,25 @@ func (c *Consensus) Collections(height uint64) ([]*flow.LightCollection, error) 
 		collection := complete.Collection().Light()
 		collections = append(collections, &collection)
 	}
+
 	return collections, nil
 }
 
 // Transactions returns the transaction bodies for the finalized block at the
 // given height.
 func (c *Consensus) Transactions(height uint64) ([]*flow.TransactionBody, error) {
-	header, err := c.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get header for height: %w", err)
+
+	if height > c.last {
+		return nil, dps.ErrUnavailable
 	}
-	record, ok := c.hold.Record(header.ID())
+
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+
+	record, ok := c.hold.Record(blockID)
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
@@ -138,31 +234,47 @@ func (c *Consensus) Transactions(height uint64) ([]*flow.TransactionBody, error)
 	for _, complete := range record.Collections {
 		transactions = append(transactions, complete.Transactions...)
 	}
+
 	return transactions, nil
 }
 
 // Results returns the transaction results for the finalized block at the
 // given height.
 func (c *Consensus) Results(height uint64) ([]*flow.TransactionResult, error) {
-	header, err := c.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get header for height: %w", err)
+
+	if height > c.last {
+		return nil, dps.ErrUnavailable
 	}
-	record, ok := c.hold.Record(header.ID())
+
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+
+	record, ok := c.hold.Record(blockID)
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
+
 	return record.TxResults, nil
 }
 
 // Events returns the transaction events for the finalized block at the
 // given height.
 func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
-	header, err := c.Header(height)
-	if err != nil {
-		return nil, fmt.Errorf("could not get header for height: %w", err)
+
+	if height > c.last {
+		return nil, dps.ErrUnavailable
 	}
-	record, ok := c.hold.Record(header.ID())
+
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+
+	record, ok := c.hold.Record(blockID)
 	if !ok {
 		return nil, dps.ErrUnavailable
 	}
@@ -170,17 +282,22 @@ func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 	for _, event := range record.Events {
 		events = append(events, *event)
 	}
+
 	return events, nil
 }
 
 // OnBlockFinalized is a callback that notifies the consensus tracker of a new
 // finalized block.
-func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
-	height, err := c.Height(finalID)
+func (c *Consensus) OnBlockFinalized(blockID flow.Identifier) {
+
+	var header flow.Header
+	err := c.db.View(operation.RetrieveHeader(blockID, &header))
 	if err != nil {
-		c.log.Error().Err(err).Hex("block", finalID[:]).Msg("could not get height for block")
+		c.log.Error().Err(err).Hex("block", blockID[:]).Msg("could not get header")
 		return
 	}
-	c.log.Debug().Hex("block", finalID[:]).Uint64("height", height).Msg("block finalization processed")
-	c.last = height
+
+	c.log.Debug().Hex("block", blockID[:]).Uint64("height", header.Height).Msg("block finalization processed")
+
+	c.last = header.Height
 }
