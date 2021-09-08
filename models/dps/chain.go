@@ -20,6 +20,7 @@ import (
 
 type Chain interface {
 	Root() (uint64, error)
+	Height(blockID flow.Identifier) (uint64, error)
 	Header(height uint64) (*flow.Header, error)
 	Commit(height uint64) (flow.StateCommitment, error)
 	Events(height uint64) ([]flow.Event, error)
