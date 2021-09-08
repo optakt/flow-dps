@@ -52,7 +52,7 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	err = c.Validate(req)
+	err = c.validate.Request(req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 	}
@@ -72,7 +72,7 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 	}
 	var opErr failure.InvalidOperations
 	if errors.As(err, &opErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txInvalidOps))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(TxInvalidOps))
 	}
 	var inErr failure.InvalidIntent
 	if errors.As(err, &inErr) {

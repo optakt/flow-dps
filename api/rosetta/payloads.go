@@ -54,11 +54,11 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	err = c.Validate(req)
-	if errors.Is(err, errBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
+	err = c.validate.Request(req)
+	if errors.Is(err, ErrBlockLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength,
 			withDetail("have_length", len(req.Metadata.CurrentBlockID.Hash)),
-			withDetail("want_length", hexIDSize),
+			withDetail("want_length", HexIDSize),
 		))
 	}
 	if err != nil {
@@ -69,7 +69,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	// should be okay, but let's validate it anyway.
 	rosBlockID := req.Metadata.CurrentBlockID
 	if rosBlockID.Index == nil || rosBlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockNotFull))
 	}
 
 	intent, err := c.transact.DeriveIntent(req.Operations)
@@ -87,7 +87,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	}
 	var opErr failure.InvalidOperations
 	if errors.As(err, &opErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txInvalidOps))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(TxInvalidOps))
 	}
 	var inErr failure.InvalidIntent
 	if errors.As(err, &inErr) {

@@ -25,7 +25,7 @@ package rosetta
 type Construction struct {
 	config   Configuration
 	transact Transactor
-	validate *Validator
+	validate Validator
 
 	// Retrieve is used to get the latest block ID. This is needed since
 	// transactions require a reference block ID, so that their validity
@@ -37,18 +37,14 @@ type Construction struct {
 // to handle transaction construction requests.
 // TODO: Decide if the retriever dependency should be kept or this functionality should be part of the transactor.
 // => https://github.com/optakt/flow-dps/issues/406
-func NewConstruction(config Configuration, transact Transactor, retriever Retriever) *Construction {
+func NewConstruction(config Configuration, transact Transactor, retrieve Retriever, validate Validator) *Construction {
 
 	c := Construction{
 		config:   config,
 		transact: transact,
-		retrieve: retriever,
-		validate: NewValidator(),
+		retrieve: retrieve,
+		validate: validate,
 	}
 
 	return &c
-}
-
-func (c *Construction) Validate(request interface{}) error {
-	return c.validate.Validate(request)
 }

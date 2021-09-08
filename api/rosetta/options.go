@@ -59,7 +59,7 @@ func (d *Data) Options(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	err = d.Validate(req)
+	err = d.validate.Request(req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 	}

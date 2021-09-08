@@ -49,11 +49,11 @@ func (d *Data) Block(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	err = d.Validate(req)
-	if errors.Is(err, errBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
+	err = d.validate.Request(req)
+	if errors.Is(err, ErrBlockLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength,
 			withDetail("have_length", len(req.BlockID.Hash)),
-			withDetail("want_length", hexIDSize),
+			withDetail("want_length", HexIDSize),
 		))
 	}
 	if err != nil {

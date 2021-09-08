@@ -15,19 +15,23 @@
 package validator
 
 import (
+	"github.com/go-playground/validator/v10"
+
 	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Validator struct {
-	params dps.Params
-	index  dps.Reader
+	params   dps.Params
+	index    dps.Reader
+	validate *validator.Validate
 }
 
 func New(params dps.Params, index dps.Reader) *Validator {
 
 	v := &Validator{
-		params: params,
-		index:  index,
+		params:   params,
+		index:    index,
+		validate: newRequestValidator(),
 	}
 
 	return v

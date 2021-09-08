@@ -51,17 +51,17 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	err = d.Validate(req)
-	if errors.Is(err, errBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
+	err = d.validate.Request(req)
+	if errors.Is(err, ErrBlockLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength,
 			withDetail("have_length", len(req.BlockID.Hash)),
-			withDetail("want_length", hexIDSize),
+			withDetail("want_length", HexIDSize),
 		))
 	}
-	if errors.Is(err, errAddressLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(addressLength,
+	if errors.Is(err, ErrAddressLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(AddressLength,
 			withDetail("have_length", len(req.AccountID.Address)),
-			withDetail("want_length", hexAddressSize),
+			withDetail("want_length", HexAddressSize),
 		))
 	}
 	if err != nil {

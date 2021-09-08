@@ -49,17 +49,17 @@ func (d *Data) Transaction(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	err = d.Validate(req)
-	if errors.Is(err, errBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
+	err = d.validate.Request(req)
+	if errors.Is(err, ErrBlockLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength,
 			withDetail("have_length", len(req.BlockID.Hash)),
-			withDetail("want_length", hexIDSize),
+			withDetail("want_length", HexIDSize),
 		))
 	}
-	if errors.Is(err, errTxLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txLength,
+	if errors.Is(err, ErrTxLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(TxLength,
 			withDetail("have_length", len(req.TransactionID.Hash)),
-			withDetail("want_length", hexIDSize),
+			withDetail("want_length", HexIDSize),
 		))
 	}
 	if err != nil {
@@ -67,7 +67,7 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	}
 
 	if req.BlockID.Index == nil || req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockNotFull))
 	}
 
 	err = d.config.Check(req.NetworkID)

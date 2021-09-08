@@ -55,11 +55,11 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	err = c.Validate(req)
-	if errors.Is(err, errAddressLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(addressLength,
+	err = c.validate.Request(req)
+	if errors.Is(err, ErrAddressLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(AddressLength,
 			withDetail("have_length", len(req.Options.AccountID.Address)),
-			withDetail("want_length", hexAddressSize),
+			withDetail("want_length", HexAddressSize),
 		))
 	}
 	if err != nil {
