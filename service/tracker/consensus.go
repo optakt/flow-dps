@@ -98,6 +98,7 @@ func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
 	}
 	record, ok := c.hold.Record(header.ID())
 	if !ok {
+		panic("boom")
 		return flow.DummyStateCommitment, dps.ErrUnavailable
 	}
 	return record.FinalStateCommitment, nil
