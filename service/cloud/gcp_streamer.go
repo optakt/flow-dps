@@ -93,7 +93,7 @@ func (g *GCPStreamer) pull() error {
 	// do not need to have a big buffer, we just want to avoid HTTP request
 	// latency when the execution follower wants a block record.
 	if uint(g.buffer.Len()) >= g.limit {
-		g.log.Debug().Uint("limit", g.limit).Msg("buffer full, not executing poll")
+		g.log.Debug().Uint("limit", g.limit).Msg("buffer full, not executing pull")
 		return nil
 	}
 
