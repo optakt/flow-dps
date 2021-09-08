@@ -24,5 +24,5 @@ type RecordStreamer interface {
 }
 
 type RecordHolder interface {
-	Record(blockID flow.Identifier) (*uploader.BlockData, bool)
+	Record(blockID flow.Identifier) (*uploader.BlockData, error)
 }

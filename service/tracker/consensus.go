@@ -177,9 +177,9 @@ func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
 		return flow.DummyStateCommitment, fmt.Errorf("could not look up block: %w", err)
 	}
 
-	record, ok := c.hold.Record(blockID)
-	if !ok {
-		return flow.DummyStateCommitment, dps.ErrUnavailable
+	record, err := c.hold.Record(blockID)
+	if err != nil {
+		return flow.DummyStateCommitment, fmt.Errorf("could not get record: %w", err)
 	}
 
 	return record.FinalStateCommitment, nil
@@ -199,9 +199,9 @@ func (c *Consensus) Collections(height uint64) ([]*flow.LightCollection, error) 
 		return nil, fmt.Errorf("could not look up block: %w", err)
 	}
 
-	record, ok := c.hold.Record(blockID)
-	if !ok {
-		return nil, dps.ErrUnavailable
+	record, err := c.hold.Record(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get record: %w", err)
 	}
 	collections := make([]*flow.LightCollection, 0, len(record.Collections))
 	for _, complete := range record.Collections {
@@ -226,9 +226,9 @@ func (c *Consensus) Transactions(height uint64) ([]*flow.TransactionBody, error)
 		return nil, fmt.Errorf("could not look up block: %w", err)
 	}
 
-	record, ok := c.hold.Record(blockID)
-	if !ok {
-		return nil, dps.ErrUnavailable
+	record, err := c.hold.Record(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get record: %w", err)
 	}
 	transactions := make([]*flow.TransactionBody, 0, len(record.Collections))
 	for _, complete := range record.Collections {
@@ -252,9 +252,9 @@ func (c *Consensus) Results(height uint64) ([]*flow.TransactionResult, error) {
 		return nil, fmt.Errorf("could not look up block: %w", err)
 	}
 
-	record, ok := c.hold.Record(blockID)
-	if !ok {
-		return nil, dps.ErrUnavailable
+	record, err := c.hold.Record(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get record: %w", err)
 	}
 
 	return record.TxResults, nil
@@ -274,9 +274,9 @@ func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 		return nil, fmt.Errorf("could not look up block: %w", err)
 	}
 
-	record, ok := c.hold.Record(blockID)
-	if !ok {
-		return nil, dps.ErrUnavailable
+	record, err := c.hold.Record(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get record: %w", err)
 	}
 	events := make([]flow.Event, 0, len(record.Events))
 	for _, event := range record.Events {
