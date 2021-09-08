@@ -178,10 +178,18 @@ func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 // OnBlockFinalized is a callback that notifies the consensus follower of a new
 // finalized block.
 func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
+
+	log := c.log.With().Hex("block", finalID[:]).Logger()
+
+	log.Debug().Msg("finalized block callback received")
+
 	err := c.indexPayload(finalID)
 	if err != nil {
 		c.log.Error().Err(err).Msg("could not index block payload")
+		return
 	}
+
+	log.Debug().Msg("finalized block payload indexed")
 }
 
 func (c *Consensus) indexPayload(finalID flow.Identifier) error {
