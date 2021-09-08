@@ -38,15 +38,13 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-// Offsets used to ensure different flow identifiers.
+// Offsets used to ensure different flow identifiers that do not overlap.
+// Each resource type has a range of 16 unique identifiers at the moment.
+// We can increase this range if we need to, in the future.
 const (
-	offsetBlock       = 2 << 1
-	offsetSeal        = 2 << 2
-	offsetCollection  = 2 << 3
-	offsetGuarantee   = 2 << 4
-	offsetTransaction = 2 << 5
-	offsetResult      = 2 << 6
-	offsetEvent       = 2 << 7
+	offsetBlock      = 0
+	offsetCollection = 1 * 16
+	offsetResult     = 2 * 16
 )
 
 // Global variables that can be used for testing. They are non-nil valid values for the types commonly needed
@@ -132,7 +130,7 @@ var (
 		Balance: 84,
 	}
 
-	GenericBlockQualifier = identifier.Block{
+	GenericRosBlockID = identifier.Block{
 		Index: &GenericHeight,
 		Hash:  GenericHeader.ID().String(),
 	}
@@ -424,11 +422,11 @@ func GenericCollections(number int) []*flow.LightCollection {
 }
 
 func GenericCollectionIDs(number int) []flow.Identifier {
-	colls := GenericCollections(number)
+	collections := GenericCollections(number)
 
 	var collIDs []flow.Identifier
-	for _, coll := range colls {
-		collIDs = append(collIDs, coll.ID())
+	for _, collection := range collections {
+		collIDs = append(collIDs, collection.ID())
 	}
 
 	return collIDs

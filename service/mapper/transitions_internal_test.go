@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
@@ -84,7 +85,6 @@ func TestNewTransitions(t *testing.T) {
 }
 
 func TestTransitions_BootstrapState(t *testing.T) {
-
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
@@ -178,7 +178,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 
 		err := tr.UpdateTree(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusUpdating, st.status)
 	})
 
@@ -210,13 +210,13 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		// instead remain Updating until a match is found.
 		err := tr.UpdateTree(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusUpdating, st.status)
 
 		// The second call is now successful and matches.
 		err = tr.UpdateTree(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusMatched, st.status)
 	})
 
@@ -227,7 +227,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 
 		err := tr.UpdateTree(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusMatched, st.status)
 	})
 
@@ -291,7 +291,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 
 		err := tr.CollectRegisters(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusCollected, st.status)
 		for _, wantPath := range mocks.GenericLedgerPaths(6) {
 			assert.Contains(t, st.registers, wantPath)
@@ -306,7 +306,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 
 		err := tr.CollectRegisters(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Empty(t, st.registers)
 		assert.Equal(t, StatusIndexed, st.status)
 	})
@@ -336,7 +336,6 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 }
 
 func TestTransitions_IndexRegisters(t *testing.T) {
-
 	t.Run("nominal case with registers to index", func(t *testing.T) {
 		t.Parallel()
 
@@ -366,7 +365,7 @@ func TestTransitions_IndexRegisters(t *testing.T) {
 
 		err := tr.IndexRegisters(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Should not be StateIndexed because registers map was not empty.
 		assert.Empty(t, st.registers)
@@ -417,7 +416,7 @@ func TestTransitions_IndexRegisters(t *testing.T) {
 		}
 
 		index := mocks.BaselineWriter(t)
-		index.PayloadsFunc = func(height uint64, paths []ledger.Path, value []*ledger.Payload) error { return mocks.GenericError }
+		index.PayloadsFunc = func(uint64, []ledger.Path, []*ledger.Payload) error { return mocks.GenericError }
 
 		tr, st := baselineFSM(t, StatusCollected)
 		tr.index = index
@@ -468,7 +467,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 		st.status = StatusIndexed
 		err = tr.ForwardHeight(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusForwarded, st.status)
 		assert.Equal(t, mocks.GenericHeight+2, st.height)
 
@@ -490,7 +489,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.FirstFunc = func(height uint64) error {
+		index.FirstFunc = func(uint64) error {
 			return mocks.GenericError
 		}
 
@@ -506,7 +505,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.LastFunc = func(height uint64) error {
+		index.LastFunc = func(uint64) error {
 			return mocks.GenericError
 		}
 
@@ -626,7 +625,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 		err := tr.IndexChain(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusUpdating, st.status)
 	})
 
@@ -651,7 +650,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 		err := tr.IndexChain(st)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusUpdating, st.status)
 	})
 
@@ -669,7 +668,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
-		chain.CommitFunc = func(height uint64) (flow.StateCommitment, error) {
+		chain.CommitFunc = func(uint64) (flow.StateCommitment, error) {
 			return flow.DummyStateCommitment, mocks.GenericError
 		}
 
@@ -685,7 +684,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.CommitFunc = func(height uint64, commit flow.StateCommitment) error {
+		index.CommitFunc = func(uint64, flow.StateCommitment) error {
 			return mocks.GenericError
 		}
 
@@ -701,7 +700,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
-		chain.HeaderFunc = func(height uint64) (*flow.Header, error) {
+		chain.HeaderFunc = func(uint64) (*flow.Header, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -717,7 +716,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.HeaderFunc = func(height uint64, header *flow.Header) error {
+		index.HeaderFunc = func(uint64, *flow.Header) error {
 			return mocks.GenericError
 		}
 
@@ -733,7 +732,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
-		chain.TransactionsFunc = func(height uint64) ([]*flow.TransactionBody, error) {
+		chain.TransactionsFunc = func(uint64) ([]*flow.TransactionBody, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -749,7 +748,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
-		chain.ResultsFunc = func(height uint64) ([]*flow.TransactionResult, error) {
+		chain.ResultsFunc = func(uint64) ([]*flow.TransactionResult, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -765,7 +764,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.ResultsFunc = func(results []*flow.TransactionResult) error {
+		index.ResultsFunc = func([]*flow.TransactionResult) error {
 			return mocks.GenericError
 		}
 
@@ -781,7 +780,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
-		chain.CollectionsFunc = func(height uint64) ([]*flow.LightCollection, error) {
+		chain.CollectionsFunc = func(uint64) ([]*flow.LightCollection, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -797,7 +796,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.CollectionsFunc = func(height uint64, collections []*flow.LightCollection) error {
+		index.CollectionsFunc = func(uint64, []*flow.LightCollection) error {
 			return mocks.GenericError
 		}
 
@@ -813,7 +812,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
-		chain.GuaranteesFunc = func(height uint64) ([]*flow.CollectionGuarantee, error) {
+		chain.GuaranteesFunc = func(uint64) ([]*flow.CollectionGuarantee, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -829,7 +828,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.GuaranteesFunc = func(height uint64, guarantees []*flow.CollectionGuarantee) error {
+		index.GuaranteesFunc = func(uint64, []*flow.CollectionGuarantee) error {
 			return mocks.GenericError
 		}
 
@@ -845,7 +844,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
-		chain.EventsFunc = func(height uint64) ([]flow.Event, error) {
+		chain.EventsFunc = func(uint64) ([]flow.Event, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -861,7 +860,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.EventsFunc = func(height uint64, events []flow.Event) error {
+		index.EventsFunc = func(uint64, []flow.Event) error {
 			return mocks.GenericError
 		}
 
@@ -877,7 +876,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
-		chain.SealsFunc = func(height uint64) ([]*flow.Seal, error) {
+		chain.SealsFunc = func(uint64) ([]*flow.Seal, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -893,7 +892,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineWriter(t)
-		index.SealsFunc = func(height uint64, seals []*flow.Seal) error {
+		index.SealsFunc = func(uint64, []*flow.Seal) error {
 			return mocks.GenericError
 		}
 

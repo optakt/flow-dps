@@ -21,6 +21,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/model/flow"
 
@@ -32,7 +33,6 @@ import (
 )
 
 func TestIndex(t *testing.T) {
-
 	t.Run("first", func(t *testing.T) {
 		t.Parallel()
 
@@ -41,11 +41,11 @@ func TestIndex(t *testing.T) {
 
 		assert.NoError(t, writer.First(mocks.GenericHeight))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		got, err := reader.First()
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
 	})
 
@@ -57,11 +57,11 @@ func TestIndex(t *testing.T) {
 
 		assert.NoError(t, writer.Last(mocks.GenericHeight))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		got, err := reader.Last()
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
 	})
 
@@ -74,11 +74,11 @@ func TestIndex(t *testing.T) {
 		blockID := mocks.GenericHeader.ID()
 		assert.NoError(t, writer.Height(blockID, mocks.GenericHeight))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		got, err := reader.HeightForBlock(blockID)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
 	})
 
@@ -90,11 +90,11 @@ func TestIndex(t *testing.T) {
 
 		assert.NoError(t, writer.Commit(mocks.GenericHeight, mocks.GenericCommit(0)))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		got, err := reader.Commit(mocks.GenericHeight)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericCommit(0), got)
 	})
 
@@ -106,11 +106,11 @@ func TestIndex(t *testing.T) {
 
 		assert.NoError(t, writer.Header(mocks.GenericHeight, mocks.GenericHeader))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		got, err := reader.Header(mocks.GenericHeight)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeader, got)
 	})
 
@@ -122,18 +122,18 @@ func TestIndex(t *testing.T) {
 
 		paths := mocks.GenericLedgerPaths(4)
 		payloads := mocks.GenericLedgerPayloads(4)
-		want := mocks.GenericLedgerValues(4)
+		values := mocks.GenericLedgerValues(4)
 
 		assert.NoError(t, writer.First(mocks.GenericHeight))
 		assert.NoError(t, writer.Last(mocks.GenericHeight))
 		assert.NoError(t, writer.Payloads(mocks.GenericHeight, paths, payloads))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		got, err := reader.Values(mocks.GenericHeight, paths)
 
-		assert.NoError(t, err)
-		assert.ElementsMatch(t, want, got)
+		require.NoError(t, err)
+		assert.ElementsMatch(t, values, got)
 	})
 
 	t.Run("collections", func(t *testing.T) {
@@ -146,24 +146,20 @@ func TestIndex(t *testing.T) {
 
 		assert.NoError(t, writer.Collections(mocks.GenericHeight, collections))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		t.Run("retrieve collection by ID", func(t *testing.T) {
 			got, err := reader.Collection(collections[0].ID())
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, collections[0], got)
 		})
 
 		t.Run("retrieve collections by height", func(t *testing.T) {
 			got, err := reader.CollectionsByHeight(mocks.GenericHeight)
 
-			assert.NoError(t, err)
-			assert.Len(t, got, 4)
-			assert.Contains(t, got, collections[0].ID())
-			assert.Contains(t, got, collections[1].ID())
-			assert.Contains(t, got, collections[2].ID())
-			assert.Contains(t, got, collections[3].ID())
+			require.NoError(t, err)
+			assert.ElementsMatch(t, mocks.GenericCollectionIDs(4), got)
 		})
 
 		t.Run("retrieve transactions from collection", func(t *testing.T) {
@@ -179,13 +175,13 @@ func TestIndex(t *testing.T) {
 
 		assert.NoError(t, writer.Guarantees(mocks.GenericHeight, mocks.GenericGuarantees(4)))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
-		want := mocks.GenericGuarantee(0)
-		got, err := reader.Guarantee(want.ID())
+		guarantee := mocks.GenericGuarantee(0)
+		got, err := reader.Guarantee(guarantee.ID())
 
-		assert.NoError(t, err)
-		assert.Equal(t, want, got)
+		require.NoError(t, err)
+		assert.Equal(t, guarantee, got)
 	})
 
 	t.Run("transactions", func(t *testing.T) {
@@ -204,26 +200,26 @@ func TestIndex(t *testing.T) {
 
 		assert.NoError(t, writer.Transactions(mocks.GenericHeight, transactions))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		t.Run("retrieve transactions by height", func(t *testing.T) {
 			gotTxIDs, err := reader.TransactionsByHeight(mocks.GenericHeight)
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.ElementsMatch(t, txIDs, gotTxIDs)
 		})
 
 		t.Run("retrieve transaction by ID", func(t *testing.T) {
 			gotTx, err := reader.Transaction(transactions[0].ID())
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, transactions[0], gotTx)
 		})
 
 		t.Run("retrieve height for transaction", func(t *testing.T) {
 			gotTx, err := reader.HeightForTransaction(transactions[0].ID())
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, mocks.GenericHeight, gotTx)
 		})
 	})
@@ -238,11 +234,11 @@ func TestIndex(t *testing.T) {
 
 		assert.NoError(t, writer.Results(results))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		got, err := reader.Result(results[0].TransactionID)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, results[0], got)
 	})
 
@@ -262,24 +258,24 @@ func TestIndex(t *testing.T) {
 		assert.NoError(t, writer.Last(mocks.GenericHeight))
 		assert.NoError(t, writer.Events(mocks.GenericHeight, events))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		t.Run("no types specified", func(t *testing.T) {
 			got, err := reader.Events(mocks.GenericHeight)
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.ElementsMatch(t, events, got)
 		})
 
 		t.Run("type specified", func(t *testing.T) {
 			got1, err := reader.Events(mocks.GenericHeight, withdrawalType)
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Len(t, got1, 2)
 
 			got2, err := reader.Events(mocks.GenericHeight, depositType)
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Len(t, got1, 2)
 
 			assert.NotEqual(t, got1, got2)
@@ -296,24 +292,20 @@ func TestIndex(t *testing.T) {
 
 		assert.NoError(t, writer.Seals(mocks.GenericHeight, seals))
 		// Close the writer to make it commit its transactions.
-		assert.NoError(t, writer.Close())
+		require.NoError(t, writer.Close())
 
 		t.Run("retrieve seal by ID", func(t *testing.T) {
 			got, err := reader.Seal(seals[0].ID())
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, seals[0], got)
 		})
 
 		t.Run("retrieve seals by height", func(t *testing.T) {
 			got, err := reader.SealsByHeight(mocks.GenericHeight)
 
-			assert.NoError(t, err)
-			assert.Len(t, got, 4)
-			assert.Contains(t, got, seals[0].ID())
-			assert.Contains(t, got, seals[1].ID())
-			assert.Contains(t, got, seals[2].ID())
-			assert.Contains(t, got, seals[3].ID())
+			require.NoError(t, err)
+			assert.ElementsMatch(t, got, mocks.GenericSealIDs(4))
 		})
 	})
 }

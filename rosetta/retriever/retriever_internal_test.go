@@ -25,7 +25,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	params := dps.Params{ChainID: dps.FlowTestnet}
+	params := mocks.GenericParams
 	index := mocks.BaselineReader(t)
 	validate := mocks.BaselineValidator(t)
 	generator := mocks.BaselineGenerator(t)
@@ -38,7 +38,69 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, params, r.params)
 	assert.Equal(t, index, r.index)
 	assert.Equal(t, validate, r.validate)
-	assert.Equal(t, generator, r.generator)
+	assert.Equal(t, generator, r.generate)
 	assert.Equal(t, invoke, r.invoke)
 	assert.Equal(t, convert, r.convert)
+}
+
+func BaselineRetriever(t *testing.T, opts ...func(*Retriever)) *Retriever {
+	t.Helper()
+
+	r := Retriever{
+		cfg:      Config{TransactionLimit: 999},
+		params:   mocks.GenericParams,
+		index:    mocks.BaselineReader(t),
+		validate: mocks.BaselineValidator(t),
+		generate: mocks.BaselineGenerator(t),
+		invoke:   mocks.BaselineInvoker(t),
+		convert:  mocks.BaselineConverter(t),
+	}
+
+	for _, opt := range opts {
+		opt(&r)
+	}
+
+	return &r
+}
+
+func WithIndex(index dps.Reader) func(*Retriever) {
+	return func(retriever *Retriever) {
+		retriever.index = index
+	}
+}
+
+func WithValidator(validate Validator) func(*Retriever) {
+	return func(retriever *Retriever) {
+		retriever.validate = validate
+	}
+}
+
+func WithGenerator(generate Generator) func(*Retriever) {
+	return func(retriever *Retriever) {
+		retriever.generate = generate
+	}
+}
+
+func WithInvoker(invoke Invoker) func(*Retriever) {
+	return func(retriever *Retriever) {
+		retriever.invoke = invoke
+	}
+}
+
+func WithConverter(convert Converter) func(*Retriever) {
+	return func(retriever *Retriever) {
+		retriever.convert = convert
+	}
+}
+
+func WithParams(params dps.Params) func(*Retriever) {
+	return func(retriever *Retriever) {
+		retriever.params = params
+	}
+}
+
+func WithLimit(limit uint) func(*Retriever) {
+	return func(retriever *Retriever) {
+		retriever.cfg.TransactionLimit = limit
+	}
 }

@@ -24,9 +24,9 @@ import (
 )
 
 func TestIDToHash(t *testing.T) {
-	id := mocks.GenericHeader.ID()
-	got := convert.IDToHash(id)
-	assert.Equal(t, mocks.ByteSlice(id), got)
+	blockID := mocks.GenericHeader.ID()
+	got := convert.IDToHash(blockID)
+	assert.Equal(t, blockID[:], got)
 }
 
 func TestCommitToHash(t *testing.T) {

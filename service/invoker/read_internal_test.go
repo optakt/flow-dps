@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/optakt/flow-dps/testing/mocks"
@@ -47,7 +48,7 @@ func TestReadRegister(t *testing.T) {
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
 		value, err := readFunc(owner, controller, key)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericBytes, value[:])
 		assert.False(t, indexCalled)
 	})
@@ -71,7 +72,7 @@ func TestReadRegister(t *testing.T) {
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
 		value, err := readFunc(owner, controller, key)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericBytes, value[:])
 		assert.True(t, indexCalled)
 	})

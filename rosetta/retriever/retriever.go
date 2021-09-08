@@ -38,12 +38,12 @@ const (
 type Retriever struct {
 	cfg Config
 
-	params    dps.Params
-	index     dps.Reader
-	validate  Validator
-	generator Generator
-	invoke    Invoker
-	convert   Converter
+	params   dps.Params
+	index    dps.Reader
+	validate Validator
+	generate Generator
+	invoke   Invoker
+	convert  Converter
 }
 
 func New(params dps.Params, index dps.Reader, validate Validator, generator Generator, invoke Invoker, convert Converter, options ...func(*Config)) *Retriever {
@@ -57,13 +57,13 @@ func New(params dps.Params, index dps.Reader, validate Validator, generator Gene
 	}
 
 	r := Retriever{
-		cfg:       cfg,
-		params:    params,
-		index:     index,
-		validate:  validate,
-		generator: generator,
-		invoke:    invoke,
-		convert:   convert,
+		cfg:      cfg,
+		params:   params,
+		index:    index,
+		validate: validate,
+		generate: generator,
+		invoke:   invoke,
+		convert:  convert,
 	}
 
 	return &r
@@ -143,7 +143,7 @@ func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifie
 	for _, symbol := range symbols {
 
 		// We generate the script to get the vault balance and execute it.
-		script, err := r.generator.GetBalance(symbol)
+		script, err := r.generate.GetBalance(symbol)
 		if err != nil {
 			return identifier.Block{}, nil, fmt.Errorf("could not generate script: %w", err)
 		}
@@ -182,11 +182,11 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 	}
 
 	// Retrieve the Flow token default withdrawal and deposit events.
-	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
+	deposit, err := r.generate.TokensDeposited(dps.FlowSymbol)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not generate deposit event type: %w", err)
 	}
-	withdrawal, err := r.generator.TokensWithdrawn(dps.FlowSymbol)
+	withdrawal, err := r.generate.TokensWithdrawn(dps.FlowSymbol)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
 	}
@@ -294,11 +294,11 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	}
 
 	// Retrieve the Flow token default withdrawal and deposit events.
-	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
+	deposit, err := r.generate.TokensDeposited(dps.FlowSymbol)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate deposit event type: %w", err)
 	}
-	withdrawal, err := r.generator.TokensWithdrawn(dps.FlowSymbol)
+	withdrawal, err := r.generate.TokensWithdrawn(dps.FlowSymbol)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
 	}
@@ -359,11 +359,11 @@ func (r *Retriever) operations(txID flow.Identifier, events []flow.Event) ([]*ob
 
 	// These are the currently supported event types. The order here has to be kept the same so that we can keep
 	// deterministic operation indices, which is a requirement of the Rosetta API specification.
-	deposit, err := r.generator.TokensDeposited(dps.FlowSymbol)
+	deposit, err := r.generate.TokensDeposited(dps.FlowSymbol)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate deposit event type: %w", err)
 	}
-	withdrawal, err := r.generator.TokensWithdrawn(dps.FlowSymbol)
+	withdrawal, err := r.generate.TokensWithdrawn(dps.FlowSymbol)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
 	}

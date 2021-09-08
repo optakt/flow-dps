@@ -26,7 +26,6 @@ import (
 )
 
 func TestParseCadenceArgument(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		param    string

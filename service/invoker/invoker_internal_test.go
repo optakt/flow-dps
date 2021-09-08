@@ -39,7 +39,7 @@ func TestNew(t *testing.T) {
 
 		invoke, err := New(index, WithCacheSize(uint64(datasize.MB)))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, invoke)
 		assert.Equal(t, index, invoke.index)
 		assert.NotNil(t, invoke.cache)
@@ -94,7 +94,7 @@ func TestInvoker_Script(t *testing.T) {
 
 		val, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, values)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testValue, val)
 	})
 
@@ -178,7 +178,7 @@ func TestInvoker_Account(t *testing.T) {
 
 		account, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, &mocks.GenericAccount, account)
 	})
 

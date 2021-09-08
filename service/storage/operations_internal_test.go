@@ -912,8 +912,8 @@ func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_Collection(t *testing.T) {
-	coll := mocks.GenericCollection(0)
-	testKey := encodeKey(prefixCollection, coll.ID())
+	collection := mocks.GenericCollection(0)
+	testKey := encodeKey(prefixCollection, collection.ID())
 
 	t.Run("save collection", func(t *testing.T) {
 		t.Parallel()
@@ -931,7 +931,7 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.SaveCollection(coll))
+		err := db.Update(l.SaveCollection(collection))
 
 		assert.NoError(t, err)
 	})
@@ -962,7 +962,7 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 		}
 
 		var got flow.LightCollection
-		err = db.View(l.RetrieveCollection(coll.ID(), &got))
+		err = db.View(l.RetrieveCollection(collection.ID(), &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -970,8 +970,8 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_Guarantee(t *testing.T) {
-	guar := mocks.GenericGuarantee(0)
-	testKey := encodeKey(prefixGuarantee, guar.ID())
+	guarantee := mocks.GenericGuarantee(0)
+	testKey := encodeKey(prefixGuarantee, guarantee.ID())
 
 	t.Run("save guarantee", func(t *testing.T) {
 		t.Parallel()
@@ -989,7 +989,7 @@ func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.SaveGuarantee(guar))
+		err := db.Update(l.SaveGuarantee(guarantee))
 
 		assert.NoError(t, err)
 	})
@@ -1020,7 +1020,7 @@ func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 		}
 
 		var got flow.CollectionGuarantee
-		err = db.View(l.RetrieveGuarantee(guar.ID(), &got))
+		err = db.View(l.RetrieveGuarantee(guarantee.ID(), &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)

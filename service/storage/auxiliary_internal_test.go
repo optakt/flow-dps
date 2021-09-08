@@ -60,7 +60,7 @@ func TestLibrary_Retrieve(t *testing.T) {
 		var got uint64
 		err = db.View(l.retrieve(testKey, &got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testValue, got)
 	})
 

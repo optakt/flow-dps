@@ -41,7 +41,8 @@ func TestDisk_Root(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		root, err := c.Root()
-		assert.NoError(t, err)
+
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, root)
 	})
 
@@ -54,9 +55,9 @@ func TestDisk_Root(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Root()
+
 		assert.Error(t, err)
 	})
-
 }
 
 func TestDisk_Header(t *testing.T) {
@@ -72,12 +73,13 @@ func TestDisk_Header(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		header, err := c.Header(mocks.GenericHeight)
-		assert.NoError(t, err)
 
+		require.NoError(t, err)
 		require.NotNil(t, header)
 		assert.Equal(t, dps.FlowTestnet, header.ChainID)
 
 		_, err = c.Header(math.MaxUint64)
+
 		assert.Error(t, err)
 	})
 
@@ -93,6 +95,7 @@ func TestDisk_Header(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Header(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 
@@ -106,6 +109,7 @@ func TestDisk_Header(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Header(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 }
@@ -123,7 +127,8 @@ func TestDisk_Commit(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		commit, err := c.Commit(mocks.GenericHeight)
-		assert.NoError(t, err)
+
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericCommit(0), commit)
 
 		_, err = c.Commit(math.MaxUint64)
@@ -175,12 +180,14 @@ func TestDisk_Events(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		events, err := c.Events(mocks.GenericHeight)
-		assert.NoError(t, err)
+
+		require.NoError(t, err)
 		assert.Len(t, events, 2)
 		assert.Contains(t, events, mocks.GenericEvent(0))
 		assert.Contains(t, events, mocks.GenericEvent(1))
 
 		_, err = c.Events(math.MaxUint64)
+
 		assert.Error(t, err)
 	})
 
@@ -193,6 +200,7 @@ func TestDisk_Events(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Events(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 }
@@ -212,10 +220,12 @@ func TestDisk_Collections(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		tt, err := c.Collections(mocks.GenericHeight)
-		assert.NoError(t, err)
+
+		require.NoError(t, err)
 		assert.Len(t, tt, 2)
 
 		_, err = c.Collections(math.MaxUint64)
+
 		assert.Error(t, err)
 	})
 
@@ -230,6 +240,7 @@ func TestDisk_Collections(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Collections(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 
@@ -242,6 +253,7 @@ func TestDisk_Collections(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Collections(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 }
@@ -261,10 +273,12 @@ func TestDisk_Guarantees(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		tt, err := c.Guarantees(mocks.GenericHeight)
-		assert.NoError(t, err)
+
+		require.NoError(t, err)
 		assert.Len(t, tt, 2)
 
 		_, err = c.Guarantees(math.MaxUint64)
+
 		assert.Error(t, err)
 	})
 
@@ -279,6 +293,7 @@ func TestDisk_Guarantees(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Guarantees(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 
@@ -291,6 +306,7 @@ func TestDisk_Guarantees(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Guarantees(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 }
@@ -314,10 +330,12 @@ func TestDisk_Transactions(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		tt, err := c.Transactions(mocks.GenericHeight)
-		assert.NoError(t, err)
+
+		require.NoError(t, err)
 		assert.Len(t, tt, 4)
 
 		_, err = c.Transactions(math.MaxUint64)
+
 		assert.Error(t, err)
 	})
 
@@ -332,6 +350,7 @@ func TestDisk_Transactions(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Transactions(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 
@@ -344,6 +363,7 @@ func TestDisk_Transactions(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Transactions(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 }
@@ -364,10 +384,12 @@ func TestDisk_TransactionResults(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		tr, err := c.Results(mocks.GenericHeight)
-		assert.NoError(t, err)
+
+		require.NoError(t, err)
 		assert.Len(t, tr, 4)
 
 		_, err = c.Results(math.MaxUint64)
+
 		assert.Error(t, err)
 	})
 
@@ -380,6 +402,7 @@ func TestDisk_TransactionResults(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Results(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 }
@@ -401,10 +424,12 @@ func TestDisk_Seals(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		seals, err := c.Seals(mocks.GenericHeight)
-		assert.NoError(t, err)
+
+		require.NoError(t, err)
 		assert.Len(t, seals, 4)
 
 		_, err = c.Seals(math.MaxUint64)
+
 		assert.Error(t, err)
 	})
 
@@ -419,6 +444,7 @@ func TestDisk_Seals(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Seals(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 
@@ -431,6 +457,7 @@ func TestDisk_Seals(t *testing.T) {
 		c := chain.FromDisk(db)
 
 		_, err := c.Seals(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 }

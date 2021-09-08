@@ -58,7 +58,6 @@ func TestIndex_First(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
-
 	})
 
 	t.Run("handles index failure", func(t *testing.T) {
@@ -66,9 +65,7 @@ func TestIndex_First(t *testing.T) {
 
 		index := Index{
 			client: &apiMock{
-				GetFirstFunc: func(_ context.Context, in *GetFirstRequest, _ ...grpc.CallOption) (*GetFirstResponse, error) {
-					assert.NotNil(t, in)
-
+				GetFirstFunc: func(context.Context, *GetFirstRequest, ...grpc.CallOption) (*GetFirstResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
@@ -99,7 +96,6 @@ func TestIndex_Last(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
-
 	})
 
 	t.Run("handles index failure", func(t *testing.T) {
@@ -107,9 +103,7 @@ func TestIndex_Last(t *testing.T) {
 
 		index := Index{
 			client: &apiMock{
-				GetLastFunc: func(_ context.Context, in *GetLastRequest, _ ...grpc.CallOption) (*GetLastResponse, error) {
-					assert.NotNil(t, in)
-
+				GetLastFunc: func(context.Context, *GetLastRequest, ...grpc.CallOption) (*GetLastResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
@@ -118,7 +112,6 @@ func TestIndex_Last(t *testing.T) {
 		_, err := index.Last()
 		assert.Error(t, err)
 	})
-
 }
 
 func TestIndex_Header(t *testing.T) {
@@ -129,7 +122,8 @@ func TestIndex_Header(t *testing.T) {
 	encoder, err := options.EncMode()
 	require.NoError(t, err)
 
-	headerBytes, err := encoder.Marshal(mocks.GenericHeader)
+	header := mocks.GenericHeader
+	data, err := encoder.Marshal(header)
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -142,21 +136,20 @@ func TestIndex_Header(t *testing.T) {
 			codec: codec,
 			client: &apiMock{
 				GetHeaderFunc: func(_ context.Context, in *GetHeaderRequest, _ ...grpc.CallOption) (*GetHeaderResponse, error) {
-					assert.Equal(t, mocks.GenericHeader.Height, in.Height)
+					assert.Equal(t, header.Height, in.Height)
 
 					return &GetHeaderResponse{
-						Height: mocks.GenericHeader.Height,
-						Data:   headerBytes,
+						Height: header.Height,
+						Data:   data,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Header(mocks.GenericHeader.Height)
+		got, err := index.Header(header.Height)
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericHeader, got)
-
+		assert.Equal(t, header, got)
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -165,15 +158,13 @@ func TestIndex_Header(t *testing.T) {
 		index := Index{
 			codec: mocks.BaselineCodec(t),
 			client: &apiMock{
-				GetHeaderFunc: func(_ context.Context, in *GetHeaderRequest, _ ...grpc.CallOption) (*GetHeaderResponse, error) {
-					assert.Equal(t, mocks.GenericHeader.Height, in.Height)
-
+				GetHeaderFunc: func(context.Context, *GetHeaderRequest, ...grpc.CallOption) (*GetHeaderResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Header(mocks.GenericHeader.Height)
+		_, err := index.Header(header.Height)
 
 		assert.Error(t, err)
 	})
@@ -188,23 +179,25 @@ func TestIndex_Header(t *testing.T) {
 			codec: codec,
 			client: &apiMock{
 				GetHeaderFunc: func(_ context.Context, in *GetHeaderRequest, _ ...grpc.CallOption) (*GetHeaderResponse, error) {
-					assert.Equal(t, mocks.GenericHeader.Height, in.Height)
+					assert.Equal(t, header.Height, in.Height)
 
 					return &GetHeaderResponse{
-						Height: mocks.GenericHeader.Height,
+						Height: header.Height,
 						Data:   []byte(`invalid data`),
 					}, nil
 				},
 			},
 		}
 
-		_, err := index.Header(mocks.GenericHeader.Height)
+		_, err := index.Header(header.Height)
 
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_Commit(t *testing.T) {
+	commit := mocks.GenericCommit(0)
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
@@ -215,7 +208,7 @@ func TestIndex_Commit(t *testing.T) {
 
 					return &GetCommitResponse{
 						Height: mocks.GenericHeight,
-						Commit: mocks.ByteSlice(mocks.GenericCommit(0)),
+						Commit: commit[:],
 					}, nil
 				},
 			},
@@ -224,8 +217,7 @@ func TestIndex_Commit(t *testing.T) {
 		got, err := index.Commit(mocks.GenericHeight)
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericCommit(0), got)
-
+		assert.Equal(t, commit, got)
 	})
 
 	codec := mocks.BaselineCodec(t)
@@ -236,9 +228,7 @@ func TestIndex_Commit(t *testing.T) {
 
 		index := Index{
 			client: &apiMock{
-				GetCommitFunc: func(_ context.Context, in *GetCommitRequest, _ ...grpc.CallOption) (*GetCommitResponse, error) {
-					assert.Equal(t, mocks.GenericHeight, in.Height)
-
+				GetCommitFunc: func(context.Context, *GetCommitRequest, ...grpc.CallOption) (*GetCommitResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
@@ -275,6 +265,9 @@ func TestIndex_Commit(t *testing.T) {
 }
 
 func TestIndex_Values(t *testing.T) {
+	paths := mocks.GenericLedgerPaths(6)
+	values := mocks.GenericLedgerValues(6)
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
@@ -285,23 +278,22 @@ func TestIndex_Values(t *testing.T) {
 					codec := mocks.BaselineCodec(t)
 					codec.UnmarshalFunc = cbor.Unmarshal
 
-					assert.Equal(t, convert.PathsToBytes(mocks.GenericLedgerPaths(6)), in.Paths)
+					assert.Equal(t, convert.PathsToBytes(paths), in.Paths)
 					assert.Equal(t, in.Height, mocks.GenericHeight)
 
 					return &GetRegisterValuesResponse{
 						Height: mocks.GenericHeight,
-						Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
-						Values: convert.ValuesToBytes(mocks.GenericLedgerValues(6)),
+						Paths:  convert.PathsToBytes(paths),
+						Values: convert.ValuesToBytes(values),
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Values(mocks.GenericHeight, mocks.GenericLedgerPaths(6))
+		got, err := index.Values(mocks.GenericHeight, paths)
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericLedgerValues(6), got)
-
+		assert.Equal(t, values, got)
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -311,20 +303,21 @@ func TestIndex_Values(t *testing.T) {
 		codec.UnmarshalFunc = cbor.Unmarshal
 		index := Index{
 			client: &apiMock{
-				GetRegisterValuesFunc: func(_ context.Context, in *GetRegisterValuesRequest, _ ...grpc.CallOption) (*GetRegisterValuesResponse, error) {
+				GetRegisterValuesFunc: func(context.Context, *GetRegisterValuesRequest, ...grpc.CallOption) (*GetRegisterValuesResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Values(mocks.GenericHeight, mocks.GenericLedgerPaths(6))
+		_, err := index.Values(mocks.GenericHeight, paths)
 
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_Height(t *testing.T) {
-	blockID := mocks.GenericHeader.ID()
+	header := mocks.GenericHeader
+	blockID := header.ID()
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -335,11 +328,11 @@ func TestIndex_Height(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetHeightForBlockFunc: func(_ context.Context, in *GetHeightForBlockRequest, _ ...grpc.CallOption) (*GetHeightForBlockResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(blockID), in.BlockID)
+					assert.Equal(t, blockID[:], in.BlockID)
 
 					return &GetHeightForBlockResponse{
-						BlockID: mocks.ByteSlice(blockID),
-						Height:  mocks.GenericHeight,
+						BlockID: blockID[:],
+						Height:  header.Height,
 					}, nil
 				},
 			},
@@ -348,8 +341,7 @@ func TestIndex_Height(t *testing.T) {
 		got, err := index.HeightForBlock(blockID)
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericHeight, got)
-
+		assert.Equal(t, header.Height, got)
 	})
 
 	codec := mocks.BaselineCodec(t)
@@ -360,9 +352,7 @@ func TestIndex_Height(t *testing.T) {
 
 		index := Index{
 			client: &apiMock{
-				GetHeightForBlockFunc: func(_ context.Context, in *GetHeightForBlockRequest, _ ...grpc.CallOption) (*GetHeightForBlockResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(blockID), in.BlockID)
-
+				GetHeightForBlockFunc: func(context.Context, *GetHeightForBlockRequest, ...grpc.CallOption) (*GetHeightForBlockResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
@@ -375,8 +365,9 @@ func TestIndex_Height(t *testing.T) {
 }
 
 func TestIndex_Collection(t *testing.T) {
-	coll := mocks.GenericCollection(0)
-	testCollectionBytes, err := cbor.Marshal(coll)
+	collection := mocks.GenericCollection(0)
+	collID := collection.ID()
+	data, err := cbor.Marshal(collection)
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -389,21 +380,20 @@ func TestIndex_Collection(t *testing.T) {
 			codec: codec,
 			client: &apiMock{
 				GetCollectionFunc: func(_ context.Context, in *GetCollectionRequest, _ ...grpc.CallOption) (*GetCollectionResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(coll.ID()), in.CollectionID)
+					assert.Equal(t, collID[:], in.CollectionID)
 
 					return &GetCollectionResponse{
-						CollectionID: mocks.ByteSlice(coll.ID()),
-						Data:         testCollectionBytes,
+						CollectionID: collID[:],
+						Data:         data,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Collection(coll.ID())
+		got, err := index.Collection(collID)
 
 		require.NoError(t, err)
-		assert.Equal(t, coll, got)
-
+		assert.Equal(t, collection, got)
 	})
 
 	t.Run("handles index failure on GetCollection", func(t *testing.T) {
@@ -415,15 +405,13 @@ func TestIndex_Collection(t *testing.T) {
 		index := Index{
 			codec: codec,
 			client: &apiMock{
-				GetCollectionFunc: func(_ context.Context, in *GetCollectionRequest, _ ...grpc.CallOption) (*GetCollectionResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(coll.ID()), in.CollectionID)
-
+				GetCollectionFunc: func(context.Context, *GetCollectionRequest, ...grpc.CallOption) (*GetCollectionResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Collection(coll.ID())
+		_, err := index.Collection(collID)
 
 		assert.Error(t, err)
 	})
@@ -433,10 +421,11 @@ func TestIndex_ListCollectionsForHeight(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		want := mocks.GenericCollectionIDs(4)
-		testCollectionBytes := make([][]byte, 0, len(want))
-		for _, collID := range want {
-			testCollectionBytes = append(testCollectionBytes, mocks.ByteSlice(collID))
+		collIDs := mocks.GenericCollectionIDs(4)
+		data := make([][]byte, 0, len(collIDs))
+		for _, collID := range collIDs {
+			collID := collID
+			data = append(data, collID[:])
 		}
 
 		index := Index{
@@ -447,16 +436,16 @@ func TestIndex_ListCollectionsForHeight(t *testing.T) {
 
 					return &ListCollectionsForHeightResponse{
 						Height:        in.Height,
-						CollectionIDs: testCollectionBytes,
+						CollectionIDs: data,
 					}, nil
 				},
 			},
 		}
 
 		got, err := index.CollectionsByHeight(mocks.GenericHeight)
-		require.NoError(t, err)
-		assert.Equal(t, want, got)
 
+		require.NoError(t, err)
+		assert.Equal(t, collIDs, got)
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -465,22 +454,22 @@ func TestIndex_ListCollectionsForHeight(t *testing.T) {
 		index := Index{
 			codec: mocks.BaselineCodec(t),
 			client: &apiMock{
-				ListCollectionsForHeightFunc: func(_ context.Context, in *ListCollectionsForHeightRequest, _ ...grpc.CallOption) (*ListCollectionsForHeightResponse, error) {
-					assert.Equal(t, mocks.GenericHeight, in.Height)
-
+				ListCollectionsForHeightFunc: func(context.Context, *ListCollectionsForHeightRequest, ...grpc.CallOption) (*ListCollectionsForHeightResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
 		_, err := index.CollectionsByHeight(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_Guarantee(t *testing.T) {
-	want := mocks.GenericGuarantee(0)
-	testGuaranteeBytes, err := cbor.Marshal(want)
+	guarantee := mocks.GenericGuarantee(0)
+	collID := guarantee.ID()
+	testGuaranteeBytes, err := cbor.Marshal(guarantee)
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -493,20 +482,20 @@ func TestIndex_Guarantee(t *testing.T) {
 			codec: codec,
 			client: &apiMock{
 				GetGuaranteeFunc: func(_ context.Context, in *GetGuaranteeRequest, _ ...grpc.CallOption) (*GetGuaranteeResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(want.ID()), in.CollectionID)
+					assert.Equal(t, collID[:], in.CollectionID)
 
 					return &GetGuaranteeResponse{
-						CollectionID: mocks.ByteSlice(want.ID()),
+						CollectionID: collID[:],
 						Data:         testGuaranteeBytes,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Guarantee(want.ID())
+		got, err := index.Guarantee(collID)
 
 		require.NoError(t, err)
-		assert.Equal(t, want, got)
+		assert.Equal(t, guarantee, got)
 	})
 
 	t.Run("handles index failure on GetGuarantee", func(t *testing.T) {
@@ -518,22 +507,23 @@ func TestIndex_Guarantee(t *testing.T) {
 		index := Index{
 			codec: codec,
 			client: &apiMock{
-				GetGuaranteeFunc: func(_ context.Context, in *GetGuaranteeRequest, _ ...grpc.CallOption) (*GetGuaranteeResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(want.ID()), in.CollectionID)
-
+				GetGuaranteeFunc: func(context.Context, *GetGuaranteeRequest, ...grpc.CallOption) (*GetGuaranteeResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Guarantee(want.ID())
+		_, err := index.Guarantee(guarantee.ID())
+
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_Transaction(t *testing.T) {
-	want := mocks.GenericTransaction(0)
-	testTransactionBytes, err := cbor.Marshal(want)
+	tx := mocks.GenericTransaction(0)
+	txID := tx.ID()
+
+	data, err := cbor.Marshal(tx)
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -546,20 +536,20 @@ func TestIndex_Transaction(t *testing.T) {
 			codec: codec,
 			client: &apiMock{
 				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(want.ID()), in.TransactionID)
+					assert.Equal(t, txID[:], in.TransactionID)
 
 					return &GetTransactionResponse{
-						TransactionID: mocks.ByteSlice(want.ID()),
-						Data:          testTransactionBytes,
+						TransactionID: txID[:],
+						Data:          data,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Transaction(want.ID())
+		got, err := index.Transaction(txID)
 
 		require.NoError(t, err)
-		assert.Equal(t, want, got)
+		assert.Equal(t, tx, got)
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -571,23 +561,23 @@ func TestIndex_Transaction(t *testing.T) {
 		index := Index{
 			codec: codec,
 			client: &apiMock{
-				GetTransactionFunc: func(_ context.Context, in *GetTransactionRequest, _ ...grpc.CallOption) (*GetTransactionResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(want.ID()), in.TransactionID)
-
+				GetTransactionFunc: func(context.Context, *GetTransactionRequest, ...grpc.CallOption) (*GetTransactionResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Transaction(want.ID())
+		_, err := index.Transaction(tx.ID())
 
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_Result(t *testing.T) {
-	want := mocks.GenericResult(0)
-	testResultBytes, err := cbor.Marshal(want)
+	result := mocks.GenericResult(0)
+	txID := result.TransactionID
+
+	data, err := cbor.Marshal(result)
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -600,47 +590,44 @@ func TestIndex_Result(t *testing.T) {
 			codec: codec,
 			client: &apiMock{
 				GetResultFunc: func(_ context.Context, in *GetResultRequest, _ ...grpc.CallOption) (*GetResultResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(want.ID()), in.TransactionID)
+					assert.Equal(t, txID[:], in.TransactionID)
 
 					return &GetResultResponse{
-						TransactionID: mocks.ByteSlice(want.ID()),
-						Data:          testResultBytes,
+						TransactionID: txID[:],
+						Data:          data,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Result(want.ID())
+		got, err := index.Result(txID)
 
 		require.NoError(t, err)
-		assert.Equal(t, want, got)
+		assert.Equal(t, result, got)
 	})
-
-	codec := mocks.BaselineCodec(t)
-	codec.UnmarshalFunc = cbor.Unmarshal
 
 	t.Run("handles index failures", func(t *testing.T) {
 		t.Parallel()
 
 		index := Index{
 			client: &apiMock{
-				GetResultFunc: func(_ context.Context, in *GetResultRequest, _ ...grpc.CallOption) (*GetResultResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(want.ID()), in.TransactionID)
-
+				GetResultFunc: func(context.Context, *GetResultRequest, ...grpc.CallOption) (*GetResultResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Result(want.ID())
+		_, err := index.Result(result.ID())
 
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_Events(t *testing.T) {
-	want := mocks.GenericEvents(4)
-	testEventsBytes, err := cbor.Marshal(want)
+	events := mocks.GenericEvents(4)
+	types := mocks.GenericEventTypes(2)
+
+	data, err := cbor.Marshal(events)
 	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -654,21 +641,21 @@ func TestIndex_Events(t *testing.T) {
 			client: &apiMock{
 				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
 					assert.Equal(t, mocks.GenericHeight, in.Height)
-					assert.Equal(t, convert.TypesToStrings(mocks.GenericEventTypes(2)), in.Types)
+					assert.Equal(t, convert.TypesToStrings(types), in.Types)
 
 					return &GetEventsResponse{
 						Height: mocks.GenericHeight,
-						Types:  convert.TypesToStrings(mocks.GenericEventTypes(2)),
-						Data:   testEventsBytes,
+						Types:  convert.TypesToStrings(types),
+						Data:   data,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes(2)...)
+		got, err := index.Events(mocks.GenericHeight, types...)
 
 		require.NoError(t, err)
-		assert.Equal(t, want, got)
+		assert.Equal(t, events, got)
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -680,16 +667,13 @@ func TestIndex_Events(t *testing.T) {
 		index := Index{
 			codec: codec,
 			client: &apiMock{
-				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
-					assert.Equal(t, mocks.GenericHeight, in.Height)
-					assert.Equal(t, convert.TypesToStrings(mocks.GenericEventTypes(2)), in.Types)
-
+				GetEventsFunc: func(context.Context, *GetEventsRequest, ...grpc.CallOption) (*GetEventsResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes(2)...)
+		_, err := index.Events(mocks.GenericHeight, types...)
 
 		assert.Error(t, err)
 	})
@@ -703,32 +687,30 @@ func TestIndex_Events(t *testing.T) {
 		index := Index{
 			codec: codec,
 			client: &apiMock{
-				GetEventsFunc: func(_ context.Context, in *GetEventsRequest, _ ...grpc.CallOption) (*GetEventsResponse, error) {
-					assert.Equal(t, mocks.GenericHeight, in.Height)
-					assert.Equal(t, convert.TypesToStrings(mocks.GenericEventTypes(2)), in.Types)
-
+				GetEventsFunc: func(context.Context, *GetEventsRequest, ...grpc.CallOption) (*GetEventsResponse, error) {
 					return &GetEventsResponse{
 						Height: mocks.GenericHeight,
-						Types:  convert.TypesToStrings(mocks.GenericEventTypes(2)),
+						Types:  convert.TypesToStrings(types),
 						Data:   []byte(`invalid data`),
 					}, nil
 				},
 			},
 		}
 
-		_, err := index.Events(mocks.GenericHeight, mocks.GenericEventTypes(2)...)
+		_, err := index.Events(mocks.GenericHeight, types...)
 
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_Seals(t *testing.T) {
-	want := mocks.GenericSeal(0)
+	seal := mocks.GenericSeal(0)
+	sealID := seal.ID()
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		testSealBytes, err := cbor.Marshal(want)
+		data, err := cbor.Marshal(seal)
 		require.NoError(t, err)
 
 		codec := mocks.BaselineCodec(t)
@@ -738,19 +720,20 @@ func TestIndex_Seals(t *testing.T) {
 			codec: codec,
 			client: &apiMock{
 				GetSealFunc: func(_ context.Context, in *GetSealRequest, _ ...grpc.CallOption) (*GetSealResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(want.ID()), in.SealID)
+					assert.Equal(t, sealID[:], in.SealID)
 
 					return &GetSealResponse{
-						SealID: mocks.ByteSlice(want.ID()),
-						Data:   testSealBytes,
+						SealID: sealID[:],
+						Data:   data,
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Seal(want.ID())
+		got, err := index.Seal(sealID)
+
 		require.NoError(t, err)
-		assert.Equal(t, want, got)
+		assert.Equal(t, seal, got)
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -759,28 +742,27 @@ func TestIndex_Seals(t *testing.T) {
 		index := Index{
 			codec: mocks.BaselineCodec(t),
 			client: &apiMock{
-				GetSealFunc: func(_ context.Context, in *GetSealRequest, _ ...grpc.CallOption) (*GetSealResponse, error) {
-					assert.Equal(t, mocks.ByteSlice(want.ID()), in.SealID)
-
+				GetSealFunc: func(context.Context, *GetSealRequest, ...grpc.CallOption) (*GetSealResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
-		_, err := index.Seal(want.ID())
+		_, err := index.Seal(sealID)
+
 		assert.Error(t, err)
 	})
 }
 
 func TestIndex_ListSealsForHeight(t *testing.T) {
-	want := mocks.GenericSealIDs(4)
+	sealIDs := mocks.GenericSealIDs(4)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		testSealBytes := make([][]byte, 0, len(want))
-		for _, sealID := range want {
-			testSealBytes = append(testSealBytes, mocks.ByteSlice(sealID))
+		data := make([][]byte, 0, len(sealIDs))
+		for _, sealID := range sealIDs {
+			data = append(data, mocks.ByteSlice(sealID))
 		}
 
 		index := Index{
@@ -791,15 +773,16 @@ func TestIndex_ListSealsForHeight(t *testing.T) {
 
 					return &ListSealsForHeightResponse{
 						Height:  in.Height,
-						SealIDs: testSealBytes,
+						SealIDs: data,
 					}, nil
 				},
 			},
 		}
 
 		got, err := index.SealsByHeight(mocks.GenericHeight)
+
 		require.NoError(t, err)
-		assert.Equal(t, want, got)
+		assert.Equal(t, sealIDs, got)
 	})
 
 	t.Run("handles index failures", func(t *testing.T) {
@@ -808,15 +791,14 @@ func TestIndex_ListSealsForHeight(t *testing.T) {
 		index := Index{
 			codec: mocks.BaselineCodec(t),
 			client: &apiMock{
-				ListSealsForHeightFunc: func(_ context.Context, in *ListSealsForHeightRequest, _ ...grpc.CallOption) (*ListSealsForHeightResponse, error) {
-					assert.Equal(t, mocks.GenericHeight, in.Height)
-
+				ListSealsForHeightFunc: func(context.Context, *ListSealsForHeightRequest, ...grpc.CallOption) (*ListSealsForHeightResponse, error) {
 					return nil, mocks.GenericError
 				},
 			},
 		}
 
 		_, err := index.SealsByHeight(mocks.GenericHeight)
+
 		assert.Error(t, err)
 	})
 }
