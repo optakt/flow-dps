@@ -20,6 +20,7 @@ import (
 	"io"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -40,6 +41,7 @@ type GCPStreamer struct {
 	validate *validator.Validate
 	buffer   *deque.Deque
 	last     time.Time
+	busy     uint32
 	wg       *sync.WaitGroup
 	limit    uint
 }
@@ -52,6 +54,7 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStream
 		validate: validator.New(),
 		buffer:   deque.New(),
 		last:     time.Time{},
+		busy:     0,
 		wg:       &sync.WaitGroup{},
 		limit:    8,
 	}
@@ -80,6 +83,12 @@ func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
 func (g *GCPStreamer) poll() {
 	defer g.wg.Done()
 
+	if !atomic.CompareAndSwapUint32(&g.busy, 0, 1) {
+		return
+	}
+
+	defer atomic.StoreUint32(&g.busy, 0)
+
 	err := g.pull()
 	if err != nil {
 		g.log.Error().Err(err).Msg("could not pull records")
@@ -93,7 +102,7 @@ func (g *GCPStreamer) pull() error {
 	// do not need to have a big buffer, we just want to avoid HTTP request
 	// latency when the execution follower wants a block record.
 	if uint(g.buffer.Len()) >= g.limit {
-		g.log.Debug().Uint("limit", g.limit).Msg("buffer full, not executing pull")
+		g.log.Debug().Uint("limit", g.limit).Msg("buffer full, skipping pull")
 		return nil
 	}
 
@@ -135,12 +144,12 @@ func (g *GCPStreamer) pull() error {
 
 		record, err := g.pullRecord(object.Name)
 		if err != nil {
-			return fmt.Errorf("could not pull record (name: %s): %w", object.Name, err)
+			return fmt.Errorf("could not pull record object (name: %s): %w", object.Name, err)
 		}
 
 		g.last = object.Created
 
-		g.log.Debug().Time("created", object.Created).Msg("pushing block record into buffer")
+		g.log.Debug().Time("created", object.Created).Msg("pushing record object into buffer")
 
 		g.buffer.PushFront(record)
 		if uint(g.buffer.Len()) >= g.limit {
