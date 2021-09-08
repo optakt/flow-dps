@@ -116,26 +116,11 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 		return update.(*ledger.TrieUpdate), nil
 	}
 
-	// Get the next block data available from the execution follower and push
-	// all of the trie updates into the queue.
-	record, err := e.stream.Next()
-	if err != nil {
-		return nil, fmt.Errorf("could not read record: %w", err)
-	}
-	for _, update := range record.TrieUpdates {
-		e.queue.PushFront(update)
-	}
-
-	e.log.Debug().
-		Int("updates", len(record.TrieUpdates)).
-		Int("queue", e.queue.Len()).
-		Msg("pushed new trie updates to the queue")
-
 	// We should then also index the block data by block ID, so we can provide
 	// it to the chain interface as needed.
-	err = e.processRecord(record)
+	err := e.processNext()
 	if err != nil {
-		return nil, fmt.Errorf("could not index block record: %w", err)
+		return nil, fmt.Errorf("could not process next record: %w", err)
 	}
 
 	// This is a recursive function call. It allows us to skip past blocks which
@@ -147,28 +132,57 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 // Record returns the block record for the given block ID, if it is available.
 // Once a block record is returned, all block records at a height lower than
 // the height of the returned record are purged from the cache.
-func (e *Execution) Record(blockID flow.Identifier) (*uploader.BlockData, bool) {
+func (e *Execution) Record(blockID flow.Identifier) (*uploader.BlockData, error) {
 
+	// If we have the block available in the cache, let's feed it to the
+	// consumer.
 	record, ok := e.records[blockID]
-	if !ok {
-		return nil, false
+	if ok {
+		e.purge(record.Block.Header.Height)
+		return record, nil
 	}
 
-	e.purge(record.Block.Header.Height)
+	// Get the next block data available from the execution follower and process
+	// it appropriately. This will wrap an unavailable error if we don't get
+	// the next one from the cloud reader.
+	err := e.processNext()
+	if err != nil {
+		return nil, fmt.Errorf("could not process next record: %w", err)
+	}
 
-	return record, true
+	// This is a recursive function call. It allows us to keep reading block
+	// records from the cloud streamer until we find the block we are looking
+	// for, or until we receive an unavailable error that we propagate up.
+	return e.Record(blockID)
 }
 
-func (e *Execution) processRecord(record *uploader.BlockData) error {
+func (e *Execution) processNext() error {
 
-	// Extract the block ID from the block data.
+	// Get the next block execution record available from the cloud streamer.
+	record, err := e.stream.Next()
+	if err != nil {
+		return fmt.Errorf("could not read record: %w", err)
+	}
+
+	// Check if we already processed a block with this ID recently. This should
+	// be idempotent, but we should be aware if something like this happens.
 	blockID := record.Block.Header.ID()
 	_, ok := e.records[blockID]
 	if ok {
 		return fmt.Errorf("duplicate block record (block: %x)", blockID)
 	}
 
+	// Dump the block execution record into our cache and push all trie updates
+	// into our update queue.
 	e.records[blockID] = record
+	for _, update := range record.TrieUpdates {
+		e.queue.PushFront(update)
+	}
+
+	e.log.Debug().
+		Hex("block", blockID[:]).
+		Int("updates", len(record.TrieUpdates)).
+		Msg("processed next block record")
 
 	return nil
 }
