@@ -235,7 +235,7 @@ func run() int {
 	}()
 	bucket := client.Bucket(flagBucket)
 	stream := cloud.NewGCPStreamer(log, bucket)
-	execution, err := tracker.NewExecution(log, db, stream)
+	execution, err := tracker.NewExecution(log, data, stream)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize execution tracker")
 		return failure
