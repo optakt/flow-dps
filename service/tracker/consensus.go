@@ -56,6 +56,7 @@ func NewConsensus(log zerolog.Logger, chain dps.Chain, hold RecordHolder) (*Cons
 func (c *Consensus) Root() (uint64, error) {
 	root, err := c.chain.Root()
 	c.last = root
+	c.log.Debug().Uint64("height", root).Msg("root initialization processed")
 	return root, err
 }
 
@@ -98,7 +99,6 @@ func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
 	}
 	record, ok := c.hold.Record(header.ID())
 	if !ok {
-		panic("boom")
 		return flow.DummyStateCommitment, dps.ErrUnavailable
 	}
 	return record.FinalStateCommitment, nil
@@ -181,5 +181,6 @@ func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 		c.log.Error().Err(err).Hex("block", finalID[:]).Msg("could not get height for block")
 		return
 	}
+	c.log.Debug().Hex("block", finalID[:]).Uint64("height", height).Msg("block finalization processed")
 	c.last = height
 }
