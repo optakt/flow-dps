@@ -215,6 +215,7 @@ func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
 		if err != nil {
 			return flow.DummyStateCommitment, fmt.Errorf("could not look up root state commitment: %w", err)
 		}
+		return commit, nil
 	}
 
 	payload, ok := c.payloads[height]
