@@ -61,7 +61,7 @@ func (d *Data) Options(ctx echo.Context) error {
 
 	err = d.validate.Request(req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+		return validationError(err)
 	}
 
 	err = d.config.Check(req.NetworkID)

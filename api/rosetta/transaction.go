@@ -50,24 +50,13 @@ func (d *Data) Transaction(ctx echo.Context) error {
 	}
 
 	err = d.validate.Request(req)
-	if errors.Is(err, ErrBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength,
-			withDetail("have_length", len(req.BlockID.Hash)),
-			withDetail("want_length", HexIDSize),
-		))
-	}
-	if errors.Is(err, ErrTxLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(TxLength,
-			withDetail("have_length", len(req.TransactionID.Hash)),
-			withDetail("want_length", HexIDSize),
-		))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+		return validationError(err)
 	}
 
-	if req.BlockID.Index == nil || req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockNotFull))
+	err = d.validate.CompleteBlockID(req.BlockID)
+	if err != nil {
+		return validationError(err)
 	}
 
 	err = d.config.Check(req.NetworkID)

@@ -50,14 +50,8 @@ func (d *Data) Block(ctx echo.Context) error {
 	}
 
 	err = d.validate.Request(req)
-	if errors.Is(err, ErrBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength,
-			withDetail("have_length", len(req.BlockID.Hash)),
-			withDetail("want_length", HexIDSize),
-		))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+		return validationError(err)
 	}
 
 	err = d.config.Check(req.NetworkID)

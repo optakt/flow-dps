@@ -15,6 +15,10 @@
 package rosetta
 
 import (
+	"errors"
+	"net/http"
+
+	"github.com/labstack/echo/v4"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/rosetta/configuration"
@@ -289,4 +293,17 @@ func invalidKey(fail failure.InvalidKey) Error {
 		withAddress("account", fail.Address),
 		withDetail("index", fail.Index),
 	)
+}
+
+func validationError(err error) *echo.HTTPError {
+	if errors.Is(err, ErrBlockLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength, withDetail("want_length", HexIDSize)))
+	}
+	if errors.Is(err, ErrAddressLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(AddressLength, withDetail("want_length", HexAddressSize)))
+	}
+	if errors.Is(err, ErrTxLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(TxLength, withDetail("want_length", HexIDSize)))
+	}
+	return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 }

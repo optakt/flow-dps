@@ -53,7 +53,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+		return validationError(err)
 	}
 
 	signed, err := c.transact.AttachSignatures(req.UnsignedTransaction, req.Signatures)

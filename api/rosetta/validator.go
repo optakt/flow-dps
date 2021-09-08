@@ -16,16 +16,18 @@ package rosetta
 
 import (
 	"errors"
+
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 type Validator interface {
-	Request(request interface{}) error
+	Request(interface{}) error
+	CompleteBlockID(identifier.Block) error
 }
 
 var (
-	ErrInvalidValidation = errors.New("invalid validation input")
-
-	ErrBlockLength   = errors.New(BlockLength)
-	ErrAddressLength = errors.New(AddressLength)
-	ErrTxLength      = errors.New(TxLength)
+	ErrBlockLength     = errors.New(BlockLength)
+	ErrBlockIncomplete = errors.New(BlockNotFull)
+	ErrAddressLength   = errors.New(AddressLength)
+	ErrTxLength        = errors.New(TxLength)
 )

@@ -55,21 +55,15 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	}
 
 	err = c.validate.Request(req)
-	if errors.Is(err, ErrBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength,
-			withDetail("have_length", len(req.Metadata.CurrentBlockID.Hash)),
-			withDetail("want_length", HexIDSize),
-		))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+		return validationError(err)
 	}
 
 	// Metadata object is the response from our metadata endpoint. Thus, the object
 	// should be okay, but let's validate it anyway.
-	rosBlockID := req.Metadata.CurrentBlockID
-	if rosBlockID.Index == nil || rosBlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockNotFull))
+	err = c.validate.CompleteBlockID(req.Metadata.CurrentBlockID)
+	if err != nil {
+		return validationError(err)
 	}
 
 	intent, err := c.transact.DeriveIntent(req.Operations)

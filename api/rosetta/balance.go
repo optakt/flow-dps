@@ -52,20 +52,8 @@ func (d *Data) Balance(ctx echo.Context) error {
 	}
 
 	err = d.validate.Request(req)
-	if errors.Is(err, ErrBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength,
-			withDetail("have_length", len(req.BlockID.Hash)),
-			withDetail("want_length", HexIDSize),
-		))
-	}
-	if errors.Is(err, ErrAddressLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(AddressLength,
-			withDetail("have_length", len(req.AccountID.Address)),
-			withDetail("want_length", HexAddressSize),
-		))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+		return validationError(err)
 	}
 
 	// TODO: Check if we can set up validation middleware to remove the

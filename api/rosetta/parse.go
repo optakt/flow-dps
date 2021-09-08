@@ -56,7 +56,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+		return validationError(err)
 	}
 
 	// Parse the transaction and recreate the original list of operations, as well as all signers involved.

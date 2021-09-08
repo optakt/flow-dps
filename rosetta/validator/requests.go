@@ -15,6 +15,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/go-playground/validator/v10"
@@ -22,6 +23,8 @@ import (
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
+
+var ErrInvalidValidation = errors.New("invalid validation input")
 
 // Field names are displayed if the code deals with the plain `error` types instead of the structured validation errors.
 // When dealing with plain errors, the validation error reads "Field validation for 'FieldName' failed on the 'X' tag".
@@ -76,7 +79,7 @@ func (v *Validator) Request(request interface{}) error {
 	// more precisely, passing a non-struct to `validate.Struct()` method.
 	_, ok := err.(*validator.InvalidValidationError)
 	if ok {
-		return rosetta.ErrInvalidValidation
+		return ErrInvalidValidation
 	}
 
 	// Process validation errors we have found. Return the first one we encounter.
