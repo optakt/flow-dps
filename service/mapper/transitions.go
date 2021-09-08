@@ -143,7 +143,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// it to in the forest. This usually means that it was meant for a pruned
 	// branch of the execution forest.
 	update, err := t.feed.Update()
-	if err == dps.ErrUnavailable {
+	if errors.Is(err, dps.ErrUnavailable) {
 		time.Sleep(t.cfg.WaitInterval)
 		log.Debug().Msg("waiting for next trie update")
 		return nil

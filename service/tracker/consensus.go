@@ -177,6 +177,8 @@ func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
 		return flow.DummyStateCommitment, fmt.Errorf("could not look up block: %w", err)
 	}
 
+	panic("boom")
+
 	record, ok := c.hold.Record(blockID)
 	if !ok {
 		return flow.DummyStateCommitment, dps.ErrUnavailable
