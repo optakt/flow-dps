@@ -92,7 +92,7 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
-	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip bootstrapping of root checkpoint registers")
+	pflag.BoolVar(&flagSkip, "skip-registers", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
 
@@ -257,9 +257,8 @@ func run() int {
 		mapper.WithIndexTransactions(true),
 		mapper.WithIndexResults(true),
 		mapper.WithIndexEvents(true),
-		mapper.WithIndexPayloads(true),
 		mapper.WithIndexSeals(true),
-		mapper.WithSkipBootstrap(flagSkip),
+		mapper.WithIndexPayloads(!flagSkip),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
