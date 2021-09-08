@@ -34,11 +34,12 @@ type Construction struct {
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
-func NewConstruction(config Configuration, transact Transactor) *Construction {
+func NewConstruction(config Configuration, transact Transactor, retriever Retriever) *Construction {
 
 	c := Construction{
 		config:   config,
 		transact: transact,
+		retrieve: retriever,
 	}
 
 	return &c
