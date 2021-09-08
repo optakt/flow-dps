@@ -156,38 +156,6 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the loader component, which is responsible for loading,
-	// decoding and providing indexing for the root checkpoint.
-	load := loader.New(
-		loader.WithCheckpointPath(flagCheckpoint),
-	)
-
-	// Initialize the execution follower that will read block records from the
-	// Google Cloud Platform bucket.
-	client, err := googlecloud.NewClient(context.Background())
-	if err != nil {
-		log.Error().Err(err).Msg("could not connect GCP client")
-		return failure
-	}
-	defer func() {
-		err := client.Close()
-		if err != nil {
-			log.Error().Err(err).Msg("could not close GCP client")
-		}
-	}()
-	bucket := client.Bucket(flagBucket)
-	stream := cloud.NewGCPStreamer(log, bucket)
-	execution := tracker.NewExecution(log, stream)
-
-	// Initialize the consensus tracker, which uses the protocol state to
-	// retrieve data from consensus and the execution follower to complement
-	// the data with complete blocks.
-	consensus, err := tracker.NewConsensus(log, data, execution)
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize consensus tracker")
-		return failure
-	}
-
 	// Initialize the private key for joining the unstaked peer-to-peer network.
 	// This is just needed for security, not authentication, so we can just
 	// generate a new one each time we start.
@@ -240,6 +208,47 @@ func run() int {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
 		return failure
 	}
+
+	// We have to start the consensus follower early and wait for it to finish
+	// starting up, so that we are sure that the protocol state is properly
+	// bootstrapped. This means we will miss some block finalization
+	// notifications. However, we do load the latest finalized block in the
+	// consensus tracker upon initialization, so we should only lose track for
+	// the time between the initialization and registering the callback.
+	go func() {
+		follow.Run(context.Background())
+	}()
+	<-follow.NodeBuilder.Ready()
+
+	// Initialize the execution follower that will read block records from the
+	// Google Cloud Platform bucket.
+	client, err := googlecloud.NewClient(context.Background())
+	if err != nil {
+		log.Error().Err(err).Msg("could not connect GCP client")
+		return failure
+	}
+	defer func() {
+		err := client.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close GCP client")
+		}
+	}()
+	bucket := client.Bucket(flagBucket)
+	stream := cloud.NewGCPStreamer(log, bucket)
+	execution, err := tracker.NewExecution(log, db, stream)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize execution tracker")
+		return failure
+	}
+
+	// Initialize the consensus tracker, which uses the protocol state to
+	// retrieve data from consensus and the execution follower to complement
+	// the data with complete blocks.
+	consensus, err := tracker.NewConsensus(log, data, execution)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize consensus tracker")
+		return failure
+	}
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
 	// Initialize the index writer, which is responsible for writing the chain
@@ -251,6 +260,12 @@ func run() int {
 			log.Error().Err(err).Msg("could not close index writer")
 		}
 	}()
+
+	// Initialize the loader component, which is responsible for loading,
+	// decoding and providing indexing for the root checkpoint.
+	load := loader.New(
+		loader.WithCheckpointPath(flagCheckpoint),
+	)
 
 	// Initialize the state transition library, the finite-state machine (FSM)
 	// and then register the desired state transitions with the FSM.
@@ -304,11 +319,6 @@ func run() int {
 	done := make(chan struct{})
 	failed := make(chan struct{})
 	go func() {
-		follow.Run(context.Background())
-		close(done)
-	}()
-	go func() {
-		<-follow.NodeBuilder.Ready()
 		start := time.Now()
 		log.Info().Time("start", start).Msg("Flow DPS Live Indexer starting")
 		err := fsm.Run()

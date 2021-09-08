@@ -17,12 +17,14 @@ package tracker
 import (
 	"fmt"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/storage/badger/operation"
 )
 
 // Execution is the DPS execution follower, which keeps track of updates to the
@@ -38,7 +40,36 @@ type Execution struct {
 
 // NewExecution creates a new DPS execution follower, relying on the provided
 // stream of block records (block data updates).
-func NewExecution(log zerolog.Logger, stream RecordStreamer) *Execution {
+func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Execution, error) {
+
+	// The root block does not have a record that we can pull from the cloud
+	// stream of execution data. We thus construct it by getting the root block
+	// data from the DB directly.
+	var height uint64
+	err := db.View(operation.RetrieveRootHeight(&height))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve root height: %w", err)
+	}
+	var blockID flow.Identifier
+	err = db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up root block: %w", err)
+	}
+	var header flow.Header
+	err = db.View(operation.RetrieveHeader(blockID, &header))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve root header: %w", err)
+	}
+	var sealID flow.Identifier
+	err = db.View(operation.LookupBlockSeal(blockID, &sealID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up root seal: %w", err)
+	}
+	var seal flow.Seal
+	err = db.View(operation.RetrieveSeal(sealID, &seal))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve root seal: %w", err)
+	}
 
 	s := Execution{
 		log:     log.With().Str("component", "execution_tracker").Logger(),
@@ -47,7 +78,30 @@ func NewExecution(log zerolog.Logger, stream RecordStreamer) *Execution {
 		records: make(map[flow.Identifier]*uploader.BlockData),
 	}
 
-	return &s
+	payload := flow.Payload{
+		Guarantees: nil,
+		Seals:      nil,
+		Receipts:   nil,
+		Results:    nil,
+	}
+
+	block := flow.Block{
+		Header:  &header,
+		Payload: &payload,
+	}
+
+	record := uploader.BlockData{
+		Block:                &block,
+		Collections:          nil, // no collections
+		TxResults:            nil, // no transaction results
+		Events:               nil, // no events
+		TrieUpdates:          nil, // no trie updates
+		FinalStateCommitment: seal.FinalState,
+	}
+
+	s.records[blockID] = &record
+
+	return &s, nil
 }
 
 // Update provides the next trie update from the stream of block records. Trie
@@ -94,11 +148,14 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 // Once a block record is returned, all block records at a height lower than
 // the height of the returned record are purged from the cache.
 func (e *Execution) Record(blockID flow.Identifier) (*uploader.BlockData, bool) {
+
 	record, ok := e.records[blockID]
 	if !ok {
 		return nil, false
 	}
+
 	e.purge(record.Block.Header.Height)
+
 	return record, true
 }
 
