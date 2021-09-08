@@ -54,7 +54,7 @@ func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) (*Consen
 		log:  log.With().Str("component", "consensus_tracker").Logger(),
 		db:   db,
 		hold: hold,
-		last: 0,
+		last: last,
 	}
 
 	return &c, nil
