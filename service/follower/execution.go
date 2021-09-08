@@ -72,6 +72,11 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 		e.queue.PushFront(update)
 	}
 
+	e.log.Debug().
+		Int("updates", len(record.TrieUpdates)).
+		Int("queue", e.queue.Len()).
+		Msg("pushed new trie updates to the queue")
+
 	// We should then also index the block data by block ID, so we can provide
 	// it to the chain interface as needed.
 	err = e.processRecord(record)
