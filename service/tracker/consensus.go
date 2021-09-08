@@ -39,6 +39,7 @@ type Consensus struct {
 	db       *badger.DB
 	hold     RecordHolder
 	last     uint64
+	root     uint64
 	payloads map[uint64]*Payload
 }
 
@@ -84,6 +85,11 @@ func (c *Consensus) Root() (uint64, error) {
 	// consensus follower. This should be addressed by properly handling startup
 	// order and waiting, but this is a quick fix that will work for testing.
 	c.last = root
+
+	// FIXME: This is also a "hack" to make sure we return the state commitment
+	// of the root block from the protocol state, rather than from execution
+	// data. There is no execution record for the root block in the cloud.
+	c.root = root
 
 	return root, nil
 }
@@ -196,6 +202,21 @@ func (c *Consensus) Seals(height uint64) ([]*flow.Seal, error) {
 
 // Commit returns the state commitment for the given height, if available.
 func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
+
+	// FIXME: This should be solved in a much cleaner manner.
+	if height == c.root {
+		var rootID flow.Identifier
+		err := c.db.View(operation.LookupBlockHeight(height, &rootID))
+		if err != nil {
+			return flow.DummyStateCommitment, fmt.Errorf("could not look up root block: %w", err)
+		}
+		var commit flow.StateCommitment
+		err = c.db.View(operation.LookupStateCommitment(rootID, &commit))
+		if err != nil {
+			return flow.DummyStateCommitment, fmt.Errorf("could not look up root state commitment: %w", err)
+		}
+	}
+
 	payload, ok := c.payloads[height]
 	if !ok {
 		return flow.DummyStateCommitment, dps.ErrUnavailable
