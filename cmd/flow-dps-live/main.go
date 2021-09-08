@@ -44,12 +44,12 @@ import (
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/cloud"
-	"github.com/optakt/flow-dps/service/follower"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
+	"github.com/optakt/flow-dps/service/tracker"
 )
 
 const (
@@ -177,12 +177,16 @@ func run() int {
 	}()
 	bucket := client.Bucket(flagBucket)
 	stream := cloud.NewGCPStreamer(log, bucket)
-	execution := follower.NewExecution(log, stream)
+	execution := tracker.NewExecution(log, stream)
 
-	// Initialize the consensus follower, which uses the protocol state to
+	// Initialize the consensus tracker, which uses the protocol state to
 	// retrieve data from consensus and the execution follower to complement
 	// the data with complete blocks.
-	consensus := follower.NewConsensus(log, data, execution)
+	consensus, err := tracker.NewConsensus(log, data, execution)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize consensus tracker")
+		return failure
+	}
 
 	// Initialize the private key for joining the unstaked peer-to-peer network.
 	// This is just needed for security, not authentication, so we can just
