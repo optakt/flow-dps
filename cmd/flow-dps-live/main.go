@@ -280,14 +280,15 @@ func run() int {
 	opts := []logging.Option{
 		logging.WithLevels(logging.DefaultServerCodeToLevel),
 	}
+	interceptor := grpczerolog.InterceptorLogger(log.With().Str("component", "grpc_server").Logger())
 	gsvr := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			tags.UnaryServerInterceptor(),
-			logging.UnaryServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+			logging.UnaryServerInterceptor(interceptor, opts...),
 		),
 		grpc.ChainStreamInterceptor(
 			tags.StreamServerInterceptor(),
-			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+			logging.StreamServerInterceptor(interceptor, opts...),
 		),
 	)
 	server := api.NewServer(read, codec)

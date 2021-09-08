@@ -49,7 +49,7 @@ func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feede
 	}
 
 	t := Transitions{
-		log:   log,
+		log:   log.With().Str("component", "mapper_transitions").Logger(),
 		cfg:   cfg,
 		load:  load,
 		chain: chain,

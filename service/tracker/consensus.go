@@ -58,7 +58,7 @@ func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) (*Consen
 	}
 
 	c := Consensus{
-		log:      log,
+		log:      log.With().Str("component", "consensus_tracker").Logger(),
 		db:       db,
 		hold:     hold,
 		payloads: make(map[uint64]*Payload),
@@ -276,13 +276,11 @@ func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 	return events, nil
 }
 
-// OnBlockFinalized is a callback that notifies the consensus follower of a new
+// OnBlockFinalized is a callback that notifies the consensus tracker of a new
 // finalized block.
 func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 
 	log := c.log.With().Hex("block", finalID[:]).Logger()
-
-	log.Debug().Msg("finalized block callback received")
 
 	err := c.processPayload(finalID)
 	if err != nil {

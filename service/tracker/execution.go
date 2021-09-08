@@ -41,7 +41,7 @@ type Execution struct {
 func NewExecution(log zerolog.Logger, stream RecordStreamer) *Execution {
 
 	s := Execution{
-		log:     log,
+		log:     log.With().Str("component", "execution_tracker").Logger(),
 		stream:  stream,
 		queue:   deque.New(),
 		records: make(map[flow.Identifier]*uploader.BlockData),

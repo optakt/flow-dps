@@ -47,7 +47,7 @@ type GCPStreamer struct {
 func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStreamer {
 
 	g := GCPStreamer{
-		log:      log,
+		log:      log.With().Str("component", "gcp_streamer").Logger(),
 		bucket:   bucket,
 		validate: validator.New(),
 		buffer:   deque.New(),
