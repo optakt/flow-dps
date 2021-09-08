@@ -64,10 +64,12 @@ func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
 	go g.poll()
 
 	if g.buffer.Len() == 0 {
+		g.log.Debug().Msg("buffer empty, waiting for poll")
 		g.wg.Wait()
 	}
 
 	if g.buffer.Len() == 0 {
+		g.log.Debug().Msg("buffer still empty, no data available")
 		return nil, dps.ErrUnavailable
 	}
 
@@ -81,6 +83,7 @@ func (g *GCPStreamer) poll() {
 	err := g.pull()
 	if err != nil {
 		g.log.Error().Err(err).Msg("could not pull records")
+		return
 	}
 }
 
@@ -90,6 +93,7 @@ func (g *GCPStreamer) pull() error {
 	// do not need to have a big buffer, we just want to avoid HTTP request
 	// latency when the execution follower wants a block record.
 	if uint(g.buffer.Len()) >= g.limit {
+		g.log.Debug().Uint("limit", g.limit).Msg("buffer full, not executing poll")
 		return nil
 	}
 
@@ -118,6 +122,8 @@ func (g *GCPStreamer) pull() error {
 		objects = append(objects, object)
 	}
 
+	g.log.Debug().Int("objects", len(objects)).Msg("polled new block record objects")
+
 	// Now, we sort the objects by creation time to make sure we process the
 	// oldest ones first.
 	sort.Slice(objects, func(i int, j int) bool {
@@ -133,6 +139,8 @@ func (g *GCPStreamer) pull() error {
 		}
 
 		g.last = object.Created
+
+		g.log.Debug().Time("created", object.Created).Msg("pushing block record into buffer")
 
 		g.buffer.PushFront(record)
 		if uint(g.buffer.Len()) >= g.limit {
