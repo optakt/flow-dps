@@ -92,30 +92,106 @@ func (c *Consensus) Root() (uint64, error) {
 // has been successfully retrieved, all block payload data at a height lower
 // than the returned payload are purged from the cache.
 func (c *Consensus) Header(height uint64) (*flow.Header, error) {
+
+	// Once a height is requested, all data from previous heights becomes
+	// irrelevant. This means we can purge the cache with the new height as a
+	// threshold. We only need to do that in one method, so `Header` will do.
 	c.purge(height)
+
+	// If we have the payload cached, we can return the header immediately. The
+	// same logic applies to all other functions.
 	payload, ok := c.payloads[height]
-	if !ok {
+	if ok {
+		return payload.Header, nil
+	}
+
+	// If the payload is not cached and the last finalized height is behind the
+	// requested height, we have not received the requested data yet and it is
+	// thus unavailable. We are probably following consensus in real-time now.
+	if height > c.last {
 		return nil, dps.ErrUnavailable
 	}
-	return payload.Header, nil
+
+	// Otherwise, we should have the header in the on-disk protocol state
+	// database. This can happen for the root block, or in cases where we start
+	// with an existing on-disk protocol state.
+	// FIXME: Remove redundancy of retrieval code.
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+	var header flow.Header
+	err = c.db.View(operation.RetrieveHeader(blockID, &header))
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve block: %w", err)
+	}
+
+	return &header, nil
 }
 
 // Guarantees returns the collection guarantees for the given height, if available.
 func (c *Consensus) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
+
 	payload, ok := c.payloads[height]
-	if !ok {
-		return nil, dps.ErrUnavailable
+	if ok {
+		return payload.Guarantees, nil
 	}
-	return payload.Guarantees, nil
+
+	// FIXME: Remove redundancy of retrieval code.
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+	var collIDs []flow.Identifier
+	err = c.db.View(operation.LookupPayloadGuarantees(blockID, &collIDs))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up guarantees: %w", err)
+	}
+	guarantees := make([]*flow.CollectionGuarantee, 0, len(collIDs))
+	for _, collID := range collIDs {
+		var guarantee flow.CollectionGuarantee
+		err = c.db.View(operation.RetrieveGuarantee(collID, &guarantee))
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve guarantee (collection: %x): %w", collID, err)
+		}
+		guarantees = append(guarantees, &guarantee)
+	}
+
+	return guarantees, nil
 }
 
 // Seals returns the block seals for the given height, if available.
 func (c *Consensus) Seals(height uint64) ([]*flow.Seal, error) {
+
 	payload, ok := c.payloads[height]
-	if !ok {
-		return nil, dps.ErrUnavailable
+	if ok {
+		return payload.Seals, nil
 	}
-	return payload.Seals, nil
+
+	// FIXME: Remove redundancy of retrieval code.
+	var blockID flow.Identifier
+	err := c.db.View(operation.LookupBlockHeight(height, &blockID))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up block: %w", err)
+	}
+	var sealIDs []flow.Identifier
+	err = c.db.View(operation.LookupPayloadSeals(blockID, &sealIDs))
+	if err != nil {
+		return nil, fmt.Errorf("could not look up seals: %w", err)
+	}
+	seals := make([]*flow.Seal, 0, len(sealIDs))
+	for _, sealID := range sealIDs {
+		var seal flow.Seal
+		err = c.db.View(operation.RetrieveSeal(sealID, &seal))
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve seal (seal: %x): %w", sealID, err)
+		}
+		seals = append(seals, &seal)
+	}
+
+	return seals, nil
 }
 
 // Commit returns the state commitment for the given height, if available.
