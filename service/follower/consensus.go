@@ -15,12 +15,14 @@
 package follower
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -36,31 +38,54 @@ type Consensus struct {
 	log      zerolog.Logger
 	db       *badger.DB
 	hold     RecordHolder
+	last     uint64
 	payloads map[uint64]*Payload
 }
 
 // NewConsensus returns a new instance of the DPS consensus follower, reading
 // from the provided protocol state database and the provided block record
 // holder.
-func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) *Consensus {
-	f := Consensus{
+func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) (*Consensus, error) {
+
+	// We first try to retrieve the root height from the database, in case there
+	// is already protocol state on the disk. We then keep track of the last
+	// finalized height in order to determine which requests can be fulfilled
+	// from disk.
+	last := uint64(0)
+	err := db.View(operation.RetrieveFinalizedHeight(&last))
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		return nil, fmt.Errorf("could not retrieve finalized height: %w", err)
+	}
+
+	c := Consensus{
 		log:      log,
 		db:       db,
 		hold:     hold,
 		payloads: make(map[uint64]*Payload),
+		last:     last,
 	}
 
-	return &f
+	return &c, nil
 }
 
 // Root returns the root height from the underlying protocol state.
 func (c *Consensus) Root() (uint64, error) {
-	var height uint64
-	err := c.db.View(operation.RetrieveRootHeight(&height))
+
+	var root uint64
+	err := c.db.View(operation.RetrieveRootHeight(&root))
 	if err != nil {
 		return 0, fmt.Errorf("could not retrieve root height: %w", err)
 	}
-	return height, nil
+
+	// FIXME: This is currently a "hack" so that we set the last height to root
+	// height when starting. It is needed because the protocol state is
+	// boostrapped by the unstaked consensus follower; this means that there is
+	// no root height available in the database when we initialize the DPS
+	// consensus follower. This should be addressed by properly handling startup
+	// order and waiting, but this is a quick fix that will work for testing.
+	c.last = root
+
+	return root, nil
 }
 
 // Header returns the header for the given height, if available. Once a header
@@ -183,16 +208,16 @@ func (c *Consensus) OnBlockFinalized(finalID flow.Identifier) {
 
 	log.Debug().Msg("finalized block callback received")
 
-	err := c.indexPayload(finalID)
+	err := c.processPayload(finalID)
 	if err != nil {
 		c.log.Error().Err(err).Msg("could not index block payload")
 		return
 	}
 
-	log.Debug().Msg("finalized block payload indexed")
+	log.Debug().Msg("finalized block payload processed")
 }
 
-func (c *Consensus) indexPayload(finalID flow.Identifier) error {
+func (c *Consensus) processPayload(finalID flow.Identifier) error {
 
 	var header flow.Header
 	var guarantees []*flow.CollectionGuarantee

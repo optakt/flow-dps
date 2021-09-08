@@ -74,7 +74,7 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 
 	// We should then also index the block data by block ID, so we can provide
 	// it to the chain interface as needed.
-	err = e.indexRecord(record)
+	err = e.processRecord(record)
 	if err != nil {
 		return nil, fmt.Errorf("could not index block record: %w", err)
 	}
@@ -97,7 +97,7 @@ func (e *Execution) Record(blockID flow.Identifier) (*uploader.BlockData, bool) 
 	return record, true
 }
 
-func (e *Execution) indexRecord(record *uploader.BlockData) error {
+func (e *Execution) processRecord(record *uploader.BlockData) error {
 
 	// Extract the block ID from the block data.
 	blockID := record.Block.Header.ID()
