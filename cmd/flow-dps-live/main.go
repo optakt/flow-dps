@@ -230,6 +230,7 @@ func run() int {
 		seedNodes,
 		unstaked.WithBootstrapDir(flagBootstrap),
 		unstaked.WithDB(data),
+		unstaked.WithLogLevel(flagLevel),
 	)
 	if err != nil {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
