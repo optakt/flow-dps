@@ -250,6 +250,7 @@ func run() int {
 		return failure
 	}
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
+	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 
 	// Initialize the index writer, which is responsible for writing the chain
 	// and execution data to the index database.

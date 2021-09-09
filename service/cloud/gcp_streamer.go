@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,9 +27,9 @@ import (
 	"github.com/gammazero/deque"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
-	"google.golang.org/api/iterator"
 
 	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
+	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -38,6 +37,7 @@ import (
 type GCPStreamer struct {
 	log      zerolog.Logger
 	bucket   *storage.BucketHandle
+	queue    *deque.Deque
 	validate *validator.Validate
 	buffer   *deque.Deque
 	last     time.Time
@@ -51,6 +51,7 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStream
 	g := GCPStreamer{
 		log:      log.With().Str("component", "gcp_streamer").Logger(),
 		bucket:   bucket,
+		queue:    deque.New(),
 		validate: validator.New(),
 		buffer:   deque.New(),
 		last:     time.Time{},
@@ -98,66 +99,41 @@ func (g *GCPStreamer) poll() {
 
 func (g *GCPStreamer) pull() error {
 
-	// We only want to retrieve and process files until the buffer is full. We
-	// do not need to have a big buffer, we just want to avoid HTTP request
-	// latency when the execution follower wants a block record.
-	if uint(g.buffer.Len()) >= g.limit {
-		g.log.Debug().Uint("limit", g.limit).Msg("buffer full, skipping pull")
-		return nil
-	}
-
-	// Retrieve the attributes for all files in the bucket.
-	// NOTE: The used attributes are always valid, no need to check error.
-	// TODO: We should redo the storage naming so that we can use the prefix to
-	// limit the date selection on query. Otherwise, we will end up with a huge
-	// iterator every time we pull once there are many block records.
-	// => https://github.com/optakt/flow-dps/issues/396
-	query := &storage.Query{}
-	_ = query.SetAttrSelection([]string{"Name", "Created"})
-	it := g.bucket.Objects(context.Background(), query)
-	var objects []*storage.ObjectAttrs
 	for {
-		object, err := it.Next()
-		if err == iterator.Done {
-			break
+
+		// We only want to retrieve and process files until the buffer is full. We
+		// do not need to have a big buffer, we just want to avoid HTTP request
+		// latency when the execution follower wants a block record.
+		if uint(g.buffer.Len()) >= g.limit {
+			g.log.Debug().Uint("limit", g.limit).Msg("buffer full, finishing pull")
+			return nil
 		}
+
+		// We only want to retrieve and process files for blocks that have already
+		// been finalized, in the order that they have been finalized. This creates
+		// some latency, but it's currently the only way we can ensure that trie
+		// updates are delivered in the right order.
+		if uint(g.queue.Len()) == 0 {
+			g.log.Debug().Msg("queue empty, finishing pull")
+			return nil
+		}
+
+		// Get the name of the file based on the block ID.
+		blockID := g.queue.PopBack().(flow.Identifier)
+		name := blockID.String() + ".block"
+		record, err := g.pullRecord(name)
 		if err != nil {
-			return fmt.Errorf("could not read next object: %w", err)
-		}
-		if object.Created.Before(g.last) {
-			// This filters out all objects we already processed.
-			continue
-		}
-		objects = append(objects, object)
-	}
-
-	g.log.Debug().Int("objects", len(objects)).Msg("polled new block record objects")
-
-	// Now, we sort the objects by creation time to make sure we process the
-	// oldest ones first.
-	sort.Slice(objects, func(i int, j int) bool {
-		return objects[i].Created.Before(objects[j].Created)
-	})
-
-	// Then, we read and decode the next file until the buffer is full.
-	for _, object := range objects {
-
-		record, err := g.pullRecord(object.Name)
-		if err != nil {
-			return fmt.Errorf("could not pull record object (name: %s): %w", object.Name, err)
+			return fmt.Errorf("could not pull record object (name: %s): %w", name, err)
 		}
 
-		g.last = object.Created
-
-		g.log.Debug().Time("created", object.Created).Msg("pushing record object into buffer")
+		g.log.Debug().Str("name", name).Msg("pushing record object into buffer")
 
 		g.buffer.PushFront(record)
-		if uint(g.buffer.Len()) >= g.limit {
-			break
-		}
 	}
+}
 
-	return nil
+func (g *GCPStreamer) OnBlockFinalized(blockID flow.Identifier) {
+	g.queue.PushFront(blockID)
 }
 
 func (g *GCPStreamer) pullRecord(name string) (*uploader.BlockData, error) {
