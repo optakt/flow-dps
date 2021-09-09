@@ -183,5 +183,13 @@ func (g *GCPStreamer) pullRecord(name string) (*uploader.BlockData, error) {
 		return nil, fmt.Errorf("could not decode record: %w", err)
 	}
 
+	if record.FinalStateCommitment == flow.DummyStateCommitment {
+		return nil, fmt.Errorf("record does not contain state commitment")
+	}
+
+	if record.Block.Header.Height == 0 {
+		return nil, fmt.Errorf("record does not contain block data")
+	}
+
 	return &record, nil
 }
