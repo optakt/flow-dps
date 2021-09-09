@@ -27,7 +27,6 @@ Usage of flow-dps-indexer:
   -l, --level string         log output level (default "info")
   -m, --metrics                     enable metrics collection and output
       --metrics-interval duration   defines the interval of metrics output to log (default 5m0s)
-      --skip-bootstrap              enable skipping checkpoint register payloads indexing
   -t, --trie string          data directory for state ledger
 ```
 

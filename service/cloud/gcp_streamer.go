@@ -157,7 +157,11 @@ func (g *GCPStreamer) pull() error {
 			return fmt.Errorf("could not pull record object (name: %s): %w", name, err)
 		}
 
-		g.log.Debug().Str("name", name).Msg("pushing record object into buffer")
+		g.log.Debug().
+			Str("name", name).
+			Uint64("height", record.Block.Header.Height).
+			Hex("block", blockID[:]).
+			Msg("pushing record object into buffer")
 
 		g.buffer.PushFront(record)
 	}

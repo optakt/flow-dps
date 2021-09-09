@@ -176,6 +176,14 @@ func (e *Execution) processNext() error {
 	// into our update queue.
 	e.records[blockID] = record
 	for _, update := range record.TrieUpdates {
+
+		// The Flow execution node includes `nil` updates in the slice, instead
+		// of empty updates. We could fix this here, but we don't have the root
+		// hash to apply against, so we just skip.
+		if update == nil {
+			continue
+		}
+
 		e.queue.PushFront(update)
 	}
 
