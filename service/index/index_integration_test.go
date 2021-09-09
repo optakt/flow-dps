@@ -148,6 +148,8 @@ func TestIndex(t *testing.T) {
 		// Close the writer to make it commit its transactions.
 		require.NoError(t, writer.Close())
 
+		// NOTE: The following subtests should NOT be run in parallel, because of the deferral
+		// to close the database above.
 		t.Run("retrieve collection by ID", func(t *testing.T) {
 			got, err := reader.Collection(collections[0].ID())
 
@@ -202,6 +204,8 @@ func TestIndex(t *testing.T) {
 		// Close the writer to make it commit its transactions.
 		require.NoError(t, writer.Close())
 
+		// NOTE: The following subtests should NOT be run in parallel, because of the deferral
+		// to close the database above.
 		t.Run("retrieve transactions by height", func(t *testing.T) {
 			gotTxIDs, err := reader.TransactionsByHeight(mocks.GenericHeight)
 
@@ -260,6 +264,8 @@ func TestIndex(t *testing.T) {
 		// Close the writer to make it commit its transactions.
 		require.NoError(t, writer.Close())
 
+		// NOTE: The following subtests should NOT be run in parallel, because of the deferral
+		// to close the database above.
 		t.Run("no types specified", func(t *testing.T) {
 			got, err := reader.Events(mocks.GenericHeight)
 
@@ -294,6 +300,8 @@ func TestIndex(t *testing.T) {
 		// Close the writer to make it commit its transactions.
 		require.NoError(t, writer.Close())
 
+		// NOTE: The following subtests should NOT be run in parallel, because of the deferral
+		// to close the database above.
 		t.Run("retrieve seal by ID", func(t *testing.T) {
 			got, err := reader.Seal(seals[0].ID())
 
