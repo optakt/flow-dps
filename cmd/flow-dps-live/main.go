@@ -232,6 +232,16 @@ func run() int {
 	<-follow.NodeBuilder.Ready()
 	defer cancel()
 
+	// Currently, we start the index from scratch each time. We should therefore
+	// dump all finalized block IDs that are already in the protocol state into
+	// the consumer, so that these become available on the consensus tracker and
+	// we download the execution data.
+	err = tracker.Initialize(data, consume.OnBlockFinalized)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initalize finalized consumer")
+		return failure
+	}
+
 	// Initialize the execution follower that will read block records from the
 	// Google Cloud Platform bucket.
 	client, err := googlecloud.NewClient(context.Background())

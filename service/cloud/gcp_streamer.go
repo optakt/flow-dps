@@ -63,6 +63,10 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStream
 	return &g
 }
 
+func (g *GCPStreamer) OnBlockFinalized(blockID flow.Identifier) {
+	g.queue.PushFront(blockID)
+}
+
 func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
 	g.wg.Add(1)
 	go g.poll()
@@ -130,10 +134,6 @@ func (g *GCPStreamer) pull() error {
 
 		g.buffer.PushFront(record)
 	}
-}
-
-func (g *GCPStreamer) OnBlockFinalized(blockID flow.Identifier) {
-	g.queue.PushFront(blockID)
 }
 
 func (g *GCPStreamer) pullRecord(name string) (*uploader.BlockData, error) {

@@ -44,20 +44,30 @@ type Consensus struct {
 // holder.
 func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) (*Consensus, error) {
 
-	var last uint64
-	err := db.View(operation.RetrieveFinalizedHeight(&last))
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve finalized height: %w", err)
-	}
-
 	c := Consensus{
 		log:  log.With().Str("component", "consensus_tracker").Logger(),
 		db:   db,
 		hold: hold,
-		last: last,
+		last: 0,
 	}
 
 	return &c, nil
+}
+
+// OnBlockFinalized is a callback that notifies the consensus tracker of a new
+// finalized block.
+func (c *Consensus) OnBlockFinalized(blockID flow.Identifier) {
+
+	var header flow.Header
+	err := c.db.View(operation.RetrieveHeader(blockID, &header))
+	if err != nil {
+		c.log.Error().Err(err).Hex("block", blockID[:]).Msg("could not get header")
+		return
+	}
+
+	c.log.Debug().Hex("block", blockID[:]).Uint64("height", header.Height).Msg("block finalization processed")
+
+	c.last = header.Height
 }
 
 // Root returns the root height from the underlying protocol state.
@@ -284,20 +294,4 @@ func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 	}
 
 	return events, nil
-}
-
-// OnBlockFinalized is a callback that notifies the consensus tracker of a new
-// finalized block.
-func (c *Consensus) OnBlockFinalized(blockID flow.Identifier) {
-
-	var header flow.Header
-	err := c.db.View(operation.RetrieveHeader(blockID, &header))
-	if err != nil {
-		c.log.Error().Err(err).Hex("block", blockID[:]).Msg("could not get header")
-		return
-	}
-
-	c.log.Debug().Hex("block", blockID[:]).Uint64("height", header.Height).Msg("block finalization processed")
-
-	c.last = header.Height
 }
