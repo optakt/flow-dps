@@ -34,11 +34,14 @@ type Construction struct {
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
-func NewConstruction(config Configuration, transact Transactor) *Construction {
+// TODO: Decide if the retriever dependency should be kept or this functionality should be part of the transactor.
+// => https://github.com/optakt/flow-dps/issues/406
+func NewConstruction(config Configuration, transact Transactor, retriever Retriever) *Construction {
 
 	c := Construction{
 		config:   config,
 		transact: transact,
+		retrieve: retriever,
 	}
 
 	return &c
