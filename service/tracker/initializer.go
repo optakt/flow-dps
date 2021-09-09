@@ -63,10 +63,10 @@ func Initialize(dir string, db *badger.DB) error {
 	collector := metrics.NewNoopCollector()
 	headers := cache.NewHeaders(collector, db)
 	index := cache.NewIndex(collector, db)
-	guarantees := cache.NewGuarantees(collector, db, 0)
+	guarantees := cache.NewGuarantees(collector, db, 1)
 	seals := cache.NewSeals(collector, db)
 	results := cache.NewExecutionResults(collector, db)
-	receipts := cache.NewExecutionReceipts(collector, db, results, 0)
+	receipts := cache.NewExecutionReceipts(collector, db, results, 1)
 	payloads := cache.NewPayloads(db, index, guarantees, seals, receipts, results)
 	_, err = protocol.Bootstrap(
 		collector,
