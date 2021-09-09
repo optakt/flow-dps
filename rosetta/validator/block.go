@@ -19,14 +19,14 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
 // Block identifier tries to extrapolate the block identifier to a full version
-// of itself. For now, we will always need a height.
-// NOTE: We always pass a block identifier that in principle at least could be
-// valid, so we will have at least a height or a hash.
+// of itself. If both index and hash are zero values, it is assumed that the
+// latest block is referenced.
 func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
 
 	// If both the index and the hash are missing, the block identifier is invalid.
@@ -109,4 +109,12 @@ func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier,
 	}
 
 	return header.Height, header.ID(), nil
+}
+
+// CompleteBlockID verifies that both index and hash are populated in the block ID.
+func (v *Validator) CompleteBlockID(rosBlockID identifier.Block) error {
+	if rosBlockID.Index == nil || rosBlockID.Hash == "" {
+		return rosetta.ErrBlockIncomplete
+	}
+	return nil
 }

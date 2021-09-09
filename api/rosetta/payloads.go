@@ -54,24 +54,16 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
-	}
-	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
+	err = c.validate.Request(req)
+	if err != nil {
+		return validationError(err)
 	}
 
 	// Metadata object is the response from our metadata endpoint. Thus, the object
 	// should be okay, but let's validate it anyway.
-	rosBlockID := req.Metadata.CurrentBlockID
-	if rosBlockID.Index == nil || rosBlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
-	}
-	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
-			withDetail("have_length", len(rosBlockID.Hash)),
-			withDetail("want_length", hexIDSize),
-		))
+	err = c.validate.CompleteBlockID(req.Metadata.CurrentBlockID)
+	if err != nil {
+		return validationError(err)
 	}
 
 	intent, err := c.transact.DeriveIntent(req.Operations)
@@ -89,7 +81,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	}
 	var opErr failure.InvalidOperations
 	if errors.As(err, &opErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txInvalidOps))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(TxInvalidOps))
 	}
 	var inErr failure.InvalidIntent
 	if errors.As(err, &inErr) {

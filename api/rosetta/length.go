@@ -20,6 +20,6 @@ import (
 
 // Sizes are multiplied by two because hex-encoded strings use two characters for every byte.
 const (
-	hexIDSize      = 2 * len(flow.ZeroID)
-	hexAddressSize = 2 * flow.AddressLength
+	HexIDSize      = 2 * len(flow.ZeroID)
+	HexAddressSize = 2 * flow.AddressLength
 )

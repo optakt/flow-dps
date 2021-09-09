@@ -15,6 +15,11 @@
 package rosetta
 
 import (
+	"errors"
+	"net/http"
+
+	"github.com/labstack/echo/v4"
+
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/rosetta/configuration"
@@ -25,19 +30,19 @@ import (
 const (
 	invalidJSON = "request does not contain valid JSON-encoded body"
 
-	blockchainEmpty = "blockchain identifier has empty blockchain field"
-	networkEmpty    = "blockchain identifier has empty network field"
-	blockNotFull    = "block identifier needs both fields filled for this request"
-	blockLength     = "block identifier has invalid hash field length"
-	addressEmpty    = "account identifier has empty address field"
-	addressLength   = "account identifier has invalid address field length"
-	currenciesEmpty = "currency identifier list is empty"
-	symbolEmpty     = "currency identifier has empty symbol field"
-	txHashEmpty     = "transaction identifier has empty hash field"
-	txLength        = "transaction identifier has invalid hash filed length"
-	txInvalidOps    = "transaction operations are invalid"
-	txBodyEmpty     = "transaction text is empty"
-	signaturesEmpty = "signature list is empty"
+	BlockchainEmpty = "blockchain identifier has empty blockchain field"
+	NetworkEmpty    = "blockchain identifier has empty network field"
+	BlockNotFull    = "block identifier needs both fields filled for this request"
+	BlockLength     = "block identifier has invalid hash field length"
+	AddressEmpty    = "account identifier has empty address field"
+	AddressLength   = "account identifier has invalid address field length"
+	CurrenciesEmpty = "currency identifier list is empty"
+	SymbolEmpty     = "currency identifier has empty symbol field"
+	TxHashEmpty     = "transaction identifier has empty hash field"
+	TxLength        = "transaction identifier has invalid hash filed length"
+	TxInvalidOps    = "transaction operations are invalid"
+	TxBodyEmpty     = "transaction text is empty"
+	SignaturesEmpty = "signature list is empty"
 
 	networkCheck            = "unable to check network"
 	blockRetrieval          = "unable to retrieve block"
@@ -289,4 +294,17 @@ func invalidKey(fail failure.InvalidKey) Error {
 		withAddress("account", fail.Address),
 		withDetail("index", fail.Index),
 	)
+}
+
+func validationError(err error) *echo.HTTPError {
+	if errors.Is(err, ErrBlockLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength, withDetail("want_length", HexIDSize)))
+	}
+	if errors.Is(err, ErrAddressLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(AddressLength, withDetail("want_length", HexAddressSize)))
+	}
+	if errors.Is(err, ErrTxLength) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(TxLength, withDetail("want_length", HexIDSize)))
+	}
+	return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 }

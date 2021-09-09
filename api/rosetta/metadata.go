@@ -55,21 +55,9 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
-	}
-	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
-	}
-
-	if req.Options.AccountID.Address == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(addressEmpty))
-	}
-	if len(req.Options.AccountID.Address) != hexAddressSize {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(addressLength,
-			withDetail("have_length", len(req.Options.AccountID.Address)),
-			withDetail("want_length", hexAddressSize),
-		))
+	err = c.validate.Request(req)
+	if err != nil {
+		return validationError(err)
 	}
 
 	current, _, err := c.retrieve.Current()

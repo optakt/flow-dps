@@ -106,7 +106,7 @@ func setupAPI(t *testing.T, db *badger.DB) *rosetta.Data {
 	convert, err := converter.New(generate)
 	require.NoError(t, err)
 	retrieve := retriever.New(params, index, validate, generate, invoke, convert)
-	controller := rosetta.NewData(config, retrieve)
+	controller := rosetta.NewData(config, retrieve, validate)
 
 	return controller
 }

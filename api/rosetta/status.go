@@ -50,11 +50,9 @@ func (d *Data) Status(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
-	}
-	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
+	err = d.validate.Request(req)
+	if err != nil {
+		return validationError(err)
 	}
 
 	err = d.config.Check(req.NetworkID)

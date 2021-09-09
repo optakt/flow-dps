@@ -19,14 +19,16 @@ package rosetta
 type Data struct {
 	config   Configuration
 	retrieve Retriever
+	validate Validator
 }
 
 // NewData creates a new instance of the Data API using the given configuration to answer configuration queries
 // and the given retriever to answer blockchain data queries.
-func NewData(config Configuration, retrieve Retriever) *Data {
+func NewData(config Configuration, retrieve Retriever, validate Validator) *Data {
 	d := Data{
 		config:   config,
 		retrieve: retrieve,
+		validate: validate,
 	}
 	return &d
 }

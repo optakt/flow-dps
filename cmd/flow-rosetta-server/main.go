@@ -152,11 +152,11 @@ func run() int {
 	retrieve := retriever.New(params, index, validate, generate, invoke, convert,
 		retriever.WithTransactionLimit(flagTransactions),
 	)
-	dataCtrl := rosetta.NewData(config, retrieve)
+	dataCtrl := rosetta.NewData(config, retrieve, validate)
 
 	submit := submitter.New(accessAPI)
 	transact := transactor.New(validate, generate, invoke, submit)
-	constructCtrl := rosetta.NewConstruction(config, transact, retrieve)
+	constructCtrl := rosetta.NewConstruction(config, transact, retrieve, validate)
 
 	server := echo.New()
 	server.HideBanner = true

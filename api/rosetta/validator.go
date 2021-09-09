@@ -12,27 +12,22 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package validator
+package rosetta
 
 import (
-	"github.com/go-playground/validator/v10"
+	"errors"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-type Validator struct {
-	params   dps.Params
-	index    dps.Reader
-	validate *validator.Validate
+type Validator interface {
+	Request(interface{}) error
+	CompleteBlockID(identifier.Block) error
 }
 
-func New(params dps.Params, index dps.Reader) *Validator {
-
-	v := &Validator{
-		params:   params,
-		index:    index,
-		validate: newRequestValidator(),
-	}
-
-	return v
-}
+var (
+	ErrBlockLength     = errors.New(BlockLength)
+	ErrBlockIncomplete = errors.New(BlockNotFull)
+	ErrAddressLength   = errors.New(AddressLength)
+	ErrTxLength        = errors.New(TxLength)
+)

@@ -49,31 +49,14 @@ func (d *Data) Transaction(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 	}
 
-	if req.NetworkID.Blockchain == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockchainEmpty))
-	}
-	if req.NetworkID.Network == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(networkEmpty))
+	err = d.validate.Request(req)
+	if err != nil {
+		return validationError(err)
 	}
 
-	if req.BlockID.Index == nil || req.BlockID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockNotFull))
-	}
-	if req.BlockID.Hash != "" && len(req.BlockID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(blockLength,
-			withDetail("have_length", len(req.BlockID.Hash)),
-			withDetail("want_length", hexIDSize),
-		))
-	}
-
-	if req.TransactionID.Hash == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txHashEmpty))
-	}
-	if len(req.TransactionID.Hash) != hexIDSize {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(txLength,
-			withDetail("have_length", len(req.TransactionID.Hash)),
-			withDetail("want_length", hexIDSize),
-		))
+	err = d.validate.CompleteBlockID(req.BlockID)
+	if err != nil {
+		return validationError(err)
 	}
 
 	err = d.config.Check(req.NetworkID)
