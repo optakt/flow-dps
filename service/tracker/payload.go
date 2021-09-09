@@ -12,17 +12,14 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package follower
+package tracker
 
 import (
-	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 	"github.com/onflow/flow-go/model/flow"
 )
 
-type RecordStreamer interface {
-	Next() (*uploader.BlockData, error)
-}
-
-type RecordHolder interface {
-	Record(blockID flow.Identifier) (*uploader.BlockData, bool)
+type Payload struct {
+	Header     *flow.Header
+	Guarantees []*flow.CollectionGuarantee
+	Seals      []*flow.Seal
 }

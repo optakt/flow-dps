@@ -44,12 +44,12 @@ import (
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/cloud"
-	"github.com/optakt/flow-dps/service/follower"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
+	"github.com/optakt/flow-dps/service/tracker"
 )
 
 const (
@@ -79,6 +79,7 @@ func run() int {
 		flagLevel       string
 		flagSeedAddress string
 		flagSeedKey     string
+		flagSkip        bool
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
@@ -92,7 +93,11 @@ func run() int {
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
 
+	pflag.BoolVar(&flagSkip, "skip-registers", false, "skip indexing of execution state ledger registers")
+
 	pflag.Parse()
+
+	pflag.CommandLine.MarkHidden("skip-registers")
 
 	// Increase the GOMAXPROCS value in order to use the full IOPS available, see:
 	// https://groups.google.com/g/golang-nuts/c/jPb_h3TvlKE
@@ -154,33 +159,16 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the loader component, which is responsible for loading,
-	// decoding and providing indexing for the root checkpoint.
-	load := loader.New(
-		loader.WithCheckpointPath(flagCheckpoint),
-	)
-
-	// Initialize the execution follower that will read block records from the
-	// Google Cloud Platform bucket.
-	client, err := googlecloud.NewClient(context.Background())
+	// Unfortunately, the current consensus follower does not bootstrap the
+	// protocol state until it is run. This means we are liable to miss block
+	// finalization of the first few blocks, which breaks our logic. We thus
+	// must ensure that the protocol state is already bootstrapped manually
+	// before starting the consensus follower.
+	err = tracker.Initialize(flagBootstrap, data)
 	if err != nil {
-		log.Error().Err(err).Msg("could not connect GCP client")
+		log.Error().Err(err).Msg("could not initialize protocol state")
 		return failure
 	}
-	defer func() {
-		err := client.Close()
-		if err != nil {
-			log.Error().Err(err).Msg("could not close GCP client")
-		}
-	}()
-	bucket := client.Bucket(flagBucket)
-	stream := cloud.NewGCPStreamer(log, bucket)
-	execution := follower.NewExecution(log, stream)
-
-	// Initialize the consensus follower, which uses the protocol state to
-	// retrieve data from consensus and the execution follower to complement
-	// the data with complete blocks.
-	consensus := follower.NewConsensus(log, data, execution)
 
 	// Initialize the private key for joining the unstaked peer-to-peer network.
 	// This is just needed for security, not authentication, so we can just
@@ -217,25 +205,57 @@ func run() int {
 		log.Error().Err(err).Str("key", flagSeedKey).Msg("could not parse seed node network public key")
 		return failure
 	}
-	seedNode := unstaked.BootstrapNodeInfo{
+	seedNodes := []unstaked.BootstrapNodeInfo{{
 		Host:             seedHost,
 		Port:             uint(seedPort),
 		NetworkPublicKey: seedKey,
-	}
+	}}
 	follow, err := unstaked.NewConsensusFollower(
 		privKey,
 		"0.0.0.0:0", // automatically choose port, listen on all IPs
-		[]unstaked.BootstrapNodeInfo{seedNode},
+		seedNodes,
 		unstaked.WithBootstrapDir(flagBootstrap),
-		// FIXME: We can uncomment this once the PR is merged to inject the
-		// protocol state database is merged:
-		// => https://github.com/onflow/flow-go/pull/1228
-		// unstaked.WithDB(db),
+		unstaked.WithDB(data),
+		unstaked.WithLogLevel(flagLevel),
 	)
 	if err != nil {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
 		return failure
 	}
+
+	// Initialize the execution follower that will read block records from the
+	// Google Cloud Platform bucket.
+	client, err := googlecloud.NewClient(context.Background())
+	if err != nil {
+		log.Error().Err(err).Msg("could not connect GCP client")
+		return failure
+	}
+	defer func() {
+		err := client.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close GCP client")
+		}
+	}()
+	bucket := client.Bucket(flagBucket)
+	stream := cloud.NewGCPStreamer(log, bucket)
+	execution, err := tracker.NewExecution(log, data, stream)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize execution tracker")
+		return failure
+	}
+
+	// Initialize the consensus tracker, which uses the protocol state to
+	// retrieve data from consensus and the execution follower to complement
+	// the data with complete blocks.
+	consensus, err := tracker.NewConsensus(log, data, execution)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize consensus tracker")
+		return failure
+	}
+
+	// We can now register both the consensus follower and the cloud streamer
+	// as consumers of finalized blocks.
+	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
 	// Initialize the index writer, which is responsible for writing the chain
@@ -248,6 +268,12 @@ func run() int {
 		}
 	}()
 
+	// Initialize the loader component, which is responsible for loading,
+	// decoding and providing indexing for the root checkpoint.
+	load := loader.New(
+		loader.WithCheckpointPath(flagCheckpoint),
+	)
+
 	// Initialize the state transition library, the finite-state machine (FSM)
 	// and then register the desired state transitions with the FSM.
 	transitions := mapper.NewTransitions(log, load, consensus, execution, write,
@@ -258,8 +284,8 @@ func run() int {
 		mapper.WithIndexTransactions(true),
 		mapper.WithIndexResults(true),
 		mapper.WithIndexEvents(true),
-		mapper.WithIndexPayloads(true),
 		mapper.WithIndexSeals(true),
+		mapper.WithIndexPayloads(!flagSkip),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
@@ -276,14 +302,15 @@ func run() int {
 	opts := []logging.Option{
 		logging.WithLevels(logging.DefaultServerCodeToLevel),
 	}
+	interceptor := grpczerolog.InterceptorLogger(log.With().Str("component", "grpc_server").Logger())
 	gsvr := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			tags.UnaryServerInterceptor(),
-			logging.UnaryServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+			logging.UnaryServerInterceptor(interceptor, opts...),
 		),
 		grpc.ChainStreamInterceptor(
 			tags.StreamServerInterceptor(),
-			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
+			logging.StreamServerInterceptor(interceptor, opts...),
 		),
 	)
 	server := api.NewServer(read, codec)
@@ -298,6 +325,10 @@ func run() int {
 	}
 	done := make(chan struct{})
 	failed := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		follow.Run(ctx)
+	}()
 	go func() {
 		start := time.Now()
 		log.Info().Time("start", start).Msg("Flow DPS Live Indexer starting")
@@ -332,7 +363,6 @@ func run() int {
 		log.Info().Msg("Flow DPS Indexer done")
 	case <-failed:
 		log.Warn().Msg("Flow DPS Indexer aborted")
-		return failure
 	}
 	go func() {
 		<-sig
@@ -343,10 +373,11 @@ func run() int {
 	// First, stop the DPS API to avoid failed requests.
 	gsvr.GracefulStop()
 
-	// The following code starts a shut down with a certain timeout and makes
-	// sure that the main executing components are shutting down within the
-	// allocated shutdown time. Otherwise, we will force the shutdown and log
-	// an error. We then wait for shutdown on each component to complete.
+	// Then stop the consensus follower and wait for it to shut down completely.
+	cancel()
+	<-follow.NodeBuilder.Done()
+
+	// Lastly, we can stop the core business logic of the indexer.
 	err = fsm.Stop()
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")

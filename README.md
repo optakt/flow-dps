@@ -50,7 +50,7 @@ Please note that the flow-go repository should be cloned in the same folder as t
 
 * `git clone git@github.com:onflow/flow-go.git`
 * `cd flow-go/crypto`
-* `git checkout ac090a188c979fbcd1b1711271f5b7d1281f76d9`
+* `git checkout c0afa789365eb7a22713ed76b8de1e3efaf3a70a`
 * `go generate`
 
 You can then verify that the installation of the flow-go crypto package has been successful by running the tests of the project.

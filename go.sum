@@ -1006,8 +1006,8 @@ github.com/olekukonko/tablewriter v0.0.2-0.20190409134802-7e037d187b0c/go.mod h1
 github.com/onflow/cadence v0.15.0/go.mod h1:KMzDF6cIv6nb5PJW9aITaqazbmJX8MMeibFcpPP385M=
 github.com/onflow/cadence v0.17.0/go.mod h1:iR/tZpP+1YhM8iRnOBPiBIs7on5dE3hk2ZfunCRQswE=
 github.com/onflow/cadence v0.18.0/go.mod h1:iR/tZpP+1YhM8iRnOBPiBIs7on5dE3hk2ZfunCRQswE=
-github.com/onflow/cadence v0.18.1-0.20210730161646-b891a21c51fd h1:+J8msFNYPhdjgPDnQm3uH2q4TQFHAQXAxWTNOJ5VOec=
-github.com/onflow/cadence v0.18.1-0.20210730161646-b891a21c51fd/go.mod h1:ZXcJOh7LZkgqoArtvKx8UYcYQ0cC71zNffP6R1HGGB8=
+github.com/onflow/cadence v0.19.0 h1:xpz3Cl57FMHgu3DuvxJa4869g6kDOTSU07pCPrddxSk=
+github.com/onflow/cadence v0.19.0/go.mod h1:ZXcJOh7LZkgqoArtvKx8UYcYQ0cC71zNffP6R1HGGB8=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.3-0.20210527134022-58c25247091a/go.mod h1:IZ2e7UyLCYmpQ8Kd7k0A32uXqdqfiV1r2sKs5/riblo=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.7 h1:5GTxbA0oTBwysgIyFFVEdkbBvtSOQYHQ/frKLGTnjYM=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.7/go.mod h1:MSNt2rodpRXm1n0iGQWL6ltDoJCtXEzlPw9nhE/zQmk=
@@ -1017,8 +1017,8 @@ github.com/onflow/flow-emulator v0.20.3/go.mod h1:xNdVsrMJiAaYJ59Dwo+xvj0ENdvk/b
 github.com/onflow/flow-ft/lib/go/contracts v0.5.0 h1:Cg4gHGVblxcejfNNG5Mfj98Wf4zbY76O0Y28QB0766A=
 github.com/onflow/flow-ft/lib/go/contracts v0.5.0/go.mod h1:1zoTjp1KzNnOPkyqKmWKerUyf0gciw+e6tAEt0Ks3JE=
 github.com/onflow/flow-go v0.18.0/go.mod h1:cQpvFoqth9PR7tarWDa36R/dDOqUK5QYfeYzCdXPLII=
-github.com/onflow/flow-go v0.21.1-0.20210902230851-cd710a1464fc h1:CItXJe1ETGntSaJQrHD3qGIsUOC4sKP/pT/+G+yave0=
-github.com/onflow/flow-go v0.21.1-0.20210902230851-cd710a1464fc/go.mod h1:yRVjO3XNGgNqC0WnPDVw3tYdvym4a3e6JXBMy5HYHfA=
+github.com/onflow/flow-go v0.21.1-0.20210908232656-c0afa789365e h1:EptnfERUHiKI8R+ynAcGusLU3K9CNOjSaNQga6hbgaM=
+github.com/onflow/flow-go v0.21.1-0.20210908232656-c0afa789365e/go.mod h1:L2y/yLMRucu/A920H+3LD0wB+bXpmLJgK1cSFjCOcbw=
 github.com/onflow/flow-go-sdk v0.20.0-alpha.1/go.mod h1:52QZyLwU3p3UZ2FXOy+sRl4JPdtvJoae1spIUBOFxA8=
 github.com/onflow/flow-go-sdk v0.20.0/go.mod h1:52QZyLwU3p3UZ2FXOy+sRl4JPdtvJoae1spIUBOFxA8=
 github.com/onflow/flow-go-sdk v0.21.0 h1:KRU6F80KZLD+CJLj57S2EaAPNJUx4qpFTw1Ok0AJZ1M=

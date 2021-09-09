@@ -49,7 +49,7 @@ func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feede
 	}
 
 	t := Transitions{
-		log:   log,
+		log:   log.With().Str("component", "mapper_transitions").Logger(),
 		cfg:   cfg,
 		load:  load,
 		chain: chain,
@@ -143,8 +143,9 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// it to in the forest. This usually means that it was meant for a pruned
 	// branch of the execution forest.
 	update, err := t.feed.Update()
-	if err == dps.ErrUnavailable {
+	if errors.Is(err, dps.ErrUnavailable) {
 		time.Sleep(t.cfg.WaitInterval)
+		log.Debug().Msg("waiting for next trie update")
 		return nil
 	}
 	if err != nil {
@@ -321,7 +322,8 @@ func (t *Transitions) ForwardHeight(s *State) error {
 }
 
 func (t *Transitions) IndexChain(s *State) error {
-	log := t.log.Info().Uint64("height", s.height)
+
+	log := t.log.With().Uint64("height", s.height).Logger()
 
 	// Indexing of chain data should only happen after we have just forwarded
 	// to the next height. This is also the case after bootstrapping.
@@ -333,6 +335,7 @@ func (t *Transitions) IndexChain(s *State) error {
 	// of the next finalized block as the sentinel we will be looking for.
 	commit, err := t.chain.Commit(s.height)
 	if errors.Is(err, dps.ErrUnavailable) {
+		log.Debug().Msg("waiting for next state commitment")
 		time.Sleep(t.cfg.WaitInterval)
 		return nil
 	}
@@ -344,12 +347,13 @@ func (t *Transitions) IndexChain(s *State) error {
 
 	// After that, we index all chain data that is configured for being indexed
 	// currently.
+	event := log.Info()
 	if t.cfg.IndexCommit {
 		err := t.index.Commit(s.height, commit)
 		if err != nil {
 			return fmt.Errorf("could not index commit: %w", err)
 		}
-		log = log.Hex("commit", commit[:])
+		event = event.Hex("commit", commit[:])
 	}
 	if t.cfg.IndexHeader {
 		header, err := t.chain.Header(s.height)
@@ -365,7 +369,7 @@ func (t *Transitions) IndexChain(s *State) error {
 		if err != nil {
 			return fmt.Errorf("could not index height: %w", err)
 		}
-		log = log.Hex("block", blockID[:])
+		event = event.Hex("block", blockID[:])
 	}
 	if t.cfg.IndexCollections {
 		collections, err := t.chain.Collections(s.height)
@@ -376,7 +380,7 @@ func (t *Transitions) IndexChain(s *State) error {
 		if err != nil {
 			return fmt.Errorf("could not index collections: %w", err)
 		}
-		log = log.Int("collections", len(collections))
+		event = event.Int("collections", len(collections))
 	}
 	if t.cfg.IndexGuarantees {
 		guarantees, err := t.chain.Guarantees(s.height)
@@ -387,7 +391,7 @@ func (t *Transitions) IndexChain(s *State) error {
 		if err != nil {
 			return fmt.Errorf("could not index guarantees: %w", err)
 		}
-		log = log.Int("guarantees", len(guarantees))
+		event = event.Int("guarantees", len(guarantees))
 	}
 	if t.cfg.IndexTransactions {
 		transactions, err := t.chain.Transactions(s.height)
@@ -398,7 +402,7 @@ func (t *Transitions) IndexChain(s *State) error {
 		if err != nil {
 			return fmt.Errorf("could not index transactions: %w", err)
 		}
-		log = log.Int("transactions", len(transactions))
+		event = event.Int("transactions", len(transactions))
 	}
 	if t.cfg.IndexResults {
 		results, err := t.chain.Results(s.height)
@@ -409,7 +413,7 @@ func (t *Transitions) IndexChain(s *State) error {
 		if err != nil {
 			return fmt.Errorf("could not index transaction results: %w", err)
 		}
-		log = log.Int("transaction_results", len(results))
+		event = event.Int("transaction_results", len(results))
 	}
 	if t.cfg.IndexEvents {
 		events, err := t.chain.Events(s.height)
@@ -420,7 +424,7 @@ func (t *Transitions) IndexChain(s *State) error {
 		if err != nil {
 			return fmt.Errorf("could not index events: %w", err)
 		}
-		log = log.Int("events", len(events))
+		event = event.Int("events", len(events))
 	}
 	if t.cfg.IndexSeals {
 		seals, err := t.chain.Seals(s.height)
@@ -431,10 +435,10 @@ func (t *Transitions) IndexChain(s *State) error {
 		if err != nil {
 			return fmt.Errorf("could not index seals: %w", err)
 		}
-		log = log.Int("seals", len(seals))
+		event = event.Int("seals", len(seals))
 	}
 
-	log.Msg("indexed blockchain data for finalized block")
+	event.Msg("indexed blockchain data for finalized block")
 
 	// After indexing the blockchain data, we can go back to updating the state
 	// tree until we find the commit of the finalized block. This will allow us

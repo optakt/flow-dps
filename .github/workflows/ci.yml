@@ -19,6 +19,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: onflow/flow-go
+          ref: c0afa789365eb7a22713ed76b8de1e3efaf3a70a
           path: flow-go
 
       - name: Install Go
@@ -72,8 +73,6 @@ jobs:
       - name: Install Flow Go's crypto
         run: |
           cd ./flow-go/crypto
-          git fetch
-          git checkout ac090a188c979fbcd1b1711271f5b7d1281f76d9
           go generate .
 
       # This check makes sure that the `go.mod` and `go.sum` files for Go
