@@ -54,3 +54,14 @@ func (c *Consumer) OnBlockFinalized(blockID flow.Identifier) {
 	c.exeQ <- blockID
 	c.conQ <- blockID
 }
+
+func (c *Consumer) Close() {
+	close(c.exeQ)
+	close(c.conQ)
+	for range c.exeQ {
+		// drain
+	}
+	for range c.conQ {
+		// drain
+	}
+}

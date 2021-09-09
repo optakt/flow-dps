@@ -225,10 +225,12 @@ func run() int {
 	// notifications. However, we do load the latest finalized block in the
 	// consensus tracker upon initialization, so we should only lose track for
 	// the time between the initialization and registering the callback.
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		follow.Run(context.Background())
+		follow.Run(ctx)
 	}()
 	<-follow.NodeBuilder.Ready()
+	defer cancel()
 
 	// Initialize the execution follower that will read block records from the
 	// Google Cloud Platform bucket.
@@ -378,10 +380,15 @@ func run() int {
 	// First, stop the DPS API to avoid failed requests.
 	gsvr.GracefulStop()
 
-	// The following code starts a shut down with a certain timeout and makes
-	// sure that the main executing components are shutting down within the
-	// allocated shutdown time. Otherwise, we will force the shutdown and log
-	// an error. We then wait for shutdown on each component to complete.
+	// Then stop the consensus follower and wait for it to shut down completely.
+	cancel()
+	<-follow.NodeBuilder.Done()
+
+	// At this point, no new blocks will be finalized, and we can stop the
+	// consumer and drain its internal channels.
+	consume.Close()
+
+	// Lastly, we can stop the core business logic of the indexer.
 	err = fsm.Stop()
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
