@@ -681,7 +681,8 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 }
 
 func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
-	testKey := encodeKey(prefixHeightForBlock, mocks.GenericIdentifier(0))
+	blockID := mocks.GenericHeader.ID()
+	testKey := encodeKey(prefixHeightForBlock, blockID)
 
 	t.Run("save height of block", func(t *testing.T) {
 		t.Parallel()
@@ -699,7 +700,7 @@ func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.IndexHeightForBlock(mocks.GenericIdentifier(0), mocks.GenericHeight))
+		err := db.Update(l.IndexHeightForBlock(blockID, mocks.GenericHeight))
 
 		assert.NoError(t, err)
 	})
@@ -730,7 +731,7 @@ func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 		}
 
 		var got uint64
-		err = db.View(l.LookupHeightForBlock(mocks.GenericIdentifier(0), &got))
+		err = db.View(l.LookupHeightForBlock(blockID, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -738,7 +739,8 @@ func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_Transaction(t *testing.T) {
-	testKey := encodeKey(prefixTransaction, mocks.GenericIdentifier(0))
+	tx := mocks.GenericTransaction(0)
+	testKey := encodeKey(prefixTransaction, tx.ID())
 
 	t.Run("save transaction", func(t *testing.T) {
 		t.Parallel()
@@ -756,7 +758,7 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.SaveTransaction(mocks.GenericTransaction(0)))
+		err := db.Update(l.SaveTransaction(tx))
 
 		assert.NoError(t, err)
 	})
@@ -787,7 +789,7 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 		}
 
 		var got flow.TransactionBody
-		err = db.View(l.RetrieveTransaction(mocks.GenericIdentifier(0), &got))
+		err = db.View(l.RetrieveTransaction(tx.ID(), &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -795,7 +797,8 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 }
 
 func TestLibrary_IndexAndLookupHeightForTransaction(t *testing.T) {
-	testKey := encodeKey(prefixHeightForTransaction, mocks.GenericIdentifier(0))
+	txID := mocks.GenericHeader.ID()
+	testKey := encodeKey(prefixHeightForTransaction, txID)
 
 	t.Run("save height of transaction", func(t *testing.T) {
 		t.Parallel()
@@ -813,7 +816,7 @@ func TestLibrary_IndexAndLookupHeightForTransaction(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.IndexHeightForTransaction(mocks.GenericIdentifier(0), mocks.GenericHeight))
+		err := db.Update(l.IndexHeightForTransaction(txID, mocks.GenericHeight))
 
 		assert.NoError(t, err)
 	})
@@ -844,7 +847,7 @@ func TestLibrary_IndexAndLookupHeightForTransaction(t *testing.T) {
 		}
 
 		var got uint64
-		err = db.View(l.LookupHeightForTransaction(mocks.GenericIdentifier(0), &got))
+		err = db.View(l.LookupHeightForTransaction(txID, &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -870,7 +873,7 @@ func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.IndexTransactionsForHeight(mocks.GenericHeight, mocks.GenericIdentifiers(5)))
+		err := db.Update(l.IndexTransactionsForHeight(mocks.GenericHeight, mocks.GenericTransactionIDs(5)))
 
 		assert.NoError(t, err)
 	})
@@ -909,7 +912,8 @@ func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_Collection(t *testing.T) {
-	testKey := encodeKey(prefixCollection, mocks.GenericIdentifier(0))
+	collection := mocks.GenericCollection(0)
+	testKey := encodeKey(prefixCollection, collection.ID())
 
 	t.Run("save collection", func(t *testing.T) {
 		t.Parallel()
@@ -927,7 +931,7 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.SaveCollection(mocks.GenericCollection(0)))
+		err := db.Update(l.SaveCollection(collection))
 
 		assert.NoError(t, err)
 	})
@@ -958,7 +962,7 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 		}
 
 		var got flow.LightCollection
-		err = db.View(l.RetrieveCollection(mocks.GenericIdentifier(0), &got))
+		err = db.View(l.RetrieveCollection(collection.ID(), &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -966,7 +970,8 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_Guarantee(t *testing.T) {
-	testKey := encodeKey(prefixGuarantee, mocks.GenericIdentifier(0))
+	guarantee := mocks.GenericGuarantee(0)
+	testKey := encodeKey(prefixGuarantee, guarantee.ID())
 
 	t.Run("save guarantee", func(t *testing.T) {
 		t.Parallel()
@@ -984,7 +989,7 @@ func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.SaveGuarantee(mocks.GenericGuarantee(0)))
+		err := db.Update(l.SaveGuarantee(guarantee))
 
 		assert.NoError(t, err)
 	})
@@ -1015,7 +1020,7 @@ func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 		}
 
 		var got flow.CollectionGuarantee
-		err = db.View(l.RetrieveGuarantee(mocks.GenericIdentifier(0), &got))
+		err = db.View(l.RetrieveGuarantee(guarantee.ID(), &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -1023,6 +1028,7 @@ func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 }
 
 func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
+	collIDs := mocks.GenericCollectionIDs(5)
 	testKey := encodeKey(prefixCollectionsForHeight, mocks.GenericHeight)
 
 	t.Run("save collections", func(t *testing.T) {
@@ -1041,7 +1047,7 @@ func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.IndexCollectionsForHeight(mocks.GenericHeight, mocks.GenericIdentifiers(5)))
+		err := db.Update(l.IndexCollectionsForHeight(mocks.GenericHeight, collIDs))
 
 		assert.NoError(t, err)
 	})
@@ -1137,7 +1143,8 @@ func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_Seal(t *testing.T) {
-	testKey := encodeKey(prefixSeal, mocks.GenericIdentifier(0))
+	seal := mocks.GenericSeal(0)
+	testKey := encodeKey(prefixSeal, seal.ID())
 
 	t.Run("save seal", func(t *testing.T) {
 		t.Parallel()
@@ -1155,7 +1162,7 @@ func TestSaveAndRetrieve_Seal(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.SaveSeal(mocks.GenericSeal(0)))
+		err := db.Update(l.SaveSeal(seal))
 
 		assert.NoError(t, err)
 	})
@@ -1186,7 +1193,7 @@ func TestSaveAndRetrieve_Seal(t *testing.T) {
 		}
 
 		var got flow.Seal
-		err = db.View(l.RetrieveSeal(mocks.GenericIdentifier(0), &got))
+		err = db.View(l.RetrieveSeal(seal.ID(), &got))
 
 		assert.NoError(t, err)
 		assert.Equal(t, 1, decodeCallCount)
@@ -1212,7 +1219,7 @@ func TestIndexAndLookup_Seals(t *testing.T) {
 			codec: codec,
 		}
 
-		err := db.Update(l.IndexSealsForHeight(mocks.GenericHeight, mocks.GenericIdentifiers(5)))
+		err := db.Update(l.IndexSealsForHeight(mocks.GenericHeight, mocks.GenericSealIDs(5)))
 		assert.NoError(t, err)
 	})
 

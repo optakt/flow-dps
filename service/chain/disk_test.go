@@ -18,11 +18,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -32,286 +30,434 @@ import (
 )
 
 func TestDisk_Root(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	root, err := c.Root()
-	assert.NoError(t, err)
-	assert.Equal(t, mocks.GenericHeight, root)
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		require.NoError(t, db.Update(operation.InsertRootHeight(mocks.GenericHeight)))
+
+		c := chain.FromDisk(db)
+
+		root, err := c.Root()
+
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericHeight, root)
+	})
+
+	t.Run("handles missing root height entry in db", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Root()
+
+		assert.Error(t, err)
+	})
 }
 
 func TestDisk_Header(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	header, err := c.Header(mocks.GenericHeight)
-	assert.NoError(t, err)
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
-	require.NotNil(t, header)
-	assert.Equal(t, dps.FlowMainnet, header.ChainID)
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+		require.NoError(t, db.Update(operation.InsertHeader(mocks.GenericHeader.ID(), mocks.GenericHeader)))
 
-	_, err = c.Header(math.MaxUint64)
-	assert.Error(t, err)
+		c := chain.FromDisk(db)
+
+		header, err := c.Header(mocks.GenericHeight)
+
+		require.NoError(t, err)
+		require.NotNil(t, header)
+		assert.Equal(t, dps.FlowTestnet, header.ChainID)
+
+		_, err = c.Header(math.MaxUint64)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles missing entry for indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		// Only index the block height, but no header for that height.
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Header(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles call on non-indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		// Use an empty DB without any entries.
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Header(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
 }
 
 func TestDisk_Commit(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	commit, err := c.Commit(mocks.GenericHeight)
-	assert.NoError(t, err)
-	assert.Equal(t, mocks.GenericCommit(0), commit)
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
-	_, err = c.Commit(math.MaxUint64)
-	assert.Error(t, err)
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+		require.NoError(t, db.Update(operation.IndexStateCommitment(mocks.GenericHeader.ID(), mocks.GenericCommit(0))))
+
+		c := chain.FromDisk(db)
+
+		commit, err := c.Commit(mocks.GenericHeight)
+
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericCommit(0), commit)
+
+		_, err = c.Commit(math.MaxUint64)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("returns db error when block exists but commit is missing", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Commit(mocks.GenericHeight)
+
+		assert.Error(t, err)
+		assert.NotEqual(t, dps.ErrFinished, err)
+	})
+
+	t.Run("returns ErrFinished when no more entries are in the DB", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Commit(mocks.GenericHeight)
+
+		assert.Equal(t, dps.ErrFinished, err)
+	})
 }
 
 func TestDisk_Events(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	events, err := c.Events(mocks.GenericHeight)
-	assert.NoError(t, err)
-	assert.Len(t, events, 2)
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
-	_, err = c.Events(math.MaxUint64)
-	assert.Error(t, err)
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+		require.NoError(t, db.Update(operation.InsertEvent(mocks.GenericHeader.ID(), mocks.GenericEvent(0))))
+		require.NoError(t, db.Update(operation.InsertEvent(mocks.GenericHeader.ID(), mocks.GenericEvent(1))))
+
+		c := chain.FromDisk(db)
+
+		events, err := c.Events(mocks.GenericHeight)
+
+		require.NoError(t, err)
+		assert.Len(t, events, 2)
+		assert.Contains(t, events, mocks.GenericEvent(0))
+		assert.Contains(t, events, mocks.GenericEvent(1))
+
+		_, err = c.Events(math.MaxUint64)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles call on non-indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Events(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
 }
 
 func TestDisk_Collections(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	tt, err := c.Collections(mocks.GenericHeight)
-	assert.NoError(t, err)
-	assert.Len(t, tt, 2)
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
-	_, err = c.Collections(math.MaxUint64)
-	assert.Error(t, err)
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+		require.NoError(t, db.Update(operation.IndexPayloadGuarantees(mocks.GenericHeader.ID(), mocks.GenericCollectionIDs(2))))
+		require.NoError(t, db.Update(operation.InsertCollection(mocks.GenericCollection(0))))
+		require.NoError(t, db.Update(operation.InsertCollection(mocks.GenericCollection(1))))
+
+		c := chain.FromDisk(db)
+
+		tt, err := c.Collections(mocks.GenericHeight)
+
+		require.NoError(t, err)
+		assert.Len(t, tt, 2)
+
+		_, err = c.Collections(math.MaxUint64)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles missing entry for indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Collections(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles call on non-indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Collections(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
 }
 
 func TestDisk_Guarantees(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	tt, err := c.Guarantees(mocks.GenericHeight)
-	assert.NoError(t, err)
-	assert.Len(t, tt, 2)
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
-	_, err = c.Guarantees(math.MaxUint64)
-	assert.Error(t, err)
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+		require.NoError(t, db.Update(operation.IndexPayloadGuarantees(mocks.GenericHeader.ID(), mocks.GenericCollectionIDs(2))))
+		require.NoError(t, db.Update(operation.InsertGuarantee(mocks.GenericCollection(0).ID(), mocks.GenericGuarantee(0))))
+		require.NoError(t, db.Update(operation.InsertGuarantee(mocks.GenericCollection(1).ID(), mocks.GenericGuarantee(1))))
+
+		c := chain.FromDisk(db)
+
+		tt, err := c.Guarantees(mocks.GenericHeight)
+
+		require.NoError(t, err)
+		assert.Len(t, tt, 2)
+
+		_, err = c.Guarantees(math.MaxUint64)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles missing entry for indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Guarantees(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles call on non-indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Guarantees(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
 }
 
 func TestDisk_Transactions(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	tt, err := c.Transactions(mocks.GenericHeight)
-	assert.NoError(t, err)
-	assert.Len(t, tt, 4)
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
-	_, err = c.Transactions(math.MaxUint64)
-	assert.Error(t, err)
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+		require.NoError(t, db.Update(operation.IndexPayloadGuarantees(mocks.GenericHeader.ID(), mocks.GenericCollectionIDs(2))))
+		require.NoError(t, db.Update(operation.InsertCollection(mocks.GenericCollection(0))))
+		require.NoError(t, db.Update(operation.InsertTransaction(mocks.GenericTransaction(0).ID(), mocks.GenericTransaction(0))))
+		require.NoError(t, db.Update(operation.InsertTransaction(mocks.GenericTransaction(1).ID(), mocks.GenericTransaction(1))))
+		require.NoError(t, db.Update(operation.InsertCollection(mocks.GenericCollection(1))))
+		require.NoError(t, db.Update(operation.InsertTransaction(mocks.GenericTransaction(2).ID(), mocks.GenericTransaction(2))))
+		require.NoError(t, db.Update(operation.InsertTransaction(mocks.GenericTransaction(3).ID(), mocks.GenericTransaction(3))))
+
+		c := chain.FromDisk(db)
+
+		tt, err := c.Transactions(mocks.GenericHeight)
+
+		require.NoError(t, err)
+		assert.Len(t, tt, 4)
+
+		_, err = c.Transactions(math.MaxUint64)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles missing entry for indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Transactions(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles call on non-indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Transactions(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
 }
 
 func TestDisk_TransactionResults(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
-	c := chain.FromDisk(db)
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	tr, err := c.Results(mocks.GenericHeight)
-	assert.NoError(t, err)
-	assert.Len(t, tr, 4)
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
-	_, err = c.Results(math.MaxUint64)
-	assert.Error(t, err)
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+		require.NoError(t, db.Update(operation.InsertTransactionResult(mocks.GenericHeader.ID(), mocks.GenericResult(0))))
+		require.NoError(t, db.Update(operation.InsertTransactionResult(mocks.GenericHeader.ID(), mocks.GenericResult(1))))
+		require.NoError(t, db.Update(operation.InsertTransactionResult(mocks.GenericHeader.ID(), mocks.GenericResult(2))))
+		require.NoError(t, db.Update(operation.InsertTransactionResult(mocks.GenericHeader.ID(), mocks.GenericResult(3))))
+
+		c := chain.FromDisk(db)
+
+		tr, err := c.Results(mocks.GenericHeight)
+
+		require.NoError(t, err)
+		assert.Len(t, tr, 4)
+
+		_, err = c.Results(math.MaxUint64)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles call on non-indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Results(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
 }
 
 func TestDisk_Seals(t *testing.T) {
-	db := populateDB(t)
-	defer db.Close()
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
 
-	c := chain.FromDisk(db)
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
-	seals, err := c.Seals(mocks.GenericHeight)
-	assert.NoError(t, err)
-	assert.Len(t, seals, 4)
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+		require.NoError(t, db.Update(operation.IndexPayloadSeals(mocks.GenericHeader.ID(), mocks.GenericSealIDs(4))))
+		require.NoError(t, db.Update(operation.InsertSeal(mocks.GenericSeal(0).ID(), mocks.GenericSeal(0))))
+		require.NoError(t, db.Update(operation.InsertSeal(mocks.GenericSeal(1).ID(), mocks.GenericSeal(1))))
+		require.NoError(t, db.Update(operation.InsertSeal(mocks.GenericSeal(2).ID(), mocks.GenericSeal(2))))
+		require.NoError(t, db.Update(operation.InsertSeal(mocks.GenericSeal(3).ID(), mocks.GenericSeal(3))))
 
-	_, err = c.Seals(math.MaxUint64)
-	assert.Error(t, err)
-}
+		c := chain.FromDisk(db)
 
-func populateDB(t *testing.T) *badger.DB {
-	t.Helper()
+		seals, err := c.Seals(mocks.GenericHeight)
 
-	db := helpers.InMemoryDB(t)
+		require.NoError(t, err)
+		assert.Len(t, seals, 4)
 
-	err := db.Update(func(tx *badger.Txn) error {
-		err := operation.InsertRootHeight(mocks.GenericHeight)(tx)
-		if err != nil {
-			return err
-		}
+		_, err = c.Seals(math.MaxUint64)
 
-		err = operation.InsertHeader(mocks.GenericIdentifier(0), &flow.Header{ChainID: dps.FlowMainnet})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericIdentifier(0))(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.IndexStateCommitment(mocks.GenericIdentifier(0), mocks.GenericCommit(0))(tx)
-		if err != nil {
-			return err
-		}
-
-		events := []flow.Event{
-			{
-				Type:             "test",
-				TransactionIndex: 1,
-				EventIndex:       2,
-			},
-			{
-				Type:             "test",
-				TransactionIndex: 3,
-				EventIndex:       4,
-			},
-		}
-		err = operation.InsertEvent(mocks.GenericIdentifier(0), events[0])(tx)
-		if err != nil {
-			return err
-		}
-		err = operation.InsertEvent(mocks.GenericIdentifier(0), events[1])(tx)
-		if err != nil {
-			return err
-		}
-
-		tb1 := flow.TransactionBody{
-			ReferenceBlockID: mocks.GenericIdentifier(0),
-			GasLimit:         42,
-			Payer:            flow.Address{0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12},
-		}
-		tb2 := flow.TransactionBody{
-			ReferenceBlockID: mocks.GenericIdentifier(0),
-			GasLimit:         84,
-			Payer:            flow.Address{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-		}
-		tb3 := flow.TransactionBody{
-			ReferenceBlockID: mocks.GenericIdentifier(0),
-			GasLimit:         21,
-			Payer:            flow.Address{0xb0, 0x20, 0xe8, 0x58, 0x72, 0xc8, 0x12, 0x59},
-		}
-		tb4 := flow.TransactionBody{
-			ReferenceBlockID: mocks.GenericIdentifier(0),
-			GasLimit:         168,
-			Payer:            flow.Address{0x94, 0x2f, 0x2f, 0xf3, 0x50, 0x6b, 0xa8, 0xde},
-		}
-
-		err = operation.InsertTransaction(tb1.ID(), &tb1)(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransaction(tb2.ID(), &tb2)(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransaction(tb3.ID(), &tb3)(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransaction(tb4.ID(), &tb4)(tx)
-		if err != nil {
-			return err
-		}
-
-		collection1 := flow.LightCollection{Transactions: []flow.Identifier{tb1.ID(), tb2.ID()}}
-		collection2 := flow.LightCollection{Transactions: []flow.Identifier{tb3.ID(), tb4.ID()}}
-
-		err = operation.InsertCollection(&collection1)(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertCollection(&collection2)(tx)
-		if err != nil {
-			return err
-		}
-
-		guarantee1 := &flow.CollectionGuarantee{
-			CollectionID: collection1.ID(),
-			Signature:    mocks.GenericBytes,
-		}
-		guarantee2 := &flow.CollectionGuarantee{
-			CollectionID: collection2.ID(),
-			Signature:    mocks.GenericBytes,
-		}
-
-		err = operation.InsertGuarantee(guarantee1.CollectionID, guarantee1)(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertGuarantee(guarantee2.CollectionID, guarantee2)(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.IndexPayloadGuarantees(mocks.GenericIdentifier(0), []flow.Identifier{collection1.ID(), collection2.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb1.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb2.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb3.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		err = operation.InsertTransactionResult(mocks.GenericIdentifier(0), &flow.TransactionResult{TransactionID: tb4.ID()})(tx)
-		if err != nil {
-			return err
-		}
-
-		seals := mocks.GenericSeals(4)
-		var sealIDs []flow.Identifier
-		for _, seal := range seals {
-			err = operation.InsertSeal(seal.ID(), seal)(tx)
-			if err != nil {
-				return err
-			}
-
-			sealIDs = append(sealIDs, seal.ID())
-		}
-
-		err = operation.IndexPayloadSeals(mocks.GenericIdentifier(0), sealIDs)(tx)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		assert.Error(t, err)
 	})
-	require.NoError(t, err)
 
-	return db
+	t.Run("handles missing entry for indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		require.NoError(t, db.Update(operation.IndexBlockHeight(mocks.GenericHeight, mocks.GenericHeader.ID())))
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Seals(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles call on non-indexed height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Seals(mocks.GenericHeight)
+
+		assert.Error(t, err)
+	})
 }

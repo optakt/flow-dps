@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package convert
+package convert_test
 
 import (
 	"math/big"
@@ -21,10 +21,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence"
+
+	"github.com/optakt/flow-dps/models/convert"
 )
 
 func TestParseCadenceArgument(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		param    string
@@ -120,7 +121,7 @@ func TestParseCadenceArgument(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			gotArg, err := ParseCadenceArgument(test.param)
+			gotArg, err := convert.ParseCadenceArgument(test.param)
 			test.checkErr(t, err)
 
 			if err == nil {

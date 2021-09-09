@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package convert
+package convert_test
 
 import (
 	"testing"
@@ -20,6 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/models/convert"
 )
 
 func TestTypesToStrings(t *testing.T) {
@@ -33,7 +35,7 @@ func TestTypesToStrings(t *testing.T) {
 	typ3 := flow.EventType(t3)
 	typ4 := flow.EventType(t4)
 
-	ss := TypesToStrings([]flow.EventType{typ1, typ2, typ3, typ4})
+	ss := convert.TypesToStrings([]flow.EventType{typ1, typ2, typ3, typ4})
 
 	assert.Equal(t, []string{t1, t2, t3, t4}, ss)
 }

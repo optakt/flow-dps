@@ -188,13 +188,12 @@ func TestAPI_Block(t *testing.T) {
 			// Verify that the information about the parent block (index and hash) is correct.
 			assert.Equal(t, test.wantParentHash, blockResponse.Block.ParentID.Hash)
 
-			if assert.NotNil(t, blockResponse.Block.ParentID.Index) {
-				assert.Equal(t, test.wantParentHeight, *blockResponse.Block.ParentID.Index)
-			}
-
 			if test.validateTransactions != nil {
 				test.validateTransactions(blockResponse.Block.Transactions)
 			}
+
+			require.NotNil(t, blockResponse.Block.ParentID.Index)
+			assert.Equal(t, test.wantParentHeight, *blockResponse.Block.ParentID.Index)
 		})
 	}
 }

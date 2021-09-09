@@ -59,25 +59,23 @@ func TestAPI_Status(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &status))
 
 	currentHeight := status.CurrentBlockID.Index
-	if assert.NotNil(t, currentHeight) {
-		assert.Equal(t, *currentHeight, lastBlock.Height)
-	}
+	require.NotNil(t, currentHeight)
+	assert.Equal(t, *currentHeight, lastBlock.Height)
+
 	assert.Equal(t, status.CurrentBlockID.Hash, lastBlock.ID().String())
 	assert.Equal(t, status.CurrentBlockTimestamp, convert.RosettaTime(lastBlock.Timestamp))
 
 	assert.Equal(t, status.OldestBlockID.Hash, oldestBlockID)
 
 	oldestHeight := status.OldestBlockID.Index
-	if assert.NotNil(t, oldestHeight) {
-		assert.Equal(t, *oldestHeight, uint64(0))
-	}
+	require.NotNil(t, oldestHeight)
+	assert.Equal(t, *oldestHeight, uint64(0))
 
 	assert.Equal(t, status.GenesisBlockID.Hash, oldestBlockID)
 
 	genesisBlockHeight := status.GenesisBlockID.Index
-	if assert.NotNil(t, genesisBlockHeight) {
-		assert.Equal(t, *genesisBlockHeight, uint64(0))
-	}
+	require.NotNil(t, genesisBlockHeight)
+	assert.Equal(t, *genesisBlockHeight, uint64(0))
 }
 
 func TestAPI_StatusHandlesErrors(t *testing.T) {

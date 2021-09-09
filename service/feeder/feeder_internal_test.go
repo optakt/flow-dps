@@ -36,7 +36,7 @@ func TestFromWAL(t *testing.T) {
 }
 
 func TestFeeder_Update(t *testing.T) {
-	encodedTrieUpdate := encoding.EncodeTrieUpdate(mocks.GenericTrieUpdate)
+	update := encoding.EncodeTrieUpdate(mocks.GenericTrieUpdate)
 	rootHash := mocks.GenericTrieUpdate.RootHash[:]
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -52,7 +52,7 @@ func TestFeeder_Update(t *testing.T) {
 			}
 
 			// On any subsequent call, return the Update operation.
-			return append([]byte{byte(wal.WALUpdate)}, encodedTrieUpdate...)
+			return append([]byte{byte(wal.WALUpdate)}, update...)
 		}
 
 		feeder := &Feeder{

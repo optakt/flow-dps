@@ -35,13 +35,13 @@ import (
 )
 
 func TestIntegrationServer_GetFirst(t *testing.T) {
-
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -66,11 +66,11 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -89,6 +89,7 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -113,11 +114,11 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -129,7 +130,8 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 }
 
 func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
-	id := mocks.GenericIdentifier(0)
+	blockID := mocks.GenericHeader.ID()
+	height := mocks.GenericHeader.Height
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -137,24 +139,25 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
 		writer := index.NewWriter(db, storage)
 
 		// Insert mock data in database.
-		require.NoError(t, writer.Height(id, mocks.GenericHeight))
+		require.NoError(t, writer.Height(blockID, height))
 		require.NoError(t, writer.Close())
 
 		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeightForBlockRequest{
-			BlockID: id[:],
+			BlockID: blockID[:],
 		}
 		resp, err := server.GetHeightForBlock(context.Background(), req)
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericHeight, resp.Height)
+		assert.Equal(t, height, resp.Height)
 	})
 
 	t.Run("handles indexer failure on HeightForBlock", func(t *testing.T) {
@@ -163,16 +166,16 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeightForBlockRequest{
-			BlockID: id[:],
+			BlockID: blockID[:],
 		}
 		_, err := server.GetHeightForBlock(context.Background(), req)
 
@@ -182,6 +185,7 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 
 func TestIntegrationServer_GetCommit(t *testing.T) {
 	commit := mocks.GenericCommit(0)
+	height := mocks.GenericHeader.Height
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -189,24 +193,25 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
 		writer := index.NewWriter(db, storage)
 
 		// Insert mock data in database.
-		require.NoError(t, writer.Commit(mocks.GenericHeight, commit))
+		require.NoError(t, writer.Commit(height, commit))
 		require.NoError(t, writer.Close())
 
 		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetCommitRequest{
-			Height: mocks.GenericHeight,
+			Height: height,
 		}
 		resp, err := server.GetCommit(context.Background(), req)
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericHeight, resp.Height)
+		assert.Equal(t, height, resp.Height)
 		assert.Equal(t, commit[:], resp.Commit)
 	})
 
@@ -216,16 +221,16 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetCommitRequest{
-			Height: mocks.GenericHeight,
+			Height: height,
 		}
 		_, err := server.GetCommit(context.Background(), req)
 
@@ -235,6 +240,7 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 
 func TestIntegrationServer_GetHeader(t *testing.T) {
 	header := mocks.GenericHeader
+	height := mocks.GenericHeader.Height
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -242,24 +248,25 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
 		writer := index.NewWriter(db, storage)
 
 		// Insert mock data in database.
-		require.NoError(t, writer.Header(mocks.GenericHeight, header))
+		require.NoError(t, writer.Header(height, header))
 		require.NoError(t, writer.Close())
 
 		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeaderRequest{
-			Height: mocks.GenericHeight,
+			Height: height,
 		}
 		resp, err := server.GetHeader(context.Background(), req)
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericHeight, resp.Height)
+		assert.Equal(t, height, resp.Height)
 
 		wantData, err := codec.Marshal(header)
 		require.NoError(t, err)
@@ -272,16 +279,16 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeaderRequest{
-			Height: mocks.GenericHeight,
+			Height: height,
 		}
 		_, err := server.GetHeader(context.Background(), req)
 
@@ -290,7 +297,12 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 }
 
 func TestIntegrationServer_GetEvents(t *testing.T) {
-	events := mocks.GenericEvents(4)
+	withdrawalType := mocks.GenericEventType(0)
+	depositType := mocks.GenericEventType(1)
+	withdrawals := mocks.GenericEvents(2, withdrawalType)
+	deposits := mocks.GenericEvents(2, depositType)
+	events := append(withdrawals, deposits...)
+
 	height := mocks.GenericHeight
 
 	t.Run("nominal case without type specified", func(t *testing.T) {
@@ -299,6 +311,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -307,7 +320,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
 		require.NoError(t, writer.Last(height))
-		require.NoError(t, writer.Events(mocks.GenericHeight, events))
+		require.NoError(t, writer.Events(height, events))
 		require.NoError(t, writer.Close())
 
 		server := dps.NewServer(reader, codec)
@@ -331,6 +344,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -339,17 +353,13 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
 		require.NoError(t, writer.Last(height))
-		require.NoError(t, writer.Events(mocks.GenericHeight, events))
+		require.NoError(t, writer.Events(height, events))
 		require.NoError(t, writer.Close())
 
 		server := dps.NewServer(reader, codec)
 
-		// Only request one of the types of the events. Since the generic events are
-		// of two types (to simulate deposit/withdrawal), we should get half of the
-		// events as a result of this request.
-		// TODO: https://github.com/optakt/flow-dps/issues/333
 		req := &dps.GetEventsRequest{
-			Types:  []string{string(events[0].Type)},
+			Types:  []string{string(withdrawalType)},
 			Height: height,
 		}
 		resp, err := server.GetEvents(context.Background(), req)
@@ -359,10 +369,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 
 		var got []flow.Event
 		require.NoError(t, codec.Unmarshal(resp.Data, &got))
-		assert.Contains(t, got, events[0])
-		assert.NotContains(t, got, events[1])
-		assert.Contains(t, got, events[2])
-		assert.NotContains(t, got, events[3])
+		assert.ElementsMatch(t, withdrawals, got)
 	})
 
 	t.Run("handles indexer failure on Events", func(t *testing.T) {
@@ -371,11 +378,11 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -399,6 +406,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -434,6 +442,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -462,11 +471,11 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -490,6 +499,7 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -520,11 +530,11 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -547,6 +557,7 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -579,11 +590,11 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -606,6 +617,7 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -636,11 +648,11 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -663,6 +675,7 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -693,11 +706,11 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -720,6 +733,7 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -747,11 +761,11 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -774,6 +788,7 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -806,11 +821,11 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -833,6 +848,7 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -863,11 +879,11 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -890,6 +906,7 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -920,11 +937,11 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 
@@ -947,6 +964,7 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
 		reader := index.NewReader(db, storage)
@@ -979,11 +997,11 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		codec := zbor.NewCodec()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-
 		// No data is written in the database, so the index should fail to retrieve anything.
+		reader := index.NewReader(db, storage)
 
 		server := dps.NewServer(reader, codec)
 

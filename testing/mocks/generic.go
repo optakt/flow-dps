@@ -38,6 +38,15 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
+// Offsets used to ensure different flow identifiers that do not overlap.
+// Each resource type has a range of 16 unique identifiers at the moment.
+// We can increase this range if we need to, in the future.
+const (
+	offsetBlock      = 0
+	offsetCollection = 1 * 16
+	offsetResult     = 2 * 16
+)
+
 // Global variables that can be used for testing. They are non-nil valid values for the types commonly needed
 // test DPS components.
 var (
@@ -52,7 +61,7 @@ var (
 	GenericHeader = &flow.Header{
 		ChainID:   dps.FlowTestnet,
 		Height:    GenericHeight,
-		ParentID:  GenericIdentifier(15),
+		ParentID:  genericIdentifier(0, offsetBlock),
 		Timestamp: time.Date(1972, 11, 12, 13, 14, 15, 16, time.UTC),
 	}
 
@@ -121,11 +130,17 @@ var (
 		Balance: 84,
 	}
 
-	GenericBlockQualifier = identifier.Block{
+	GenericRosBlockID = identifier.Block{
 		Index: &GenericHeight,
 		Hash:  GenericHeader.ID().String(),
 	}
+
+	GenericParams = dps.Params{ChainID: dps.FlowTestnet}
 )
+
+func GenericBlockIDs(number int) []flow.Identifier {
+	return genericIdentifiers(number, offsetBlock)
+}
 
 func GenericCommits(number int) []flow.StateCommitment {
 	// Ensure consistent deterministic results.
@@ -147,28 +162,6 @@ func GenericCommits(number int) []flow.StateCommitment {
 
 func GenericCommit(index int) flow.StateCommitment {
 	return GenericCommits(index + 1)[index]
-}
-
-func GenericIdentifiers(number int) []flow.Identifier {
-	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(1))
-
-	var ids []flow.Identifier
-	for i := 0; i < number; i++ {
-		var id flow.Identifier
-		binary.BigEndian.PutUint64(id[0:], random.Uint64())
-		binary.BigEndian.PutUint64(id[8:], random.Uint64())
-		binary.BigEndian.PutUint64(id[16:], random.Uint64())
-		binary.BigEndian.PutUint64(id[24:], random.Uint64())
-
-		ids = append(ids, id)
-	}
-
-	return ids
-}
-
-func GenericIdentifier(index int) flow.Identifier {
-	return GenericIdentifiers(index + 1)[index]
 }
 
 func GenericLedgerPaths(number int) []ledger.Path {
@@ -232,12 +225,24 @@ func GenericLedgerPayload(index int) *ledger.Payload {
 func GenericTransactions(number int) []*flow.TransactionBody {
 	var txs []*flow.TransactionBody
 	for i := 0; i < number; i++ {
-		txs = append(txs, &flow.TransactionBody{
-			ReferenceBlockID: GenericIdentifier(i),
-		})
+		tx := flow.TransactionBody{
+			ReferenceBlockID: genericIdentifier(i, offsetBlock),
+		}
+		txs = append(txs, &tx)
 	}
 
 	return txs
+}
+
+func GenericTransactionIDs(number int) []flow.Identifier {
+	transactions := GenericTransactions(number)
+
+	var txIDs []flow.Identifier
+	for _, tx := range transactions {
+		txIDs = append(txIDs, tx.ID())
+	}
+
+	return txIDs
 }
 
 func GenericTransaction(index int) *flow.TransactionBody {
@@ -336,17 +341,22 @@ func GenericCadenceEvent(index int) cadence.Event {
 	return GenericCadenceEvents(index + 1)[index]
 }
 
-func GenericEvents(number int) []flow.Event {
+func GenericEvents(number int, types ...flow.EventType) []flow.Event {
+	txIDs := GenericTransactionIDs(number)
+
 	var events []flow.Event
 	for i := 0; i < number; i++ {
 
-		// We want only two types of events to simulate deposit/withdrawal.
-		eventType := GenericEventType(i % 2)
-		// We want each pair of events to be related to a single transaction.
-		transactionID := GenericIdentifier(i / 2)
+		// If types were provided, alternate between them. Otherwise, assume a type of 0.
+		eventType := GenericEventType(0)
+		if len(types) != 0 {
+			typeIdx := i % len(types)
+			eventType = types[typeIdx]
+		}
 
 		event := flow.Event{
-			TransactionID: transactionID,
+			// We want each pair of events to be related to a single transaction.
+			TransactionID: txIDs[i],
 			EventIndex:    uint32(i),
 			Type:          eventType,
 			Payload:       json.MustEncode(GenericCadenceEvent(i)),
@@ -358,8 +368,13 @@ func GenericEvents(number int) []flow.Event {
 	return events
 }
 
+func GenericEvent(index int) flow.Event {
+	return GenericEvents(index + 1)[index]
+}
+
 func GenericTransactionQualifier(index int) identifier.Transaction {
-	return identifier.Transaction{Hash: GenericIdentifier(index).String()}
+	txID := GenericTransaction(index).ID()
+	return identifier.Transaction{Hash: txID.String()}
 }
 
 func GenericOperations(number int) []object.Operation {
@@ -396,16 +411,25 @@ func GenericOperation(index int) object.Operation {
 }
 
 func GenericCollections(number int) []*flow.LightCollection {
-	txIDs := GenericIdentifiers(number * 2)
+	txIDs := GenericTransactionIDs(number * 2)
 
 	var collections []*flow.LightCollection
 	for i := 0; i < number; i++ {
-		// Since we want two transactions per collection, we use a secondary index called `j` for the transaction IDs.
-		j := i * 2
-		collections = append(collections, &flow.LightCollection{Transactions: txIDs[j : j+1]})
+		collections = append(collections, &flow.LightCollection{Transactions: txIDs[i*2 : i*2+2]})
 	}
 
 	return collections
+}
+
+func GenericCollectionIDs(number int) []flow.Identifier {
+	collections := GenericCollections(number)
+
+	var collIDs []flow.Identifier
+	for _, collection := range collections {
+		collIDs = append(collIDs, collection.ID())
+	}
+
+	return collIDs
 }
 
 func GenericCollection(index int) *flow.LightCollection {
@@ -417,8 +441,8 @@ func GenericGuarantees(number int) []*flow.CollectionGuarantee {
 	for i := 0; i < number; i++ {
 		j := i * 2
 		guarantees = append(guarantees, &flow.CollectionGuarantee{
-			CollectionID:     GenericIdentifier(i),
-			ReferenceBlockID: GenericIdentifier(j),
+			CollectionID:     genericIdentifier(i, offsetCollection),
+			ReferenceBlockID: genericIdentifier(j, offsetBlock),
 			Signature:        GenericBytes,
 		})
 	}
@@ -434,7 +458,7 @@ func GenericResults(number int) []*flow.TransactionResult {
 	var results []*flow.TransactionResult
 	for i := 0; i < number; i++ {
 		results = append(results, &flow.TransactionResult{
-			TransactionID: GenericIdentifier(i),
+			TransactionID: genericIdentifier(i, offsetResult),
 		})
 	}
 
@@ -461,8 +485,8 @@ func GenericSeals(number int) []*flow.Seal {
 		j := 2 * i
 
 		seal := flow.Seal{
-			BlockID:    GenericIdentifier(j),
-			ResultID:   GenericIdentifier(j + 1),
+			BlockID:    genericIdentifier(j, offsetBlock),
+			ResultID:   genericIdentifier(j+1, offsetResult),
 			FinalState: GenericCommit(i),
 
 			AggregatedApprovalSigs: nil,
@@ -473,6 +497,17 @@ func GenericSeals(number int) []*flow.Seal {
 	}
 
 	return seals
+}
+
+func GenericSealIDs(number int) []flow.Identifier {
+	seals := GenericSeals(number)
+
+	var sealIDs []flow.Identifier
+	for _, seal := range seals {
+		sealIDs = append(sealIDs, seal.ID())
+	}
+
+	return sealIDs
 }
 
 func GenericSeal(index int) *flow.Seal {
@@ -490,4 +525,26 @@ func ByteSlice(v interface{}) []byte {
 	default:
 		panic("invalid type")
 	}
+}
+
+func genericIdentifiers(number, offset int) []flow.Identifier {
+	// Ensure consistent deterministic results.
+	random := rand.New(rand.NewSource(1 + int64(offset*10)))
+
+	var ids []flow.Identifier
+	for i := 0; i < number; i++ {
+		var id flow.Identifier
+		binary.BigEndian.PutUint64(id[0:], random.Uint64())
+		binary.BigEndian.PutUint64(id[8:], random.Uint64())
+		binary.BigEndian.PutUint64(id[16:], random.Uint64())
+		binary.BigEndian.PutUint64(id[24:], random.Uint64())
+
+		ids = append(ids, id)
+	}
+
+	return ids
+}
+
+func genericIdentifier(index, offset int) flow.Identifier {
+	return genericIdentifiers(index+1, offset)[index]
 }

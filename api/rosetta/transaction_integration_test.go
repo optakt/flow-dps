@@ -265,7 +265,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: getUint64P(lastHeight + 1),
-					Hash:  mocks.GenericBlockQualifier.Hash,
+					Hash:  mocks.GenericRosBlockID.Hash,
 				},
 				TransactionID: testTx,
 			},

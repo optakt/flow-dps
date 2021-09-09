@@ -46,10 +46,9 @@ func TestNew(t *testing.T) {
 
 		cvt, err := New(generator)
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, cvt.deposit, mocks.GenericEventType(0))
-			assert.Equal(t, cvt.withdrawal, mocks.GenericEventType(1))
-		}
+		require.NoError(t, err)
+		assert.Equal(t, cvt.deposit, mocks.GenericEventType(0))
+		assert.Equal(t, cvt.withdrawal, mocks.GenericEventType(1))
 	})
 
 	t.Run("handles generator failure for deposit event type", func(t *testing.T) {

@@ -21,6 +21,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
@@ -32,7 +33,6 @@ import (
 )
 
 func TestLibrary(t *testing.T) {
-
 	t.Run("first", func(t *testing.T) {
 		t.Parallel()
 
@@ -44,7 +44,7 @@ func TestLibrary(t *testing.T) {
 		var got uint64
 		err = db.View(lib.RetrieveFirst(&got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
 	})
 
@@ -59,7 +59,7 @@ func TestLibrary(t *testing.T) {
 		var got uint64
 		err = db.View(lib.RetrieveLast(&got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
 	})
 
@@ -68,13 +68,14 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		err := db.Update(lib.IndexHeightForBlock(mocks.GenericIdentifier(0), mocks.GenericHeight))
+		blockID := mocks.GenericHeader.ID()
+		err := db.Update(lib.IndexHeightForBlock(blockID, mocks.GenericHeight))
 		assert.NoError(t, err)
 
 		var got uint64
-		err = db.View(lib.LookupHeightForBlock(mocks.GenericIdentifier(0), &got))
+		err = db.View(lib.LookupHeightForBlock(blockID, &got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericHeight, got)
 	})
 
@@ -89,7 +90,7 @@ func TestLibrary(t *testing.T) {
 		var got flow.StateCommitment
 		err = db.View(lib.RetrieveCommit(mocks.GenericHeight, &got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericCommit(0), got)
 	})
 
@@ -104,7 +105,7 @@ func TestLibrary(t *testing.T) {
 		var got flow.Header
 		err = db.View(lib.RetrieveHeader(mocks.GenericHeight, &got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, *mocks.GenericHeader, got)
 	})
 
@@ -132,7 +133,7 @@ func TestLibrary(t *testing.T) {
 			var got []flow.Event
 			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(1), &got))
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.ElementsMatch(t, events1, got)
 		})
 
@@ -142,7 +143,7 @@ func TestLibrary(t *testing.T) {
 			var got []flow.Event
 			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{}, &got))
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.ElementsMatch(t, allEvents, got)
 		})
 
@@ -152,7 +153,7 @@ func TestLibrary(t *testing.T) {
 			var got []flow.Event
 			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(4), &got))
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.ElementsMatch(t, allEvents, got)
 		})
 
@@ -162,7 +163,7 @@ func TestLibrary(t *testing.T) {
 			var got []flow.Event
 			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{mocks.GenericEventType(2)}, &got))
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Empty(t, got)
 		})
 	})
@@ -178,7 +179,7 @@ func TestLibrary(t *testing.T) {
 		var got ledger.Payload
 		err = db.View(lib.RetrievePayload(mocks.GenericHeight, mocks.GenericLedgerPath(0), &got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, *mocks.GenericLedgerPayload(0), got)
 	})
 
@@ -195,7 +196,7 @@ func TestLibrary(t *testing.T) {
 		var got flow.TransactionBody
 		err = db.View(lib.RetrieveTransaction(tx.ID(), &got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, *tx, got)
 	})
 
@@ -204,16 +205,16 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		coll := mocks.GenericCollection(0)
+		collection := mocks.GenericCollection(0)
 
-		err := db.Update(lib.SaveCollection(coll))
+		err := db.Update(lib.SaveCollection(collection))
 		assert.NoError(t, err)
 
 		var got flow.LightCollection
-		err = db.View(lib.RetrieveCollection(coll.ID(), &got))
+		err = db.View(lib.RetrieveCollection(collection.ID(), &got))
 
-		assert.NoError(t, err)
-		assert.Equal(t, *coll, got)
+		require.NoError(t, err)
+		assert.Equal(t, *collection, got)
 	})
 
 	t.Run("transactions for height", func(t *testing.T) {
@@ -221,7 +222,7 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		txIDs := mocks.GenericIdentifiers(4)
+		txIDs := mocks.GenericTransactionIDs(4)
 
 		err := db.Update(lib.IndexTransactionsForHeight(mocks.GenericHeight, txIDs))
 		assert.NoError(t, err)
@@ -229,7 +230,7 @@ func TestLibrary(t *testing.T) {
 		var got []flow.Identifier
 		err = db.View(lib.LookupTransactionsForHeight(mocks.GenericHeight, &got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, txIDs, got)
 	})
 
@@ -238,8 +239,8 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		txIDs := mocks.GenericIdentifiers(4)
-		collID := mocks.GenericIdentifier(1)
+		txIDs := mocks.GenericTransactionIDs(4)
+		collID := mocks.GenericCollection(0).ID()
 
 		err := db.Update(lib.IndexTransactionsForCollection(collID, txIDs))
 		assert.NoError(t, err)
@@ -247,7 +248,7 @@ func TestLibrary(t *testing.T) {
 		var got []flow.Identifier
 		err = db.View(lib.LookupTransactionsForCollection(collID, &got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.ElementsMatch(t, txIDs, got)
 	})
 
@@ -256,7 +257,7 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		collIDs := mocks.GenericIdentifiers(4)
+		collIDs := mocks.GenericCollectionIDs(4)
 
 		err := db.Update(lib.IndexCollectionsForHeight(mocks.GenericHeight, collIDs))
 		assert.NoError(t, err)
@@ -264,7 +265,7 @@ func TestLibrary(t *testing.T) {
 		var got []flow.Identifier
 		err = db.View(lib.LookupCollectionsForHeight(mocks.GenericHeight, &got))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.ElementsMatch(t, collIDs, got)
 	})
 
@@ -324,7 +325,7 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		sealIDs := mocks.GenericIdentifiers(4)
+		sealIDs := mocks.GenericSealIDs(4)
 
 		err := db.Update(lib.IndexSealsForHeight(mocks.GenericHeight, sealIDs))
 		assert.NoError(t, err)
