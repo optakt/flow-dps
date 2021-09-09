@@ -209,6 +209,16 @@ func run() int {
 		return failure
 	}
 
+	// We have to capture all of the finalized blocks from the beginning of the
+	// blockchain, otherwise we might have issues with coordinating the download
+	// of execution data. This consumer dumps all block IDs into two channels,
+	// so we can have one consumer on the execution side of the flow, and one
+	// consumer on the consensus side of the flow. We can't use the consensus
+	// tracker directly, because it needs to access a bootstrapped protocol
+	// state which is initialized by the consensus follower when starting.
+	consume := tracker.NewConsumer(10_000)
+	follow.AddOnBlockFinalizedConsumer(consume.OnBlockFinalized)
+
 	// We have to start the consensus follower early and wait for it to finish
 	// starting up, so that we are sure that the protocol state is properly
 	// bootstrapped. This means we will miss some block finalization
@@ -249,8 +259,12 @@ func run() int {
 		log.Error().Err(err).Msg("could not initialize consensus tracker")
 		return failure
 	}
-	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
-	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
+
+	// Initialize the consumption of finalized blocks by the cloud streamer,
+	// which will start downloading execution data for finalized blocks, and the
+	// consensus tracker, which will start making data available from disk.
+	consume.Execution(stream.OnBlockFinalized)
+	consume.Consensus(consensus.OnBlockFinalized)
 
 	// Initialize the index writer, which is responsible for writing the chain
 	// and execution data to the index database.
