@@ -71,9 +71,9 @@ func Initialize(dir string, db *badger.DB) error {
 	_, err = protocol.Bootstrap(
 		collector,
 		db,
-		cache.NewHeaders(collector, db),
-		cache.NewSeals(collector, db),
-		cache.NewExecutionResults(collector, db),
+		headers,
+		seals,
+		results,
 		cache.NewBlocks(db, headers, payloads),
 		cache.NewEpochSetups(collector, db),
 		cache.NewEpochCommits(collector, db),

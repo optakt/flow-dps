@@ -219,6 +219,7 @@ func (c *Consensus) Collections(height uint64) ([]*flow.LightCollection, error) 
 	if err != nil {
 		return nil, fmt.Errorf("could not get record: %w", err)
 	}
+
 	collections := make([]*flow.LightCollection, 0, len(record.Collections))
 	for _, complete := range record.Collections {
 		collection := complete.Collection().Light()
@@ -246,6 +247,7 @@ func (c *Consensus) Transactions(height uint64) ([]*flow.TransactionBody, error)
 	if err != nil {
 		return nil, fmt.Errorf("could not get record: %w", err)
 	}
+
 	transactions := make([]*flow.TransactionBody, 0, len(record.Collections))
 	for _, complete := range record.Collections {
 		transactions = append(transactions, complete.Transactions...)
@@ -294,6 +296,7 @@ func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get record: %w", err)
 	}
+
 	events := make([]flow.Event, 0, len(record.Events))
 	for _, event := range record.Events {
 		events = append(events, *event)

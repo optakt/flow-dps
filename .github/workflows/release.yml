@@ -63,7 +63,7 @@ jobs:
       - name: Install Flow Go's crypto
         run: |
           cd ./flow-go/crypto
-          git checkout ac090a188c979fbcd1b1711271f5b7d1281f76d9
+          git checkout c0afa789365eb7a22713ed76b8de1e3efaf3a70a
           go generate .
 
       # This check makes sure that the `go.mod` and `go.sum` files for Go

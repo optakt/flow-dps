@@ -20,7 +20,6 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/fxamacker/cbor/v2"
@@ -35,12 +34,10 @@ import (
 
 type GCPStreamer struct {
 	log    zerolog.Logger
-	ext    string
 	bucket *storage.BucketHandle
-	queue  *deque.Deque
-	buffer *deque.Deque
-	last   time.Time
-	busy   uint32
+	queue  *deque.Deque // queue of block identifiers for next downloads
+	buffer *deque.Deque // queue of downloaded execution data records
+	busy   uint32       // used as a guard to avoid concurrent polling
 	wg     *sync.WaitGroup
 	limit  uint
 }
@@ -49,11 +46,9 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStream
 
 	g := GCPStreamer{
 		log:    log.With().Str("component", "gcp_streamer").Logger(),
-		ext:    ".cbor",
 		bucket: bucket,
 		queue:  deque.New(),
 		buffer: deque.New(),
-		last:   time.Time{},
 		busy:   0,
 		wg:     &sync.WaitGroup{},
 		limit:  8,
@@ -62,7 +57,12 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStream
 	return &g
 }
 
+// OnBlockFinalized is a callback for the Flow consensus follower. It is called
+// each time a block is finalized by the Flow consensus algorithm.
 func (g *GCPStreamer) OnBlockFinalized(blockID flow.Identifier) {
+
+	// We push the block ID to the front of the queue; the streamer will try to
+	// download the blocks in a FIFO manner.
 	g.queue.PushFront(blockID)
 }
 
@@ -101,7 +101,7 @@ func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
 func (g *GCPStreamer) poll() {
 
 	// We defer the call to done, so that the consumer is notified of the
-	// finished poll in case he is waiting.
+	// finished poll in case it is waiting.
 	defer g.wg.Done()
 
 	// We only call `Next()` sequentially, so there is no need to guard it from
@@ -151,7 +151,7 @@ func (g *GCPStreamer) pull() error {
 		// made up of the block ID in hex and a `.cbor` extension, see:
 		// Maks: "thats correct. In fact the full name is `<blockID>.cbor`"
 		blockID := g.queue.PopBack().(flow.Identifier)
-		name := blockID.String() + g.ext
+		name := blockID.String() + ".cbor"
 		record, err := g.pullRecord(name)
 		if err != nil {
 			return fmt.Errorf("could not pull record object (name: %s): %w", name, err)
