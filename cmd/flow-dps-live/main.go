@@ -92,9 +92,12 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
+
 	pflag.BoolVar(&flagSkip, "skip-registers", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
+
+	pflag.CommandLine.MarkHidden("skip-registers")
 
 	// Increase the GOMAXPROCS value in order to use the full IOPS available, see:
 	// https://groups.google.com/g/golang-nuts/c/jPb_h3TvlKE

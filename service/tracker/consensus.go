@@ -85,7 +85,7 @@ func (c *Consensus) Root() (uint64, error) {
 		return 0, fmt.Errorf("could not retrieve root height: %w", err)
 	}
 
-	return root, err
+	return root, nil
 }
 
 // Header returns the header for the given height, if available. Once a header
