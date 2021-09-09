@@ -156,6 +156,17 @@ func run() int {
 		return failure
 	}
 
+	// Unfortunately, the current consensus follower does not bootstrap the
+	// protocol state until it is run. This means we are liable to miss block
+	// finalization of the first few blocks, which breaks our logic. We thus
+	// must ensure that the protocol state is already bootstrapped manually
+	// before starting the consensus follower.
+	err = tracker.Initialize(flagBootstrap, data)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize protocol state")
+		return failure
+	}
+
 	// Initialize the private key for joining the unstaked peer-to-peer network.
 	// This is just needed for security, not authentication, so we can just
 	// generate a new one each time we start.
@@ -209,39 +220,6 @@ func run() int {
 		return failure
 	}
 
-	// We have to capture all of the finalized blocks from the beginning of the
-	// blockchain, otherwise we might have issues with coordinating the download
-	// of execution data. This consumer dumps all block IDs into two channels,
-	// so we can have one consumer on the execution side of the flow, and one
-	// consumer on the consensus side of the flow. We can't use the consensus
-	// tracker directly, because it needs to access a bootstrapped protocol
-	// state which is initialized by the consensus follower when starting.
-	consume := tracker.NewConsumer(10_000)
-	follow.AddOnBlockFinalizedConsumer(consume.OnBlockFinalized)
-
-	// We have to start the consensus follower early and wait for it to finish
-	// starting up, so that we are sure that the protocol state is properly
-	// bootstrapped. This means we will miss some block finalization
-	// notifications. However, we do load the latest finalized block in the
-	// consensus tracker upon initialization, so we should only lose track for
-	// the time between the initialization and registering the callback.
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		follow.Run(ctx)
-	}()
-	<-follow.NodeBuilder.Ready()
-	defer cancel()
-
-	// Currently, we start the index from scratch each time. We should therefore
-	// dump all finalized block IDs that are already in the protocol state into
-	// the consumer, so that these become available on the consensus tracker and
-	// we download the execution data.
-	err = tracker.Initialize(data, consume.OnBlockFinalized)
-	if err != nil {
-		log.Error().Err(err).Msg("could not initalize finalized consumer")
-		return failure
-	}
-
 	// Initialize the execution follower that will read block records from the
 	// Google Cloud Platform bucket.
 	client, err := googlecloud.NewClient(context.Background())
@@ -272,11 +250,10 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the consumption of finalized blocks by the cloud streamer,
-	// which will start downloading execution data for finalized blocks, and the
-	// consensus tracker, which will start making data available from disk.
-	consume.Execution(stream.OnBlockFinalized)
-	consume.Consensus(consensus.OnBlockFinalized)
+	// We can now register both the consensus follower and the cloud streamer
+	// as consumers of finalized blocks.
+	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
+	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
 	// Initialize the index writer, which is responsible for writing the chain
 	// and execution data to the index database.
@@ -345,6 +322,10 @@ func run() int {
 	}
 	done := make(chan struct{})
 	failed := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		follow.Run(ctx)
+	}()
 	go func() {
 		start := time.Now()
 		log.Info().Time("start", start).Msg("Flow DPS Live Indexer starting")
@@ -379,7 +360,6 @@ func run() int {
 		log.Info().Msg("Flow DPS Indexer done")
 	case <-failed:
 		log.Warn().Msg("Flow DPS Indexer aborted")
-		return failure
 	}
 	go func() {
 		<-sig
@@ -393,10 +373,6 @@ func run() int {
 	// Then stop the consensus follower and wait for it to shut down completely.
 	cancel()
 	<-follow.NodeBuilder.Done()
-
-	// At this point, no new blocks will be finalized, and we can stop the
-	// consumer and drain its internal channels.
-	consume.Close()
 
 	// Lastly, we can stop the core business logic of the indexer.
 	err = fsm.Stop()
