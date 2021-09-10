@@ -15,7 +15,7 @@
 package cloud
 
 var DefaultConfig = Config{
-	BufferSize: 8,
+	BufferSize: 32,
 }
 
 type Config struct {
