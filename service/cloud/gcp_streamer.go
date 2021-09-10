@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sync"
 	"sync/atomic"
 
 	"cloud.google.com/go/storage"
@@ -37,21 +36,24 @@ type GCPStreamer struct {
 	bucket *storage.BucketHandle
 	queue  *deque.Deque // queue of block identifiers for next downloads
 	buffer *deque.Deque // queue of downloaded execution data records
+	limit  uint         // buffer size limit for downloaded records
 	busy   uint32       // used as a guard to avoid concurrent polling
-	wg     *sync.WaitGroup
-	limit  uint
 }
 
-func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStreamer {
+func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ...Option) *GCPStreamer {
+
+	cfg := DefaultConfig
+	for _, option := range options {
+		option(&cfg)
+	}
 
 	g := GCPStreamer{
 		log:    log.With().Str("component", "gcp_streamer").Logger(),
 		bucket: bucket,
 		queue:  deque.New(),
 		buffer: deque.New(),
+		limit:  cfg.BufferSize,
 		busy:   0,
-		wg:     &sync.WaitGroup{},
-		limit:  8,
 	}
 
 	return &g
@@ -68,41 +70,29 @@ func (g *GCPStreamer) OnBlockFinalized(blockID flow.Identifier) {
 
 func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
 
-	// We want to be able to wait for a poll to successfully complete before
-	// returning, so we add to the waiting group and start the polling in the
-	// background.
-	g.wg.Add(1)
+	// If we are not polling already, we want to start polling in the
+	// background. This will try to fill the buffer up until its limit is
+	// reached. It basically means that the cloud streamer will always be
+	// downloading if something is available and the execution tracker is asking
+	// for the next record.
 	go g.poll()
 
-	// However, in case we already have items in the buffer, we prefer to return
-	// immediately and complete the polling in the background, so the buffer is
-	// filled again for the next request. We thus only wait on the wait group if
-	// the buffer is empty.
-	if g.buffer.Len() == 0 {
-		g.log.Debug().Msg("buffer empty, waiting for poll")
-		g.wg.Wait()
-	}
-
-	// At this point, we waited for polling to finish. If the buffer is still
-	// empty, it means there is no new data available on the cloud, and we can
-	// return the corresponding error.
+	// If we have nothing in the buffer, we can return the unavailable error,
+	// which will cause the mapper logic to go into a wait state and retry a bit
+	// later.
 	if g.buffer.Len() == 0 {
 		g.log.Debug().Msg("buffer still empty, no data available")
 		return nil, dps.ErrUnavailable
 	}
 
-	// When we get here, we either had a full buffer before finishing polling,
-	// or the buffer was filled up again by the polling. We can thus pop an item
-	// from the buffer and return it.
+	// If we have a record in the buffer, we will just return it. The buffer is
+	// concurrency safe, so there is no problem with popping from the back while
+	// the poll is pushing new items in the front.
 	record := g.buffer.PopBack()
 	return record.(*uploader.BlockData), nil
 }
 
 func (g *GCPStreamer) poll() {
-
-	// We defer the call to done, so that the consumer is notified of the
-	// finished poll in case it is waiting.
-	defer g.wg.Done()
 
 	// We only call `Next()` sequentially, so there is no need to guard it from
 	// concurrent access. However, when the buffer is not empty, we might still
