@@ -120,7 +120,7 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 	// it to the chain interface as needed.
 	err := e.processNext()
 	if err != nil {
-		return nil, fmt.Errorf("could not process next record: %w", err)
+		return nil, fmt.Errorf("could not process next execution record: %w", err)
 	}
 
 	// This is a recursive function call. It allows us to skip past blocks which
@@ -147,7 +147,7 @@ func (e *Execution) Record(blockID flow.Identifier) (*uploader.BlockData, error)
 	// the next one from the cloud reader.
 	err := e.processNext()
 	if err != nil {
-		return nil, fmt.Errorf("could not process next record: %w", err)
+		return nil, fmt.Errorf("could not process next execution record: %w", err)
 	}
 
 	// This is a recursive function call. It allows us to keep reading block
@@ -161,7 +161,7 @@ func (e *Execution) processNext() error {
 	// Get the next block execution record available from the cloud streamer.
 	record, err := e.stream.Next()
 	if err != nil {
-		return fmt.Errorf("could not read record: %w", err)
+		return fmt.Errorf("could not read next execution record: %w", err)
 	}
 
 	// Check if we already processed a block with this ID recently. This should
@@ -169,7 +169,7 @@ func (e *Execution) processNext() error {
 	blockID := record.Block.Header.ID()
 	_, ok := e.records[blockID]
 	if ok {
-		return fmt.Errorf("duplicate block record (block: %x)", blockID)
+		return fmt.Errorf("duplicate execution record (block: %x)", blockID)
 	}
 
 	// Dump the block execution record into our cache and push all trie updates
@@ -190,7 +190,7 @@ func (e *Execution) processNext() error {
 	e.log.Debug().
 		Hex("block", blockID[:]).
 		Int("updates", len(record.TrieUpdates)).
-		Msg("processed next block record")
+		Msg("next execution record processed")
 
 	return nil
 }

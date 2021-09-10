@@ -71,9 +71,9 @@ func (c *Consensus) OnBlockFinalized(blockID flow.Identifier) {
 		return
 	}
 
-	c.log.Debug().Hex("block", blockID[:]).Uint64("height", header.Height).Msg("block finalization processed")
-
 	c.last = header.Height
+
+	c.log.Debug().Hex("block", blockID[:]).Uint64("height", header.Height).Msg("block finalization processed")
 }
 
 // Root returns the root height from the underlying protocol state.
