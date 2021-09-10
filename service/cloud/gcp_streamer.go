@@ -111,6 +111,10 @@ func (g *GCPStreamer) poll() {
 
 	// At this point, we try to pull new files from the cloud.
 	err := g.pull()
+	if errors.Is(err, storage.ErrObjectNotExist) {
+		g.log.Debug().Msg("next record not available yet")
+		return
+	}
 	if err != nil {
 		g.log.Error().Err(err).Msg("could not pull records")
 		return
@@ -148,12 +152,8 @@ func (g *GCPStreamer) pull() error {
 		blockID := g.queue.PopBack().(flow.Identifier)
 		name := blockID.String() + ".cbor"
 		record, err := g.pullRecord(name)
-		if errors.Is(err, storage.ErrObjectNotExist) {
-			g.log.Debug().Hex("block", blockID[:]).Msg("block unavailable, stopping pull")
-			g.queue.PushBack(blockID)
-			return nil
-		}
 		if err != nil {
+			g.queue.PushBack(blockID)
 			return fmt.Errorf("could not pull record object (name: %s): %w", name, err)
 		}
 
