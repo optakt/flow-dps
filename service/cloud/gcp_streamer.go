@@ -36,19 +36,24 @@ type GCPStreamer struct {
 	bucket *storage.BucketHandle
 	queue  *deque.Deque // queue of block identifiers for next downloads
 	buffer *deque.Deque // queue of downloaded execution data records
+	limit  uint         // buffer size limit for downloaded records
 	busy   uint32       // used as a guard to avoid concurrent polling
-	limit  uint
 }
 
-func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle) *GCPStreamer {
+func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ...Option) *GCPStreamer {
+
+	cfg := DefaultConfig
+	for _, option := range options {
+		option(&cfg)
+	}
 
 	g := GCPStreamer{
 		log:    log.With().Str("component", "gcp_streamer").Logger(),
 		bucket: bucket,
 		queue:  deque.New(),
 		buffer: deque.New(),
+		limit:  cfg.BufferSize,
 		busy:   0,
-		limit:  100,
 	}
 
 	return &g
