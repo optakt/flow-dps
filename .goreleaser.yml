@@ -4,40 +4,56 @@
 builds:
   - id: dps-client
     binary: dps-client
+    main: ./cmd/flow-dps-client
+    goos:
+      - linux
     goarch:
       - amd64
-    main: ./cmd/flow-dps-client
+    flags:
+      - -tags=relic
 
   - id: dps-indexer
     binary: dps-indexer
+    main: ./cmd/flow-dps-indexer
+    goos:
+      - linux
     goarch:
       - amd64
-    main: ./cmd/flow-dps-indexer
+    flags:
+      - -tags=relic
 
   - id: dps-server
     binary: dps-server
+    main: ./cmd/flow-dps-server
+    goos:
+      - linux
     goarch:
       - amd64
-    main: ./cmd/flow-dps-server
+    flags:
+      - -tags=relic
 
   - id: dps-live
     binary: dps-live
+    main: ./cmd/flow-dps-live
+    goos:
+      - linux
     goarch:
       - amd64
-    main: ./cmd/flow-dps-live
     flags:
       - -tags=relic
 
   - id: rosetta-server
     binary: rosetta-server
+    main: ./cmd/flow-rosetta-server
+    goos:
+      - linux
     goarch:
       - amd64
-    main: ./cmd/flow-rosetta-server
+    flags:
+      - -tags=relic
+
 archives:
   - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
       386: i386
       amd64: x86_64
 checksum:
