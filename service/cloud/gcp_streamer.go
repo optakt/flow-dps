@@ -147,8 +147,8 @@ func (g *GCPStreamer) download() error {
 		// Get the name of the file based on the block ID. The file name is
 		// made up of the block ID in hex and a `.cbor` extension, see:
 		// Maks: "thats correct. In fact the full name is `<blockID>.cbor`"
-		// If the file is not found, we put the block ID back into the queue
-		// and return `nil` to stop pulling.
+		// If we encounter an error, such as that the file is not found, we put
+		// the block ID back into the queue and return `nil` to stop pulling.
 		blockID := g.queue.PopBack().(flow.Identifier)
 		name := blockID.String() + ".cbor"
 		record, err := g.pullRecord(name)
