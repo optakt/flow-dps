@@ -2,6 +2,7 @@ name: AutoRelease
 
 # AutoRelease will run whenever a tag is pushed.
 on:
+  workflow_dispatch:
   push:
     tags:
       - '*'
