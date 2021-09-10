@@ -3,6 +3,7 @@ name: CI
 # Continuous integration will run whenever a pull request for the master branch
 # is created or updated.
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - master
