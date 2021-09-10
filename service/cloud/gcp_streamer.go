@@ -16,6 +16,7 @@ package cloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sync/atomic"
@@ -66,6 +67,8 @@ func (g *GCPStreamer) OnBlockFinalized(blockID flow.Identifier) {
 	// We push the block ID to the front of the queue; the streamer will try to
 	// download the blocks in a FIFO manner.
 	g.queue.PushFront(blockID)
+
+	g.log.Debug().Hex("block", blockID[:]).Msg("block queued for download")
 }
 
 func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
@@ -81,7 +84,7 @@ func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
 	// which will cause the mapper logic to go into a wait state and retry a bit
 	// later.
 	if g.buffer.Len() == 0 {
-		g.log.Debug().Msg("buffer still empty, no data available")
+		g.log.Debug().Msg("buffer empty, no record available")
 		return nil, dps.ErrUnavailable
 	}
 
@@ -122,7 +125,7 @@ func (g *GCPStreamer) pull() error {
 		// do not need to have a big buffer; we just want to avoid HTTP request
 		// latency when the execution follower wants a block record.
 		if uint(g.buffer.Len()) >= g.limit {
-			g.log.Debug().Uint("limit", g.limit).Msg("buffer full, finishing pull")
+			g.log.Debug().Uint("limit", g.limit).Msg("buffer full, stopping pull")
 			return nil
 		}
 
@@ -133,16 +136,23 @@ func (g *GCPStreamer) pull() error {
 		// be the only way to make sure trie updates are delivered to the mapper
 		// in the right order without changing the way uploads work.
 		if uint(g.queue.Len()) == 0 {
-			g.log.Debug().Msg("queue empty, finishing pull")
+			g.log.Debug().Msg("queue empty, stopping pull")
 			return nil
 		}
 
 		// Get the name of the file based on the block ID. The file name is
 		// made up of the block ID in hex and a `.cbor` extension, see:
 		// Maks: "thats correct. In fact the full name is `<blockID>.cbor`"
+		// If the file is not found, we put the block ID back into the queue
+		// and return `nil` to stop pulling.
 		blockID := g.queue.PopBack().(flow.Identifier)
 		name := blockID.String() + ".cbor"
 		record, err := g.pullRecord(name)
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			g.log.Debug().Hex("block", blockID[:]).Msg("block unavailable, stopping pull")
+			g.queue.PushBack(blockID)
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("could not pull record object (name: %s): %w", name, err)
 		}
@@ -151,7 +161,7 @@ func (g *GCPStreamer) pull() error {
 			Str("name", name).
 			Uint64("height", record.Block.Header.Height).
 			Hex("block", blockID[:]).
-			Msg("pushing record object into buffer")
+			Msg("pushing record into buffer")
 
 		g.buffer.PushFront(record)
 	}
@@ -168,7 +178,7 @@ func (g *GCPStreamer) pullRecord(name string) (*uploader.BlockData, error) {
 
 	data, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, fmt.Errorf("could not read object data: %w", err)
+		return nil, fmt.Errorf("could not read record: %w", err)
 	}
 
 	var record uploader.BlockData
