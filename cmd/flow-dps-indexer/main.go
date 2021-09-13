@@ -137,7 +137,7 @@ func run() int {
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	transitions := mapper.NewTransitions(log, disk, feed, read, write,
 		mapper.WithRootCheckpoint(flagCheckpoint),
-		mapper.WithSkipRegister(flagSkip),
+		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)

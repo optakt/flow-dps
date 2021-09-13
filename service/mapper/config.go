@@ -42,7 +42,7 @@ func WithRootCheckpoint(checkpoint string) func(*Config) {
 
 // WithSkipRegisters can enable skipping the indexing of register payloads. It
 // is mostly meant to be used for testing and debuging.
-func WithSkipRegister(skip bool) func(*Config) {
+func WithSkipRegisters(skip bool) func(*Config) {
 	return func(cfg *Config) {
 		cfg.SkipRegisters = skip
 	}

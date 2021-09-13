@@ -252,7 +252,7 @@ func run() int {
 	// and then register the desired state transitions with the FSM.
 	transitions := mapper.NewTransitions(log, consensus, execution, read, write,
 		mapper.WithRootCheckpoint(flagCheckpoint),
-		mapper.WithSkipRegister(flagSkip),
+		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)

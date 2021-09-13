@@ -59,11 +59,11 @@ func TestFSM_Run(t *testing.T) {
 			},
 			transitions: map[Status]TransitionFunc{
 				StatusBootstrap: func(state *State) error {
-					state.status = StatusMatched
+					state.status = StatusIndex
 					emptyCalls++
 					return nil
 				},
-				StatusMatched: func(state *State) error {
+				StatusIndex: func(state *State) error {
 					state.status = StatusBootstrap
 					matchedCalls++
 					return nil
@@ -100,7 +100,7 @@ func TestFSM_Run(t *testing.T) {
 				status: StatusBootstrap,
 			},
 			transitions: map[Status]TransitionFunc{
-				StatusIndexed: func(*State) error { return nil },
+				StatusIndex: func(*State) error { return nil },
 			},
 			wg: &sync.WaitGroup{},
 		}

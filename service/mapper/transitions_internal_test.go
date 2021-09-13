@@ -31,56 +31,45 @@ import (
 
 func TestNewTransitions(t *testing.T) {
 	t.Run("nominal case, without options", func(t *testing.T) {
-		load := mocks.BaselineLoader(t)
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
-		index := mocks.BaselineWriter(t)
+		read := mocks.BaselineReader(t)
+		write := mocks.BaselineWriter(t)
 
-		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, index)
+		tr := NewTransitions(mocks.NoopLogger, chain, feed, read, write)
 
 		assert.NotNil(t, tr)
-		assert.Equal(t, load, tr.load)
 		assert.Equal(t, chain, tr.chain)
 		assert.Equal(t, feed, tr.feed)
-		assert.Equal(t, index, tr.index)
+		assert.Equal(t, read, tr.read)
+		assert.Equal(t, write, tr.write)
 		assert.NotNil(t, tr.once)
 		assert.Equal(t, DefaultConfig, tr.cfg)
 	})
 
 	t.Run("nominal case, with options", func(t *testing.T) {
-		load := mocks.BaselineLoader(t)
+		path := "path"
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
-		index := mocks.BaselineWriter(t)
+		read := mocks.BaselineReader(t)
+		write := mocks.BaselineWriter(t)
 
-		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, index,
-			WithIndexCommit(true),
-			WithIndexHeader(true),
-			WithIndexPayloads(true),
-			WithIndexCollections(true),
-			WithIndexGuarantees(true),
-			WithIndexTransactions(true),
-			WithIndexResults(true),
-			WithIndexSeals(true),
+		tr := NewTransitions(mocks.NoopLogger, chain, feed, read, write,
+			WithRootCheckpoint(path),
+			WithSkipRegisters(true),
 		)
 
 		assert.NotNil(t, tr)
-		assert.Equal(t, load, tr.load)
 		assert.Equal(t, chain, tr.chain)
 		assert.Equal(t, feed, tr.feed)
-		assert.Equal(t, index, tr.index)
+		assert.Equal(t, read, tr.read)
+		assert.Equal(t, write, tr.write)
 		assert.NotNil(t, tr.once)
 
 		assert.NotEqual(t, DefaultConfig, tr.cfg)
-		assert.Equal(t, DefaultConfig.IndexEvents, tr.cfg.IndexEvents)
-		assert.True(t, tr.cfg.IndexTransactions)
-		assert.True(t, tr.cfg.IndexHeader)
-		assert.True(t, tr.cfg.IndexPayloads)
-		assert.True(t, tr.cfg.IndexCollections)
-		assert.True(t, tr.cfg.IndexGuarantees)
-		assert.True(t, tr.cfg.IndexTransactions)
-		assert.True(t, tr.cfg.IndexResults)
-		assert.True(t, tr.cfg.IndexSeals)
+		assert.Equal(t, DefaultConfig.WaitInterval, tr.cfg.WaitInterval)
+		assert.True(t, tr.cfg.SkipRegisters)
+		assert.Equal(t, tr.cfg.RootCheckpoint, path)
 	})
 }
 
@@ -88,34 +77,29 @@ func TestTransitions_BootstrapState(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusEmpty)
+		tr, st := baselineFSM(t, StatusBootstrap)
 
 		// Copy state in local scope so that we can override its SaveFunc without impacting other
 		// tests running in parallel.
-		var saveCalled bool
 		forest := mocks.BaselineForest(t, true)
+		calls := 0
 		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
-			if !saveCalled {
-				assert.True(t, tree.IsEmpty())
-				assert.Nil(t, paths)
-				assert.Zero(t, parent)
-				saveCalled = true
-				return
-			}
 			assert.False(t, tree.IsEmpty())
 			assert.Len(t, tree.AllPayloads(), len(paths))
 			assert.Len(t, paths, 3) // Expect the three paths from leaves.
 			assert.NotZero(t, parent)
+			calls++
 		}
 
 		err := tr.BootstrapState(st)
 		assert.NoError(t, err)
+		assert.Equal(t, 1, calls)
 	})
 
 	t.Run("invalid state", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusIndexed)
+		tr, st := baselineFSM(t, StatusIndex)
 
 		err := tr.BootstrapState(st)
 		assert.Error(t, err)
@@ -124,7 +108,7 @@ func TestTransitions_BootstrapState(t *testing.T) {
 	t.Run("handles failure to get root height", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusEmpty)
+		tr, st := baselineFSM(t, StatusBootstrap)
 
 		chain := mocks.BaselineChain(t)
 		chain.RootFunc = func() (uint64, error) {
@@ -140,14 +124,12 @@ func TestTransitions_BootstrapState(t *testing.T) {
 	t.Run("handles failure to load checkpoint", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusEmpty)
+		tr, st := baselineFSM(t, StatusBootstrap)
 
 		load := mocks.BaselineLoader(t)
 		load.CheckpointFunc = func() (*trie.MTrie, error) {
 			return nil, mocks.GenericError
 		}
-
-		tr.load = load
 
 		err := tr.BootstrapState(st)
 		assert.Error(t, err)
@@ -158,7 +140,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 	t.Run("nominal case without match", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusUpdating)
+		tr, st := baselineFSM(t, StatusUpdate)
 
 		forest := mocks.BaselineForest(t, false)
 		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
@@ -179,13 +161,13 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		err := tr.UpdateTree(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusUpdating, st.status)
+		assert.Equal(t, StatusUpdate, st.status)
 	})
 
 	t.Run("nominal case with no available update temporarily", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusUpdating)
+		tr, st := baselineFSM(t, StatusUpdate)
 
 		// Set up the mock feeder to return an unavailable error on the first call and return successfully
 		// to subsequent calls.
@@ -211,30 +193,30 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		err := tr.UpdateTree(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusUpdating, st.status)
+		assert.Equal(t, StatusUpdate, st.status)
 
 		// The second call is now successful and matches.
 		err = tr.UpdateTree(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusMatched, st.status)
+		assert.Equal(t, StatusCollect, st.status)
 	})
 
 	t.Run("nominal case with match", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusUpdating)
+		tr, st := baselineFSM(t, StatusUpdate)
 
 		err := tr.UpdateTree(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusMatched, st.status)
+		assert.Equal(t, StatusCollect, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusEmpty)
+		tr, st := baselineFSM(t, StatusBootstrap)
 
 		err := tr.UpdateTree(st)
 
@@ -249,7 +231,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusUpdating)
+		tr, st := baselineFSM(t, StatusUpdate)
 		st.forest = mocks.BaselineForest(t, false)
 		tr.feed = feed
 
@@ -266,7 +248,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 			return nil, false
 		}
 
-		tr, st := baselineFSM(t, StatusUpdating)
+		tr, st := baselineFSM(t, StatusUpdate)
 		st.forest = forest
 
 		err := tr.UpdateTree(st)
@@ -286,13 +268,13 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 			return mocks.GenericCommit(1), true
 		}
 
-		tr, st := baselineFSM(t, StatusMatched)
+		tr, st := baselineFSM(t, StatusCollect)
 		st.forest = forest
 
 		err := tr.CollectRegisters(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusCollected, st.status)
+		assert.Equal(t, StatusMap, st.status)
 		for _, wantPath := range mocks.GenericLedgerPaths(6) {
 			assert.Contains(t, st.registers, wantPath)
 		}
@@ -301,20 +283,20 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 	t.Run("indexing payloads disabled", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusMatched)
-		tr.cfg.IndexPayloads = false
+		tr, st := baselineFSM(t, StatusCollect)
+		tr.cfg.SkipRegisters = true
 
 		err := tr.CollectRegisters(st)
 
 		require.NoError(t, err)
 		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusIndexed, st.status)
+		assert.Equal(t, StatusForward, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusEmpty)
+		tr, st := baselineFSM(t, StatusBootstrap)
 
 		err := tr.CollectRegisters(st)
 
@@ -325,7 +307,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 	t.Run("handles missing tree for commit", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusMatched)
+		tr, st := baselineFSM(t, StatusCollect)
 		st.forest = mocks.BaselineForest(t, false)
 
 		err := tr.CollectRegisters(st)
@@ -335,7 +317,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 	})
 }
 
-func TestTransitions_IndexRegisters(t *testing.T) {
+func TestTransitions_MapRegisters(t *testing.T) {
 	t.Run("nominal case with registers to index", func(t *testing.T) {
 		t.Parallel()
 
@@ -349,8 +331,8 @@ func TestTransitions_IndexRegisters(t *testing.T) {
 			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
 		}
 
-		index := mocks.BaselineWriter(t)
-		index.PayloadsFunc = func(height uint64, paths []ledger.Path, value []*ledger.Payload) error {
+		write := mocks.BaselineWriter(t)
+		write.PayloadsFunc = func(height uint64, paths []ledger.Path, value []*ledger.Payload) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 
 			// Expect the 5 entries from the map.
@@ -359,28 +341,28 @@ func TestTransitions_IndexRegisters(t *testing.T) {
 			return nil
 		}
 
-		tr, st := baselineFSM(t, StatusCollected)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusMap)
+		tr.write = write
 		st.registers = testRegisters
 
-		err := tr.IndexRegisters(st)
+		err := tr.MapRegisters(st)
 
 		require.NoError(t, err)
 
 		// Should not be StateIndexed because registers map was not empty.
 		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusCollected, st.status)
+		assert.Equal(t, StatusMap, st.status)
 	})
 
 	t.Run("nominal case no more registers left to index", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusCollected)
+		tr, st := baselineFSM(t, StatusMap)
 
-		err := tr.IndexRegisters(st)
+		err := tr.MapRegisters(st)
 
 		assert.NoError(t, err)
-		assert.Equal(t, StatusIndexed, st.status)
+		assert.Equal(t, StatusForward, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
@@ -395,10 +377,10 @@ func TestTransitions_IndexRegisters(t *testing.T) {
 			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
 		}
 
-		tr, st := baselineFSM(t, StatusEmpty)
+		tr, st := baselineFSM(t, StatusBootstrap)
 		st.registers = testRegisters
 
-		err := tr.IndexRegisters(st)
+		err := tr.MapRegisters(st)
 
 		assert.Error(t, err)
 	})
@@ -415,14 +397,14 @@ func TestTransitions_IndexRegisters(t *testing.T) {
 			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
 		}
 
-		index := mocks.BaselineWriter(t)
-		index.PayloadsFunc = func(uint64, []ledger.Path, []*ledger.Payload) error { return mocks.GenericError }
+		write := mocks.BaselineWriter(t)
+		write.PayloadsFunc = func(uint64, []ledger.Path, []*ledger.Payload) error { return mocks.GenericError }
 
-		tr, st := baselineFSM(t, StatusCollected)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusMap)
+		tr.write = write
 		st.registers = testRegisters
 
-		err := tr.IndexRegisters(st)
+		err := tr.MapRegisters(st)
 
 		assert.Error(t, err)
 	})
@@ -436,13 +418,13 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 			firstCalled int
 			lastCalled  int
 		)
-		index := mocks.BaselineWriter(t)
-		index.FirstFunc = func(height uint64) error {
+		write := mocks.BaselineWriter(t)
+		write.FirstFunc = func(height uint64) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			firstCalled++
 			return nil
 		}
-		index.LastFunc = func(height uint64) error {
+		write.LastFunc = func(height uint64) error {
 			assert.Equal(t, mocks.GenericHeight+uint64(lastCalled), height)
 			lastCalled++
 			return nil
@@ -453,22 +435,22 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 			assert.Equal(t, mocks.GenericCommit(0), finalized)
 		}
 
-		tr, st := baselineFSM(t, StatusIndexed)
+		tr, st := baselineFSM(t, StatusForward)
 		st.forest = forest
-		tr.index = index
+		tr.write = write
 
 		err := tr.ForwardHeight(st)
 
 		assert.NoError(t, err)
-		assert.Equal(t, StatusForwarded, st.status)
+		assert.Equal(t, StatusIndex, st.status)
 		assert.Equal(t, mocks.GenericHeight+1, st.height)
 
 		// Reset status to allow next call.
-		st.status = StatusIndexed
+		st.status = StatusForward
 		err = tr.ForwardHeight(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusForwarded, st.status)
+		assert.Equal(t, StatusIndex, st.status)
 		assert.Equal(t, mocks.GenericHeight+2, st.height)
 
 		// First should have been called only once.
@@ -478,7 +460,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 	t.Run("handles invalid status", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusEmpty)
+		tr, st := baselineFSM(t, StatusBootstrap)
 
 		err := tr.ForwardHeight(st)
 
@@ -488,13 +470,13 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 	t.Run("handles indexer error on first", func(t *testing.T) {
 		t.Parallel()
 
-		index := mocks.BaselineWriter(t)
-		index.FirstFunc = func(uint64) error {
+		write := mocks.BaselineWriter(t)
+		write.FirstFunc = func(uint64) error {
 			return mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusIndexed)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusForward)
+		tr.write = write
 
 		err := tr.ForwardHeight(st)
 
@@ -504,13 +486,13 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 	t.Run("handles indexer error on last", func(t *testing.T) {
 		t.Parallel()
 
-		index := mocks.BaselineWriter(t)
-		index.LastFunc = func(uint64) error {
+		write := mocks.BaselineWriter(t)
+		write.LastFunc = func(uint64) error {
 			return mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusIndexed)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusForward)
+		tr.write = write
 
 		err := tr.ForwardHeight(st)
 
@@ -519,7 +501,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 }
 
 func TestTransitions_IndexChain(t *testing.T) {
-	t.Run("nominal case index all", func(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
@@ -564,100 +546,75 @@ func TestTransitions_IndexChain(t *testing.T) {
 			return mocks.GenericSeals(4), nil
 		}
 
-		index := mocks.BaselineWriter(t)
-		index.HeaderFunc = func(height uint64, header *flow.Header) error {
+		write := mocks.BaselineWriter(t)
+		write.HeaderFunc = func(height uint64, header *flow.Header) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericHeader, header)
 
 			return nil
 		}
-		index.CommitFunc = func(height uint64, commit flow.StateCommitment) error {
+		write.CommitFunc = func(height uint64, commit flow.StateCommitment) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericCommit(0), commit)
 
 			return nil
 		}
-		index.HeightFunc = func(blockID flow.Identifier, height uint64) error {
+		write.HeightFunc = func(blockID flow.Identifier, height uint64) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericHeader.ID(), blockID)
 
 			return nil
 		}
-		index.CollectionsFunc = func(height uint64, collections []*flow.LightCollection) error {
+		write.CollectionsFunc = func(height uint64, collections []*flow.LightCollection) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericCollections(2), collections)
 
 			return nil
 		}
-		index.GuaranteesFunc = func(height uint64, guarantees []*flow.CollectionGuarantee) error {
+		write.GuaranteesFunc = func(height uint64, guarantees []*flow.CollectionGuarantee) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericGuarantees(2), guarantees)
 
 			return nil
 		}
-		index.TransactionsFunc = func(height uint64, transactions []*flow.TransactionBody) error {
+		write.TransactionsFunc = func(height uint64, transactions []*flow.TransactionBody) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericTransactions(4), transactions)
 
 			return nil
 		}
-		index.ResultsFunc = func(results []*flow.TransactionResult) error {
+		write.ResultsFunc = func(results []*flow.TransactionResult) error {
 			assert.Equal(t, mocks.GenericResults(4), results)
 
 			return nil
 		}
-		index.EventsFunc = func(height uint64, events []flow.Event) error {
+		write.EventsFunc = func(height uint64, events []flow.Event) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericEvents(8), events)
 
 			return nil
 		}
-		index.SealsFunc = func(height uint64, seals []*flow.Seal) error {
+		write.SealsFunc = func(height uint64, seals []*flow.Seal) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericSeals(4), seals)
 
 			return nil
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
+		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
-		tr.index = index
+		tr.write = write
 
 		err := tr.IndexChain(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusUpdating, st.status)
-	})
-
-	t.Run("nominal case index nothing", func(t *testing.T) {
-		t.Parallel()
-
-		chain := mocks.BaselineChain(t)
-		chain.CommitFunc = func(height uint64) (flow.StateCommitment, error) {
-			assert.Equal(t, mocks.GenericHeight, height)
-
-			return mocks.GenericCommit(0), nil
-		}
-
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.chain = chain
-		tr.cfg.IndexCommit = false
-		tr.cfg.IndexHeader = false
-		tr.cfg.IndexTransactions = false
-		tr.cfg.IndexCollections = false
-		tr.cfg.IndexEvents = false
-		tr.cfg.IndexSeals = false
-
-		err := tr.IndexChain(st)
-
-		require.NoError(t, err)
-		assert.Equal(t, StatusUpdating, st.status)
+		assert.Equal(t, StatusUpdate, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
 		t.Parallel()
 
-		tr, st := baselineFSM(t, StatusEmpty)
+		tr, st := baselineFSM(t, StatusBootstrap)
 
 		err := tr.IndexChain(st)
 
@@ -672,7 +629,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			return flow.DummyStateCommitment, mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
+		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
 
 		err := tr.IndexChain(st)
@@ -683,13 +640,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 	t.Run("handles indexer failure to write commit", func(t *testing.T) {
 		t.Parallel()
 
-		index := mocks.BaselineWriter(t)
-		index.CommitFunc = func(uint64, flow.StateCommitment) error {
+		write := mocks.BaselineWriter(t)
+		write.CommitFunc = func(uint64, flow.StateCommitment) error {
 			return mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusIndex)
+		tr.write = write
 
 		err := tr.IndexChain(st)
 
@@ -704,7 +661,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
+		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
 
 		err := tr.IndexChain(st)
@@ -715,13 +672,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 	t.Run("handles indexer failure to write header", func(t *testing.T) {
 		t.Parallel()
 
-		index := mocks.BaselineWriter(t)
-		index.HeaderFunc = func(uint64, *flow.Header) error {
+		write := mocks.BaselineWriter(t)
+		write.HeaderFunc = func(uint64, *flow.Header) error {
 			return mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusIndex)
+		tr.write = write
 
 		err := tr.IndexChain(st)
 
@@ -736,7 +693,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
+		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
 
 		err := tr.IndexChain(st)
@@ -752,7 +709,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
+		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
 
 		err := tr.IndexChain(st)
@@ -763,13 +720,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 	t.Run("handles indexer failure to write transactions", func(t *testing.T) {
 		t.Parallel()
 
-		index := mocks.BaselineWriter(t)
-		index.ResultsFunc = func([]*flow.TransactionResult) error {
+		write := mocks.BaselineWriter(t)
+		write.ResultsFunc = func([]*flow.TransactionResult) error {
 			return mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusIndex)
+		tr.write = write
 
 		err := tr.IndexChain(st)
 
@@ -784,7 +741,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
+		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
 
 		err := tr.IndexChain(st)
@@ -795,13 +752,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 	t.Run("handles indexer failure to write collections", func(t *testing.T) {
 		t.Parallel()
 
-		index := mocks.BaselineWriter(t)
-		index.CollectionsFunc = func(uint64, []*flow.LightCollection) error {
+		write := mocks.BaselineWriter(t)
+		write.CollectionsFunc = func(uint64, []*flow.LightCollection) error {
 			return mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusIndex)
+		tr.write = write
 
 		err := tr.IndexChain(st)
 
@@ -816,7 +773,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
+		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
 
 		err := tr.IndexChain(st)
@@ -827,13 +784,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 	t.Run("handles indexer failure to write guarantees", func(t *testing.T) {
 		t.Parallel()
 
-		index := mocks.BaselineWriter(t)
-		index.GuaranteesFunc = func(uint64, []*flow.CollectionGuarantee) error {
+		write := mocks.BaselineWriter(t)
+		write.GuaranteesFunc = func(uint64, []*flow.CollectionGuarantee) error {
 			return mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusIndex)
+		tr.write = write
 
 		err := tr.IndexChain(st)
 
@@ -848,7 +805,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
+		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
 
 		err := tr.IndexChain(st)
@@ -859,13 +816,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 	t.Run("handles indexer failure to write events", func(t *testing.T) {
 		t.Parallel()
 
-		index := mocks.BaselineWriter(t)
-		index.EventsFunc = func(uint64, []flow.Event) error {
+		write := mocks.BaselineWriter(t)
+		write.EventsFunc = func(uint64, []flow.Event) error {
 			return mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusIndex)
+		tr.write = write
 
 		err := tr.IndexChain(st)
 
@@ -880,7 +837,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
+		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
 
 		err := tr.IndexChain(st)
@@ -891,13 +848,13 @@ func TestTransitions_IndexChain(t *testing.T) {
 	t.Run("handles indexer failure to write seals", func(t *testing.T) {
 		t.Parallel()
 
-		index := mocks.BaselineWriter(t)
-		index.SealsFunc = func(uint64, []*flow.Seal) error {
+		write := mocks.BaselineWriter(t)
+		write.SealsFunc = func(uint64, []*flow.Seal) error {
 			return mocks.GenericError
 		}
 
-		tr, st := baselineFSM(t, StatusForwarded)
-		tr.index = index
+		tr, st := baselineFSM(t, StatusIndex)
+		tr.write = write
 
 		err := tr.IndexChain(st)
 
@@ -908,9 +865,9 @@ func TestTransitions_IndexChain(t *testing.T) {
 func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 	t.Helper()
 
-	load := mocks.BaselineLoader(t)
 	chain := mocks.BaselineChain(t)
-	index := mocks.BaselineWriter(t)
+	read := mocks.BaselineReader(t)
+	write := mocks.BaselineWriter(t)
 	feeder := mocks.BaselineFeeder(t)
 	forest := mocks.BaselineForest(t, true)
 
@@ -918,22 +875,12 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 	doneCh := make(chan struct{})
 
 	tr := &Transitions{
-		cfg: Config{
-			IndexCommit:       true,
-			IndexHeader:       true,
-			IndexPayloads:     true,
-			IndexCollections:  true,
-			IndexGuarantees:   true,
-			IndexTransactions: true,
-			IndexResults:      true,
-			IndexEvents:       true,
-			IndexSeals:        true,
-		},
+		cfg:   DefaultConfig,
 		log:   mocks.NoopLogger,
-		load:  load,
 		chain: chain,
 		feed:  feeder,
-		index: index,
+		read:  read,
+		write: write,
 		once:  once,
 	}
 

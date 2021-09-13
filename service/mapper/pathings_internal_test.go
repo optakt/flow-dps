@@ -27,7 +27,7 @@ import (
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
-func TestAllPaths(t *testing.T) {
+func TestExtractPaths(t *testing.T) {
 	t.Run("nominal case with single path", func(t *testing.T) {
 		t.Parallel()
 
@@ -35,7 +35,7 @@ func TestAllPaths(t *testing.T) {
 		testTrie, err := trie.NewMTrie(testNode)
 		require.NoError(t, err)
 
-		got := allPaths(testTrie)
+		got := extractPaths(testTrie)
 
 		assert.NotEmpty(t, got)
 		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPath(0)}, got)
@@ -44,7 +44,7 @@ func TestAllPaths(t *testing.T) {
 	t.Run("nominal case with multiple paths", func(t *testing.T) {
 		t.Parallel()
 
-		got := allPaths(mocks.GenericTrie)
+		got := extractPaths(mocks.GenericTrie)
 
 		// Only the paths in nodes 1, 2 and 4 are taken into account since they are the only leaves.
 		assert.Len(t, got, 3)
@@ -54,7 +54,7 @@ func TestAllPaths(t *testing.T) {
 	t.Run("empty trie", func(t *testing.T) {
 		t.Parallel()
 
-		got := allPaths(trie.NewEmptyMTrie())
+		got := extractPaths(trie.NewEmptyMTrie())
 
 		assert.Empty(t, got)
 	})
