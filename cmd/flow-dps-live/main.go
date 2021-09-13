@@ -33,6 +33,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 
 	sdk "github.com/onflow/flow-go-sdk/crypto"
@@ -225,7 +226,9 @@ func run() int {
 
 	// Initialize the execution follower that will read block records from the
 	// Google Cloud Platform bucket.
-	client, err := googlecloud.NewClient(context.Background())
+	client, err := googlecloud.NewClient(context.Background(),
+		option.WithoutAuthentication(),
+	)
 	if err != nil {
 		log.Error().Err(err).Msg("could not connect GCP client")
 		return failure
