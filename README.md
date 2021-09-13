@@ -35,7 +35,7 @@ Please note that it is also required to make sure that your `GOPATH` is exported
 
 If you want to make changes to the GRPC API, the two following binaries are required as well.
 
-* [`protoc`](https://grpc.io/docs/protoc-installation/) version `3.17.0`
+* [`protoc`](https://grpc.io/docs/protoc-installation/) version `3.17.3`
 * `go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26`
 * `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1`
 * `go install github.com/srikrsna/protoc-gen-gotag@v0.6.1`
