@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 )
 
-func allPaths(tree *trie.MTrie) []ledger.Path {
+func extractPaths(tree *trie.MTrie) []ledger.Path {
 
 	var paths []ledger.Path
 

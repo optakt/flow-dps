@@ -47,7 +47,6 @@ import (
 	"github.com/optakt/flow-dps/service/cloud"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
-	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
 	"github.com/optakt/flow-dps/service/tracker"
@@ -75,7 +74,6 @@ func run() int {
 		flagBucket      string
 		flagCheckpoint  string
 		flagData        string
-		flagForce       bool
 		flagIndex       string
 		flagLevel       string
 		flagSeedAddress string
@@ -88,17 +86,13 @@ func run() int {
 	pflag.StringVarP(&flagBucket, "bucket", "u", "", "name of the Google Cloud Storage bucket which contains the block data")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "data", "database directory for protocol data")
-	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
-
-	pflag.BoolVar(&flagSkip, "skip-registers", false, "skip indexing of execution state ledger registers")
+	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
-
-	pflag.CommandLine.MarkHidden("skip-registers")
 
 	// Increase the GOMAXPROCS value in order to use the full IOPS available, see:
 	// https://groups.google.com/g/golang-nuts/c/jPb_h3TvlKE
@@ -140,25 +134,18 @@ func run() int {
 		}
 	}()
 
-	// The storage library is initialized with a codec and provides functions to
-	// interact with a Badger database while encoding and compressing
-	// transparently.
+	// Initialize a codec and a storage function library that is used by the
+	// index reader and writer to manage index database access.
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
-
-	// Initialize the index reader and check whether there is already an index
-	// in the database at the provided index database directory.
 	read := index.NewReader(db, storage)
-	_, err = read.First()
-	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-		log.Error().Err(err).Msg("could not get first height from index reader")
-		return failure
-	}
-	indexExists := err == nil
-	if indexExists && !flagForce {
-		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
-		return failure
-	}
+	write := index.NewWriter(db, storage)
+	defer func() {
+		err := write.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close index writer")
+		}
+	}()
 
 	// Unfortunately, the current consensus follower does not bootstrap the
 	// protocol state until it is run. This means we are liable to miss block
@@ -261,44 +248,23 @@ func run() int {
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
-	// Initialize the index writer, which is responsible for writing the chain
-	// and execution data to the index database.
-	write := index.NewWriter(db, storage)
-	defer func() {
-		err := write.Close()
-		if err != nil {
-			log.Error().Err(err).Msg("could not close index writer")
-		}
-	}()
-
-	// Initialize the loader component, which is responsible for loading,
-	// decoding and providing indexing for the root checkpoint.
-	load := loader.New(
-		loader.WithCheckpointPath(flagCheckpoint),
-	)
-
 	// Initialize the state transition library, the finite-state machine (FSM)
 	// and then register the desired state transitions with the FSM.
-	transitions := mapper.NewTransitions(log, load, consensus, execution, write,
-		mapper.WithIndexCommit(true),
-		mapper.WithIndexHeader(true),
-		mapper.WithIndexCollections(true),
-		mapper.WithIndexGuarantees(true),
-		mapper.WithIndexTransactions(true),
-		mapper.WithIndexResults(true),
-		mapper.WithIndexEvents(true),
-		mapper.WithIndexSeals(true),
-		mapper.WithIndexPayloads(!flagSkip),
+	transitions := mapper.NewTransitions(log, consensus, execution, read, write,
+		mapper.WithRootCheckpoint(flagCheckpoint),
+		mapper.WithSkipRegister(flagSkip),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
-		mapper.WithTransition(mapper.StatusEmpty, transitions.BootstrapState),
-		mapper.WithTransition(mapper.StatusUpdating, transitions.UpdateTree),
-		mapper.WithTransition(mapper.StatusMatched, transitions.CollectRegisters),
-		mapper.WithTransition(mapper.StatusCollected, transitions.IndexRegisters),
-		mapper.WithTransition(mapper.StatusIndexed, transitions.ForwardHeight),
-		mapper.WithTransition(mapper.StatusForwarded, transitions.IndexChain),
+		mapper.WithTransition(mapper.StatusInit, transitions.InitializeMapper),
+		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
+		mapper.WithTransition(mapper.StatusResume, transitions.ResumeIndexing),
+		mapper.WithTransition(mapper.StatusUpdate, transitions.UpdateTree),
+		mapper.WithTransition(mapper.StatusCollect, transitions.CollectRegisters),
+		mapper.WithTransition(mapper.StatusMap, transitions.MapRegisters),
+		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
+		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),
 	)
 
 	// Initialize the GRPC server for the DPS API.

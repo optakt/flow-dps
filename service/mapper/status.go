@@ -17,28 +17,34 @@ package mapper
 type Status uint8
 
 const (
-	StatusEmpty Status = iota + 1
-	StatusUpdating
-	StatusMatched
-	StatusCollected
-	StatusIndexed
-	StatusForwarded
+	StatusInit Status = iota + 1
+	StatusBootstrap
+	StatusResume
+	StatusUpdate
+	StatusCollect
+	StatusMap
+	StatusIndex
+	StatusForward
 )
 
 func (s Status) String() string {
 	switch s {
-	case StatusEmpty:
-		return "empty"
-	case StatusUpdating:
-		return "updating"
-	case StatusMatched:
-		return "matched"
-	case StatusCollected:
-		return "collected"
-	case StatusIndexed:
-		return "indexed"
-	case StatusForwarded:
-		return "forwarded"
+	case StatusInit:
+		return "init"
+	case StatusBootstrap:
+		return "bootstrap"
+	case StatusResume:
+		return "resume"
+	case StatusUpdate:
+		return "update"
+	case StatusCollect:
+		return "collect"
+	case StatusMap:
+		return "map"
+	case StatusForward:
+		return "forward"
+	case StatusIndex:
+		return "index"
 	default:
 		return "invalid"
 	}
