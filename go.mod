@@ -31,6 +31,7 @@ require (
 	github.com/ziflex/lecho/v2 v2.3.1
 	golang.org/x/mod v0.4.2
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	google.golang.org/api v0.49.0
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.27.1
 )
