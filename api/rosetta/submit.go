@@ -54,12 +54,12 @@ func (c *Construction) Submit(ctx echo.Context) error {
 
 	err = c.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	rosTxID, err := c.transact.SubmitTransaction(req.SignedTransaction)
 	if err != nil {
-		return echo.NewHTTPError(apiError(txSubmission, err))
+		return apiError(txSubmission, err)
 	}
 
 	res := SubmitResponse{

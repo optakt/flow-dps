@@ -59,12 +59,12 @@ func (d *Data) Transaction(ctx echo.Context) error {
 
 	err = d.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	transaction, err := d.retrieve.Transaction(req.BlockID, req.TransactionID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(txRetrieval, err))
+		return apiError(txRetrieval, err)
 	}
 
 	res := TransactionResponse{

@@ -60,19 +60,19 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 
 	err = c.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	current, _, err := c.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(apiError(referenceBlockRetrieval, err))
+		return apiError(referenceBlockRetrieval, err)
 	}
 
 	// TODO: Allow arbitrary proposal key index
 	// => https://github.com/optakt/flow-dps/issues/369
 	sequence, err := c.retrieve.Sequence(current, req.Options.AccountID, 0)
 	if err != nil {
-		return echo.NewHTTPError(apiError(sequenceNumberRetrieval, err))
+		return apiError(sequenceNumberRetrieval, err)
 	}
 
 	// In the `parse` endpoint, we parse a transaction to produce the original metadata (and operations).

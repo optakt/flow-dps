@@ -61,7 +61,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 
 	err = c.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	parse, err := c.transact.Parse(req.Transaction)
@@ -126,7 +126,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
 	}
 	if err != nil {
-		return echo.NewHTTPError(apiError(txParsing, err))
+		return apiError(txParsing, err)
 	}
 
 	sequence := parse.Sequence()

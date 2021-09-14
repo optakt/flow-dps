@@ -60,12 +60,12 @@ func (d *Data) Balance(ctx echo.Context) error {
 
 	err = d.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	rosBlockID, balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
 	if err != nil {
-		return echo.NewHTTPError(apiError(balancesRetrieval, err))
+		return apiError(balancesRetrieval, err)
 	}
 
 	res := BalanceResponse{

@@ -57,13 +57,13 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 
 	err = c.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	intent, err := c.transact.DeriveIntent(req.Operations)
 	if err != nil {
 		// TODO: check - status code for 'other' errors was 'bad request', now its 'internal server error'
-		return echo.NewHTTPError(apiError(intentDetermination, err))
+		return apiError(intentDetermination, err)
 	}
 
 	res := PreprocessResponse{

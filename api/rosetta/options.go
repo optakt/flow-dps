@@ -64,7 +64,7 @@ func (d *Data) Options(ctx echo.Context) error {
 
 	err = d.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	// Create the allow object, which is native to the response.

@@ -66,17 +66,17 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 
 	err = c.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	intent, err := c.transact.DeriveIntent(req.Operations)
 	if err != nil {
-		return echo.NewHTTPError(apiError(intentDetermination, err))
+		return apiError(intentDetermination, err)
 	}
 
 	unsigned, err := c.transact.CompileTransaction(req.Metadata.CurrentBlockID, intent, req.Metadata.SequenceNumber)
 	if err != nil {
-		return echo.NewHTTPError(apiError(txConstruction, err))
+		return apiError(txConstruction, err)
 	}
 
 	sender := identifier.Account{
@@ -84,7 +84,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	}
 	algo, hash, err := c.transact.HashPayload(req.Metadata.CurrentBlockID, unsigned, sender)
 	if err != nil {
-		return echo.NewHTTPError(apiError(payloadHashing, err))
+		return apiError(payloadHashing, err)
 	}
 
 	// We only support a single signer at the moment, so the account only needs to sign the transaction envelope.

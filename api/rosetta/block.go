@@ -54,12 +54,12 @@ func (d *Data) Block(ctx echo.Context) error {
 
 	err = d.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	block, extraTxIDs, err := d.retrieve.Block(req.BlockID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(blockRetrieval, err))
+		return apiError(blockRetrieval, err)
 	}
 
 	res := BlockResponse{

@@ -55,17 +55,17 @@ func (d *Data) Status(ctx echo.Context) error {
 
 	err = d.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	oldest, _, err := d.retrieve.Oldest()
 	if err != nil {
-		return echo.NewHTTPError(apiError(oldestRetrieval, err))
+		return apiError(oldestRetrieval, err)
 	}
 
 	current, timestamp, err := d.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(apiError(currentRetrieval, err))
+		return apiError(currentRetrieval, err)
 	}
 
 	res := StatusResponse{

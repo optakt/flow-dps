@@ -53,12 +53,12 @@ func (c *Construction) Hash(ctx echo.Context) error {
 
 	err = c.config.Check(req.NetworkID)
 	if err != nil {
-		return echo.NewHTTPError(apiError(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	rosTxID, err := c.transact.TransactionIdentifier(req.SignedTransaction)
 	if err != nil {
-		return echo.NewHTTPError(apiError(txIdentifier, err))
+		return apiError(txIdentifier, err)
 	}
 
 	res := HashResponse{
