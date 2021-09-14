@@ -304,10 +304,13 @@ func invalidPayload(fail failure.InvalidPayload) Error {
 	)
 }
 
+// unpackError returns the HTTP status code and Rosetta Error for malformed JSON requests.
 func unpackError(err error) *echo.HTTPError {
 	return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 }
 
+// unpackError returns the HTTP status code and Rosetta Error for requests
+// that did not pass validation.
 func formatError(err error) *echo.HTTPError {
 	if errors.Is(err, ErrBlockLength) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength, withDetail("want_length", HexIDSize)))
@@ -321,11 +324,10 @@ func formatError(err error) *echo.HTTPError {
 	return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 }
 
-// apiError will take a general error and try to classify it based on its type
-// and return the appropriate HTTP status code and Rosetta Error.
+// apiError returns the HTTP status code and Rosetta Error for various errors
+// occurred during request processing.
 func apiError(description string, err error) *echo.HTTPError {
 
-	// TODO - check - this one was a special case so far; perhaps it can be still.
 	var inErr failure.InvalidNetwork
 	if errors.As(err, &inErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(inErr))

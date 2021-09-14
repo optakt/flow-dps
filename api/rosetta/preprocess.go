@@ -62,7 +62,6 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 
 	intent, err := c.transact.DeriveIntent(req.Operations)
 	if err != nil {
-		// TODO: check - status code for 'other' errors was 'bad request', now its 'internal server error'
 		return apiError(intentDetermination, err)
 	}
 
