@@ -17,7 +17,6 @@ package invoker
 import (
 	"testing"
 
-	"github.com/c2h5oh/datasize"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -37,7 +36,7 @@ func TestNew(t *testing.T) {
 
 		index := mocks.BaselineReader(t)
 
-		invoke, err := New(index, WithCacheSize(uint64(datasize.MB)))
+		invoke, err := New(index, WithCacheSize(1_000_000))
 
 		require.NoError(t, err)
 		assert.NotNil(t, invoke)

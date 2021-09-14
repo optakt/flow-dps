@@ -23,7 +23,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/c2h5oh/datasize"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
@@ -73,7 +72,7 @@ func run() int {
 
 	pflag.StringVarP(&flagDPSAPI, "dps-api", "a", "127.0.0.1:5005", "host address for GRPC API endpoint")
 	pflag.StringVarP(&flagAccessAPI, "access-api", "c", "access.canary.nodes.onflow.org:9000", "host address for Flow network's Access API endpoint")
-	pflag.Uint64VarP(&flagCache, "cache", "e", uint64(datasize.GB), "maximum cache size for register reads in bytes")
+	pflag.Uint64VarP(&flagCache, "cache", "e", 1_000_000_000, "maximum cache size for register reads in bytes")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
 	pflag.UintVarP(&flagTransactions, "transaction-limit", "t", 200, "maximum amount of transactions to include in a block response")
