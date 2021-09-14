@@ -30,7 +30,7 @@ staked and delegated tokens, for accounts which deploy these custom resources.
 
 ## Dependencies
 
-Go `v1.17` or higher is recommended to compile `flow-dps`.
+Go `v1.16` or higher is required to compile `flow-dps`.
 Please note that it is also required to make sure that your `GOPATH` is exported in your environment in order to generate the DPS API.
 
 If you want to make changes to the GRPC API, the following dependencies are required as well.

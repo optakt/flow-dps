@@ -397,7 +397,7 @@ This guide lists the necessary step to get started with installing and testing t
 
 #### Dependencies
 
-* `go1.17` (recommended)
+* `go1.16` or higher
 
 #### Manual Build
 
