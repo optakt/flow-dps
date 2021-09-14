@@ -26,8 +26,6 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/metrics/output"
-	"github.com/optakt/flow-dps/metrics/rcrowley"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
@@ -35,7 +33,6 @@ import (
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
-	"github.com/optakt/flow-dps/service/metrics"
 	"github.com/optakt/flow-dps/service/storage"
 )
 
@@ -71,8 +68,6 @@ func run() int {
 		flagIndexTransactions bool
 		flagIndexSeals        bool
 		flagLevel             string
-		flagMetrics           bool
-		flagMetricsInterval   time.Duration
 		flagTrie              string
 	)
 
@@ -91,8 +86,6 @@ func run() int {
 	pflag.BoolVar(&flagIndexTransactions, "index-transactions", false, "index transactions")
 	pflag.BoolVar(&flagIndexSeals, "index-seals", false, "index seals")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.BoolVarP(&flagMetrics, "metrics", "m", false, "enable metrics collection and output")
-	pflag.DurationVar(&flagMetricsInterval, "metrics-interval", 5*time.Minute, "defines the interval of metrics output to log")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
 
 	pflag.Parse()
@@ -144,20 +137,10 @@ func run() int {
 	}
 	defer data.Close()
 
-	// We initialize a metrics logger regardless of whether metrics are enabled;
-	// it will just do nothing if there are no registered metrics.
-	mout := output.New(log, flagMetricsInterval)
-
 	// The storage library is initialized with a codec and provides functions to
 	// interact with a Badger database while encoding and compressing
 	// transparently.
-	var codec dps.Codec
-	codec = zbor.NewCodec()
-	if flagMetrics {
-		size := rcrowley.NewSize("store")
-		mout.Register(size)
-		codec = metrics.NewCodec(codec, size)
-	}
+	codec := zbor.NewCodec()
 	storage := storage.New(codec)
 
 	// Check if index already exists.
@@ -174,13 +157,7 @@ func run() int {
 	)
 
 	// The chain is responsible for reading blockchain data from the protocol state.
-	var disk dps.Chain
-	disk = chain.FromDisk(data)
-	if flagMetrics {
-		time := rcrowley.NewTime("read")
-		mout.Register(time)
-		disk = metrics.NewChain(disk, time)
-	}
+	disk := chain.FromDisk(data)
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
 	segments, err := wal.NewSegmentsReader(flagTrie)
@@ -199,11 +176,6 @@ func run() int {
 		}
 	}()
 	write := dps.Writer(index)
-	if flagMetrics {
-		time := rcrowley.NewTime("write")
-		mout.Register(time)
-		write = metrics.NewWriter(write, time)
-	}
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	transitions := mapper.NewTransitions(log, load, disk, feed, write,
@@ -248,11 +220,6 @@ func run() int {
 		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
 	}()
 
-	// Start metrics output.
-	if flagMetrics {
-		mout.Run()
-	}
-
 	select {
 	case <-sig:
 		log.Info().Msg("Flow DPS Indexer stopping")
@@ -267,11 +234,6 @@ func run() int {
 		log.Warn().Msg("forcing exit")
 		os.Exit(1)
 	}()
-
-	// Stop metrics output.
-	if flagMetrics {
-		mout.Stop()
-	}
 
 	// The following code starts a shut down with a certain timeout and makes
 	// sure that the main executing components are shutting down within the

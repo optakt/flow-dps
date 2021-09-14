@@ -23,7 +23,6 @@ require (
 	github.com/onflow/flow-go/crypto v0.18.0
 	github.com/onflow/flow/protobuf/go/flow v0.2.2
 	github.com/prometheus/tsdb v0.7.1
-	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/rs/zerolog v1.22.0
 	github.com/spf13/pflag v1.0.5
 	github.com/srikrsna/protoc-gen-gotag v0.6.1
