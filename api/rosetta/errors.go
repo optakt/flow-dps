@@ -309,7 +309,7 @@ func unpackError(err error) *echo.HTTPError {
 	return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
 }
 
-// unpackError returns the HTTP status code and Rosetta Error for requests
+// formatError returns the HTTP status code and Rosetta Error for requests
 // that did not pass validation.
 func formatError(err error) *echo.HTTPError {
 
@@ -343,6 +343,7 @@ func formatError(err error) *echo.HTTPError {
 // occurred during request processing.
 func apiError(description string, err error) *echo.HTTPError {
 
+	// Common errors, found both in Data and Construction API.
 	var inErr failure.InvalidNetwork
 	if errors.As(err, &inErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(inErr))
@@ -377,7 +378,6 @@ func apiError(description string, err error) *echo.HTTPError {
 	}
 
 	// Construction API specific errors.
-
 	var iautErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iautErr))

@@ -54,10 +54,6 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	// TODO: Check if we can set up validation middleware to remove the
-	// redundant business logic between routes:
-	// => https://github.com/optakt/flow-dps/issues/164
-
 	err = d.config.Check(req.NetworkID)
 	if err != nil {
 		return apiError(networkCheck, err)
