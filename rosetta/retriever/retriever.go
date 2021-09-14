@@ -343,7 +343,7 @@ func (r *Retriever) Sequence(rosBlockID identifier.Block, rosAccountID identifie
 	}
 
 	// Retrieve the key at the height of the given block and for the given
-	// address at index 0.
+	// address at the given index.
 	key, err := r.invoke.Key(height, address, index)
 	if err != nil {
 		return 0, fmt.Errorf("could not retrieve account: %w", err)

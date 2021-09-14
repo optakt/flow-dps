@@ -59,8 +59,27 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return validationError(err)
 	}
 
+	parse, err := c.transact.Parse(req.Transaction)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
+	}
+
+	refBlockID, err := parse.BlockID()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
+	}
+
+	signers, err := parse.Signers()
+	var isgErr failure.InvalidSignature
+	if errors.As(err, &isgErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignature(isgErr))
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
+	}
+
 	// Parse the transaction and recreate the original list of operations, as well as all signers involved.
-	refBlockID, sequence, operations, signers, err := c.transact.ParseTransaction(req.Transaction)
+	operations, err := parse.Operations()
 	var iaErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
@@ -93,10 +112,6 @@ func (c *Construction) Parse(ctx echo.Context) error {
 	if errors.As(err, &irErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidReceiver(irErr))
 	}
-	var isgErr failure.InvalidSignature
-	if errors.As(err, &isgErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignature(isgErr))
-	}
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
@@ -109,6 +124,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
 	}
 
+	sequence := parse.Sequence()
 	metadata := object.Metadata{
 		CurrentBlockID: refBlockID,
 		SequenceNumber: sequence,

@@ -20,20 +20,24 @@ type Generator struct {
 	GetBalanceFunc      func(symbol string) ([]byte, error)
 	TokensDepositedFunc func(symbol string) (string, error)
 	TokensWithdrawnFunc func(symbol string) (string, error)
+	TransferTokensFunc  func(symbol string) ([]byte, error)
 }
 
 func BaselineGenerator(t *testing.T) *Generator {
 	t.Helper()
 
 	g := Generator{
-		GetBalanceFunc: func(symbol string) ([]byte, error) {
+		GetBalanceFunc: func(string) ([]byte, error) {
 			return []byte(GenericAmount(0).String()), nil
 		},
-		TokensDepositedFunc: func(symbol string) (string, error) {
+		TokensDepositedFunc: func(string) (string, error) {
 			return string(GenericEventType(0)), nil
 		},
-		TokensWithdrawnFunc: func(symbol string) (string, error) {
+		TokensWithdrawnFunc: func(string) (string, error) {
 			return string(GenericEventType(1)), nil
+		},
+		TransferTokensFunc: func(string) ([]byte, error) {
+			return GenericBytes, nil
 		},
 	}
 
@@ -50,4 +54,8 @@ func (g *Generator) TokensDeposited(symbol string) (string, error) {
 
 func (g *Generator) TokensWithdrawn(symbol string) (string, error) {
 	return g.TokensWithdrawnFunc(symbol)
+}
+
+func (g *Generator) TransferTokens(symbol string) ([]byte, error) {
+	return g.TransferTokensFunc(symbol)
 }

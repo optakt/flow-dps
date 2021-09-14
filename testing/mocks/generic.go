@@ -27,6 +27,8 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/flow-go/crypto"
+	chash "github.com/onflow/flow-go/crypto/hash"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
@@ -128,6 +130,14 @@ var (
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),
 		Balance: 84,
+		Keys: []flow.AccountPublicKey{
+			{
+				Index:     0,
+				SeqNumber: 42,
+				HashAlgo:  chash.SHA2_256,
+				PublicKey: crypto.NeutralBLSPublicKey(),
+			},
+		},
 	}
 
 	GenericRosBlockID = identifier.Block{
@@ -384,7 +394,7 @@ func GenericOperations(number int) []object.Operation {
 		account := GenericAccountID(i % 2)
 
 		// Simulate that every second operation is the withdrawal.
-		value := GenericAmount(i).String()
+		value := GenericAmount(i / 2).String()
 		if i%2 == 1 {
 			value = "-" + value
 		}
