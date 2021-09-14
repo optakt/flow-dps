@@ -35,6 +35,8 @@ This document is aimed at introducing developers to the Flow Data Provisioning S
       2. [Manual Build](#manual-build)
    2. [Setting up a test environment](#setting-up-a-test-environment)
 6. [More Resources](#more-resources)
+   1. [Internal](#internal)
+   2. [External](#external)
 
 ## Getting Started
 
@@ -395,7 +397,7 @@ This guide lists the necessary step to get started with installing and testing t
 
 #### Dependencies
 
-* `go1.16`
+* `go1.17` (recommended)
 
 #### Manual Build
 
