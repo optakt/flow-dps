@@ -49,7 +49,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	var req PayloadsRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = c.validate.Request(req)

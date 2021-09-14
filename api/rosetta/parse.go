@@ -51,7 +51,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 	var req ParseRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = c.validate.Request(req)

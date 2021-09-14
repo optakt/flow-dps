@@ -304,6 +304,10 @@ func invalidPayload(fail failure.InvalidPayload) Error {
 	)
 }
 
+func unpackError(err error) *echo.HTTPError {
+	return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+}
+
 func formatError(err error) *echo.HTTPError {
 	if errors.Is(err, ErrBlockLength) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength, withDetail("want_length", HexIDSize)))
