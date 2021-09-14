@@ -5,7 +5,6 @@ go 1.16
 require (
 	cloud.google.com/go/storage v1.16.1
 	github.com/OneOfOne/xxhash v1.2.8
-	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/dgraph-io/ristretto v0.0.3
 	github.com/fxamacker/cbor/v2 v2.3.0
