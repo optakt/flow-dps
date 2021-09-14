@@ -23,7 +23,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
@@ -35,10 +34,10 @@ import (
 type GCPStreamer struct {
 	log    zerolog.Logger
 	bucket *storage.BucketHandle
-	queue  *deque.Deque // queue of block identifiers for next downloads
-	buffer *deque.Deque // queue of downloaded execution data records
-	limit  uint         // buffer size limit for downloaded records
-	busy   uint32       // used as a guard to avoid concurrent polling
+	queue  *dps.SafeDeque // queue of block identifiers for next downloads
+	buffer *dps.SafeDeque // queue of downloaded execution data records
+	limit  uint           // buffer size limit for downloaded records
+	busy   uint32         // used as a guard to avoid concurrent polling
 }
 
 func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ...Option) *GCPStreamer {
@@ -51,8 +50,8 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ..
 	g := GCPStreamer{
 		log:    log.With().Str("component", "gcp_streamer").Logger(),
 		bucket: bucket,
-		queue:  deque.New(),
-		buffer: deque.New(),
+		queue:  dps.NewDeque(),
+		buffer: dps.NewDeque(),
 		limit:  cfg.BufferSize,
 		busy:   0,
 	}
