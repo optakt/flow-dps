@@ -56,8 +56,8 @@ func TestTransactionParser_BlockID(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
-			transactor.ParseValidator(validator),
+			transactor.InjectTransaction(tx),
+			transactor.InjectValidator(validator),
 		)
 
 		got, err := p.BlockID()
@@ -81,8 +81,8 @@ func TestTransactionParser_BlockID(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
-			transactor.ParseValidator(validator),
+			transactor.InjectTransaction(tx),
+			transactor.InjectValidator(validator),
 		)
 
 		_, err := p.BlockID()
@@ -96,7 +96,7 @@ func TestTransactionParser_Sequence(t *testing.T) {
 		ProposalKey: sdk.ProposalKey{SequenceNumber: 42},
 	}
 
-	p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx))
+	p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx))
 
 	got := p.Sequence()
 
@@ -149,8 +149,8 @@ func TestTransactionParser_Signers(t *testing.T) {
 		t.Parallel()
 
 		p := transactor.BaselineTransactionParser(t,
-			transactor.ParseTransaction(sdk.NewTransaction()),
-			transactor.ParseInvoker(invoker),
+			transactor.InjectTransaction(sdk.NewTransaction()),
+			transactor.InjectInvoker(invoker),
 		)
 
 		got, err := p.Signers()
@@ -171,7 +171,7 @@ func TestTransactionParser_Signers(t *testing.T) {
 			return &pubKey, nil
 		}
 
-		p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx), transactor.ParseInvoker(invoker))
+		p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx), transactor.InjectInvoker(invoker))
 
 		got, err := p.Signers()
 
@@ -192,7 +192,7 @@ func TestTransactionParser_Signers(t *testing.T) {
 			PayloadSignatures:  []sdk.TransactionSignature{signature},
 		}
 
-		p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx), transactor.ParseInvoker(invoker))
+		p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx), transactor.InjectInvoker(invoker))
 
 		_, err := p.Signers()
 
@@ -209,7 +209,7 @@ func TestTransactionParser_Signers(t *testing.T) {
 			EnvelopeSignatures: []sdk.TransactionSignature{signature, signature, signature},
 		}
 
-		p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx), transactor.ParseInvoker(invoker))
+		p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx), transactor.InjectInvoker(invoker))
 
 		_, err := p.Signers()
 
@@ -226,7 +226,7 @@ func TestTransactionParser_Signers(t *testing.T) {
 			EnvelopeSignatures: []sdk.TransactionSignature{signature},
 		}
 
-		p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx), transactor.ParseInvoker(invoker))
+		p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx), transactor.InjectInvoker(invoker))
 
 		_, err := p.Signers()
 
@@ -244,9 +244,9 @@ func TestTransactionParser_Signers(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
-			transactor.ParseValidator(validator),
-			transactor.ParseInvoker(invoker),
+			transactor.InjectTransaction(tx),
+			transactor.InjectValidator(validator),
+			transactor.InjectInvoker(invoker),
 		)
 
 		_, err := p.Signers()
@@ -264,8 +264,8 @@ func TestTransactionParser_Signers(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
-			transactor.ParseInvoker(invoker),
+			transactor.InjectTransaction(tx),
+			transactor.InjectInvoker(invoker),
 		)
 
 		_, err := p.Signers()
@@ -285,7 +285,7 @@ func TestTransactionParser_Signers(t *testing.T) {
 			return &mockSignature, nil
 		}
 
-		p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx), transactor.ParseInvoker(invoker))
+		p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx), transactor.InjectInvoker(invoker))
 
 		_, err := p.Signers()
 
@@ -303,9 +303,9 @@ func TestTransactionParser_Signers(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
-			transactor.ParseInvoker(invoker),
-			transactor.ParseValidator(validator),
+			transactor.InjectTransaction(tx),
+			transactor.InjectInvoker(invoker),
+			transactor.InjectValidator(validator),
 		)
 
 		_, err := p.Signers()
@@ -338,7 +338,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx))
+		p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx))
 
 		got, err := p.Operations()
 
@@ -353,7 +353,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 			Authorizers: []sdk.Address{sender, receiver, sender},
 		}
 
-		p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx))
+		p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx))
 
 		_, err := p.Operations()
 
@@ -375,8 +375,8 @@ func TestTransactionParser_Operations(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
-			transactor.ParseValidator(validator),
+			transactor.InjectTransaction(tx),
+			transactor.InjectValidator(validator),
 		)
 
 		_, err := p.Operations()
@@ -392,7 +392,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 			Authorizers: []sdk.Address{sender},
 		}
 
-		p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx))
+		p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx))
 
 		_, err := p.Operations()
 
@@ -409,7 +409,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 			Authorizers: []sdk.Address{sender},
 		}
 
-		p := transactor.BaselineTransactionParser(t, transactor.ParseTransaction(tx))
+		p := transactor.BaselineTransactionParser(t, transactor.InjectTransaction(tx))
 
 		_, err := p.Operations()
 
@@ -427,8 +427,8 @@ func TestTransactionParser_Operations(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
-			transactor.ParseGenerator(generator),
+			transactor.InjectTransaction(tx),
+			transactor.InjectGenerator(generator),
 		)
 
 		_, err := p.Operations()
@@ -446,8 +446,8 @@ func TestTransactionParser_Operations(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
-			transactor.ParseGenerator(generator),
+			transactor.InjectTransaction(tx),
+			transactor.InjectGenerator(generator),
 		)
 
 		_, err := p.Operations()
@@ -469,7 +469,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
+			transactor.InjectTransaction(tx),
 		)
 
 		_, err := p.Operations()
@@ -491,7 +491,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
+			transactor.InjectTransaction(tx),
 		)
 
 		_, err := p.Operations()
@@ -513,7 +513,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
+			transactor.InjectTransaction(tx),
 		)
 
 		_, err := p.Operations()
@@ -535,7 +535,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
+			transactor.InjectTransaction(tx),
 		)
 
 		_, err := p.Operations()
@@ -557,7 +557,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
+			transactor.InjectTransaction(tx),
 		)
 
 		_, err := p.Operations()
@@ -579,7 +579,7 @@ func TestTransactionParser_Operations(t *testing.T) {
 
 		p := transactor.BaselineTransactionParser(
 			t,
-			transactor.ParseTransaction(tx),
+			transactor.InjectTransaction(tx),
 		)
 
 		_, err := p.Operations()

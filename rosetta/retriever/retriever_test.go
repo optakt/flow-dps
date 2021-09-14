@@ -880,28 +880,34 @@ func TestRetriever_Transaction(t *testing.T) {
 }
 
 func TestRetriever_Sequence(t *testing.T) {
+	rosBlockID := mocks.GenericRosBlockID
+	accountID := mocks.GenericAccountID(0)
+	address := mocks.GenericAddress(0)
+	key := mocks.GenericAccount.Keys[0]
+	header := mocks.GenericHeader
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		validator := mocks.BaselineValidator(t)
 		validator.BlockFunc = func(blockID identifier.Block) (uint64, flow.Identifier, error) {
-			assert.Equal(t, mocks.GenericRosBlockID, blockID)
+			assert.Equal(t, rosBlockID, blockID)
 
-			return mocks.GenericHeight, flow.ZeroID, nil
+			return header.Height, header.ID(), nil
 		}
-		validator.AccountFunc = func(accountID identifier.Account) (flow.Address, error) {
-			assert.Equal(t, mocks.GenericAccountID(0), accountID)
+		validator.AccountFunc = func(gotAccountID identifier.Account) (flow.Address, error) {
+			assert.Equal(t, accountID, gotAccountID)
 
-			return mocks.GenericAddress(0), nil
+			return address, nil
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.KeyFunc = func(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
-			assert.Equal(t, mocks.GenericHeight, height)
-			assert.Equal(t, mocks.GenericAddress(0), address)
+		invoker.KeyFunc = func(height uint64, gotAddress flow.Address, index int) (*flow.AccountPublicKey, error) {
+			assert.Equal(t, header.Height, height)
+			assert.Equal(t, address, gotAddress)
 			assert.Equal(t, 0, index)
 
-			return &mocks.GenericAccount.Keys[0], nil
+			return &key, nil
 		}
 
 		ret := retriever.New(
@@ -913,10 +919,10 @@ func TestRetriever_Sequence(t *testing.T) {
 			mocks.BaselineConverter(t),
 		)
 
-		seqNum, err := ret.Sequence(mocks.GenericRosBlockID, mocks.GenericAccountID(0), 0)
+		seqNum, err := ret.Sequence(rosBlockID, accountID, 0)
 
-		assert.NoError(t, err)
-		assert.Equal(t, mocks.GenericAccount.Keys[0].SeqNumber, seqNum)
+		require.NoError(t, err)
+		assert.Equal(t, key.SeqNumber, seqNum)
 	})
 
 	t.Run("handles validator failure on block", func(t *testing.T) {
@@ -936,7 +942,7 @@ func TestRetriever_Sequence(t *testing.T) {
 			mocks.BaselineConverter(t),
 		)
 
-		_, err := ret.Sequence(mocks.GenericRosBlockID, mocks.GenericAccountID(0), 0)
+		_, err := ret.Sequence(rosBlockID, accountID, 0)
 
 		assert.Error(t, err)
 	})
@@ -958,7 +964,7 @@ func TestRetriever_Sequence(t *testing.T) {
 			mocks.BaselineConverter(t),
 		)
 
-		_, err := ret.Sequence(mocks.GenericRosBlockID, mocks.GenericAccountID(0), 0)
+		_, err := ret.Sequence(rosBlockID, accountID, 0)
 
 		assert.Error(t, err)
 	})
@@ -980,7 +986,7 @@ func TestRetriever_Sequence(t *testing.T) {
 			mocks.BaselineConverter(t),
 		)
 
-		_, err := ret.Sequence(mocks.GenericRosBlockID, mocks.GenericAccountID(0), 0)
+		_, err := ret.Sequence(rosBlockID, accountID, 0)
 
 		assert.Error(t, err)
 	})

@@ -37,25 +37,25 @@ func BaselineTransactionParser(t *testing.T, opts ...func(parser *TransactionPar
 	return &p
 }
 
-func ParseTransaction(tx *sdk.Transaction) func(*TransactionParser) {
+func InjectTransaction(tx *sdk.Transaction) func(*TransactionParser) {
 	return func(parser *TransactionParser) {
 		parser.tx = tx
 	}
 }
 
-func ParseValidator(validate Validator) func(*TransactionParser) {
+func InjectValidator(validate Validator) func(*TransactionParser) {
 	return func(parser *TransactionParser) {
 		parser.validate = validate
 	}
 }
 
-func ParseGenerator(generate Generator) func(*TransactionParser) {
+func InjectGenerator(generate Generator) func(*TransactionParser) {
 	return func(parser *TransactionParser) {
 		parser.generate = generate
 	}
 }
 
-func ParseInvoker(invoke Invoker) func(*TransactionParser) {
+func InjectInvoker(invoke Invoker) func(*TransactionParser) {
 	return func(parser *TransactionParser) {
 		parser.invoke = invoke
 	}
