@@ -15,12 +15,10 @@
 package rosetta
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -49,37 +47,22 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 	var req PreprocessRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
+	}
+
+	err = c.config.Check(req.NetworkID)
+	if err != nil {
+		return apiError(networkCheck, err)
 	}
 
 	intent, err := c.transact.DeriveIntent(req.Operations)
-	var iaErr failure.InvalidAccount
-	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
-	}
-	var icErr failure.InvalidCurrency
-	if errors.As(err, &icErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidCurrency(icErr))
-	}
-	var ucErr failure.UnknownCurrency
-	if errors.As(err, &ucErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownCurrency(ucErr))
-	}
-	var opErr failure.InvalidOperations
-	if errors.As(err, &opErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(TxInvalidOps))
-	}
-	var inErr failure.InvalidIntent
-	if errors.As(err, &inErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidIntent(inErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, internal(intentDetermination, err))
+		return apiError(intentDetermination, err)
 	}
 
 	res := PreprocessResponse{

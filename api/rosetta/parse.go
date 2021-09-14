@@ -15,12 +15,10 @@
 package rosetta
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -51,77 +49,37 @@ func (c *Construction) Parse(ctx echo.Context) error {
 	var req ParseRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
+	}
+
+	err = c.config.Check(req.NetworkID)
+	if err != nil {
+		return apiError(networkCheck, err)
 	}
 
 	parse, err := c.transact.Parse(req.Transaction)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
+		return apiError(txParsing, err)
 	}
 
 	refBlockID, err := parse.BlockID()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
+		return apiError(txParsing, err)
 	}
 
 	signers, err := parse.Signers()
-	var isgErr failure.InvalidSignature
-	if errors.As(err, &isgErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignature(isgErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
+		return apiError(txParsing, err)
 	}
 
-	// Parse the transaction and recreate the original list of operations, as well as all signers involved.
 	operations, err := parse.Operations()
-	var iaErr failure.InvalidAuthorizers
-	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
-	}
-	var iacErr failure.InvalidAccount
-	if errors.As(err, &iacErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iacErr))
-	}
-	var ipyErr failure.InvalidPayer
-	if errors.As(err, &ipyErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidPayer(ipyErr))
-	}
-	var iprErr failure.InvalidProposer
-	if errors.As(err, &iprErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidProposer(iprErr))
-	}
-	var isErr failure.InvalidScript
-	if errors.As(err, &isErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidScript(isErr))
-	}
-	var iargErr failure.InvalidArguments
-	if errors.As(err, &iargErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidArguments(iargErr))
-	}
-	var imErr failure.InvalidAmount
-	if errors.As(err, &imErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAmount(imErr))
-	}
-	var irErr failure.InvalidReceiver
-	if errors.As(err, &irErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidReceiver(irErr))
-	}
-	var ibErr failure.InvalidBlock
-	if errors.As(err, &ibErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
-	}
-	var ubErr failure.UnknownBlock
-	if errors.As(err, &ubErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, internal(txParsing, err))
+		return apiError(txParsing, err)
 	}
 
 	sequence := parse.Sequence()

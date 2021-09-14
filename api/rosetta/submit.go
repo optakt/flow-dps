@@ -44,17 +44,22 @@ func (c *Construction) Submit(ctx echo.Context) error {
 	var req SubmitRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
+	}
+
+	err = c.config.Check(req.NetworkID)
+	if err != nil {
+		return apiError(networkCheck, err)
 	}
 
 	rosTxID, err := c.transact.SubmitTransaction(req.SignedTransaction)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txSubmission, err))
+		return apiError(txSubmission, err)
 	}
 
 	res := SubmitResponse{

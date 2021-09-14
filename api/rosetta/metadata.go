@@ -15,12 +15,10 @@
 package rosetta
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -52,32 +50,29 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 	var req MetadataRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
+	}
+
+	err = c.config.Check(req.NetworkID)
+	if err != nil {
+		return apiError(networkCheck, err)
 	}
 
 	current, _, err := c.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(referenceBlockRetrieval, err))
+		return apiError(referenceBlockRetrieval, err)
 	}
 
 	// TODO: Allow arbitrary proposal key index
 	// => https://github.com/optakt/flow-dps/issues/369
 	sequence, err := c.retrieve.Sequence(current, req.Options.AccountID, 0)
-	var iaErr failure.InvalidAccount
-	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
-	}
-	var ipErr failure.InvalidKey
-	if errors.As(err, &ipErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidKey(ipErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(sequenceNumberRetrieval, err))
+		return apiError(sequenceNumberRetrieval, err)
 	}
 
 	// In the `parse` endpoint, we parse a transaction to produce the original metadata (and operations).

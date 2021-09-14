@@ -15,12 +15,10 @@
 package rosetta
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -46,34 +44,22 @@ func (d *Data) Block(ctx echo.Context) error {
 	var req BlockRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = d.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
 	}
 
 	err = d.config.Check(req.NetworkID)
-	var netErr failure.InvalidNetwork
-	if errors.As(err, &netErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(netErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	block, extraTxIDs, err := d.retrieve.Block(req.BlockID)
-	var ibErr failure.InvalidBlock
-	if errors.As(err, &ibErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
-	}
-	var ubErr failure.UnknownBlock
-	if errors.As(err, &ubErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(blockRetrieval, err))
+		return apiError(blockRetrieval, err)
 	}
 
 	res := BlockResponse{

@@ -15,12 +15,10 @@
 package rosetta
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
 )
@@ -48,33 +46,22 @@ func (c *Construction) Combine(ctx echo.Context) error {
 	var req CombineRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
+	}
+
+	err = c.config.Check(req.NetworkID)
+	if err != nil {
+		return apiError(networkCheck, err)
 	}
 
 	signed, err := c.transact.AttachSignatures(req.UnsignedTransaction, req.Signatures)
-	var iaErr failure.InvalidAuthorizers
-	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iaErr))
-	}
-	var ixErr failure.InvalidSignatures
-	if errors.As(err, &ixErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignatures(ixErr))
-	}
-	var ipErr failure.InvalidPayer
-	if errors.As(err, &ipErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidPayer(ipErr))
-	}
-	var isErr failure.InvalidSignature
-	if errors.As(err, &isErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignature(isErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, internal(txSigning, err))
+		return apiError(txSigning, err)
 	}
 
 	res := CombineResponse{

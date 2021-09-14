@@ -39,7 +39,7 @@ const (
 	CurrenciesEmpty = "currency identifier list is empty"
 	SymbolEmpty     = "currency identifier has empty symbol field"
 	TxHashEmpty     = "transaction identifier has empty hash field"
-	TxLength        = "transaction identifier has invalid hash filed length"
+	TxLength        = "transaction identifier has invalid hash field length"
 	TxInvalidOps    = "transaction operations are invalid"
 	TxBodyEmpty     = "transaction text is empty"
 	SignaturesEmpty = "signature list is empty"
@@ -296,15 +296,140 @@ func invalidKey(fail failure.InvalidKey) Error {
 	)
 }
 
-func validationError(err error) *echo.HTTPError {
-	if errors.Is(err, ErrBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength, withDetail("want_length", HexIDSize)))
+func invalidPayload(fail failure.InvalidPayload) Error {
+	return convertError(
+		configuration.ErrorInvalidPayload,
+		fail.Description,
+		withDetail("encoding", fail.Encoding),
+	)
+}
+
+// unpackError returns the HTTP status code and Rosetta Error for malformed JSON requests.
+func unpackError(err error) *echo.HTTPError {
+	return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+}
+
+// formatError returns the HTTP status code and Rosetta Error for requests
+// that did not pass validation.
+func formatError(err error) *echo.HTTPError {
+
+	var ibErr failure.InvalidBlockHash
+	if errors.As(err, &ibErr) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(ibErr.Description.Text,
+			withDetail("want_length", ibErr.WantLength),
+		))
 	}
-	if errors.Is(err, ErrAddressLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(AddressLength, withDetail("want_length", HexAddressSize)))
+	var iaErr failure.InvalidAccountAddress
+	if errors.As(err, &iaErr) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(iaErr.Description.Text,
+			withDetail("want_length", iaErr.WantLength),
+		))
 	}
-	if errors.Is(err, ErrTxLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(TxLength, withDetail("want_length", HexIDSize)))
+	var itErr failure.InvalidTransactionHash
+	if errors.As(err, &itErr) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(itErr.Description.Text,
+			withDetail("want_length", itErr.WantLength),
+		))
 	}
+	var icErr failure.IncompleteBlock
+	if errors.As(err, &icErr) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(icErr.Description.Text))
+	}
+
 	return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+}
+
+// apiError returns the HTTP status code and Rosetta Error for various errors
+// occurred during request processing.
+func apiError(description string, err error) *echo.HTTPError {
+
+	// Common errors, found both in Data and Construction API.
+	var inErr failure.InvalidNetwork
+	if errors.As(err, &inErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(inErr))
+	}
+	var ibErr failure.InvalidBlock
+	if errors.As(err, &ibErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
+	}
+	var ubErr failure.UnknownBlock
+	if errors.As(err, &ubErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
+	}
+	var iaErr failure.InvalidAccount
+	if errors.As(err, &iaErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
+	}
+	var icErr failure.InvalidCurrency
+	if errors.As(err, &icErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidCurrency(icErr))
+	}
+	var ucErr failure.UnknownCurrency
+	if errors.As(err, &ucErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownCurrency(ucErr))
+	}
+	var itErr failure.InvalidTransaction
+	if errors.As(err, &itErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidTransaction(itErr))
+	}
+	var utErr failure.UnknownTransaction
+	if errors.As(err, &utErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownTransaction(utErr))
+	}
+
+	// Construction API specific errors.
+	var iautErr failure.InvalidAuthorizers
+	if errors.As(err, &iaErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iautErr))
+	}
+	var ipyErr failure.InvalidPayer
+	if errors.As(err, &ipyErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidPayer(ipyErr))
+	}
+	var iprErr failure.InvalidProposer
+	if errors.As(err, &iprErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidProposer(iprErr))
+	}
+	var isgErr failure.InvalidSignature
+	if errors.As(err, &isgErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignature(isgErr))
+	}
+	var isgsErr failure.InvalidSignatures
+	if errors.As(err, &isgsErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignatures(isgsErr))
+	}
+	var opErr failure.InvalidOperations
+	if errors.As(err, &opErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(TxInvalidOps))
+	}
+	var intErr failure.InvalidIntent
+	if errors.As(err, &intErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidIntent(intErr))
+	}
+	var ikErr failure.InvalidKey
+	if errors.As(err, &ipyErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidKey(ikErr))
+	}
+	var isErr failure.InvalidScript
+	if errors.As(err, &isErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidScript(isErr))
+	}
+	var iargErr failure.InvalidArguments
+	if errors.As(err, &iargErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidArguments(iargErr))
+	}
+	var imErr failure.InvalidAmount
+	if errors.As(err, &imErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAmount(imErr))
+	}
+	var irErr failure.InvalidReceiver
+	if errors.As(err, &irErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidReceiver(irErr))
+	}
+	var iplErr failure.InvalidPayload
+	if errors.As(err, &iplErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidPayload(iplErr))
+	}
+
+	return echo.NewHTTPError(http.StatusInternalServerError, internal(description, err))
 }

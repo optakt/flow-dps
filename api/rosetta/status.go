@@ -15,12 +15,10 @@
 package rosetta
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -47,31 +45,27 @@ func (d *Data) Status(ctx echo.Context) error {
 	var req StatusRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = d.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
 	}
 
 	err = d.config.Check(req.NetworkID)
-	var netErr failure.InvalidNetwork
-	if errors.As(err, &netErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(netErr))
-	}
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(networkCheck, err))
+		return apiError(networkCheck, err)
 	}
 
 	oldest, _, err := d.retrieve.Oldest()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(oldestRetrieval, err))
+		return apiError(oldestRetrieval, err)
 	}
 
 	current, timestamp, err := d.retrieve.Current()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(currentRetrieval, err))
+		return apiError(currentRetrieval, err)
 	}
 
 	res := StatusResponse{

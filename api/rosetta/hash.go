@@ -43,17 +43,22 @@ func (c *Construction) Hash(ctx echo.Context) error {
 	var req HashRequest
 	err := ctx.Bind(&req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+		return unpackError(err)
 	}
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
+	}
+
+	err = c.config.Check(req.NetworkID)
+	if err != nil {
+		return apiError(networkCheck, err)
 	}
 
 	rosTxID, err := c.transact.TransactionIdentifier(req.SignedTransaction)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, internal(txIdentifier, err))
+		return apiError(txIdentifier, err)
 	}
 
 	res := HashResponse{
