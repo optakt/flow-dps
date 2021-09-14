@@ -54,14 +54,14 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
 	}
 
 	// Metadata object is the response from our metadata endpoint. Thus, the object
 	// should be okay, but let's validate it anyway.
 	err = c.validate.CompleteBlockID(req.Metadata.CurrentBlockID)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
 	}
 
 	err = c.config.Check(req.NetworkID)

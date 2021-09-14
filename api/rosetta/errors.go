@@ -296,7 +296,7 @@ func invalidKey(fail failure.InvalidKey) Error {
 	)
 }
 
-func validationError(err error) *echo.HTTPError {
+func formatError(err error) *echo.HTTPError {
 	if errors.Is(err, ErrBlockLength) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength, withDetail("want_length", HexIDSize)))
 	}

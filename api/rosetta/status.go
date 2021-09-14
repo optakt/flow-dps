@@ -50,7 +50,7 @@ func (d *Data) Status(ctx echo.Context) error {
 
 	err = d.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
 	}
 
 	err = d.config.Check(req.NetworkID)

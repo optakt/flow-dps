@@ -56,7 +56,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
 	}
 
 	err = c.config.Check(req.NetworkID)

@@ -49,7 +49,7 @@ func (d *Data) Block(ctx echo.Context) error {
 
 	err = d.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
 	}
 
 	err = d.config.Check(req.NetworkID)

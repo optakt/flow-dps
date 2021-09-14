@@ -49,7 +49,7 @@ func (c *Construction) Submit(ctx echo.Context) error {
 
 	err = c.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
 	}
 
 	err = c.config.Check(req.NetworkID)

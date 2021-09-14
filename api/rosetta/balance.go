@@ -51,7 +51,7 @@ func (d *Data) Balance(ctx echo.Context) error {
 
 	err = d.validate.Request(req)
 	if err != nil {
-		return validationError(err)
+		return formatError(err)
 	}
 
 	// TODO: Check if we can set up validation middleware to remove the
