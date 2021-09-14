@@ -114,7 +114,9 @@ func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier,
 // CompleteBlockID verifies that both index and hash are populated in the block ID.
 func (v *Validator) CompleteBlockID(rosBlockID identifier.Block) error {
 	if rosBlockID.Index == nil || rosBlockID.Hash == "" {
-		return rosetta.ErrBlockIncomplete
+		return failure.IncompleteBlock{
+			Description: failure.NewDescription(rosetta.BlockNotFull),
+		}
 	}
 	return nil
 }

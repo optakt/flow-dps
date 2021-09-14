@@ -39,7 +39,7 @@ const (
 	CurrenciesEmpty = "currency identifier list is empty"
 	SymbolEmpty     = "currency identifier has empty symbol field"
 	TxHashEmpty     = "transaction identifier has empty hash field"
-	TxLength        = "transaction identifier has invalid hash filed length"
+	TxLength        = "transaction identifier has invalid hash field length"
 	TxInvalidOps    = "transaction operations are invalid"
 	TxBodyEmpty     = "transaction text is empty"
 	SignaturesEmpty = "signature list is empty"
@@ -312,15 +312,30 @@ func unpackError(err error) *echo.HTTPError {
 // unpackError returns the HTTP status code and Rosetta Error for requests
 // that did not pass validation.
 func formatError(err error) *echo.HTTPError {
-	if errors.Is(err, ErrBlockLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(BlockLength, withDetail("want_length", HexIDSize)))
+
+	var ibErr failure.InvalidBlockHash
+	if errors.As(err, &ibErr) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(ibErr.Description.Text,
+			withDetail("want_length", ibErr.WantLength),
+		))
 	}
-	if errors.Is(err, ErrAddressLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(AddressLength, withDetail("want_length", HexAddressSize)))
+	var iaErr failure.InvalidAccountAddress
+	if errors.As(err, &iaErr) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(iaErr.Description.Text,
+			withDetail("want_length", iaErr.WantLength),
+		))
 	}
-	if errors.Is(err, ErrTxLength) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(TxLength, withDetail("want_length", HexIDSize)))
+	var itErr failure.InvalidTransactionHash
+	if errors.As(err, &itErr) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(itErr.Description.Text,
+			withDetail("want_length", itErr.WantLength),
+		))
 	}
+	var icErr failure.IncompleteBlock
+	if errors.As(err, &icErr) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(icErr.Description.Text))
+	}
+
 	return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
 }
 

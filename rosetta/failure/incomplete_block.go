@@ -12,13 +12,16 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package rosetta
+package failure
 
 import (
-	"github.com/optakt/flow-dps/rosetta/identifier"
+	"fmt"
 )
 
-type Validator interface {
-	Request(interface{}) error
-	CompleteBlockID(identifier.Block) error
+type IncompleteBlock struct {
+	Description Description
+}
+
+func (i IncompleteBlock) Error() string {
+	return fmt.Sprintf("incomplete block: %s", i.Description)
 }

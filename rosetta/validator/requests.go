@@ -21,6 +21,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/optakt/flow-dps/api/rosetta"
+	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
@@ -88,11 +89,23 @@ func (v *Validator) Request(request interface{}) error {
 
 	switch msg {
 	case rosetta.BlockLength:
-		return rosetta.ErrBlockLength
+		return failure.InvalidBlockHash{
+			Description: failure.NewDescription(rosetta.BlockLength),
+			WantLength:  rosetta.HexIDSize,
+		}
+
 	case rosetta.AddressLength:
-		return rosetta.ErrAddressLength
+		return failure.InvalidAccountAddress{
+			Description: failure.NewDescription(rosetta.AddressLength),
+			WantLength:  rosetta.HexAddressSize,
+		}
+
 	case rosetta.TxLength:
-		return rosetta.ErrTxLength
+		return failure.InvalidTransactionHash{
+			Description: failure.NewDescription(rosetta.TxLength),
+			WantLength:  rosetta.HexIDSize,
+		}
+
 	default:
 		return fmt.Errorf(msg)
 	}
