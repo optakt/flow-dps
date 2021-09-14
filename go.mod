@@ -7,7 +7,7 @@ require (
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/dgraph-io/ristretto v0.1.0
-	github.com/fxamacker/cbor/v2 v2.3.0
+	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/gammazero/deque v0.1.0
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/golang/protobuf v1.5.2
