@@ -257,14 +257,12 @@ func run() int {
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
-		mapper.WithTransition(mapper.StatusInit, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
-		mapper.WithTransition(mapper.StatusResume, transitions.ResumeIndexing),
+		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),
 		mapper.WithTransition(mapper.StatusUpdate, transitions.UpdateTree),
 		mapper.WithTransition(mapper.StatusCollect, transitions.CollectRegisters),
 		mapper.WithTransition(mapper.StatusMap, transitions.MapRegisters),
 		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
-		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),
 	)
 
 	// Initialize the GRPC server for the DPS API.

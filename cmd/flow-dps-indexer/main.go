@@ -61,7 +61,7 @@ func run() int {
 		flagTrie       string
 	)
 
-	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
@@ -142,14 +142,12 @@ func run() int {
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
-		mapper.WithTransition(mapper.StatusInit, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
-		mapper.WithTransition(mapper.StatusResume, transitions.ResumeIndexing),
+		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),
 		mapper.WithTransition(mapper.StatusUpdate, transitions.UpdateTree),
 		mapper.WithTransition(mapper.StatusCollect, transitions.CollectRegisters),
 		mapper.WithTransition(mapper.StatusMap, transitions.MapRegisters),
 		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
-		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),
 	)
 
 	// This section launches the main executing components in their own

@@ -25,6 +25,7 @@ type State struct {
 	forest    Forest
 	status    Status
 	height    uint64
+	skip      uint64
 	last      flow.StateCommitment
 	next      flow.StateCommitment
 	registers map[ledger.Path]*ledger.Payload
@@ -34,8 +35,9 @@ type State struct {
 func EmptyState(forest Forest) *State {
 	s := &State{
 		forest:    forest,
-		status:    StatusInit,
+		status:    StatusBootstrap,
 		height:    math.MaxUint64,
+		skip:      0,
 		last:      flow.DummyStateCommitment,
 		next:      flow.DummyStateCommitment,
 		registers: make(map[ledger.Path]*ledger.Payload),
