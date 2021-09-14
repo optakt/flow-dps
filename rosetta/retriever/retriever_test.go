@@ -181,6 +181,7 @@ func TestRetriever_Balances(t *testing.T) {
 			assert.Equal(t, []byte(`test`), script)
 			require.Len(t, parameters, 1)
 			assert.Equal(t, address, parameters[0])
+
 			return mocks.GenericAmount(0), nil
 		}
 
@@ -470,6 +471,7 @@ func TestRetriever_Block(t *testing.T) {
 		}
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
+
 			return events, nil
 		}
 		index.EventsFunc = func(height uint64, types ...flow.EventType) ([]flow.Event, error) {
@@ -640,30 +642,6 @@ func TestRetriever_Block(t *testing.T) {
 
 	t.Run("handles event converter failure", func(t *testing.T) {
 		t.Parallel()
-
-		index := mocks.BaselineReader(t)
-		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
-			assert.Equal(t, mocks.GenericHeight, height)
-			return mocks.GenericHeader, nil
-		}
-		index.TransactionsByHeightFunc = func(height uint64) ([]flow.Identifier, error) {
-			assert.Equal(t, mocks.GenericHeight, height)
-			return mocks.GenericTransactionIDs(6), nil
-		}
-		validator := mocks.BaselineValidator(t)
-		validator.BlockFunc = func(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
-			assert.Equal(t, mocks.GenericRosBlockID, rosBlockID)
-			return mocks.GenericHeader.Height, mocks.GenericHeader.ID(), nil
-		}
-		generator := mocks.BaselineGenerator(t)
-		generator.TokensDepositedFunc = func(symbol string) (string, error) {
-			assert.Equal(t, symbol, dps.FlowSymbol)
-			return string(mocks.GenericEventType(0)), nil
-		}
-		generator.TokensWithdrawnFunc = func(symbol string) (string, error) {
-			assert.Equal(t, symbol, dps.FlowSymbol)
-			return string(mocks.GenericEventType(1)), nil
-		}
 		convert := mocks.BaselineConverter(t)
 		convert.EventToOperationFunc = func(flow.Event) (*object.Operation, error) {
 			return nil, mocks.GenericError

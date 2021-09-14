@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	sdk "github.com/onflow/flow-go-sdk"
+
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -36,8 +37,6 @@ func BaselineTransactionParser(t *testing.T, opts ...func(parser *TransactionPar
 	return &p
 }
 
-// FIXME: The naming of those funcs conflict with the transactor's, since they have the same dependencies :(
-//        How can we name this in a consistent way that makes sense?
 func ParseTransaction(tx *sdk.Transaction) func(*TransactionParser) {
 	return func(parser *TransactionParser) {
 		parser.tx = tx

@@ -416,6 +416,4 @@ func (t *Transactor) Parse(payload string) (Parser, error) {
 	}
 
 	return &p, nil
-
-	return nil, err
 }

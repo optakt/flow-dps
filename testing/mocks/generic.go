@@ -135,7 +135,7 @@ var (
 				Index:     0,
 				SeqNumber: 42,
 				HashAlgo:  chash.SHA2_256,
-				PublicKey: crypto.NeutralBLSPublicKey(), // FIXME: Is this fine as a mock key?
+				PublicKey: crypto.NeutralBLSPublicKey(),
 			},
 		},
 	}
