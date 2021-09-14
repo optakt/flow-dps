@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package tracker
+package initializer
 
 import (
 	"encoding/json"
@@ -32,10 +32,7 @@ import (
 	"github.com/onflow/flow-go/utils/io"
 )
 
-// Initialize will initialize the Flow protocol state in the given database. The
-// code is inspired by the related unexported code in the Flow Go code base:
-// https://github.com/onflow/flow-go/blob/v0.21.0/cmd/bootstrap/cmd/finalize.go#L452
-func Initialize(dir string, db *badger.DB) error {
+func ProtocolState(dir string, db *badger.DB) error {
 
 	// Check if there is already a protocol state, in which case we error.
 	var root uint64

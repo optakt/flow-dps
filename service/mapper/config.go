@@ -16,27 +16,29 @@ package mapper
 
 import (
 	"time"
+
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 )
 
 // DefaultConfig has the default values of the config set.
 var DefaultConfig = Config{
-	RootCheckpoint: "",
-	SkipRegisters:  false,
-	WaitInterval:   100 * time.Millisecond,
+	RootTrie:      trie.NewEmptyMTrie(),
+	SkipRegisters: false,
+	WaitInterval:  100 * time.Millisecond,
 }
 
 // Config contains optional parameters for the mapper.
 type Config struct {
-	RootCheckpoint string
-	SkipRegisters  bool
-	WaitInterval   time.Duration
+	RootTrie      *trie.MTrie
+	SkipRegisters bool
+	WaitInterval  time.Duration
 }
 
-// WithRootCheckpoint provides the path to a root checkpoint file that is
-// required when bootstrapping a new index.
-func WithRootCheckpoint(checkpoint string) func(*Config) {
+// WithRootTrie will use the given trie to start up the indexing on the mapper
+// at the root block.
+func WithRootTrie(trie *trie.MTrie) func(*Config) {
 	return func(cfg *Config) {
-		cfg.RootCheckpoint = checkpoint
+		cfg.RootTrie = trie
 	}
 }
 

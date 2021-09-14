@@ -48,14 +48,14 @@ func TestNewTransitions(t *testing.T) {
 	})
 
 	t.Run("nominal case, with options", func(t *testing.T) {
-		path := "path"
+		trie := trie.NewEmptyMTrie()
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		read := mocks.BaselineReader(t)
 		write := mocks.BaselineWriter(t)
 
 		tr := NewTransitions(mocks.NoopLogger, chain, feed, read, write,
-			WithRootCheckpoint(path),
+			WithRootTrie(trie),
 			WithSkipRegisters(true),
 		)
 
@@ -69,7 +69,7 @@ func TestNewTransitions(t *testing.T) {
 		assert.NotEqual(t, DefaultConfig, tr.cfg)
 		assert.Equal(t, DefaultConfig.WaitInterval, tr.cfg.WaitInterval)
 		assert.True(t, tr.cfg.SkipRegisters)
-		assert.Equal(t, tr.cfg.RootCheckpoint, path)
+		assert.Equal(t, tr.cfg.RootTrie, trie)
 	})
 }
 

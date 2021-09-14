@@ -47,6 +47,7 @@ import (
 	"github.com/optakt/flow-dps/service/cloud"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
+	"github.com/optakt/flow-dps/service/initializer"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
 	"github.com/optakt/flow-dps/service/tracker"
@@ -103,15 +104,22 @@ func run() int {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Err(err).Str("level", flagLevel).Msg("could not parse log level")
 		return failure
 	}
 	log = log.Level(level)
 
+	// The root checkpoint is mandatory, so check if we can load it first.
+	root, err := initializer.RootTrie(flagCheckpoint)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize root trie")
+		return failure
+	}
+
 	// Open DPS index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index database")
+		log.Error().Err(err).Str("index", flagIndex).Msg("could not open index database")
 		return failure
 	}
 	defer func() {
@@ -122,13 +130,13 @@ func run() int {
 	}()
 
 	// Open protocol state database.
-	data, err := badger.Open(dps.DefaultOptions(flagData))
+	protocol, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
 		log.Error().Err(err).Msg("could not open protocol state database")
 		return failure
 	}
 	defer func() {
-		err := data.Close()
+		err := protocol.Close()
 		if err != nil {
 			log.Error().Err(err).Msg("could not close protocol state database")
 		}
@@ -152,7 +160,7 @@ func run() int {
 	// finalization of the first few blocks, which breaks our logic. We thus
 	// must ensure that the protocol state is already bootstrapped manually
 	// before starting the consensus follower.
-	err = tracker.Initialize(flagBootstrap, data)
+	err = initializer.ProtocolState(flagBootstrap, protocol)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize protocol state")
 		return failure
@@ -203,7 +211,7 @@ func run() int {
 		"0.0.0.0:0", // automatically choose port, listen on all IPs
 		seedNodes,
 		unstaked.WithBootstrapDir(flagBootstrap),
-		unstaked.WithDB(data),
+		unstaked.WithDB(protocol),
 		unstaked.WithLogLevel(flagLevel),
 	)
 	if err != nil {
@@ -228,7 +236,7 @@ func run() int {
 	}()
 	bucket := client.Bucket(flagBucket)
 	stream := cloud.NewGCPStreamer(log, bucket)
-	execution, err := tracker.NewExecution(log, data, stream)
+	execution, err := tracker.NewExecution(log, protocol, stream)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize execution tracker")
 		return failure
@@ -237,7 +245,7 @@ func run() int {
 	// Initialize the consensus tracker, which uses the protocol state to
 	// retrieve data from consensus and the execution follower to complement
 	// the data with complete blocks.
-	consensus, err := tracker.NewConsensus(log, data, execution)
+	consensus, err := tracker.NewConsensus(log, protocol, execution)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize consensus tracker")
 		return failure
@@ -251,7 +259,7 @@ func run() int {
 	// Initialize the state transition library, the finite-state machine (FSM)
 	// and then register the desired state transitions with the FSM.
 	transitions := mapper.NewTransitions(log, consensus, execution, read, write,
-		mapper.WithRootCheckpoint(flagCheckpoint),
+		mapper.WithRootTrie(root),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()

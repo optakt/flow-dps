@@ -17,7 +17,6 @@ package mapper
 import (
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -25,9 +24,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -87,40 +84,18 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 	t.log.Info().Hex("commit", first[:]).Msg("added empty tree to forest")
 
-	// Next, we need to load the root checkpoint so that we can extract and
-	// index the ledger registers paths and values at the start of the spork.
-	// They will all be considered to be included in the root block.
-	if t.cfg.RootCheckpoint == "" {
-		return fmt.Errorf("bootstrapping requires root checkpoint file")
-	}
-	file, err := os.Open(t.cfg.RootCheckpoint)
-	if err != nil {
-		return fmt.Errorf("could not open checkpoint file: %w", err)
-	}
-	checkpoint, err := wal.ReadCheckpoint(file)
-	if err != nil {
-		return fmt.Errorf("could not read checkpoint: %w", err)
-	}
-
-	// As we said, we want to index all ledger entries from the checkpoint under
-	// the root block, which means we need to start indexing at the root height.
+	// We want to index all ledger entries from the root checkpoint under the
+	// height of the root block, which means we need to start indexing at root.
 	height, err := t.chain.Root()
 	if err != nil {
 		return fmt.Errorf("could not get root height: %w", err)
 	}
 	s.height = height
 
-	// Rebuild the root checkpoint trie and extract all paths from it. We add
-	// this to the forest, which will allow us to index all trie registers when
-	// we reach the root block state commitment.
-	trees, err := flattener.RebuildTries(checkpoint)
-	if err != nil {
-		return fmt.Errorf("could not rebuild tries: %w", err)
-	}
-	if len(trees) != 1 {
-		return fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
-	}
-	tree := trees[0]
+	// Extract all paths from the configured root trie. We will store them in
+	// the forest with the root block and commit, so that we can index the
+	// payloads later.
+	tree := t.cfg.RootTrie
 	paths := extractPaths(tree)
 	s.forest.Save(tree, paths, s.next)
 

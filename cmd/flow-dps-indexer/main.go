@@ -31,6 +31,7 @@ import (
 	"github.com/optakt/flow-dps/service/feeder"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
+	"github.com/optakt/flow-dps/service/initializer"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
 )
@@ -80,15 +81,22 @@ func run() int {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	level, err := zerolog.ParseLevel(flagLevel)
 	if err != nil {
-		log.Error().Str("level", flagLevel).Err(err).Msg("could not parse log level")
+		log.Error().Err(err).Str("level", flagLevel).Msg("could not parse log level")
 		return failure
 	}
 	log = log.Level(level)
 
+	// The root checkpoint is mandatory, so check if we can load it first.
+	root, err := initializer.RootTrie(flagCheckpoint)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize root trie")
+		return failure
+	}
+
 	// Open index database.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		log.Error().Err(err).Str("index", flagIndex).Msg("could not open index DB")
 		return failure
 	}
 	defer db.Close()
@@ -120,7 +128,7 @@ func run() int {
 	// Feeder is responsible for reading the write-ahead log of the execution state.
 	segments, err := wal.NewSegmentsReader(flagTrie)
 	if err != nil {
-		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
+		log.Error().Err(err).Str("trie", flagTrie).Msg("could not open segments reader")
 		return failure
 	}
 	feed := feeder.FromWAL(wal.NewReader(segments))
@@ -136,7 +144,7 @@ func run() int {
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	transitions := mapper.NewTransitions(log, disk, feed, read, write,
-		mapper.WithRootCheckpoint(flagCheckpoint),
+		mapper.WithRootTrie(root),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
