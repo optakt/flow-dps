@@ -108,21 +108,30 @@ func (v *Validator) Request(request interface{}) error {
 
 	switch verr.Tag() {
 	case rosetta.BlockLength:
+		// Block hash has incorrect length.
+		blockHash, _ := verr.Value().(string)
 		return failure.InvalidBlockHash{
 			Description: failure.NewDescription(rosetta.BlockLength),
 			WantLength:  rosetta.HexIDSize,
+			HaveLength:  len(blockHash),
 		}
 
 	case rosetta.AddressLength:
+		// Account address has incorrect length.
+		address, _ := verr.Value().(string)
 		return failure.InvalidAccountAddress{
 			Description: failure.NewDescription(rosetta.AddressLength),
 			WantLength:  rosetta.HexAddressSize,
+			HaveLength:  len(address),
 		}
 
 	case rosetta.TxLength:
+		// Transaction hash has incorrect length.
+		txHash, _ := verr.Value().(string)
 		return failure.InvalidTransactionHash{
 			Description: failure.NewDescription(rosetta.TxLength),
 			WantLength:  rosetta.HexIDSize,
+			HaveLength:  len(txHash),
 		}
 
 	case networkFailTag:

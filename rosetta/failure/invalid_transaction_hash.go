@@ -21,8 +21,9 @@ import (
 type InvalidTransactionHash struct {
 	Description Description
 	WantLength  int
+	HaveLength  int
 }
 
 func (i InvalidTransactionHash) Error() string {
-	return fmt.Sprintf("invalid transaction hash length (want: %d): %s", i.WantLength, i.Description)
+	return fmt.Sprintf("invalid transaction hash length (want: %d, have: %d): %s", i.WantLength, i.HaveLength, i.Description)
 }

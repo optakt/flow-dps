@@ -326,18 +326,21 @@ func formatError(err error) *echo.HTTPError {
 	if errors.As(err, &ibErr) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(ibErr.Description.Text,
 			withDetail("want_length", ibErr.WantLength),
+			withDetail("have_length", ibErr.HaveLength),
 		))
 	}
 	var iaErr failure.InvalidAccountAddress
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(iaErr.Description.Text,
 			withDetail("want_length", iaErr.WantLength),
+			withDetail("have_length", iaErr.HaveLength),
 		))
 	}
 	var itErr failure.InvalidTransactionHash
 	if errors.As(err, &itErr) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(itErr.Description.Text,
 			withDetail("want_length", itErr.WantLength),
+			withDetail("have_length", itErr.HaveLength),
 		))
 	}
 	var icErr failure.IncompleteBlock
