@@ -262,7 +262,7 @@ func TestExecution_Purge(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			exec := BaselineExecutionTracker(t)
+			exec := BaselineExecution(t)
 			exec.records = test.before
 
 			exec.purge(test.threshold)
@@ -274,7 +274,7 @@ func TestExecution_Purge(t *testing.T) {
 
 }
 
-func BaselineExecutionTracker(t *testing.T, opts ...func(*Execution)) *Execution {
+func BaselineExecution(t *testing.T, opts ...func(*Execution)) *Execution {
 	t.Helper()
 
 	e := Execution{

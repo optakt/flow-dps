@@ -38,7 +38,7 @@ func TestExecution_Update(t *testing.T) {
 			return blockData, nil
 		}
 
-		exec := tracker.BaselineExecutionTracker(t, tracker.WithStreamer(streamer))
+		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
 		got, err := exec.Update()
 
@@ -58,7 +58,7 @@ func TestExecution_Update(t *testing.T) {
 		queue := deque.New()
 		queue.PushBack(blockData.TrieUpdates[0])
 
-		exec := tracker.BaselineExecutionTracker(
+		exec := tracker.BaselineExecution(
 			t,
 			tracker.WithQueue(queue),
 			tracker.WithStreamer(streamer),
@@ -78,7 +78,7 @@ func TestExecution_Update(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		exec := tracker.BaselineExecutionTracker(t, tracker.WithStreamer(streamer))
+		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
 		_, err := exec.Update()
 
@@ -97,7 +97,7 @@ func TestExecution_Update(t *testing.T) {
 			return smallBlock, nil
 		}
 
-		exec := tracker.BaselineExecutionTracker(t, tracker.WithStreamer(streamer))
+		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
 		// The first call loads our "small block" with only one trie update and consumes it.
 		_, err := exec.Update()
@@ -123,7 +123,7 @@ func TestExecution_Record(t *testing.T) {
 			return blockData, nil
 		}
 
-		exec := tracker.BaselineExecutionTracker(t, tracker.WithStreamer(streamer))
+		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
 		got, err := exec.Record(blockData.Block.ID())
 
@@ -139,7 +139,7 @@ func TestExecution_Record(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		exec := tracker.BaselineExecutionTracker(t, tracker.WithStreamer(streamer))
+		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
 		_, err := exec.Record(blockData.Block.ID())
 
