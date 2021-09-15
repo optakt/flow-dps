@@ -171,8 +171,7 @@ func run() int {
 		log.Error().Err(err).Str("path", path).Msg("could not open protocol state snapshot")
 		return failure
 	}
-
-	err = tracker.Initialize(file, data)
+	err = initializer.ProtocolState(file, data)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize protocol state")
 		return failure

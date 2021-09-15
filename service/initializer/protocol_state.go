@@ -12,11 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package tracker
+package initializer
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 
@@ -25,28 +24,16 @@ import (
 	"github.com/onflow/flow-go/module/metrics"
 	protocol "github.com/onflow/flow-go/state/protocol/badger"
 	"github.com/onflow/flow-go/state/protocol/inmem"
-	"github.com/onflow/flow-go/storage"
 	cache "github.com/onflow/flow-go/storage/badger"
-	"github.com/onflow/flow-go/storage/badger/operation"
 )
 
-// Initialize will initialize the Flow protocol state in the given database. The
+// ProtocolState will initialize the Flow protocol state in the given database. The
 // code is inspired by the related unexported code in the Flow Go code base:
 // https://github.com/onflow/flow-go/blob/v0.21.0/cmd/bootstrap/cmd/finalize.go#L452
-func Initialize(reader io.Reader, db *badger.DB) error {
-
-	// Check if there is already a protocol state, in which case we error.
-	var root uint64
-	err := db.View(operation.RetrieveRootHeight(&root))
-	if err == nil {
-		return fmt.Errorf("protocol state already populated, please delete")
-	}
-	if !errors.Is(err, storage.ErrNotFound) {
-		return fmt.Errorf("could not check root height: %w", err)
-	}
+func ProtocolState(file io.Reader, db *badger.DB) error {
 
 	// Load the protocol snapshot from disk.
-	data, err := io.ReadAll(reader)
+	data, err := io.ReadAll(file)
 	if err != nil {
 		return fmt.Errorf("could not read protocol snapshot file: %w", err)
 	}

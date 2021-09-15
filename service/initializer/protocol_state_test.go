@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package tracker_test
+package initializer_test
 
 import (
 	"bytes"
@@ -26,12 +26,12 @@ import (
 	"github.com/onflow/flow-go/storage/badger/operation"
 	"github.com/onflow/flow-go/utils/unittest"
 
-	"github.com/optakt/flow-dps/service/tracker"
+	"github.com/optakt/flow-dps/service/initializer"
 	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
-func TestInitialize(t *testing.T) {
+func TestProtocolState(t *testing.T) {
 	header := mocks.GenericHeader
 	participants := unittest.CompleteIdentitySet()
 	rootSnapshot := unittest.RootSnapshotFixture(participants).Encodable()
@@ -46,7 +46,7 @@ func TestInitialize(t *testing.T) {
 
 		file := bytes.NewBuffer(data)
 
-		err := tracker.Initialize(file, db)
+		err := initializer.ProtocolState(file, db)
 
 		assert.NoError(t, err)
 	})
@@ -61,7 +61,7 @@ func TestInitialize(t *testing.T) {
 
 		file := bytes.NewBuffer(data)
 
-		err := tracker.Initialize(file, db)
+		err := initializer.ProtocolState(file, db)
 
 		assert.Error(t, err)
 	})
@@ -76,7 +76,7 @@ func TestInitialize(t *testing.T) {
 
 		file := bytes.NewBuffer(data)
 
-		err := tracker.Initialize(file, db)
+		err := initializer.ProtocolState(file, db)
 
 		assert.Error(t, err)
 	})
@@ -89,7 +89,7 @@ func TestInitialize(t *testing.T) {
 
 		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 
-		err := tracker.Initialize(bytes.NewBuffer(mocks.GenericBytes), db)
+		err := initializer.ProtocolState(bytes.NewBuffer(mocks.GenericBytes), db)
 
 		assert.Error(t, err)
 	})
@@ -108,7 +108,7 @@ func TestInitialize(t *testing.T) {
 
 		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 
-		err = tracker.Initialize(reader, db)
+		err = initializer.ProtocolState(reader, db)
 
 		assert.Error(t, err)
 	})
