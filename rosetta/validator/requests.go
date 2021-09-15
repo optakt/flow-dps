@@ -59,12 +59,12 @@ func (v *Validator) newRequestValidator() *validator.Validate {
 	// Register custom validators for known types.
 	// We register a single type per validator, so we can safely perform type
 	// assertion of the provided `validator.StructLevel` to the correct type.
+	// Validation library stores the validators in a map, so if multiple
+	// validators are registered for a single type, only the last one will be used.
 	vl.RegisterStructValidation(blockValidator, identifier.Block{})
 	vl.RegisterStructValidation(accountValidator, identifier.Account{})
 	vl.RegisterStructValidation(transactionValidator, identifier.Transaction{})
-	vl.RegisterStructValidation(networkValidator, identifier.Network{})
-	// Validate that the request is valid for the configured network.
-	vl.RegisterStructValidation(v.netconfigValidator, identifier.Network{})
+	vl.RegisterStructValidation(v.networkValidator, identifier.Network{})
 
 	// Register custom top-level validators. These validate the entire request
 	// object, compared to the ones above which validate a specific type
@@ -103,6 +103,7 @@ func (v *Validator) Request(request interface{}) error {
 	// to identify what went wrong.
 	// In the case of blockchain/network misconfigurtion, we also use the `param` field
 	// to pass the acceptable value for the field.
+
 	verr := err.(validator.ValidationErrors)[0]
 
 	switch verr.Tag() {
@@ -147,12 +148,19 @@ func (v *Validator) Request(request interface{}) error {
 	}
 }
 
-// netconfigValidator verifies that the request is valid for the configured network.
-// Network and blockchain identifier may be correctly populated, but invalid for the
-// current running instance of the DPS - e.g. addressing a Testnet network while we
-// have Mainnet network data.
-func (v *Validator) netconfigValidator(sl validator.StructLevel) {
+// networkValidator verifies that the request is valid for the configured network.
+// Network and blockchain fields must be populated and valid for the current
+// running instance of the DPS. For example, a request cannot be addressing a Testnet
+// network while we are reunning on top of a Mainnet index.
+func (v *Validator) networkValidator(sl validator.StructLevel) {
 	network := sl.Current().Interface().(identifier.Network)
+
+	if network.Blockchain == "" {
+		sl.ReportError(network.Blockchain, blockchainField, blockchainField, rosetta.BlockchainEmpty, "")
+	}
+	if network.Network == "" {
+		sl.ReportError(network.Network, networkField, networkField, rosetta.NetworkEmpty, "")
+	}
 
 	err := v.config.Check(network)
 	// Check returns a typed error, which we can use to identify which field was invalid.
@@ -165,17 +173,6 @@ func (v *Validator) netconfigValidator(sl validator.StructLevel) {
 	var inErr failure.InvalidNetwork
 	if errors.As(err, &inErr) {
 		sl.ReportError(network, networkField, networkField, networkFailTag, inErr.AvailableNetworks)
-	}
-}
-
-// networkValidator ensures that the blockchain and network fields are populated.
-func networkValidator(sl validator.StructLevel) {
-	network := sl.Current().Interface().(identifier.Network)
-	if network.Blockchain == "" {
-		sl.ReportError(network.Blockchain, blockchainField, blockchainField, rosetta.BlockchainEmpty, "")
-	}
-	if network.Network == "" {
-		sl.ReportError(network.Network, networkField, networkField, rosetta.NetworkEmpty, "")
 	}
 }
 
