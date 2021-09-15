@@ -16,46 +16,29 @@ package mapper
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWithIndexCommit(t *testing.T) {
-	c := &Config{}
+func TestWithSkipRegisters(t *testing.T) {
+	c := Config{
+		SkipRegisters: false,
+	}
+	skip := true
 
-	WithIndexCommit(true)(c)
+	WithSkipRegisters(skip)(&c)
 
-	assert.Equal(t, true, c.IndexCommit)
+	assert.Equal(t, skip, c.SkipRegisters)
 }
 
 func TestWithIndexHeader(t *testing.T) {
-	c := &Config{}
+	c := &Config{
+		WaitInterval: time.Second,
+	}
+	interval := time.Millisecond
 
-	WithIndexHeader(true)(c)
+	WithWaitInterval(interval)(c)
 
-	assert.Equal(t, true, c.IndexHeader)
-}
-
-func TestWithIndexTransactions(t *testing.T) {
-	c := &Config{}
-
-	WithIndexTransactions(true)(c)
-
-	assert.Equal(t, true, c.IndexTransactions)
-}
-
-func TestWithIndexEvents(t *testing.T) {
-	c := &Config{}
-
-	WithIndexEvents(true)(c)
-
-	assert.Equal(t, true, c.IndexEvents)
-}
-
-func TestWithIndexPayloads(t *testing.T) {
-	c := &Config{}
-
-	WithIndexPayloads(true)(c)
-
-	assert.Equal(t, true, c.IndexPayloads)
+	assert.Equal(t, interval, c.WaitInterval)
 }

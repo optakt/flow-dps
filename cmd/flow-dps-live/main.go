@@ -95,8 +95,7 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
-
-	pflag.BoolVar(&flagSkip, "skip-registers", false, "skip indexing of execution state ledger registers")
+	pflag.BoolVarP(&flagSkip, "skip-registers", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
 
@@ -287,15 +286,7 @@ func run() int {
 	// Initialize the state transition library, the finite-state machine (FSM)
 	// and then register the desired state transitions with the FSM.
 	transitions := mapper.NewTransitions(log, root, consensus, execution, write,
-		mapper.WithIndexCommit(true),
-		mapper.WithIndexHeader(true),
-		mapper.WithIndexCollections(true),
-		mapper.WithIndexGuarantees(true),
-		mapper.WithIndexTransactions(true),
-		mapper.WithIndexResults(true),
-		mapper.WithIndexEvents(true),
-		mapper.WithIndexSeals(true),
-		mapper.WithIndexPayloads(!flagSkip),
+		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)

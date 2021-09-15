@@ -311,7 +311,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	// If indexing payloads is disabled, we can bypass collection and indexing
 	// of payloads and just go straight to forwarding the height to the next
 	// finalized block.
-	if !t.cfg.IndexPayloads {
+	if t.cfg.SkipRegisters {
 		s.status = StatusForward
 		return nil
 	}

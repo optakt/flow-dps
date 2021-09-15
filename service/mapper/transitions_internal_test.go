@@ -47,21 +47,15 @@ func TestNewTransitions(t *testing.T) {
 		assert.Equal(t, DefaultConfig, tr.cfg)
 	})
 
-	t.Run("nominal case, with options", func(t *testing.T) {
+	t.Run("nominal case, with option", func(t *testing.T) {
 		root := trie.NewEmptyMTrie()
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		index := mocks.BaselineWriter(t)
 
+		skip := true
 		tr := NewTransitions(mocks.NoopLogger, root, chain, feed, index,
-			WithIndexCommit(true),
-			WithIndexHeader(true),
-			WithIndexPayloads(true),
-			WithIndexCollections(true),
-			WithIndexGuarantees(true),
-			WithIndexTransactions(true),
-			WithIndexResults(true),
-			WithIndexSeals(true),
+			WithSkipRegisters(skip),
 		)
 
 		assert.NotNil(t, tr)
@@ -72,15 +66,8 @@ func TestNewTransitions(t *testing.T) {
 		assert.NotNil(t, tr.once)
 
 		assert.NotEqual(t, DefaultConfig, tr.cfg)
-		assert.Equal(t, DefaultConfig.IndexEvents, tr.cfg.IndexEvents)
-		assert.True(t, tr.cfg.IndexTransactions)
-		assert.True(t, tr.cfg.IndexHeader)
-		assert.True(t, tr.cfg.IndexPayloads)
-		assert.True(t, tr.cfg.IndexCollections)
-		assert.True(t, tr.cfg.IndexGuarantees)
-		assert.True(t, tr.cfg.IndexTransactions)
-		assert.True(t, tr.cfg.IndexResults)
-		assert.True(t, tr.cfg.IndexSeals)
+		assert.Equal(t, skip, tr.cfg.SkipRegisters)
+		assert.Equal(t, DefaultConfig.WaitInterval, tr.cfg.WaitInterval)
 	})
 }
 
@@ -287,7 +274,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusCollect)
-		tr.cfg.IndexPayloads = false
+		tr.cfg.SkipRegisters = true
 
 		err := tr.CollectRegisters(st)
 
@@ -504,7 +491,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 }
 
 func TestTransitions_IndexChain(t *testing.T) {
-	t.Run("nominal case index all", func(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		chain := mocks.BaselineChain(t)
@@ -607,31 +594,6 @@ func TestTransitions_IndexChain(t *testing.T) {
 		tr, st := baselineFSM(t, StatusIndex)
 		tr.chain = chain
 		tr.index = index
-
-		err := tr.IndexChain(st)
-
-		require.NoError(t, err)
-		assert.Equal(t, StatusUpdate, st.status)
-	})
-
-	t.Run("nominal case index nothing", func(t *testing.T) {
-		t.Parallel()
-
-		chain := mocks.BaselineChain(t)
-		chain.CommitFunc = func(height uint64) (flow.StateCommitment, error) {
-			assert.Equal(t, mocks.GenericHeight, height)
-
-			return mocks.GenericCommit(0), nil
-		}
-
-		tr, st := baselineFSM(t, StatusIndex)
-		tr.chain = chain
-		tr.cfg.IndexCommit = false
-		tr.cfg.IndexHeader = false
-		tr.cfg.IndexTransactions = false
-		tr.cfg.IndexCollections = false
-		tr.cfg.IndexEvents = false
-		tr.cfg.IndexSeals = false
 
 		err := tr.IndexChain(st)
 
@@ -904,15 +866,8 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 
 	tr := &Transitions{
 		cfg: Config{
-			IndexCommit:       true,
-			IndexHeader:       true,
-			IndexPayloads:     true,
-			IndexCollections:  true,
-			IndexGuarantees:   true,
-			IndexTransactions: true,
-			IndexResults:      true,
-			IndexEvents:       true,
-			IndexSeals:        true,
+			SkipRegisters: false,
+			WaitInterval:  0,
 		},
 		log:   mocks.NoopLogger,
 		root:  root,
