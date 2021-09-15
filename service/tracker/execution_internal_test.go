@@ -158,7 +158,7 @@ func TestExecution_Purge(t *testing.T) {
 		name string
 
 		threshold uint64
-		before   map[flow.Identifier]*uploader.BlockData
+		before    map[flow.Identifier]*uploader.BlockData
 
 		after map[flow.Identifier]*uploader.BlockData
 	}{

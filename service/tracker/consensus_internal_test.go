@@ -109,7 +109,7 @@ func BaselineConsensus(t *testing.T, opts ...func(*Consensus)) *Consensus {
 		// DB is omitted on purpose, since if we set it here it will never be closed properly.
 		// Tests that need to use the DB should set it using the WithDB function.
 		hold: hold,
-		log: log,
+		log:  log,
 	}
 
 	for _, opt := range opts {

@@ -36,8 +36,9 @@ func TestFromWAL(t *testing.T) {
 }
 
 func TestFeeder_Update(t *testing.T) {
-	update := encoding.EncodeTrieUpdate(mocks.GenericTrieUpdate)
-	rootHash := mocks.GenericTrieUpdate.RootHash[:]
+	trieUpdate := mocks.GenericTrieUpdate(0)
+	encoded := encoding.EncodeTrieUpdate(trieUpdate)
+	rootHash := trieUpdate.RootHash[:]
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -52,7 +53,7 @@ func TestFeeder_Update(t *testing.T) {
 			}
 
 			// On any subsequent call, return the Update operation.
-			return append([]byte{byte(wal.WALUpdate)}, update...)
+			return append([]byte{byte(wal.WALUpdate)}, encoded...)
 		}
 
 		feeder := &Feeder{
@@ -62,7 +63,7 @@ func TestFeeder_Update(t *testing.T) {
 		got, err := feeder.Update()
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericTrieUpdate, got)
+		assert.Equal(t, trieUpdate, got)
 	})
 
 	t.Run("handles reader failure", func(t *testing.T) {
