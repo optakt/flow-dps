@@ -71,7 +71,7 @@ func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Ex
 		return nil, fmt.Errorf("could not retrieve root seal: %w", err)
 	}
 
-	s := Execution{
+	e := Execution{
 		log:     log.With().Str("component", "execution_tracker").Logger(),
 		stream:  stream,
 		queue:   deque.New(),
@@ -99,9 +99,9 @@ func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Ex
 		FinalStateCommitment: seal.FinalState,
 	}
 
-	s.records[blockID] = &record
+	e.records[blockID] = &record
 
-	return &s, nil
+	return &e, nil
 }
 
 // Update provides the next trie update from the stream of block records. Trie
@@ -167,6 +167,7 @@ func (e *Execution) processNext() error {
 	// Check if we already processed a block with this ID recently. This should
 	// be idempotent, but we should be aware if something like this happens.
 	blockID := record.Block.Header.ID()
+
 	_, ok := e.records[blockID]
 	if ok {
 		return fmt.Errorf("duplicate execution record (block: %x)", blockID)
