@@ -333,8 +333,55 @@ func (t *Transitions) IndexChain(s *State) error {
 		return fmt.Errorf("invalid status for indexing chain (%s)", s.status)
 	}
 
-	// As we have only just forwarded to this height, we need to set the commit
-	// of the next finalized block as the sentinel we will be looking for.
+	// We try to retrieve the next header until it becomes available, which
+	// means all data coming from the protocol state is available after this
+	// point.
+	header, err := t.chain.Header(s.height)
+	if errors.Is(err, dps.ErrUnavailable) {
+		log.Debug().Msg("waiting for next header")
+		time.Sleep(t.cfg.WaitInterval)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("could not get header: %w", err)
+	}
+
+	// At this point, we can retrieve the data from the consensus state. This is
+	// a slight optimization for the live indexer, as it allows us to process
+	// some data before the full execution data becomes available.
+	guarantees, err := t.chain.Guarantees(s.height)
+	if err != nil {
+		return fmt.Errorf("could not get guarantees: %w", err)
+	}
+	seals, err := t.chain.Seals(s.height)
+	if err != nil {
+		return fmt.Errorf("could not get seals: %w", err)
+	}
+
+	// We can also proceed to already indexing the data related to the consensus
+	// state, before dealing with anything related to execution data, which
+	// might go into the wait state.
+	blockID := header.ID()
+	err = t.index.Height(blockID, s.height)
+	if err != nil {
+		return fmt.Errorf("could not index height: %w", err)
+	}
+	err = t.index.Header(s.height, header)
+	if err != nil {
+		return fmt.Errorf("could not index header: %w", err)
+	}
+	err = t.index.Guarantees(s.height, guarantees)
+	if err != nil {
+		return fmt.Errorf("could not index guarantees: %w", err)
+	}
+	err = t.index.Seals(s.height, seals)
+	if err != nil {
+		return fmt.Errorf("could not index seals: %w", err)
+	}
+
+	// Next, we try to retrieve the next commit until it becomes available,
+	// at which point all the data coming from the execution data should be
+	// available.
 	commit, err := t.chain.Commit(s.height)
 	if errors.Is(err, dps.ErrUnavailable) {
 		log.Debug().Msg("waiting for next state commitment")
@@ -344,103 +391,59 @@ func (t *Transitions) IndexChain(s *State) error {
 	if err != nil {
 		return fmt.Errorf("could not get commit: %w", err)
 	}
+	collections, err := t.chain.Collections(s.height)
+	if err != nil {
+		return fmt.Errorf("could not get collections: %w", err)
+	}
+	transactions, err := t.chain.Transactions(s.height)
+	if err != nil {
+		return fmt.Errorf("could not get transactions: %w", err)
+	}
+	results, err := t.chain.Results(s.height)
+	if err != nil {
+		return fmt.Errorf("could not get transaction results: %w", err)
+	}
+	events, err := t.chain.Events(s.height)
+	if err != nil {
+		return fmt.Errorf("could not get events: %w", err)
+	}
+
+	// Next, all we need to do is index the remaining data and we have fully
+	// processed indexing for this block height.
+	err = t.index.Commit(s.height, commit)
+	if err != nil {
+		return fmt.Errorf("could not index commit: %w", err)
+	}
+	err = t.index.Collections(s.height, collections)
+	if err != nil {
+		return fmt.Errorf("could not index collections: %w", err)
+	}
+	err = t.index.Transactions(s.height, transactions)
+	if err != nil {
+		return fmt.Errorf("could not index transactions: %w", err)
+	}
+	err = t.index.Results(results)
+	if err != nil {
+		return fmt.Errorf("could not index transaction results: %w", err)
+	}
+	err = t.index.Events(s.height, events)
+	if err != nil {
+		return fmt.Errorf("could not index events: %w", err)
+	}
+
+	// At this point, we need to forward the the `last` state commitment to
+	// `next`, so we know what the state commitment was at the last finalized
+	// block we processed. This will allow us to know when to stop when
+	// walking back through the forest to collect trie updates.
 	s.last = s.next
+
+	// Last but not least, we need to update `next` to point to the commit we
+	// have just retrieved for the new block height. This is the sentinel that
+	// tells us when we have collected enough trie updates for the forest to
+	// have reached the next finalized block.
 	s.next = commit
 
-	// After that, we index all chain data that is configured for being indexed
-	// currently.
-	event := log.Info()
-	if t.cfg.IndexCommit {
-		err := t.index.Commit(s.height, commit)
-		if err != nil {
-			return fmt.Errorf("could not index commit: %w", err)
-		}
-		event = event.Hex("commit", commit[:])
-	}
-	if t.cfg.IndexHeader {
-		header, err := t.chain.Header(s.height)
-		if err != nil {
-			return fmt.Errorf("could not get header: %w", err)
-		}
-		err = t.index.Header(s.height, header)
-		if err != nil {
-			return fmt.Errorf("could not index header: %w", err)
-		}
-		blockID := header.ID()
-		err = t.index.Height(blockID, s.height)
-		if err != nil {
-			return fmt.Errorf("could not index height: %w", err)
-		}
-		event = event.Hex("block", blockID[:])
-	}
-	if t.cfg.IndexCollections {
-		collections, err := t.chain.Collections(s.height)
-		if err != nil {
-			return fmt.Errorf("could not get collections: %w", err)
-		}
-		err = t.index.Collections(s.height, collections)
-		if err != nil {
-			return fmt.Errorf("could not index collections: %w", err)
-		}
-		event = event.Int("collections", len(collections))
-	}
-	if t.cfg.IndexGuarantees {
-		guarantees, err := t.chain.Guarantees(s.height)
-		if err != nil {
-			return fmt.Errorf("could not get guarantees: %w", err)
-		}
-		err = t.index.Guarantees(s.height, guarantees)
-		if err != nil {
-			return fmt.Errorf("could not index guarantees: %w", err)
-		}
-		event = event.Int("guarantees", len(guarantees))
-	}
-	if t.cfg.IndexTransactions {
-		transactions, err := t.chain.Transactions(s.height)
-		if err != nil {
-			return fmt.Errorf("could not get transactions: %w", err)
-		}
-		err = t.index.Transactions(s.height, transactions)
-		if err != nil {
-			return fmt.Errorf("could not index transactions: %w", err)
-		}
-		event = event.Int("transactions", len(transactions))
-	}
-	if t.cfg.IndexResults {
-		results, err := t.chain.Results(s.height)
-		if err != nil {
-			return fmt.Errorf("could not get transaction results: %w", err)
-		}
-		err = t.index.Results(results)
-		if err != nil {
-			return fmt.Errorf("could not index transaction results: %w", err)
-		}
-		event = event.Int("transaction_results", len(results))
-	}
-	if t.cfg.IndexEvents {
-		events, err := t.chain.Events(s.height)
-		if err != nil {
-			return fmt.Errorf("could not get events: %w", err)
-		}
-		err = t.index.Events(s.height, events)
-		if err != nil {
-			return fmt.Errorf("could not index events: %w", err)
-		}
-		event = event.Int("events", len(events))
-	}
-	if t.cfg.IndexSeals {
-		seals, err := t.chain.Seals(s.height)
-		if err != nil {
-			return fmt.Errorf("could not get seals: %w", err)
-		}
-		err = t.index.Seals(s.height, seals)
-		if err != nil {
-			return fmt.Errorf("could not index seals: %w", err)
-		}
-		event = event.Int("seals", len(seals))
-	}
-
-	event.Msg("indexed blockchain data for finalized block")
+	log.Info().Msg("indexed blockchain data for finalized block")
 
 	// After indexing the blockchain data, we can go back to updating the state
 	// tree until we find the commit of the finalized block. This will allow us
