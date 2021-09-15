@@ -20,29 +20,29 @@ type Status uint8
 // The following is an enumeration of all possible statuses the
 // state machine can have.
 const (
-	StatusEmpty Status = iota + 1
-	StatusUpdating
-	StatusMatched
-	StatusCollected
-	StatusIndexed
-	StatusForwarded
+	StatusBootstrap Status = iota + 1
+	StatusIndex
+	StatusUpdate
+	StatusCollect
+	StatusMap
+	StatusForward
 )
 
 // String implements the Stringer interface.
 func (s Status) String() string {
 	switch s {
-	case StatusEmpty:
-		return "empty"
-	case StatusUpdating:
-		return "updating"
-	case StatusMatched:
-		return "matched"
-	case StatusCollected:
-		return "collected"
-	case StatusIndexed:
-		return "indexed"
-	case StatusForwarded:
-		return "forwarded"
+	case StatusBootstrap:
+		return "bootstrap"
+	case StatusIndex:
+		return "index"
+	case StatusUpdate:
+		return "update"
+	case StatusCollect:
+		return "collect"
+	case StatusMap:
+		return "map"
+	case StatusForward:
+		return "forward"
 	default:
 		return "invalid"
 	}

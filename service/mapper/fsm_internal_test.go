@@ -39,7 +39,7 @@ func TestNewFSM(t *testing.T) {
 	t.Run("nominal case with transition option", func(t *testing.T) {
 		t.Parallel()
 
-		f := NewFSM(st, WithTransition(StatusEmpty, func(*State) error { return nil }))
+		f := NewFSM(st, WithTransition(StatusBootstrap, func(*State) error { return nil }))
 
 		assert.NotNil(t, f)
 		assert.Equal(t, st, f.state)
@@ -54,17 +54,17 @@ func TestFSM_Run(t *testing.T) {
 		var emptyCalls, matchedCalls int
 		f := &FSM{
 			state: &State{
-				status: StatusEmpty,
+				status: StatusBootstrap,
 				done:   make(chan struct{}),
 			},
 			transitions: map[Status]TransitionFunc{
-				StatusEmpty: func(state *State) error {
-					state.status = StatusMatched
+				StatusBootstrap: func(state *State) error {
+					state.status = StatusCollect
 					emptyCalls++
 					return nil
 				},
-				StatusMatched: func(state *State) error {
-					state.status = StatusEmpty
+				StatusCollect: func(state *State) error {
+					state.status = StatusBootstrap
 					matchedCalls++
 					return nil
 				},
@@ -97,10 +97,10 @@ func TestFSM_Run(t *testing.T) {
 
 		f := &FSM{
 			state: &State{
-				status: StatusEmpty,
+				status: StatusBootstrap,
 			},
 			transitions: map[Status]TransitionFunc{
-				StatusIndexed: func(*State) error { return nil },
+				StatusForward: func(*State) error { return nil },
 			},
 			wg: &sync.WaitGroup{},
 		}
@@ -117,10 +117,10 @@ func TestFSM_Run(t *testing.T) {
 
 		f := &FSM{
 			state: &State{
-				status: StatusEmpty,
+				status: StatusBootstrap,
 			},
 			transitions: map[Status]TransitionFunc{
-				StatusEmpty: failingTransition,
+				StatusBootstrap: failingTransition,
 			},
 			wg: &sync.WaitGroup{},
 		}

@@ -194,12 +194,12 @@ func run() int {
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
-		mapper.WithTransition(mapper.StatusEmpty, transitions.BootstrapState),
-		mapper.WithTransition(mapper.StatusUpdating, transitions.UpdateTree),
-		mapper.WithTransition(mapper.StatusMatched, transitions.CollectRegisters),
-		mapper.WithTransition(mapper.StatusCollected, transitions.IndexRegisters),
-		mapper.WithTransition(mapper.StatusIndexed, transitions.ForwardHeight),
-		mapper.WithTransition(mapper.StatusForwarded, transitions.IndexChain),
+		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
+		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),
+		mapper.WithTransition(mapper.StatusUpdate, transitions.UpdateTree),
+		mapper.WithTransition(mapper.StatusCollect, transitions.CollectRegisters),
+		mapper.WithTransition(mapper.StatusMap, transitions.MapRegisters),
+		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
 	)
 
 	// This section launches the main executing components in their own
