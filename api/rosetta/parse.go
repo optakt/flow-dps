@@ -57,11 +57,6 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = c.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	parse, err := c.transact.Parse(req.Transaction)
 	if err != nil {
 		return apiError(txParsing, err)

@@ -53,11 +53,6 @@ func (d *Data) Status(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = d.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	oldest, _, err := d.retrieve.Oldest()
 	if err != nil {
 		return apiError(oldestRetrieval, err)

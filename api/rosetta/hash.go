@@ -51,11 +51,6 @@ func (c *Construction) Hash(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = c.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	rosTxID, err := c.transact.TransactionIdentifier(req.SignedTransaction)
 	if err != nil {
 		return apiError(txIdentifier, err)

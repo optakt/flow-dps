@@ -64,11 +64,6 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = c.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	intent, err := c.transact.DeriveIntent(req.Operations)
 	if err != nil {
 		return apiError(intentDetermination, err)

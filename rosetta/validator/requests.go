@@ -41,33 +41,47 @@ const (
 	symbolField      = "symbol"
 	transactionField = "transaction"
 	signaturesField  = "signatures"
+
+	blockchainFailTag = "blockchain"
+	networkFailTag    = "network"
 )
 
-func newRequestValidator() *validator.Validate {
+// Error descriptions for common errors.
+const (
+	unknownBlockchain = "network identifier has unknown blockchain field"
+	unknownNetwork    = "network identifier has unknown network field"
+)
 
-	v := validator.New()
+func (v *Validator) newRequestValidator() *validator.Validate {
+
+	vl := validator.New()
 
 	// Register custom validators for known types.
 	// We register a single type per validator, so we can safely perform type
 	// assertion of the provided `validator.StructLevel` to the correct type.
-	v.RegisterStructValidation(blockValidator, identifier.Block{})
-	v.RegisterStructValidation(networkValidator, identifier.Network{})
-	v.RegisterStructValidation(accountValidator, identifier.Account{})
-	v.RegisterStructValidation(transactionValidator, identifier.Transaction{})
+	vl.RegisterStructValidation(blockValidator, identifier.Block{})
+	vl.RegisterStructValidation(accountValidator, identifier.Account{})
+	vl.RegisterStructValidation(transactionValidator, identifier.Transaction{})
+	vl.RegisterStructValidation(networkValidator, identifier.Network{})
+	// Validate that the request is valid for the configured network.
+	vl.RegisterStructValidation(v.netconfigValidator, identifier.Network{})
 
 	// Register custom top-level validators. These validate the entire request
 	// object, compared to the ones above which validate a specific type
 	// within the request. This way we can validate some standard types (strings)
 	// or complex ones (array of currencies) in a structured way.
-	v.RegisterStructValidation(balanceValidator, rosetta.BalanceRequest{})
-	v.RegisterStructValidation(parseValidator, rosetta.ParseRequest{})
-	v.RegisterStructValidation(combineValidator, rosetta.CombineRequest{})
-	v.RegisterStructValidation(submitValidator, rosetta.SubmitRequest{})
-	v.RegisterStructValidation(hashValidator, rosetta.HashRequest{})
+	vl.RegisterStructValidation(balanceValidator, rosetta.BalanceRequest{})
+	vl.RegisterStructValidation(parseValidator, rosetta.ParseRequest{})
+	vl.RegisterStructValidation(combineValidator, rosetta.CombineRequest{})
+	vl.RegisterStructValidation(submitValidator, rosetta.SubmitRequest{})
+	vl.RegisterStructValidation(hashValidator, rosetta.HashRequest{})
 
-	return v
+	return vl
 }
 
+// Request will run the registered validators on the provided request.
+// It will either return a typed error with contextual information, or a plain error
+// describing what failed.
 func (v *Validator) Request(request interface{}) error {
 
 	err := v.validate.Struct(request)
@@ -84,10 +98,14 @@ func (v *Validator) Request(request interface{}) error {
 	}
 
 	// Process validation errors we have found. Return the first one we encounter.
-	errs := err.(validator.ValidationErrors)
-	msg := errs[0].Tag()
+	// Validator library doesn't offer a sophisticated mechanism for passing detailed
+	// error information from the lower validation layers, so we use the `tag` field
+	// to identify what went wrong.
+	// In the case of blockchain/network misconfigurtion, we also use the `param` field
+	// to pass the acceptable value for the field.
+	verr := err.(validator.ValidationErrors)[0]
 
-	switch msg {
+	switch verr.Tag() {
 	case rosetta.BlockLength:
 		return failure.InvalidBlockHash{
 			Description: failure.NewDescription(rosetta.BlockLength),
@@ -106,18 +124,51 @@ func (v *Validator) Request(request interface{}) error {
 			WantLength:  rosetta.HexIDSize,
 		}
 
+	case networkFailTag:
+		// Network field is not referring to the network for which we are configured.
+		network, _ := verr.Value().(identifier.Network)
+		return failure.InvalidNetwork{
+			HaveNetwork:       network.Network,
+			AvailableNetworks: verr.Param(),
+			Description:       failure.NewDescription(unknownNetwork),
+		}
+
+	case blockchainFailTag:
+		// Blockchain field is not referring to the blockchain for which we are configured.
+		network, _ := verr.Value().(identifier.Network)
+		return failure.InvalidBlockchain{
+			HaveBlockchain:       network.Blockchain,
+			AvailableBlockchains: verr.Param(),
+			Description:          failure.NewDescription(unknownBlockchain),
+		}
+
 	default:
-		return fmt.Errorf(msg)
+		return fmt.Errorf(verr.Tag())
 	}
 }
 
-func blockValidator(sl validator.StructLevel) {
-	rosBlockID := sl.Current().Interface().(identifier.Block)
-	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != rosetta.HexIDSize {
-		sl.ReportError(rosBlockID.Hash, blockHashField, blockHashField, rosetta.BlockLength, "")
+// netconfigValidator verifies that the request is valid for the configured network.
+// Network and blockchain identifier may be correctly populated, but invalid for the
+// current running instance of the DPS - e.g. addressing a Testnet network while we
+// have Mainnet network data.
+func (v *Validator) netconfigValidator(sl validator.StructLevel) {
+	network := sl.Current().Interface().(identifier.Network)
+
+	err := v.config.Check(network)
+	// Check returns a typed error, which we can use to identify which field was invalid.
+	// We will use `tag` field to communicate this, and the `param` field to pass the acceptable
+	// value to the main validation function.
+	var ibErr failure.InvalidBlockchain
+	if errors.As(err, &ibErr) {
+		sl.ReportError(network, blockchainField, blockchainField, blockchainFailTag, ibErr.AvailableBlockchains)
+	}
+	var inErr failure.InvalidNetwork
+	if errors.As(err, &inErr) {
+		sl.ReportError(network, networkField, networkField, networkFailTag, inErr.AvailableNetworks)
 	}
 }
 
+// networkValidator ensures that the blockchain and network fields are populated.
 func networkValidator(sl validator.StructLevel) {
 	network := sl.Current().Interface().(identifier.Network)
 	if network.Blockchain == "" {
@@ -128,6 +179,15 @@ func networkValidator(sl validator.StructLevel) {
 	}
 }
 
+// blockValidator ensures that, if the block hash is provided, it has the correct length.
+func blockValidator(sl validator.StructLevel) {
+	rosBlockID := sl.Current().Interface().(identifier.Block)
+	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != rosetta.HexIDSize {
+		sl.ReportError(rosBlockID.Hash, blockHashField, blockHashField, rosetta.BlockLength, "")
+	}
+}
+
+// accountValidator ensures that the account address field is populated and has correct length.
 func accountValidator(sl validator.StructLevel) {
 	rosAccountID := sl.Current().Interface().(identifier.Account)
 	if rosAccountID.Address == "" {
@@ -138,6 +198,7 @@ func accountValidator(sl validator.StructLevel) {
 	}
 }
 
+// transactionValidator ensures that the transaction identifier is populated and has correct length.
 func transactionValidator(sl validator.StructLevel) {
 	rosTxID := sl.Current().Interface().(identifier.Transaction)
 	if rosTxID.Hash == "" {
@@ -148,6 +209,8 @@ func transactionValidator(sl validator.StructLevel) {
 	}
 }
 
+// balanceValidator ensures that the provided BalanceRequest has a non-empty currency list, and that
+// all provided currencies have the `symbol` field populated.
 func balanceValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(rosetta.BalanceRequest)
 	if len(req.Currencies) == 0 {
@@ -160,6 +223,7 @@ func balanceValidator(sl validator.StructLevel) {
 	}
 }
 
+// parseValidator ensures that the provided ParseRequest has a non-empty transaction field.
 func parseValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(rosetta.ParseRequest)
 	if req.Transaction == "" {
@@ -167,6 +231,8 @@ func parseValidator(sl validator.StructLevel) {
 	}
 }
 
+// combineValidator ensures that the provided CombineRequest has a non-empty transaction field, and
+// that the signature list is not empty.
 func combineValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(rosetta.CombineRequest)
 	if req.UnsignedTransaction == "" {
@@ -178,6 +244,7 @@ func combineValidator(sl validator.StructLevel) {
 	}
 }
 
+// submitValidator ensures that the provided SubmitRequest has a non-empty transaction field.
 func submitValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(rosetta.SubmitRequest)
 	if req.SignedTransaction == "" {
@@ -185,6 +252,7 @@ func submitValidator(sl validator.StructLevel) {
 	}
 }
 
+// hashValidator ensures that the provided SubmitRequest has a non-empty transaction field.
 func hashValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(rosetta.HashRequest)
 	if req.SignedTransaction == "" {

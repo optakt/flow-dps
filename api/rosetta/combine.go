@@ -54,11 +54,6 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = c.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	signed, err := c.transact.AttachSignatures(req.UnsignedTransaction, req.Signatures)
 	if err != nil {
 		return apiError(txSigning, err)

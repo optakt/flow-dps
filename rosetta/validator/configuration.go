@@ -15,27 +15,9 @@
 package validator
 
 import (
-	"github.com/go-playground/validator/v10"
-
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-type Validator struct {
-	params   dps.Params
-	index    dps.Reader
-	config   Configuration
-	validate *validator.Validate
-}
-
-func New(params dps.Params, index dps.Reader, config Configuration) *Validator {
-
-	v := &Validator{
-		params: params,
-		index:  index,
-		config: config,
-	}
-
-	v.validate = v.newRequestValidator()
-
-	return v
+type Configuration interface {
+	Check(identifier.Network) error
 }

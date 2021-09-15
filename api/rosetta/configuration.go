@@ -29,5 +29,4 @@ type Configuration interface {
 	Operations() []string
 	Statuses() []meta.StatusDefinition
 	Errors() []meta.ErrorDefinition
-	Check(rosNetID identifier.Network) error
 }

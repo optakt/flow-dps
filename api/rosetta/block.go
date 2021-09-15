@@ -52,11 +52,6 @@ func (d *Data) Block(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = d.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	block, extraTxIDs, err := d.retrieve.Block(req.BlockID)
 	if err != nil {
 		return apiError(blockRetrieval, err)

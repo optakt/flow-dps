@@ -12,30 +12,19 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package validator
+package failure
 
 import (
-	"github.com/go-playground/validator/v10"
-
-	"github.com/optakt/flow-dps/models/dps"
+	"fmt"
 )
 
-type Validator struct {
-	params   dps.Params
-	index    dps.Reader
-	config   Configuration
-	validate *validator.Validate
+type InvalidBlockchain struct {
+	Description          Description
+	HaveBlockchain       string
+	AvailableBlockchains string
 }
 
-func New(params dps.Params, index dps.Reader, config Configuration) *Validator {
+func (i InvalidBlockchain) Error() string {
+	return fmt.Sprintf("invalid blockchain (have: %s, available: %s): %s", i.HaveBlockchain, i.AvailableBlockchains, i.Description)
 
-	v := &Validator{
-		params: params,
-		index:  index,
-		config: config,
-	}
-
-	v.validate = v.newRequestValidator()
-
-	return v
 }
