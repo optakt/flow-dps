@@ -44,7 +44,6 @@ const (
 	TxBodyEmpty     = "transaction text is empty"
 	SignaturesEmpty = "signature list is empty"
 
-	NetworkCheck            = "unable to check network"
 	blockRetrieval          = "unable to retrieve block"
 	balancesRetrieval       = "unable to retrieve balances"
 	oldestRetrieval         = "unable to retrieve oldest block"
