@@ -116,13 +116,6 @@ func run() int {
 		return failure
 	}
 
-	// Load the root trie from the checkpoint file providen on command line.
-	root, err := initializer.RootTrie(flagCheckpoint)
-	if err != nil {
-		log.Error().Err(err).Msg("could not load root checkpoint")
-		return failure
-	}
-
 	// The chain is responsible for reading blockchain data from the protocol state.
 	disk := chain.FromDisk(data)
 
@@ -145,9 +138,17 @@ func run() int {
 	write := dps.Writer(index)
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	transitions := mapper.NewTransitions(log, root, disk, feed, write,
-		mapper.WithSkipRegisters(flagSkip),
-	)
+	var opts []mapper.Option
+	if flagCheckpoint != "" {
+		root, err := initializer.RootTrie(flagCheckpoint)
+		if err != nil {
+			log.Error().Err(err).Msg("could not load root checkpoint")
+			return failure
+		}
+		opts = append(opts, mapper.WithRootTrie(root))
+	}
+	opts = append(opts, mapper.WithSkipRegisters(flagSkip))
+	transitions := mapper.NewTransitions(log, disk, feed, write, opts...)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,

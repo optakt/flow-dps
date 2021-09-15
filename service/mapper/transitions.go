@@ -37,7 +37,6 @@ type TransitionFunc func(*State) error
 type Transitions struct {
 	cfg   Config
 	log   zerolog.Logger
-	root  *trie.MTrie
 	chain dps.Chain
 	feed  Feeder
 	index dps.Writer
@@ -45,7 +44,7 @@ type Transitions struct {
 }
 
 // NewTransitions returns a Transitions component using the given dependencies and using the given options
-func NewTransitions(log zerolog.Logger, root *trie.MTrie, chain dps.Chain, feed Feeder, index dps.Writer, options ...func(*Config)) *Transitions {
+func NewTransitions(log zerolog.Logger, chain dps.Chain, feed Feeder, index dps.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -55,7 +54,6 @@ func NewTransitions(log zerolog.Logger, root *trie.MTrie, chain dps.Chain, feed 
 	t := Transitions{
 		log:   log.With().Str("component", "mapper_transitions").Logger(),
 		cfg:   cfg,
-		root:  root,
 		chain: chain,
 		feed:  feed,
 		index: index,
@@ -68,11 +66,16 @@ func NewTransitions(log zerolog.Logger, root *trie.MTrie, chain dps.Chain, feed 
 // BootstrapState bootstraps the state by loading the checkpoint if there is one
 // and initializing the elements subsequently used by the FSM.
 func (t *Transitions) BootstrapState(s *State) error {
-
-	// Bootstrapping should only happen when the state is empty.
 	if s.status != StatusBootstrap {
 		return fmt.Errorf("invalid status for bootstrapping state (%s)", s.status)
 	}
+
+	// If we are bootstrapping, we need the root trie to extract the ledger
+	// registers that need to be indexed for the root block.
+	if t.cfg.RootTrie == nil {
+		return fmt.Errorf("no root trie available for bootstrapping index")
+	}
+	tree := t.cfg.RootTrie
 
 	// We always need at least one step in our forest, which is used as the
 	// stopping point when indexing the payloads since the last finalized
@@ -98,11 +101,10 @@ func (t *Transitions) BootstrapState(s *State) error {
 	s.height = height
 
 	// Here, we store all the paths so we can index the payloads, if wanted.
-	var paths []ledger.Path
-	paths = allPaths(t.root)
-	s.forest.Save(t.root, paths, first)
+	paths := allPaths(tree)
+	s.forest.Save(tree, paths, first)
 
-	second := t.root.RootHash()
+	second := tree.RootHash()
 	t.log.Info().Uint64("height", s.height).Hex("commit", second[:]).Int("registers", len(paths)).Msg("added checkpoint tree to forest")
 
 	// We have successfully bootstrapped. However, no chain data for the root

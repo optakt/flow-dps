@@ -31,15 +31,13 @@ import (
 
 func TestNewTransitions(t *testing.T) {
 	t.Run("nominal case, without options", func(t *testing.T) {
-		root := trie.NewEmptyMTrie()
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		index := mocks.BaselineWriter(t)
 
-		tr := NewTransitions(mocks.NoopLogger, root, chain, feed, index)
+		tr := NewTransitions(mocks.NoopLogger, chain, feed, index)
 
 		assert.NotNil(t, tr)
-		assert.Equal(t, root, tr.root)
 		assert.Equal(t, chain, tr.chain)
 		assert.Equal(t, feed, tr.feed)
 		assert.Equal(t, index, tr.index)
@@ -48,18 +46,16 @@ func TestNewTransitions(t *testing.T) {
 	})
 
 	t.Run("nominal case, with option", func(t *testing.T) {
-		root := trie.NewEmptyMTrie()
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		index := mocks.BaselineWriter(t)
 
 		skip := true
-		tr := NewTransitions(mocks.NoopLogger, root, chain, feed, index,
+		tr := NewTransitions(mocks.NoopLogger, chain, feed, index,
 			WithSkipRegisters(skip),
 		)
 
 		assert.NotNil(t, tr)
-		assert.Equal(t, root, tr.root)
 		assert.Equal(t, chain, tr.chain)
 		assert.Equal(t, feed, tr.feed)
 		assert.Equal(t, index, tr.index)
@@ -76,6 +72,7 @@ func TestTransitions_BootstrapState(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusBootstrap)
+		tr.cfg.RootTrie = mocks.GenericTrie
 
 		// Copy state in local scope so that we can override its SaveFunc without impacting other
 		// tests running in parallel.
@@ -855,7 +852,6 @@ func TestTransitions_IndexChain(t *testing.T) {
 func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 	t.Helper()
 
-	root := trie.NewEmptyMTrie()
 	chain := mocks.BaselineChain(t)
 	index := mocks.BaselineWriter(t)
 	feeder := mocks.BaselineFeeder(t)
@@ -866,11 +862,11 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 
 	tr := &Transitions{
 		cfg: Config{
+			RootTrie:      nil,
 			SkipRegisters: false,
 			WaitInterval:  0,
 		},
 		log:   mocks.NoopLogger,
-		root:  root,
 		chain: chain,
 		feed:  feeder,
 		index: index,

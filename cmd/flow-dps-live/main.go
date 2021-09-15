@@ -115,72 +115,63 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// Open DPS index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex))
+	// As a first step, we will open the protocol state and the index database.
+	// The protocol state database is what the consensus follower will write to
+	// and the mapper will read from. The index database is what the mapper will
+	// write to and the DPS API will read from.
+	indexDB, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index database")
 		return failure
 	}
 	defer func() {
-		err := db.Close()
+		err := indexDB.Close()
 		if err != nil {
 			log.Error().Err(err).Msg("could not close index database")
 		}
 	}()
-
-	// Open protocol state database.
-	data, err := badger.Open(dps.DefaultOptions(flagData))
+	protocolDB, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
 		log.Error().Err(err).Msg("could not open protocol state database")
 		return failure
 	}
 	defer func() {
-		err := data.Close()
+		err := protocolDB.Close()
 		if err != nil {
 			log.Error().Err(err).Msg("could not close protocol state database")
 		}
 	}()
 
-	// The storage library is initialized with a codec and provides functions to
-	// interact with a Badger database while encoding and compressing
-	// transparently.
+	// Next, we initialize the index reader and writer. They use a common codec
+	// and storage library to interact with the underlying database. If there
+	// already is an index database, we need the force flag to be set, as we do
+	// not want to start overwriting data in the index silently. We also need
+	// to flush the writer to make sure all data is written correctly when
+	// shutting down.
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
-
-	// Initialize the index reader and check whether there is already an index
-	// in the database at the provided index database directory.
-	read := index.NewReader(db, storage)
+	read := index.NewReader(indexDB, storage)
 	_, err = read.First()
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		log.Error().Err(err).Msg("could not get first height from index reader")
 		return failure
 	}
-	indexExists := err == nil
-	if indexExists && !flagForce {
+	if err == nil && !flagForce {
 		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
 		return failure
 	}
+	write := index.NewWriter(indexDB, storage)
+	defer func() {
+		err := write.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close index writer")
+		}
+	}()
 
-	// Unfortunately, the current consensus follower does not bootstrap the
-	// protocol state until it is run. This means we are liable to miss block
-	// finalization of the first few blocks, which breaks our logic. We thus
-	// must ensure that the protocol state is already bootstrapped manually
-	// before starting the consensus follower.
-	path := filepath.Join(flagBootstrap, bootstrap.PathRootProtocolStateSnapshot)
-	file, err := os.Open(path)
-	if err != nil {
-		log.Error().Err(err).Str("path", path).Msg("could not open protocol state snapshot")
-		return failure
-	}
-	err = initializer.ProtocolState(file, data)
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize protocol state")
-		return failure
-	}
-
-	// Initialize the private key for joining the unstaked peer-to-peer network.
-	// This is just needed for security, not authentication, so we can just
-	// generate a new one each time we start.
+	// Next, we want to initialize the consensus follower. One needed parameter
+	// is a network key, used to secure the peer-to-peer communication. However,
+	// as we do not need any specific key, we choose to just initialize a new
+	// key on each start of the live indexer.
 	seed := make([]byte, crypto.KeyGenSeedMinLenECDSASecp256k1)
 	n, err := rand.Read(seed)
 	if err != nil || n != crypto.KeyGenSeedMinLenECDSASecp256k1 {
@@ -193,11 +184,11 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the unstaked consensus follower. It connects to a staked
-	// access node for bootstrapping the peer-to-peer network with other
-	// staked access nodes and unstaked consensus followers. For every finalized
-	// block, it calls the provided callback, which lets the DPS consensus
-	// follower update its data.
+	// Here, we finally initialize the unstaked consensus follower. It connects
+	// to a staked access node for bootstrapping the peer-to-peer network, which
+	// is shared between staked access nodes and unstaked consensus followers.
+	// For every finalized block, it calls the callback for all registered
+	// finalization listeners.
 	seedHost, port, err := net.SplitHostPort(flagSeedAddress)
 	if err != nil {
 		log.Error().Err(err).Str("address", flagSeedAddress).Msg("could not parse seed node address")
@@ -223,7 +214,7 @@ func run() int {
 		"0.0.0.0:0", // automatically choose port, listen on all IPs
 		seedNodes,
 		unstaked.WithBootstrapDir(flagBootstrap),
-		unstaked.WithDB(data),
+		unstaked.WithDB(protocolDB),
 		unstaked.WithLogLevel(flagLevel),
 	)
 	if err != nil {
@@ -231,8 +222,29 @@ func run() int {
 		return failure
 	}
 
-	// Initialize the execution follower that will read block records from the
-	// Google Cloud Platform bucket.
+	// There is a problem with the Flow consensus follower API which makes it
+	// impossible to use it to bootstrap the protocol state. The consensus
+	// follower will only bootstrap it when it's starting. This makes it
+	// impossible to initialize our consensus tracker, which needs a valid
+	// protocol state, and to add it to the consensus follower for block
+	// finalization, without missing some blocks. As a work-around, we manually
+	// bootstrap the Flow protocol state using the bootstrap data here.
+	path := filepath.Join(flagBootstrap, bootstrap.PathRootProtocolStateSnapshot)
+	file, err := os.Open(path)
+	if err != nil {
+		log.Error().Err(err).Str("path", path).Msg("could not open protocol state snapshot")
+		return failure
+	}
+	err = initializer.ProtocolState(file, protocolDB)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize protocol state")
+		return failure
+	}
+
+	// On the other side, we also need access to the execution data. The cloud
+	// streamer is responsible for retrieving block execution records from a
+	// Google Cloud Storage bucket. This component plays the role of what would
+	// otherwise be a network protocol, such as a publish socket.
 	client, err := gcloud.NewClient(context.Background(),
 		option.WithoutAuthentication(),
 	)
@@ -248,48 +260,44 @@ func run() int {
 	}()
 	bucket := client.Bucket(flagBucket)
 	stream := cloud.NewGCPStreamer(log, bucket)
-	execution, err := tracker.NewExecution(log, data, stream)
+
+	// Next, we can initialize our consensus and execution trackers. They are
+	// responsible for tracking changes to the available data, for the consensus
+	// follower and related consensus data on one side, and the cloud streamer
+	// and available execution records on the other side.
+	execution, err := tracker.NewExecution(log, protocolDB, stream)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize execution tracker")
 		return failure
 	}
-
-	// Initialize the consensus tracker, which uses the protocol state to
-	// retrieve data from consensus and the execution follower to complement
-	// the data with complete blocks.
-	consensus, err := tracker.NewConsensus(log, data, execution)
+	consensus, err := tracker.NewConsensus(log, protocolDB, execution)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize consensus tracker")
 		return failure
 	}
 
-	// We can now register both the consensus follower and the cloud streamer
-	// as consumers of finalized blocks.
+	// We can now register the consensus tracker and the cloud streamer as
+	// finalization listeners with the consensus follower. The consensus tracker
+	// will use the call back to make additional data available to the mapper,
+	// while the cloud streamer will use the callback to download execution data
+	// for finalized blocks.
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
-	// Initialize the index writer, which is responsible for writing the chain
-	// and execution data to the index database.
-	write := index.NewWriter(db, storage)
-	defer func() {
-		err := write.Close()
+	// At this point, we can initialize the core business logic of the indexer,
+	// with the mapper's finite state machine and transitions. We also want to
+	// load and inject the root checkpoint if it is given as a parameter.
+	var opts []mapper.Option
+	if flagCheckpoint != "" {
+		root, err := initializer.RootTrie(flagCheckpoint)
 		if err != nil {
-			log.Error().Err(err).Msg("could not close index writer")
+			log.Error().Err(err).Msg("could not load root checkpoint")
+			return failure
 		}
-	}()
-
-	// Load the root trie from the checkpoint file providen on command line.
-	root, err := initializer.RootTrie(flagCheckpoint)
-	if err != nil {
-		log.Error().Err(err).Msg("could not load root checkpoint")
-		return failure
+		opts = append(opts, mapper.WithRootTrie(root))
 	}
-
-	// Initialize the state transition library, the finite-state machine (FSM)
-	// and then register the desired state transitions with the FSM.
-	transitions := mapper.NewTransitions(log, root, consensus, execution, write,
-		mapper.WithSkipRegisters(flagSkip),
-	)
+	opts = append(opts, mapper.WithSkipRegisters(flagSkip))
+	transitions := mapper.NewTransitions(log, consensus, execution, write, opts...)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
@@ -301,26 +309,27 @@ func run() int {
 		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
 	)
 
-	// Initialize the GRPC server for the DPS API.
-	opts := []logging.Option{
+	// Next, we initialize the GRPC server that will serve the DPS API on top of
+	// the index database that is generated live by the mapper.
+	logOpts := []logging.Option{
 		logging.WithLevels(logging.DefaultServerCodeToLevel),
 	}
 	interceptor := grpczerolog.InterceptorLogger(log.With().Str("component", "grpc_server").Logger())
 	gsvr := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			tags.UnaryServerInterceptor(),
-			logging.UnaryServerInterceptor(interceptor, opts...),
+			logging.UnaryServerInterceptor(interceptor, logOpts...),
 		),
 		grpc.ChainStreamInterceptor(
 			tags.StreamServerInterceptor(),
-			logging.StreamServerInterceptor(interceptor, opts...),
+			logging.StreamServerInterceptor(interceptor, logOpts...),
 		),
 	)
 	server := api.NewServer(read, codec)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
-	// interrupt signal in order to proceed with the next section.
+	// interrupt signal in order to proceed with the shutdown.
 	listener, err := net.Listen("tcp", flagAddress)
 	if err != nil {
 		log.Error().Str("address", flagAddress).Err(err).Msg("could not create listener")
@@ -359,6 +368,10 @@ func run() int {
 		log.Info().Msg("Flow DPS Live Server stopped")
 	}()
 
+	// Here, we are waiting for a signal, or for one of the components to fail
+	// or finish. In both cases, we proceed to shut down everything, while also
+	// entering a go-routine that allows us to force shut down by sending
+	// another signal.
 	select {
 	case <-sig:
 		log.Info().Msg("Flow DPS Indexer stopping")
@@ -373,14 +386,12 @@ func run() int {
 		os.Exit(1)
 	}()
 
-	// First, stop the DPS API to avoid failed requests.
+	// We first stop serving the DPS API by shutting down the GRPC server. Next,
+	// we shut down the consensus follower, so that there is no indexing to be
+	// done anymore. Lastly, we stop the mapper logic itself.
 	gsvr.GracefulStop()
-
-	// Then stop the consensus follower and wait for it to shut down completely.
 	cancel()
 	<-follow.NodeBuilder.Done()
-
-	// Lastly, we can stop the core business logic of the indexer.
 	err = fsm.Stop()
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")

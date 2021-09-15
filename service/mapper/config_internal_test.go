@@ -18,8 +18,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestWithRootTrie(t *testing.T) {
+	c := Config{
+		RootTrie: nil,
+	}
+	tree := trie.NewEmptyMTrie()
+
+	WithRootTrie(tree)(&c)
+
+	assert.Equal(t, tree, c.RootTrie)
+}
 
 func TestWithSkipRegisters(t *testing.T) {
 	c := Config{
