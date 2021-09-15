@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package loader
+package initializer
 
 import (
 	"fmt"
@@ -23,35 +23,11 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
-// Loader loads the trie from its checkpoint, or an empty trie if it does not
-// have any checkpoint file.
-type Loader struct {
-	path string
-}
+// RootTrie loads the execution state trie from a LedgerWAL checkpoint under the
+// given path.
+func RootTrie(path string) (*trie.MTrie, error) {
 
-// New returns a new Loader with the given options.
-func New(options ...func(*Loader)) *Loader {
-	l := Loader{
-		path: "",
-	}
-
-	for _, option := range options {
-		option(&l)
-	}
-
-	return &l
-}
-
-// Checkpoint loads its checkpoint if one was specified, and otherwise
-// returns an empty trie. It errors when given a checkpoint with more than
-// one single tree.
-func (l *Loader) Checkpoint() (*trie.MTrie, error) {
-
-	if l.path == "" {
-		return trie.NewEmptyMTrie(), nil
-	}
-
-	file, err := os.Open(l.path)
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not open file: %w", err)
 	}
@@ -70,4 +46,5 @@ func (l *Loader) Checkpoint() (*trie.MTrie, error) {
 	}
 
 	return trees[0], nil
+
 }

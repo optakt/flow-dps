@@ -37,15 +37,15 @@ type TransitionFunc func(*State) error
 type Transitions struct {
 	cfg   Config
 	log   zerolog.Logger
-	load  Loader
+	root  *trie.MTrie
 	chain dps.Chain
 	feed  Feeder
 	index dps.Writer
 	once  *sync.Once
 }
 
-// NewTransitions returns a Transitions component using the given dependencies and using the given options.
-func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feeder, index dps.Writer, options ...func(*Config)) *Transitions {
+// NewTransitions returns a Transitions component using the given dependencies and using the given options
+func NewTransitions(log zerolog.Logger, root *trie.MTrie, chain dps.Chain, feed Feeder, index dps.Writer, options ...func(*Config)) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -55,7 +55,7 @@ func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feede
 	t := Transitions{
 		log:   log.With().Str("component", "mapper_transitions").Logger(),
 		cfg:   cfg,
-		load:  load,
+		root:  root,
 		chain: chain,
 		feed:  feed,
 		index: index,
@@ -97,22 +97,12 @@ func (t *Transitions) BootstrapState(s *State) error {
 	}
 	s.height = height
 
-	// Next, we will load our checkpoint tree and add it as the step
-	// following the first empty tree. This will ensure that we index all
-	// paths within the root tree.
-	checkpoint, err := t.load.Checkpoint()
-	if err != nil {
-		return fmt.Errorf("could not read checkpoint: %w", err)
-	}
-
-	// Here, we store all the paths, so we can index the payloads if wanted.
+	// Here, we store all the paths so we can index the payloads, if wanted.
 	var paths []ledger.Path
-	if !t.cfg.SkipBootstrap {
-		paths = allPaths(checkpoint)
-	}
-	s.forest.Save(checkpoint, paths, first)
+	paths = allPaths(t.root)
+	s.forest.Save(t.root, paths, first)
 
-	second := checkpoint.RootHash()
+	second := t.root.RootHash()
 	t.log.Info().Uint64("height", s.height).Hex("commit", second[:]).Int("registers", len(paths)).Msg("added checkpoint tree to forest")
 
 	// We have successfully bootstrapped. However, no chain data for the root

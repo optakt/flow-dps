@@ -49,7 +49,7 @@ import (
 	"github.com/optakt/flow-dps/service/cloud"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
-	"github.com/optakt/flow-dps/service/loader"
+	"github.com/optakt/flow-dps/service/initializer"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
 	"github.com/optakt/flow-dps/service/tracker"
@@ -278,15 +278,16 @@ func run() int {
 		}
 	}()
 
-	// Initialize the loader component, which is responsible for loading,
-	// decoding and providing indexing for the root checkpoint.
-	load := loader.New(
-		loader.WithCheckpointPath(flagCheckpoint),
-	)
+	// Load the root trie from the checkpoint file providen on command line.
+	root, err := initializer.RootTrie(flagCheckpoint)
+	if err != nil {
+		log.Error().Err(err).Msg("could not load root checkpoint")
+		return failure
+	}
 
 	// Initialize the state transition library, the finite-state machine (FSM)
 	// and then register the desired state transitions with the FSM.
-	transitions := mapper.NewTransitions(log, load, consensus, execution, write,
+	transitions := mapper.NewTransitions(log, root, consensus, execution, write,
 		mapper.WithIndexCommit(true),
 		mapper.WithIndexHeader(true),
 		mapper.WithIndexCollections(true),

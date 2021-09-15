@@ -31,15 +31,15 @@ import (
 
 func TestNewTransitions(t *testing.T) {
 	t.Run("nominal case, without options", func(t *testing.T) {
-		load := mocks.BaselineLoader(t)
+		root := trie.NewEmptyMTrie()
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		index := mocks.BaselineWriter(t)
 
-		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, index)
+		tr := NewTransitions(mocks.NoopLogger, root, chain, feed, index)
 
 		assert.NotNil(t, tr)
-		assert.Equal(t, load, tr.load)
+		assert.Equal(t, root, tr.root)
 		assert.Equal(t, chain, tr.chain)
 		assert.Equal(t, feed, tr.feed)
 		assert.Equal(t, index, tr.index)
@@ -48,12 +48,12 @@ func TestNewTransitions(t *testing.T) {
 	})
 
 	t.Run("nominal case, with options", func(t *testing.T) {
-		load := mocks.BaselineLoader(t)
+		root := trie.NewEmptyMTrie()
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		index := mocks.BaselineWriter(t)
 
-		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, index,
+		tr := NewTransitions(mocks.NoopLogger, root, chain, feed, index,
 			WithIndexCommit(true),
 			WithIndexHeader(true),
 			WithIndexPayloads(true),
@@ -65,7 +65,7 @@ func TestNewTransitions(t *testing.T) {
 		)
 
 		assert.NotNil(t, tr)
-		assert.Equal(t, load, tr.load)
+		assert.Equal(t, root, tr.root)
 		assert.Equal(t, chain, tr.chain)
 		assert.Equal(t, feed, tr.feed)
 		assert.Equal(t, index, tr.index)
@@ -132,22 +132,6 @@ func TestTransitions_BootstrapState(t *testing.T) {
 		}
 
 		tr.chain = chain
-
-		err := tr.BootstrapState(st)
-		assert.Error(t, err)
-	})
-
-	t.Run("handles failure to load checkpoint", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusEmpty)
-
-		load := mocks.BaselineLoader(t)
-		load.CheckpointFunc = func() (*trie.MTrie, error) {
-			return nil, mocks.GenericError
-		}
-
-		tr.load = load
 
 		err := tr.BootstrapState(st)
 		assert.Error(t, err)
@@ -909,7 +893,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 	t.Helper()
 
-	load := mocks.BaselineLoader(t)
+	root := trie.NewEmptyMTrie()
 	chain := mocks.BaselineChain(t)
 	index := mocks.BaselineWriter(t)
 	feeder := mocks.BaselineFeeder(t)
@@ -931,7 +915,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			IndexSeals:        true,
 		},
 		log:   mocks.NoopLogger,
-		load:  load,
+		root:  root,
 		chain: chain,
 		feed:  feeder,
 		index: index,

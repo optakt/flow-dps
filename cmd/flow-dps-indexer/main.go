@@ -31,7 +31,7 @@ import (
 	"github.com/optakt/flow-dps/service/feeder"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
-	"github.com/optakt/flow-dps/service/loader"
+	"github.com/optakt/flow-dps/service/initializer"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
 )
@@ -151,10 +151,12 @@ func run() int {
 		return failure
 	}
 
-	// The loader component is responsible for loading and decoding the checkpoint.
-	load := loader.New(
-		loader.WithCheckpointPath(flagCheckpoint),
-	)
+	// Load the root trie from the checkpoint file providen on command line.
+	root, err := initializer.RootTrie(flagCheckpoint)
+	if err != nil {
+		log.Error().Err(err).Msg("could not load root checkpoint")
+		return failure
+	}
 
 	// The chain is responsible for reading blockchain data from the protocol state.
 	disk := chain.FromDisk(data)
@@ -178,7 +180,7 @@ func run() int {
 	write := dps.Writer(index)
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	transitions := mapper.NewTransitions(log, load, disk, feed, write,
+	transitions := mapper.NewTransitions(log, root, disk, feed, write,
 		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
 		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
 		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),
