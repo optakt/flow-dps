@@ -14,17 +14,8 @@ Usage of flow-dps-indexer:
   -d, --data string          database directory for protocol data
   -f, --force                overwrite existing index database
   -i, --index string         database directory for state index (default "index")
-  -a, --index-all            index everything
-      --index-collections    index collections
-      --index-commits        index commits
-      --index-events         index events
-      --index-guarantees     index collection guarantees
-      --index-headers        index headers
-      --index-payloads       index payloads
-      --index-results        index transaction results
-      --index-seals          index seals
-      --index-transactions   index transactions
   -l, --level string         log output level (default "info")
+  -s, --skip                 skip indexing of execution state ledger registers
   -t, --trie string          data directory for state ledger
 ```
 

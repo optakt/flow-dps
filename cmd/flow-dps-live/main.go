@@ -72,17 +72,18 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAddress     string
-		flagBootstrap   string
-		flagBucket      string
-		flagCheckpoint  string
-		flagData        string
-		flagForce       bool
-		flagIndex       string
-		flagLevel       string
+		flagAddress    string
+		flagBootstrap  string
+		flagBucket     string
+		flagCheckpoint string
+		flagData       string
+		flagForce      bool
+		flagIndex      string
+		flagLevel      string
+		flagSkip       bool
+
 		flagSeedAddress string
 		flagSeedKey     string
-		flagSkip        bool
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
@@ -93,9 +94,10 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
+
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
-	pflag.BoolVarP(&flagSkip, "skip-registers", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
 

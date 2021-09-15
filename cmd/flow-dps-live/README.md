@@ -18,9 +18,9 @@ Usage of flow-dps-live:
   -f, --force                 overwrite existing index database
   -i, --index string          database directory for state index (default "index")
   -l, --level string          log output level (default "info")
+  -s, --skip                  skip indexing of execution state ledger registers
       --seed-address string   address of the seed node to follow unstaked consensus
       --seed-key string       hex-encoded public network key of the seed node to follow unstaked consensus
-
 ```
 
 ## Example

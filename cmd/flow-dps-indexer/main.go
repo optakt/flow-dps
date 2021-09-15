@@ -68,7 +68,7 @@ func run() int {
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
-	pflag.BoolVarP(&flagSkip, "skip-registers", "s", false, "skip indexing of execution state ledger registers")
+	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
 
