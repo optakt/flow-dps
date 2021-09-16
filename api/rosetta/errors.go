@@ -139,8 +139,8 @@ func invalidNetwork(fail failure.InvalidNetwork) Error {
 	return convertError(
 		configuration.ErrorInvalidNetwork,
 		fail.Description,
-		withDetail("network", fail.HaveNetwork),
-		withDetail("available_networks", fail.AvailableNetworks),
+		withDetail("have_network", fail.HaveNetwork),
+		withDetail("want_network", fail.WantNetwork),
 	)
 }
 
@@ -148,8 +148,8 @@ func invalidBlockchain(fail failure.InvalidBlockchain) Error {
 	return convertError(
 		configuration.ErrorInvalidNetwork,
 		fail.Description,
-		withDetail("blockchain", fail.HaveBlockchain),
-		withDetail("available_blockchains", fail.AvailableBlockchains),
+		withDetail("have_blockchain", fail.HaveBlockchain),
+		withDetail("want_blockchain", fail.WantBlockchain),
 	)
 }
 

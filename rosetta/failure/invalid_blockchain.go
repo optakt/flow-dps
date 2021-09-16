@@ -19,12 +19,12 @@ import (
 )
 
 type InvalidBlockchain struct {
-	Description          Description
-	HaveBlockchain       string
-	AvailableBlockchains string
+	Description    Description
+	HaveBlockchain string
+	WantBlockchain string
 }
 
 func (i InvalidBlockchain) Error() string {
-	return fmt.Sprintf("invalid blockchain (have: %s, available: %s): %s", i.HaveBlockchain, i.AvailableBlockchains, i.Description)
+	return fmt.Sprintf("invalid blockchain (have: %s, want: %s): %s", i.HaveBlockchain, i.WantBlockchain, i.Description)
 
 }

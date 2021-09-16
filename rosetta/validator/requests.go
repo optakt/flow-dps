@@ -138,18 +138,18 @@ func (v *Validator) Request(request interface{}) error {
 		// Network field is not referring to the network for which we are configured.
 		network, _ := verr.Value().(identifier.Network)
 		return failure.InvalidNetwork{
-			HaveNetwork:       network.Network,
-			AvailableNetworks: verr.Param(),
-			Description:       failure.NewDescription(unknownNetwork),
+			HaveNetwork: network.Network,
+			WantNetwork: verr.Param(),
+			Description: failure.NewDescription(unknownNetwork),
 		}
 
 	case blockchainFailTag:
 		// Blockchain field is not referring to the blockchain for which we are configured.
 		network, _ := verr.Value().(identifier.Network)
 		return failure.InvalidBlockchain{
-			HaveBlockchain:       network.Blockchain,
-			AvailableBlockchains: verr.Param(),
-			Description:          failure.NewDescription(unknownBlockchain),
+			HaveBlockchain: network.Blockchain,
+			WantBlockchain: verr.Param(),
+			Description:    failure.NewDescription(unknownBlockchain),
 		}
 
 	default:
@@ -177,11 +177,11 @@ func (v *Validator) networkValidator(sl validator.StructLevel) {
 	// value to the main validation function.
 	var ibErr failure.InvalidBlockchain
 	if errors.As(err, &ibErr) {
-		sl.ReportError(network, blockchainField, blockchainField, blockchainFailTag, ibErr.AvailableBlockchains)
+		sl.ReportError(network, blockchainField, blockchainField, blockchainFailTag, ibErr.WantBlockchain)
 	}
 	var inErr failure.InvalidNetwork
 	if errors.As(err, &inErr) {
-		sl.ReportError(network, networkField, networkField, networkFailTag, inErr.AvailableNetworks)
+		sl.ReportError(network, networkField, networkField, networkFailTag, inErr.WantNetwork)
 	}
 }
 
