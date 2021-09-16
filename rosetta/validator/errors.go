@@ -16,27 +16,36 @@ package validator
 
 // Error descriptions for common errors.
 const (
-	unknownBlockchain    = "network identifier has unknown blockchain field"
-	blockchainEmpty      = "blockchain identifier has empty blockchain field"
-	unknownNetwork       = "network identifier has unknown network field"
-	networkEmpty         = "blockchain identifier has empty network field"
-	blockInvalid         = "block hash is not a valid hex-encoded string"
-	blockNotFull         = "block identifier needs both fields filled for this request"
-	blockLength          = "block identifier has invalid hash field length"
-	blockTooLow          = "block index is below first indexed height"
-	blockTooHigh         = "block index is above last indexed height"
-	blockMismatch        = "block hash mismatches with authoritative hash for index"
+	// Network identifier errors.
+	unknownBlockchain = "network identifier has unknown blockchain field"
+	blockchainEmpty   = "blockchain identifier has empty blockchain field"
+	unknownNetwork    = "network identifier has unknown network field"
+	networkEmpty      = "blockchain identifier has empty network field"
+
+	// Block identifier errors.
+	blockInvalid  = "block hash is not a valid hex-encoded string"
+	blockNotFull  = "block identifier needs both fields filled for this request"
+	blockLength   = "block identifier has invalid hash field length"
+	blockTooLow   = "block index is below first indexed height"
+	blockTooHigh  = "block index is above last indexed height"
+	blockMismatch = "block hash mismatches with authoritative hash for index"
+
+	// Account identifier errors.
 	addressEmpty         = "account identifier has empty address field"
 	addressInvalid       = "account address is not a valid hex-encoded string"
 	addressMisconfigured = "account address is not valid for configured chain"
 	addressLength        = "account identifier has invalid address field length"
-	currenciesEmpty      = "currency identifier list is empty"
-	symbolEmpty          = "currency identifier has empty symbol field"
-	symbolUnknown        = "currency symbol is unknown"
-	decimalsMismatch     = "currency decimals mismatch with authoritative decimals for symbol"
-	txHashEmpty          = "transaction identifier has empty hash field"
-	txHashInvalid        = "transaction hash is not a valid hex-encoded string"
-	txLength             = "transaction identifier has invalid hash field length"
-	txBodyEmpty          = "transaction text is empty"
-	signaturesEmpty      = "signature list is empty"
+
+	// Currency identifier errors.
+	currenciesEmpty  = "currency identifier list is empty"
+	symbolEmpty      = "currency identifier has empty symbol field"
+	symbolUnknown    = "currency symbol is unknown"
+	decimalsMismatch = "currency decimals mismatch with authoritative decimals for symbol"
+
+	// Transaction and transaction identifier errors.
+	txHashEmpty     = "transaction identifier has empty hash field"
+	txHashInvalid   = "transaction hash is not a valid hex-encoded string"
+	txLength        = "transaction identifier has invalid hash field length"
+	txBodyEmpty     = "transaction text is empty"
+	signaturesEmpty = "signature list is empty"
 )
