@@ -24,12 +24,13 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-// Block identifier tries to extrapolate the block identifier to a full version
+// Block tries to extrapolate the block identifier to a full version
 // of itself. If both index and hash are zero values, it is assumed that the
 // latest block is referenced.
 func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier, error) {
 
-	// If both the index and the hash are missing, the block identifier is invalid.
+	// If both the index and the hash are missing, the block identifier is invalid, and
+	// the latest block ID is returned instead.
 	if rosBlockID.Index == nil && rosBlockID.Hash == "" {
 		last, err := v.index.Last()
 		if err != nil {

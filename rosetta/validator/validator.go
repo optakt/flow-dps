@@ -20,19 +20,20 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// Validator validates Rosetta object identifiers.
 type Validator struct {
 	params   dps.Params
 	index    dps.Reader
 	validate *validator.Validate
 }
 
+// New returns a new Validator.
 func New(params dps.Params, index dps.Reader, config Configuration) *Validator {
-
-	v := &Validator{
+	v := Validator{
 		params:   params,
 		index:    index,
 		validate: newRequestValidator(config),
 	}
 
-	return v
+	return &v
 }

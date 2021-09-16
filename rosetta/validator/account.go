@@ -23,6 +23,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// Account validates the given account identifier, and if successful, returns a matching Flow Address.
 func (v *Validator) Account(account identifier.Account) (flow.Address, error) {
 
 	// Parse the address; the length was already validated, but it's still

@@ -21,6 +21,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// Transaction validates a transaction identifier, and if its valid, returns a matching Flow Identifier.
 func (v *Validator) Transaction(transaction identifier.Transaction) (flow.Identifier, error) {
 
 	txID, err := flow.HexStringToIdentifier(transaction.Hash)

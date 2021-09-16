@@ -28,12 +28,14 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// Disk is a component used to access chain data from a badger database.
 type Disk struct {
 	db      *badger.DB
 	height  uint64
 	blockID flow.Identifier
 }
 
+// FromDisk returns a new Disk chain that uses the given badger database.
 func FromDisk(db *badger.DB) *Disk {
 	d := Disk{
 		db:      db,
@@ -44,6 +46,7 @@ func FromDisk(db *badger.DB) *Disk {
 	return &d
 }
 
+// Root is a
 func (d *Disk) Root() (uint64, error) {
 	var height uint64
 	err := d.db.View(operation.RetrieveRootHeight(&height))

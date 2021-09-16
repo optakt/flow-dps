@@ -24,6 +24,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// ErrInvalidValidation is a sentinel error for any error not being caused by a given input failing validation.
 var ErrInvalidValidation = errors.New("invalid validation input")
 
 // Field names are displayed if the code deals with the plain `error` types instead of the structured validation errors.
@@ -78,8 +79,8 @@ func newRequestValidator(config Configuration) *validator.Validate {
 	return validate
 }
 
-// Request will run the registered validators on the provided request.
-// It will either return a typed error with contextual information, or a plain error
+// Request runs the registered validators on the provided request.
+// It either returns a typed error with contextual information, or a plain error
 // describing what failed.
 func (v *Validator) Request(request interface{}) error {
 
