@@ -19,7 +19,6 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
@@ -116,7 +115,7 @@ func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier,
 func (v *Validator) CompleteBlockID(rosBlockID identifier.Block) error {
 	if rosBlockID.Index == nil || rosBlockID.Hash == "" {
 		return failure.IncompleteBlock{
-			Description: failure.NewDescription(rosetta.BlockNotFull),
+			Description: failure.NewDescription(blockNotFull),
 		}
 	}
 	return nil

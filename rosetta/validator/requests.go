@@ -47,12 +47,6 @@ const (
 	networkFailTag    = "network"
 )
 
-// Error descriptions for common errors.
-const (
-	unknownBlockchain = "network identifier has unknown blockchain field"
-	unknownNetwork    = "network identifier has unknown network field"
-)
-
 func newRequestValidator(config Configuration) *validator.Validate {
 
 	validate := validator.New()
@@ -108,29 +102,29 @@ func (v *Validator) Request(request interface{}) error {
 	verr := err.(validator.ValidationErrors)[0]
 
 	switch verr.Tag() {
-	case rosetta.BlockLength:
+	case blockLength:
 		// Block hash has incorrect length.
 		blockHash, _ := verr.Value().(string)
 		return failure.InvalidBlockHash{
-			Description: failure.NewDescription(rosetta.BlockLength),
+			Description: failure.NewDescription(blockLength),
 			WantLength:  rosetta.HexIDSize,
 			HaveLength:  len(blockHash),
 		}
 
-	case rosetta.AddressLength:
+	case addressLength:
 		// Account address has incorrect length.
 		address, _ := verr.Value().(string)
 		return failure.InvalidAccountAddress{
-			Description: failure.NewDescription(rosetta.AddressLength),
+			Description: failure.NewDescription(addressLength),
 			WantLength:  rosetta.HexAddressSize,
 			HaveLength:  len(address),
 		}
 
-	case rosetta.TxLength:
+	case txLength:
 		// Transaction hash has incorrect length.
 		txHash, _ := verr.Value().(string)
 		return failure.InvalidTransactionHash{
-			Description: failure.NewDescription(rosetta.TxLength),
+			Description: failure.NewDescription(txLength),
 			WantLength:  rosetta.HexIDSize,
 			HaveLength:  len(txHash),
 		}
@@ -167,10 +161,10 @@ func networkValidator(config Configuration) func(validator.StructLevel) {
 		network := sl.Current().Interface().(identifier.Network)
 
 		if network.Blockchain == "" {
-			sl.ReportError(network.Blockchain, blockchainField, blockchainField, rosetta.BlockchainEmpty, "")
+			sl.ReportError(network.Blockchain, blockchainField, blockchainField, blockchainEmpty, "")
 		}
 		if network.Network == "" {
-			sl.ReportError(network.Network, networkField, networkField, rosetta.NetworkEmpty, "")
+			sl.ReportError(network.Network, networkField, networkField, networkEmpty, "")
 		}
 
 		err := config.Check(network)
@@ -192,7 +186,7 @@ func networkValidator(config Configuration) func(validator.StructLevel) {
 func blockValidator(sl validator.StructLevel) {
 	rosBlockID := sl.Current().Interface().(identifier.Block)
 	if rosBlockID.Hash != "" && len(rosBlockID.Hash) != rosetta.HexIDSize {
-		sl.ReportError(rosBlockID.Hash, blockHashField, blockHashField, rosetta.BlockLength, "")
+		sl.ReportError(rosBlockID.Hash, blockHashField, blockHashField, blockLength, "")
 	}
 }
 
@@ -200,10 +194,10 @@ func blockValidator(sl validator.StructLevel) {
 func accountValidator(sl validator.StructLevel) {
 	rosAccountID := sl.Current().Interface().(identifier.Account)
 	if rosAccountID.Address == "" {
-		sl.ReportError(rosAccountID.Address, addressField, addressField, rosetta.AddressEmpty, "")
+		sl.ReportError(rosAccountID.Address, addressField, addressField, addressEmpty, "")
 	}
 	if len(rosAccountID.Address) != rosetta.HexAddressSize {
-		sl.ReportError(rosAccountID.Address, addressField, addressField, rosetta.AddressLength, "")
+		sl.ReportError(rosAccountID.Address, addressField, addressField, addressLength, "")
 	}
 }
 
@@ -211,10 +205,10 @@ func accountValidator(sl validator.StructLevel) {
 func transactionValidator(sl validator.StructLevel) {
 	rosTxID := sl.Current().Interface().(identifier.Transaction)
 	if rosTxID.Hash == "" {
-		sl.ReportError(rosTxID.Hash, txField, txField, rosetta.TxHashEmpty, "")
+		sl.ReportError(rosTxID.Hash, txField, txField, txHashEmpty, "")
 	}
 	if len(rosTxID.Hash) != rosetta.HexIDSize {
-		sl.ReportError(rosTxID.Hash, txField, txField, rosetta.TxLength, "")
+		sl.ReportError(rosTxID.Hash, txField, txField, txLength, "")
 	}
 }
 
@@ -223,11 +217,11 @@ func transactionValidator(sl validator.StructLevel) {
 func balanceValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(request.Balance)
 	if len(req.Currencies) == 0 {
-		sl.ReportError(req.Currencies, currencyField, currencyField, rosetta.CurrenciesEmpty, "")
+		sl.ReportError(req.Currencies, currencyField, currencyField, currenciesEmpty, "")
 	}
 	for _, currency := range req.Currencies {
 		if currency.Symbol == "" {
-			sl.ReportError(currency.Symbol, symbolField, symbolField, rosetta.SymbolEmpty, "")
+			sl.ReportError(currency.Symbol, symbolField, symbolField, symbolEmpty, "")
 		}
 	}
 }
@@ -236,7 +230,7 @@ func balanceValidator(sl validator.StructLevel) {
 func parseValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(request.Parse)
 	if req.Transaction == "" {
-		sl.ReportError(req.Transaction, transactionField, transactionField, rosetta.TxBodyEmpty, "")
+		sl.ReportError(req.Transaction, transactionField, transactionField, txBodyEmpty, "")
 	}
 }
 
@@ -245,11 +239,11 @@ func parseValidator(sl validator.StructLevel) {
 func combineValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(request.Combine)
 	if req.UnsignedTransaction == "" {
-		sl.ReportError(req.UnsignedTransaction, transactionField, transactionField, rosetta.TxBodyEmpty, "")
+		sl.ReportError(req.UnsignedTransaction, transactionField, transactionField, txBodyEmpty, "")
 	}
 
 	if len(req.Signatures) == 0 {
-		sl.ReportError(req.Signatures, signaturesField, signaturesField, rosetta.SignaturesEmpty, "")
+		sl.ReportError(req.Signatures, signaturesField, signaturesField, signaturesEmpty, "")
 	}
 }
 
@@ -257,7 +251,7 @@ func combineValidator(sl validator.StructLevel) {
 func submitValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(request.Submit)
 	if req.SignedTransaction == "" {
-		sl.ReportError(req.SignedTransaction, transactionField, transactionField, rosetta.TxBodyEmpty, "")
+		sl.ReportError(req.SignedTransaction, transactionField, transactionField, txBodyEmpty, "")
 	}
 }
 
@@ -265,6 +259,6 @@ func submitValidator(sl validator.StructLevel) {
 func hashValidator(sl validator.StructLevel) {
 	req := sl.Current().Interface().(request.Hash)
 	if req.SignedTransaction == "" {
-		sl.ReportError(req.SignedTransaction, transactionField, transactionField, rosetta.TxBodyEmpty, "")
+		sl.ReportError(req.SignedTransaction, transactionField, transactionField, txBodyEmpty, "")
 	}
 }
