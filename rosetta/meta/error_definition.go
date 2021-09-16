@@ -14,6 +14,7 @@
 
 package meta
 
+// ErrorDefinition is a Rosetta error's definition.
 type ErrorDefinition struct {
 	Code      uint   `json:"code"`
 	Message   string `json:"message"`

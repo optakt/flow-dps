@@ -184,9 +184,6 @@ func (t *Transactor) CompileTransaction(rosBlockID identifier.Block, intent *Int
 		return "", fmt.Errorf("could not generate transfer script: %w", err)
 	}
 
-	// TODO: Allow arbitrary proposal key index
-	// => https://github.com/optakt/flow-dps/issues/369
-
 	// Create the transaction.
 	unsignedTx := sdk.NewTransaction().
 		SetScript(script).
@@ -327,8 +324,6 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 		}
 	}
 
-	// TODO: allow arbitrary key index
-	// => https://github.com/optakt/flow-dps/issues/369
 	signedTx := unsignedTx.AddEnvelopeSignature(signer, 0, bytes)
 	signed, err := t.encodeTransaction(signedTx)
 	if err != nil {

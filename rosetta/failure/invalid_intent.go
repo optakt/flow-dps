@@ -18,10 +18,12 @@ import (
 	"fmt"
 )
 
+// InvalidIntent is the error for an invalid transaction intent.
 type InvalidIntent struct {
 	Description Description
 }
 
+// Error implements the error interface.
 func (i InvalidIntent) Error() string {
 	return fmt.Sprintf("invalid transaction intent: %s", i.Description)
 }

@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// UnknownBlock is the error for an unknown block identifier.
 type UnknownBlock struct {
 	Description Description
 	Index       uint64
 	Hash        string
 }
 
+// Error implements the error interface.
 func (u UnknownBlock) Error() string {
 	return fmt.Sprintf("unknown block (index: %d, hash: %s): %s", u.Index, u.Hash, u.Description)
 }

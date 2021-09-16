@@ -18,10 +18,13 @@ import (
 	"fmt"
 )
 
+// IncompleteBlock is the error for an incomplete block identifier, missing
+// either the hash or the index.
 type IncompleteBlock struct {
 	Description Description
 }
 
+// Error implements the error interface.
 func (i IncompleteBlock) Error() string {
 	return fmt.Sprintf("incomplete block: %s", i.Description)
 }

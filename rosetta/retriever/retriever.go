@@ -35,6 +35,8 @@ const (
 	missingVault = "Could not borrow Balance reference to the Vault"
 )
 
+// Retriever is a component that retrieves information from the DPS index and converts it into
+// a format that is appropriate for the Rosetta API.
 type Retriever struct {
 	cfg Config
 
@@ -46,6 +48,7 @@ type Retriever struct {
 	convert  Converter
 }
 
+// New instantiates and returns a Retriever using the injected dependencies, as well as the provided options.
 func New(params dps.Params, index dps.Reader, validate Validator, generator Generator, invoke Invoker, convert Converter, options ...func(*Config)) *Retriever {
 
 	cfg := Config{
@@ -69,6 +72,7 @@ func New(params dps.Params, index dps.Reader, validate Validator, generator Gene
 	return &r
 }
 
+// Oldest retrieves the oldest block identifier as well as its timestamp.
 func (r *Retriever) Oldest() (identifier.Block, time.Time, error) {
 
 	first, err := r.index.First()
@@ -89,6 +93,7 @@ func (r *Retriever) Oldest() (identifier.Block, time.Time, error) {
 	return block, header.Timestamp, nil
 }
 
+// Current retrieves the last block identifier as well as its timestamp.
 func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 
 	last, err := r.index.Last()
@@ -109,6 +114,7 @@ func (r *Retriever) Current() (identifier.Block, time.Time, error) {
 	return block, header.Timestamp, nil
 }
 
+// Balances retrieves the balances for the given currencies of the given account ID at the given block.
 func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifier.Account, rosCurrencies []identifier.Currency) (identifier.Block, []object.Amount, error) {
 
 	// Run validation on the Rosetta block identifier. If it is valid, this will
@@ -172,6 +178,7 @@ func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifie
 	return rosettaBlockID(height, blockID), amounts, nil
 }
 
+// Block retrieves a block and its transactions given its identifier.
 func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identifier.Transaction, error) {
 
 	// Run validation on the Rosetta block identifier. If it is valid, this will
@@ -256,6 +263,7 @@ func (r *Retriever) Block(rosBlockID identifier.Block) (*object.Block, []identif
 	return &block, extraTransactions, nil
 }
 
+// Transaction retrieves a transaction given its identifier and the identifier of the block it is a part of.
 func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.Transaction) (*object.Transaction, error) {
 
 	// Run validation on the Rosetta block identifier. If it is valid, this will
@@ -323,9 +331,7 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	return &transaction, nil
 }
 
-// TODO: Add unit test for this function:
-// => https://github.com/optakt/flow-dps/issues/390
-
+// Sequence retrieves the sequence number of an account's public key.
 func (r *Retriever) Sequence(rosBlockID identifier.Block, rosAccountID identifier.Account, index int) (uint64, error) {
 
 	// Run validation on the Rosetta block identifier. This will infer any

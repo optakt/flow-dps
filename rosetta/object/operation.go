@@ -20,7 +20,7 @@ import (
 
 // Operation contains all balance-changing information within a transaction. It
 // is always one-sided (only affects one account identifier) and can succeed or
-// fail independently from a transaction. Operations are used both to represent
+// fail independently of a transaction. Operations are used both to represent
 // on-chain data in the Data API and to construct new transaction in the
 // Construction API, creating a standard interface for reading and writing to
 // blockchains.

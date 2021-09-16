@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// InvalidNetwork is the error for an invalid network identifier.
 type InvalidNetwork struct {
 	Description Description
 	HaveNetwork string
 	WantNetwork string
 }
 
+// Error implements the error interface.
 func (i InvalidNetwork) Error() string {
 	return fmt.Sprintf("invalid network (have: %s, want: %s): %s", i.HaveNetwork, i.WantNetwork, i.Description)
 }

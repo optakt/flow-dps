@@ -18,6 +18,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// Metadata is the information required to construct a transaction for a specific network.
 type Metadata struct {
 	CurrentBlockID identifier.Block `json:"current_block"`
 	SequenceNumber uint64           `json:"sequence_number"`

@@ -18,11 +18,13 @@ import (
 	"fmt"
 )
 
+// InvalidAccount is the error for an account with an invalid identifier.
 type InvalidAccount struct {
 	Description Description
 	Address     string
 }
 
+// Error implements the error interface.
 func (i InvalidAccount) Error() string {
 	return fmt.Sprintf("invalid account (address: %s): %s", i.Address, i.Description)
 }

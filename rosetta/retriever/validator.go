@@ -20,6 +20,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// Validator represents something that can validate account, block and transaction identifiers as well as currencies.
 type Validator interface {
 	Account(rosAccountID identifier.Account) (address flow.Address, err error)
 	Block(rosBlockID identifier.Block) (height uint64, blockID flow.Identifier, err error)

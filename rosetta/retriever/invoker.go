@@ -19,6 +19,8 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Invoker represents something that can retrieve public keys at any given height, and
+// execute scripts to retrieve values from the Flow Virtual Machine.
 type Invoker interface {
 	Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error)
 	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)

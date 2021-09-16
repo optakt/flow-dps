@@ -18,11 +18,13 @@ import (
 	"fmt"
 )
 
+// UnknownTransaction is the error for an unknown transaction identifier.
 type UnknownTransaction struct {
 	Description Description
 	Hash        string
 }
 
+// Error implements the error interface.
 func (u UnknownTransaction) Error() string {
 	return fmt.Sprintf("unknown transaction (hash: %s): %s", u.Hash, u.Description)
 }

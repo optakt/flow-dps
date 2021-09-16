@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// InvalidSignatures is the error for an invalid set of transaction signatures.
 type InvalidSignatures struct {
 	Description Description
 	Want        uint
 	Have        uint
 }
 
+// Error implements the error interface.
 func (i InvalidSignatures) Error() string {
 	return fmt.Sprintf("invalid signatures (want: %d, have: %d): %s", i.Want, i.Have, i.Description)
 }

@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// InvalidArguments is the error for an invalid number of arguments.
 type InvalidArguments struct {
 	Description Description
 	Have        uint
 	Want        uint
 }
 
+// Error implements the error interface.
 func (i InvalidArguments) Error() string {
 	return fmt.Sprintf("invalid transaction arguments (have: %d, want: %d): %s", i.Have, i.Want, i.Description)
 }

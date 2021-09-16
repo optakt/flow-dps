@@ -14,6 +14,7 @@
 
 package meta
 
+// Version is the version information of the DPS Rosetta API.
 type Version struct {
 	RosettaVersion    string `json:"rosetta_version"`
 	NodeVersion       string `json:"node_version"`

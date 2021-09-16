@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// UnknownCurrency is the error for an unknown currency.
 type UnknownCurrency struct {
 	Description Description
 	Symbol      string
 	Decimals    uint
 }
 
+// Error implements the error interface.
 func (u UnknownCurrency) Error() string {
 	return fmt.Sprintf("unknown currency (symbol: %s, decimals: %d): %s", u.Symbol, u.Decimals, u.Description)
 }

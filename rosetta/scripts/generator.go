@@ -22,6 +22,7 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// Generator dynamically generates Cadence scripts from templates.
 type Generator struct {
 	params          dps.Params
 	getBalance      *template.Template
@@ -30,6 +31,7 @@ type Generator struct {
 	tokensWithdrawn *template.Template
 }
 
+// NewGenerator returns a Generator using the given parameters.
 func NewGenerator(params dps.Params) *Generator {
 	g := Generator{
 		params:          params,
@@ -41,18 +43,22 @@ func NewGenerator(params dps.Params) *Generator {
 	return &g
 }
 
+// GetBalance generates a Cadence script to retrieve the balance of an account.
 func (g *Generator) GetBalance(symbol string) ([]byte, error) {
 	return g.bytes(g.getBalance, symbol)
 }
 
+// TransferTokens generates a Cadence script to operate a token transfer transaction.
 func (g *Generator) TransferTokens(symbol string) ([]byte, error) {
 	return g.bytes(g.transferTokens, symbol)
 }
 
+// TokensDeposited generates a Cadence script that matches the Flow event for tokens being deposited.
 func (g *Generator) TokensDeposited(symbol string) (string, error) {
 	return g.string(g.tokensDeposited, symbol)
 }
 
+// TokensWithdrawn generates a Cadence script that matches the Flow event for tokens being withdrawn.
 func (g *Generator) TokensWithdrawn(symbol string) (string, error) {
 	return g.string(g.tokensWithdrawn, symbol)
 }

@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// InvalidAccountAddress is the error for an account address of invalid length.
 type InvalidAccountAddress struct {
 	Description Description
 	WantLength  int
 	HaveLength  int
 }
 
+// Error implements the error interface.
 func (i InvalidAccountAddress) Error() string {
 	return fmt.Sprintf("invalid account address length (want: %d, have: %d): %s", i.WantLength, i.HaveLength, i.Description)
 }

@@ -18,11 +18,13 @@ import (
 	"fmt"
 )
 
+// InvalidTransaction is the error for an invalid transaction hash.
 type InvalidTransaction struct {
 	Description Description
 	Hash        string
 }
 
+// Error implements the error interface.
 func (i InvalidTransaction) Error() string {
 	return fmt.Sprintf("invalid transaction (transaction: %s): %s", i.Hash, i.Description)
 }

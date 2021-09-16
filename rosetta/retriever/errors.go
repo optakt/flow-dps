@@ -4,7 +4,8 @@ import (
 	"errors"
 )
 
+// Rosetta Sentinel Errors.
 var (
 	ErrNoAddress    = errors.New("event without address")
-	ErrNotSupported = errors.New("unspported event type")
+	ErrNotSupported = errors.New("unsupported event type")
 )

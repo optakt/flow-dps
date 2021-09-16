@@ -18,10 +18,12 @@ import (
 	"fmt"
 )
 
+// InvalidBlock is the error for block with an invalid identifier.
 type InvalidBlock struct {
 	Description Description
 }
 
+// Error implements the error interface.
 func (i InvalidBlock) Error() string {
 	return fmt.Sprintf("invalid block: %s", i.Description)
 }

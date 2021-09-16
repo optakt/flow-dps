@@ -20,12 +20,14 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// InvalidProposer is the error for an invalid transaction proposer.
 type InvalidProposer struct {
 	Description Description
 	Have        flow.Address
 	Want        flow.Address
 }
 
+// Error implements the error interface.
 func (i InvalidProposer) Error() string {
 	return fmt.Sprintf("invalid transaction proposer (have: %s, want: %s): %s", i.Have.Hex(), i.Want.Hex(), i.Description)
 }

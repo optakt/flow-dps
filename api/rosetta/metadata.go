@@ -63,8 +63,6 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		return apiError(referenceBlockRetrieval, err)
 	}
 
-	// TODO: Allow arbitrary proposal key index
-	// => https://github.com/optakt/flow-dps/issues/369
 	sequence, err := c.retrieve.Sequence(current, req.Options.AccountID, 0)
 	if err != nil {
 		return apiError(sequenceNumberRetrieval, err)

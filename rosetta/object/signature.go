@@ -14,6 +14,7 @@
 
 package object
 
+// Signature contains the information about a transaction signature.
 type Signature struct {
 	SigningPayload SigningPayload `json:"signing_payload"`
 	SignatureType  string         `json:"signature_type"`
@@ -21,6 +22,7 @@ type Signature struct {
 	PublicKey      PublicKey      `json:"public_key"`
 }
 
+// PublicKey represents a public key used in a transaction signature.
 type PublicKey struct {
 	HexBytes  string `json:"hex_bytes"`
 	CurveType string `json:"curve_type"`
