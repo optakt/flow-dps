@@ -16,7 +16,6 @@ package validator
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/go-playground/validator/v10"
 
@@ -52,31 +51,31 @@ const (
 	unknownNetwork    = "network identifier has unknown network field"
 )
 
-func (v *Validator) newRequestValidator() *validator.Validate {
+func newRequestValidator(config Configuration) *validator.Validate {
 
-	vl := validator.New()
+	validate := validator.New()
 
 	// Register custom validators for known types.
 	// We register a single type per validator, so we can safely perform type
 	// assertion of the provided `validator.StructLevel` to the correct type.
 	// Validation library stores the validators in a map, so if multiple
 	// validators are registered for a single type, only the last one will be used.
-	vl.RegisterStructValidation(blockValidator, identifier.Block{})
-	vl.RegisterStructValidation(accountValidator, identifier.Account{})
-	vl.RegisterStructValidation(transactionValidator, identifier.Transaction{})
-	vl.RegisterStructValidation(v.networkValidator, identifier.Network{})
+	validate.RegisterStructValidation(blockValidator, identifier.Block{})
+	validate.RegisterStructValidation(accountValidator, identifier.Account{})
+	validate.RegisterStructValidation(transactionValidator, identifier.Transaction{})
+	validate.RegisterStructValidation(networkValidator(config), identifier.Network{})
 
 	// Register custom top-level validators. These validate the entire request
 	// object, compared to the ones above which validate a specific type
 	// within the request. This way we can validate some standard types (strings)
 	// or complex ones (array of currencies) in a structured way.
-	vl.RegisterStructValidation(balanceValidator, rosetta.BalanceRequest{})
-	vl.RegisterStructValidation(parseValidator, rosetta.ParseRequest{})
-	vl.RegisterStructValidation(combineValidator, rosetta.CombineRequest{})
-	vl.RegisterStructValidation(submitValidator, rosetta.SubmitRequest{})
-	vl.RegisterStructValidation(hashValidator, rosetta.HashRequest{})
+	validate.RegisterStructValidation(balanceValidator, rosetta.BalanceRequest{})
+	validate.RegisterStructValidation(parseValidator, rosetta.ParseRequest{})
+	validate.RegisterStructValidation(combineValidator, rosetta.CombineRequest{})
+	validate.RegisterStructValidation(submitValidator, rosetta.SubmitRequest{})
+	validate.RegisterStructValidation(hashValidator, rosetta.HashRequest{})
 
-	return vl
+	return validate
 }
 
 // Request will run the registered validators on the provided request.
@@ -153,35 +152,37 @@ func (v *Validator) Request(request interface{}) error {
 		}
 
 	default:
-		return fmt.Errorf(verr.Tag())
+		return errors.New(verr.Tag())
 	}
 }
 
 // networkValidator verifies that the request is valid for the configured network.
 // Network and blockchain fields must be populated and valid for the current
-// running instance of the DPS. For example, a request cannot be addressing a Testnet
-// network while we are reunning on top of a Mainnet index.
-func (v *Validator) networkValidator(sl validator.StructLevel) {
-	network := sl.Current().Interface().(identifier.Network)
+// running instance of the DPS. For example, a request cannot address a Testnet
+// network while we are running on top of a Mainnet index.
+func networkValidator(config Configuration) func(validator.StructLevel) {
+	return func(sl validator.StructLevel) {
+		network := sl.Current().Interface().(identifier.Network)
 
-	if network.Blockchain == "" {
-		sl.ReportError(network.Blockchain, blockchainField, blockchainField, rosetta.BlockchainEmpty, "")
-	}
-	if network.Network == "" {
-		sl.ReportError(network.Network, networkField, networkField, rosetta.NetworkEmpty, "")
-	}
+		if network.Blockchain == "" {
+			sl.ReportError(network.Blockchain, blockchainField, blockchainField, rosetta.BlockchainEmpty, "")
+		}
+		if network.Network == "" {
+			sl.ReportError(network.Network, networkField, networkField, rosetta.NetworkEmpty, "")
+		}
 
-	err := v.config.Check(network)
-	// Check returns a typed error, which we can use to identify which field was invalid.
-	// We will use `tag` field to communicate this, and the `param` field to pass the acceptable
-	// value to the main validation function.
-	var ibErr failure.InvalidBlockchain
-	if errors.As(err, &ibErr) {
-		sl.ReportError(network, blockchainField, blockchainField, blockchainFailTag, ibErr.WantBlockchain)
-	}
-	var inErr failure.InvalidNetwork
-	if errors.As(err, &inErr) {
-		sl.ReportError(network, networkField, networkField, networkFailTag, inErr.WantNetwork)
+		err := config.Check(network)
+		// Check returns a typed error, which we can use to identify which field was invalid.
+		// We will use the `tag` field to communicate this, and the `param` field to pass the acceptable
+		// value to the main validation function.
+		var ibErr failure.InvalidBlockchain
+		if errors.As(err, &ibErr) {
+			sl.ReportError(network, blockchainField, blockchainField, blockchainFailTag, ibErr.WantBlockchain)
+		}
+		var inErr failure.InvalidNetwork
+		if errors.As(err, &inErr) {
+			sl.ReportError(network, networkField, networkField, networkFailTag, inErr.WantNetwork)
+		}
 	}
 }
 

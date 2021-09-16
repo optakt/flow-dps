@@ -26,5 +26,4 @@ type InvalidBlockchain struct {
 
 func (i InvalidBlockchain) Error() string {
 	return fmt.Sprintf("invalid blockchain (have: %s, want: %s): %s", i.HaveBlockchain, i.WantBlockchain, i.Description)
-
 }

@@ -23,19 +23,16 @@ import (
 type Validator struct {
 	params   dps.Params
 	index    dps.Reader
-	config   Configuration
 	validate *validator.Validate
 }
 
 func New(params dps.Params, index dps.Reader, config Configuration) *Validator {
 
 	v := &Validator{
-		params: params,
-		index:  index,
-		config: config,
+		params:   params,
+		index:    index,
+		validate: newRequestValidator(config),
 	}
-
-	v.validate = v.newRequestValidator()
 
 	return v
 }
