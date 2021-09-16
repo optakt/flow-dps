@@ -112,21 +112,17 @@ func (c *Configuration) Errors() []meta.ErrorDefinition {
 
 func (c *Configuration) Check(network identifier.Network) error {
 	if network.Blockchain != c.network.Blockchain {
-		return failure.InvalidNetwork{
-			Blockchain: network.Blockchain,
-			Network:    network.Network,
-			Description: failure.NewDescription("network identifier has unknown blockchain field",
-				failure.WithStrings("available_blockchains", c.network.Blockchain),
-			),
+		return failure.InvalidBlockchain{
+			HaveBlockchain: network.Blockchain,
+			WantBlockchain: c.network.Blockchain,
+			Description:    failure.NewDescription("network identifier has unknown blockchain field"),
 		}
 	}
 	if network.Network != c.network.Network {
 		return failure.InvalidNetwork{
-			Blockchain: network.Blockchain,
-			Network:    network.Network,
-			Description: failure.NewDescription("network identifier has unknown network field",
-				failure.WithStrings("available_networks", c.network.Network),
-			),
+			HaveNetwork: network.Network,
+			WantNetwork: c.network.Network,
+			Description: failure.NewDescription("network identifier has unknown network field"),
 		}
 	}
 	return nil

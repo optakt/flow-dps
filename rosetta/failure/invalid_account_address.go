@@ -21,8 +21,9 @@ import (
 type InvalidAccountAddress struct {
 	Description Description
 	WantLength  int
+	HaveLength  int
 }
 
 func (i InvalidAccountAddress) Error() string {
-	return fmt.Sprintf("invalid account address length (want: %d): %s", i.WantLength, i.Description)
+	return fmt.Sprintf("invalid account address length (want: %d, have: %d): %s", i.WantLength, i.HaveLength, i.Description)
 }

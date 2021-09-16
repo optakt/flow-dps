@@ -62,11 +62,6 @@ func (d *Data) Options(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = d.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	// Create the allow object, which is native to the response.
 	allow := Allow{
 		OperationStatuses:       d.config.Statuses(),

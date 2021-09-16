@@ -44,7 +44,6 @@ const (
 	TxBodyEmpty     = "transaction text is empty"
 	SignaturesEmpty = "signature list is empty"
 
-	networkCheck            = "unable to check network"
 	blockRetrieval          = "unable to retrieve block"
 	balancesRetrieval       = "unable to retrieve balances"
 	oldestRetrieval         = "unable to retrieve oldest block"
@@ -140,8 +139,17 @@ func invalidNetwork(fail failure.InvalidNetwork) Error {
 	return convertError(
 		configuration.ErrorInvalidNetwork,
 		fail.Description,
-		withDetail("blockchain", fail.Blockchain),
-		withDetail("network", fail.Network),
+		withDetail("have_network", fail.HaveNetwork),
+		withDetail("want_network", fail.WantNetwork),
+	)
+}
+
+func invalidBlockchain(fail failure.InvalidBlockchain) Error {
+	return convertError(
+		configuration.ErrorInvalidNetwork,
+		fail.Description,
+		withDetail("have_blockchain", fail.HaveBlockchain),
+		withDetail("want_blockchain", fail.WantBlockchain),
 	)
 }
 
@@ -317,23 +325,34 @@ func formatError(err error) *echo.HTTPError {
 	if errors.As(err, &ibErr) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(ibErr.Description.Text,
 			withDetail("want_length", ibErr.WantLength),
+			withDetail("have_length", ibErr.HaveLength),
 		))
 	}
 	var iaErr failure.InvalidAccountAddress
 	if errors.As(err, &iaErr) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(iaErr.Description.Text,
 			withDetail("want_length", iaErr.WantLength),
+			withDetail("have_length", iaErr.HaveLength),
 		))
 	}
 	var itErr failure.InvalidTransactionHash
 	if errors.As(err, &itErr) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(itErr.Description.Text,
 			withDetail("want_length", itErr.WantLength),
+			withDetail("have_length", itErr.HaveLength),
 		))
 	}
 	var icErr failure.IncompleteBlock
 	if errors.As(err, &icErr) {
 		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(icErr.Description.Text))
+	}
+	var inErr failure.InvalidNetwork
+	if errors.As(err, &inErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(inErr))
+	}
+	var iblErr failure.InvalidBlockchain
+	if errors.As(err, &iblErr) {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlockchain(iblErr))
 	}
 
 	return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))

@@ -52,11 +52,6 @@ func (c *Construction) Submit(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = c.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	rosTxID, err := c.transact.SubmitTransaction(req.SignedTransaction)
 	if err != nil {
 		return apiError(txSubmission, err)

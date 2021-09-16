@@ -57,11 +57,6 @@ func (d *Data) Transaction(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = d.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	transaction, err := d.retrieve.Transaction(req.BlockID, req.TransactionID)
 	if err != nil {
 		return apiError(txRetrieval, err)

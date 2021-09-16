@@ -26,12 +26,12 @@ type Validator struct {
 	validate *validator.Validate
 }
 
-func New(params dps.Params, index dps.Reader) *Validator {
+func New(params dps.Params, index dps.Reader, config Configuration) *Validator {
 
 	v := &Validator{
 		params:   params,
 		index:    index,
-		validate: newRequestValidator(),
+		validate: newRequestValidator(config),
 	}
 
 	return v

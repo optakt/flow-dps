@@ -20,10 +20,10 @@ import (
 
 type InvalidNetwork struct {
 	Description Description
-	Blockchain  string
-	Network     string
+	HaveNetwork string
+	WantNetwork string
 }
 
 func (i InvalidNetwork) Error() string {
-	return fmt.Sprintf("invalid network (blockchain: %s, network: %s): %s", i.Blockchain, i.Network, i.Description)
+	return fmt.Sprintf("invalid network (have: %s, want: %s): %s", i.HaveNetwork, i.WantNetwork, i.Description)
 }

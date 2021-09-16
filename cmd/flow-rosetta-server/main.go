@@ -134,7 +134,7 @@ func run() int {
 
 	// Rosetta API initialization.
 	config := configuration.New(params.ChainID)
-	validate := validator.New(params, index)
+	validate := validator.New(params, index, config)
 	generate := scripts.NewGenerator(params)
 	invoke, err := invoker.New(index, invoker.WithCacheSize(flagCache))
 	if err != nil {

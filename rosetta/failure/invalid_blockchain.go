@@ -18,12 +18,12 @@ import (
 	"fmt"
 )
 
-type InvalidTransactionHash struct {
-	Description Description
-	WantLength  int
-	HaveLength  int
+type InvalidBlockchain struct {
+	Description    Description
+	HaveBlockchain string
+	WantBlockchain string
 }
 
-func (i InvalidTransactionHash) Error() string {
-	return fmt.Sprintf("invalid transaction hash length (want: %d, have: %d): %s", i.WantLength, i.HaveLength, i.Description)
+func (i InvalidBlockchain) Error() string {
+	return fmt.Sprintf("invalid blockchain (have: %s, want: %s): %s", i.HaveBlockchain, i.WantBlockchain, i.Description)
 }

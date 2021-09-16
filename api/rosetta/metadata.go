@@ -58,11 +58,6 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = c.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	current, _, err := c.retrieve.Current()
 	if err != nil {
 		return apiError(referenceBlockRetrieval, err)

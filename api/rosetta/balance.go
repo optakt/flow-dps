@@ -54,11 +54,6 @@ func (d *Data) Balance(ctx echo.Context) error {
 		return formatError(err)
 	}
 
-	err = d.config.Check(req.NetworkID)
-	if err != nil {
-		return apiError(networkCheck, err)
-	}
-
 	rosBlockID, balances, err := d.retrieve.Balances(req.BlockID, req.AccountID, req.Currencies)
 	if err != nil {
 		return apiError(balancesRetrieval, err)

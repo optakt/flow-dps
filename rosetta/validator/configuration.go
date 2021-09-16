@@ -12,18 +12,12 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package failure
+package validator
 
 import (
-	"fmt"
+	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-type InvalidTransactionHash struct {
-	Description Description
-	WantLength  int
-	HaveLength  int
-}
-
-func (i InvalidTransactionHash) Error() string {
-	return fmt.Sprintf("invalid transaction hash length (want: %d, have: %d): %s", i.WantLength, i.HaveLength, i.Description)
+type Configuration interface {
+	Check(identifier.Network) error
 }

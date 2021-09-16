@@ -21,8 +21,9 @@ import (
 type InvalidBlockHash struct {
 	Description Description
 	WantLength  int
+	HaveLength  int
 }
 
 func (i InvalidBlockHash) Error() string {
-	return fmt.Sprintf("invalid block hash length (want: %d): %s", i.WantLength, i.Description)
+	return fmt.Sprintf("invalid block hash length (want: %d, have: %d): %s", i.WantLength, i.HaveLength, i.Description)
 }
