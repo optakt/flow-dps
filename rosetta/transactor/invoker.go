@@ -18,6 +18,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Invoker represents something that can retrieve account public keys at any given height.
 type Invoker interface {
 	Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error)
 }

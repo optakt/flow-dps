@@ -22,6 +22,7 @@ import (
 	sdk "github.com/onflow/flow-go-sdk"
 )
 
+// API represents something that can be used to submit transactions.
 type API interface {
 	SendTransaction(ctx context.Context, tx sdk.Transaction, opts ...grpc.CallOption) error
 }

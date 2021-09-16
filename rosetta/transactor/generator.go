@@ -14,6 +14,8 @@
 
 package transactor
 
+// Generator represents something that can generate Cadence scripts for transferring tokens
+// between two accounts.
 type Generator interface {
 	TransferTokens(symbol string) ([]byte, error)
 }

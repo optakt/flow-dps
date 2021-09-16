@@ -19,7 +19,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-// Intent describes the intent of an array of Rosetta operations.
+// Intent describes the intent of a set of two Rosetta operations.
 type Intent struct {
 	From     flow.Address
 	To       flow.Address

@@ -18,6 +18,7 @@ import (
 	sdk "github.com/onflow/flow-go-sdk"
 )
 
+// Submitter represents something that can submit transactions.
 type Submitter interface {
 	Transaction(tx *sdk.Transaction) error
 }
