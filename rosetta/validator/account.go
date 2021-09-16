@@ -32,7 +32,7 @@ func (v *Validator) Account(account identifier.Account) (flow.Address, error) {
 	if err != nil {
 		return flow.EmptyAddress, failure.InvalidAccount{
 			Address:     account.Address,
-			Description: failure.NewDescription("account address is not a valid hex-encoded string"),
+			Description: failure.NewDescription(addressInvalid),
 		}
 	}
 
@@ -44,7 +44,7 @@ func (v *Validator) Account(account identifier.Account) (flow.Address, error) {
 	if !ok {
 		return flow.EmptyAddress, failure.InvalidAccount{
 			Address: account.Address,
-			Description: failure.NewDescription("account address is not valid for configured chain",
+			Description: failure.NewDescription(addressMisconfigured,
 				failure.WithString("active_chain", v.params.ChainID.String()),
 			),
 		}
