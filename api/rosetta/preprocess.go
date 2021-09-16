@@ -21,20 +21,9 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
-
-// PreprocessRequest implements the request schema for /construction/preprocess.
-// See https://www.rosetta-api.org/docs/ConstructionApi.html#request-6
-type PreprocessRequest struct {
-	NetworkID  identifier.Network `json:"network_identifier"`
-	Operations []object.Operation `json:"operations"`
-}
-
-// PreprocessResponse implements the response schema for /construction/preprocess.
-// See https://www.rosetta-api.org/docs/ConstructionApi.html#response-6
-type PreprocessResponse struct {
-	object.Options `json:"options,omitempty"`
-}
 
 // Preprocess implements the /construction/preprocess endpoint of the Rosetta Construction API.
 // Preprocess receives a list of operations that should deterministically specify the
@@ -44,7 +33,7 @@ type PreprocessResponse struct {
 // See https://www.rosetta-api.org/docs/ConstructionApi.html#constructionpreprocess
 func (c *Construction) Preprocess(ctx echo.Context) error {
 
-	var req PreprocessRequest
+	var req request.Preprocess
 	err := ctx.Bind(&req)
 	if err != nil {
 		return unpackError(err)
@@ -60,7 +49,7 @@ func (c *Construction) Preprocess(ctx echo.Context) error {
 		return apiError(intentDetermination, err)
 	}
 
-	res := PreprocessResponse{
+	res := response.Preprocess{
 		Options: object.Options{
 			AccountID: identifier.Account{
 				Address: intent.From.Hex(),

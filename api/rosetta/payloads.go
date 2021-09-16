@@ -21,22 +21,9 @@ import (
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
-
-// PayloadsRequest implements the request schema for /construction/payloads.
-// See https://www.rosetta-api.org/docs/ConstructionApi.html#request-5
-type PayloadsRequest struct {
-	NetworkID  identifier.Network `json:"network_identifier"`
-	Operations []object.Operation `json:"operations"`
-	Metadata   object.Metadata    `json:"metadata"`
-}
-
-// PayloadsResponse implements the response schema for /construction/payloads.
-// See https://www.rosetta-api.org/docs/ConstructionApi.html#response-5
-type PayloadsResponse struct {
-	Transaction string                  `json:"unsigned_transaction"`
-	Payloads    []object.SigningPayload `json:"payloads"`
-}
 
 // Payloads implements the /construction/payloads endpoint of the Rosetta Construction API.
 // It receives an array of operations and all other relevant information required to construct
@@ -46,7 +33,7 @@ type PayloadsResponse struct {
 // See https://www.rosetta-api.org/docs/ConstructionApi.html#constructionpayloads
 func (c *Construction) Payloads(ctx echo.Context) error {
 
-	var req PayloadsRequest
+	var req request.Payloads
 	err := ctx.Bind(&req)
 	if err != nil {
 		return unpackError(err)
@@ -83,7 +70,7 @@ func (c *Construction) Payloads(ctx echo.Context) error {
 	}
 
 	// We only support a single signer at the moment, so the account only needs to sign the transaction envelope.
-	res := PayloadsResponse{
+	res := response.Payloads{
 		Transaction: unsigned,
 		Payloads: []object.SigningPayload{
 			{

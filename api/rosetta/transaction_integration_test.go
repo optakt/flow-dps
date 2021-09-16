@@ -33,6 +33,8 @@ import (
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -64,7 +66,7 @@ func TestAPI_Transaction(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request    rosetta.TransactionRequest
+		request    request.Transaction
 		validateTx validateTxFunc
 	}{
 		{
@@ -105,7 +107,7 @@ func TestAPI_Transaction(t *testing.T) {
 
 			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-			var res rosetta.TransactionResponse
+			var res response.Transaction
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
 
 			test.validateTx([]*object.Transaction{res.Transaction})
@@ -148,19 +150,19 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request rosetta.TransactionRequest
+		request request.Transaction
 
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
 			name:    "empty transaction request",
-			request: rosetta.TransactionRequest{},
+			request: request.Transaction{},
 
 			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing blockchain name",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: identifier.Network{
 					Blockchain: "",
 					Network:    dps.FlowTestnet.String(),
@@ -173,7 +175,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid blockchain name",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
 					Network:    dps.FlowTestnet.String(),
@@ -186,7 +188,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing network name",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    "",
@@ -199,7 +201,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid network name",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    invalidNetwork,
@@ -212,7 +214,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing block height and hash",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: nil,
@@ -225,7 +227,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid length of block id",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: &testHeight,
@@ -238,7 +240,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing block height",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Hash: testBlockHash,
@@ -249,7 +251,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid block hash",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: &testHeight,
@@ -262,7 +264,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "unknown block",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: getUint64P(lastHeight + 1),
@@ -275,7 +277,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "mismatched block height and hash",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: getUint64P(44),
@@ -288,7 +290,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing transaction id",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				BlockID:   testBlock,
 				TransactionID: identifier.Transaction{
@@ -300,7 +302,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing transaction id",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				BlockID:   testBlock,
 				TransactionID: identifier.Transaction{
@@ -312,7 +314,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid transaction id",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				BlockID:   testBlock,
 				TransactionID: identifier.Transaction{
@@ -326,7 +328,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 		//       See https://github.com/optakt/flow-dps/issues/452
 		{
 			name: "transaction missing from block",
-			request: rosetta.TransactionRequest{
+			request: request.Transaction{
 				NetworkID: defaultNetwork(),
 				TransactionID: identifier.Transaction{
 					Hash: unknownTxHash,
@@ -454,8 +456,8 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 
 }
 
-func requestTransaction(header flow.Header, txID string) rosetta.TransactionRequest {
-	return rosetta.TransactionRequest{
+func requestTransaction(header flow.Header, txID string) request.Transaction {
+	return request.Transaction{
 		NetworkID: defaultNetwork(),
 		BlockID: identifier.Block{
 			Index: &header.Height,

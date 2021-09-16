@@ -24,8 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
 
 func TestAPI_Networks(t *testing.T) {
@@ -40,7 +41,7 @@ func TestAPI_Networks(t *testing.T) {
 	// there is a 'metadata' object that we're ignoring;
 	// but we can have the scaffolding here in case something changes
 
-	var netReq rosetta.NetworksRequest
+	var netReq request.Networks
 
 	rec, ctx, err := setupRecorder(listEndpoint, netReq)
 	require.NoError(t, err)
@@ -48,7 +49,7 @@ func TestAPI_Networks(t *testing.T) {
 	err = api.Networks(ctx)
 	assert.NoError(t, err)
 
-	var res rosetta.NetworksResponse
+	var res response.Networks
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
 
 	require.Len(t, res.NetworkIDs, 1)

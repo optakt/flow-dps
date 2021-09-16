@@ -19,39 +19,16 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/meta"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
-
-// OptionsRequest implements the empty request schema for the /network/options endpoint.
-// See https://www.rosetta-api.org/docs/NetworkApi.html#request-1
-type OptionsRequest struct {
-	NetworkID identifier.Network `json:"network_identifier"`
-}
-
-// OptionsResponse implements the successful response schema for the /network/options endpoint.
-// See https://www.rosetta-api.org/docs/NetworkApi.html#200---ok-1
-type OptionsResponse struct {
-	Version meta.Version `json:"version"`
-	Allow   Allow        `json:"allow"`
-}
-
-type Allow struct {
-	OperationStatuses       []meta.StatusDefinition `json:"operation_statuses"`
-	OperationTypes          []string                `json:"operation_types"`
-	Errors                  []meta.ErrorDefinition  `json:"errors"`
-	HistoricalBalanceLookup bool                    `json:"historical_balance_lookup"`
-	CallMethods             []string                `json:"call_methods"`       // not used
-	BalanceExemptions       []struct{}              `json:"balance_exemptions"` // not used
-	MempoolCoins            bool                    `json:"mempool_coins"`
-}
 
 // Options implements the /network/options endpoint of the Rosetta Data API.
 // See https://www.rosetta-api.org/docs/NetworkApi.html#networkoptions
 func (d *Data) Options(ctx echo.Context) error {
 
 	// Decode the network list request from the HTTP request JSON body.
-	var req OptionsRequest
+	var req request.Options
 	err := ctx.Bind(&req)
 	if err != nil {
 		return unpackError(err)
@@ -63,7 +40,7 @@ func (d *Data) Options(ctx echo.Context) error {
 	}
 
 	// Create the allow object, which is native to the response.
-	allow := Allow{
+	allow := response.OptionsAllow{
 		OperationStatuses:       d.config.Statuses(),
 		OperationTypes:          d.config.Operations(),
 		Errors:                  d.config.Errors(),
@@ -73,7 +50,7 @@ func (d *Data) Options(ctx echo.Context) error {
 		MempoolCoins:            false,
 	}
 
-	res := OptionsResponse{
+	res := response.Options{
 		Version: d.config.Version(),
 		Allow:   allow,
 	}

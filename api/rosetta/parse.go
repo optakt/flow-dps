@@ -19,25 +19,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
-
-// ParseRequest implements the request schema for /construction/parse.
-// See https://www.rosetta-api.org/docs/ConstructionApi.html#request-4
-type ParseRequest struct {
-	NetworkID   identifier.Network `json:"network_identifier"`
-	Signed      bool               `json:"signed"`
-	Transaction string             `json:"transaction"`
-}
-
-// ParseResponse implements the response schema for /construction/parse.
-// See https://www.rosetta-api.org/docs/ConstructionApi.html#response-4
-type ParseResponse struct {
-	Operations []object.Operation   `json:"operations"`
-	SignerIDs  []identifier.Account `json:"account_identifier_signers,omitempty"`
-	Metadata   object.Metadata      `json:"metadata,omitempty"`
-}
 
 // Parse implements the /construction/parse endpoint of the Rosetta Construction API.
 // Parse endpoint parses both signed and unsigned transactions to understand the
@@ -46,7 +31,7 @@ type ParseResponse struct {
 // See https://www.rosetta-api.org/docs/ConstructionApi.html#constructionparse
 func (c *Construction) Parse(ctx echo.Context) error {
 
-	var req ParseRequest
+	var req request.Parse
 	err := ctx.Bind(&req)
 	if err != nil {
 		return unpackError(err)
@@ -83,7 +68,7 @@ func (c *Construction) Parse(ctx echo.Context) error {
 		SequenceNumber: sequence,
 	}
 
-	res := ParseResponse{
+	res := response.Parse{
 		Operations: operations,
 		SignerIDs:  signers,
 		Metadata:   metadata,

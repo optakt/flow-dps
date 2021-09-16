@@ -22,6 +22,7 @@ import (
 	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/request"
 )
 
 // ErrInvalidValidation is a sentinel error for any error not being caused by a given input failing validation.
@@ -70,11 +71,11 @@ func newRequestValidator(config Configuration) *validator.Validate {
 	// object, compared to the ones above which validate a specific type
 	// within the request. This way we can validate some standard types (strings)
 	// or complex ones (array of currencies) in a structured way.
-	validate.RegisterStructValidation(balanceValidator, rosetta.BalanceRequest{})
-	validate.RegisterStructValidation(parseValidator, rosetta.ParseRequest{})
-	validate.RegisterStructValidation(combineValidator, rosetta.CombineRequest{})
-	validate.RegisterStructValidation(submitValidator, rosetta.SubmitRequest{})
-	validate.RegisterStructValidation(hashValidator, rosetta.HashRequest{})
+	validate.RegisterStructValidation(balanceValidator, request.Balance{})
+	validate.RegisterStructValidation(parseValidator, request.Parse{})
+	validate.RegisterStructValidation(combineValidator, request.Combine{})
+	validate.RegisterStructValidation(submitValidator, request.Submit{})
+	validate.RegisterStructValidation(hashValidator, request.Hash{})
 
 	return validate
 }
@@ -217,10 +218,10 @@ func transactionValidator(sl validator.StructLevel) {
 	}
 }
 
-// balanceValidator ensures that the provided BalanceRequest has a non-empty currency list, and that
+// balanceValidator ensures that the provided Balance request has a non-empty currency list, and that
 // all provided currencies have the `symbol` field populated.
 func balanceValidator(sl validator.StructLevel) {
-	req := sl.Current().Interface().(rosetta.BalanceRequest)
+	req := sl.Current().Interface().(request.Balance)
 	if len(req.Currencies) == 0 {
 		sl.ReportError(req.Currencies, currencyField, currencyField, rosetta.CurrenciesEmpty, "")
 	}
@@ -231,18 +232,18 @@ func balanceValidator(sl validator.StructLevel) {
 	}
 }
 
-// parseValidator ensures that the provided ParseRequest has a non-empty transaction field.
+// parseValidator ensures that the provided Parse request has a non-empty transaction field.
 func parseValidator(sl validator.StructLevel) {
-	req := sl.Current().Interface().(rosetta.ParseRequest)
+	req := sl.Current().Interface().(request.Parse)
 	if req.Transaction == "" {
 		sl.ReportError(req.Transaction, transactionField, transactionField, rosetta.TxBodyEmpty, "")
 	}
 }
 
-// combineValidator ensures that the provided CombineRequest has a non-empty transaction field, and
+// combineValidator ensures that the provided Combine request has a non-empty transaction field, and
 // that the signature list is not empty.
 func combineValidator(sl validator.StructLevel) {
-	req := sl.Current().Interface().(rosetta.CombineRequest)
+	req := sl.Current().Interface().(request.Combine)
 	if req.UnsignedTransaction == "" {
 		sl.ReportError(req.UnsignedTransaction, transactionField, transactionField, rosetta.TxBodyEmpty, "")
 	}
@@ -252,17 +253,17 @@ func combineValidator(sl validator.StructLevel) {
 	}
 }
 
-// submitValidator ensures that the provided SubmitRequest has a non-empty transaction field.
+// submitValidator ensures that the provided Submit request has a non-empty transaction field.
 func submitValidator(sl validator.StructLevel) {
-	req := sl.Current().Interface().(rosetta.SubmitRequest)
+	req := sl.Current().Interface().(request.Submit)
 	if req.SignedTransaction == "" {
 		sl.ReportError(req.SignedTransaction, transactionField, transactionField, rosetta.TxBodyEmpty, "")
 	}
 }
 
-// hashValidator ensures that the provided SubmitRequest has a non-empty transaction field.
+// hashValidator ensures that the provided Hash request has a non-empty transaction field.
 func hashValidator(sl validator.StructLevel) {
-	req := sl.Current().Interface().(rosetta.HashRequest)
+	req := sl.Current().Interface().(request.Hash)
 	if req.SignedTransaction == "" {
 		sl.ReportError(req.SignedTransaction, transactionField, transactionField, rosetta.TxBodyEmpty, "")
 	}

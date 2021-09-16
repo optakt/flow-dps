@@ -35,6 +35,8 @@ import (
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
 
 type validateBlockFunc func(identifier.Block)
@@ -70,7 +72,7 @@ func TestAPI_Block(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request rosetta.BlockRequest
+		request request.Block
 
 		wantTimestamp        int64
 		wantParentHash       string
@@ -131,7 +133,7 @@ func TestAPI_Block(t *testing.T) {
 		},
 		{
 			name: "lookup of a block mid-chain by index only",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: defaultNetwork(),
 				BlockID:   identifier.Block{Index: &midHeader3.Height},
 			},
@@ -153,7 +155,7 @@ func TestAPI_Block(t *testing.T) {
 		},
 		{
 			name: "last indexed block by omitting block identifier",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: defaultNetwork(),
 				BlockID:   identifier.Block{},
 			},
@@ -178,7 +180,7 @@ func TestAPI_Block(t *testing.T) {
 			err = api.Block(ctx)
 			assert.NoError(t, err)
 
-			var blockResponse rosetta.BlockResponse
+			var blockResponse response.Block
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &blockResponse))
 			require.NotNil(t, blockResponse.Block)
 
@@ -224,20 +226,20 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request rosetta.BlockRequest
+		request request.Block
 
 		checkErr assert.ErrorAssertionFunc
 	}{
 		{
 			// Effectively the same as the 'missing blockchain name' test case, since it's the first validation step.
 			name:    "empty block request",
-			request: rosetta.BlockRequest{},
+			request: request.Block{},
 
 			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing blockchain name",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: identifier.Network{
 					Blockchain: "",
 					Network:    dps.FlowTestnet.String(),
@@ -249,7 +251,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid blockchain name",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
 					Network:    dps.FlowTestnet.String(),
@@ -261,7 +263,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing network name",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    "",
@@ -273,7 +275,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid network name",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    invalidNetwork,
@@ -285,7 +287,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid length of block id",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: getUint64P(43),
@@ -297,7 +299,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing block height",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Hash: validBlockHash,
@@ -308,7 +310,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid block hash",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: getUint64P(13),
@@ -320,7 +322,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "unknown block",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: getUint64P(lastHeight + 1),
@@ -331,7 +333,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "mismatched block height and hash",
-			request: rosetta.BlockRequest{
+			request: request.Block{
 				NetworkID: defaultNetwork(),
 				BlockID: identifier.Block{
 					Index: getUint64P(validBlockHeight - 1),
@@ -458,9 +460,9 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 }
 
 // blockRequest generates a BlockRequest with the specified parameters.
-func blockRequest(header flow.Header) rosetta.BlockRequest {
+func blockRequest(header flow.Header) request.Block {
 
-	return rosetta.BlockRequest{
+	return request.Block{
 		NetworkID: defaultNetwork(),
 		BlockID: identifier.Block{
 			Index: &header.Height,
