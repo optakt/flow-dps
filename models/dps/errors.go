@@ -18,8 +18,8 @@ import (
 	"errors"
 )
 
+// Sentinel errors.
 var (
 	ErrFinished    = errors.New("finished")
-	ErrTimeout     = errors.New("timeout")
 	ErrUnavailable = errors.New("unavailable")
 )

@@ -55,10 +55,14 @@ func NewServer(index dps.Reader, codec dps.Codec, invoker Invoker) *Server {
 	return &s
 }
 
+// Ping implements the Ping endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#ping
 func (s *Server) Ping(_ context.Context, _ *access.PingRequest) (*access.PingResponse, error) {
 	return &access.PingResponse{}, nil
 }
 
+// GetLatestBlockHeader implements the GetLatestBlockHeader endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getlatestblockheader
 func (s *Server) GetLatestBlockHeader(ctx context.Context, _ *access.GetLatestBlockHeaderRequest) (*access.BlockHeaderResponse, error) {
 	height, err := s.index.Last()
 	if err != nil {
@@ -72,6 +76,8 @@ func (s *Server) GetLatestBlockHeader(ctx context.Context, _ *access.GetLatestBl
 	return s.GetBlockHeaderByHeight(ctx, &req)
 }
 
+// GetBlockHeaderByID implements the GetBlockHeaderByID endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getblockheaderbyid
 func (s *Server) GetBlockHeaderByID(ctx context.Context, in *access.GetBlockHeaderByIDRequest) (*access.BlockHeaderResponse, error) {
 	blockID := flow.HashToID(in.Id)
 	height, err := s.index.HeightForBlock(blockID)
@@ -86,6 +92,8 @@ func (s *Server) GetBlockHeaderByID(ctx context.Context, in *access.GetBlockHead
 	return s.GetBlockHeaderByHeight(ctx, &req)
 }
 
+// GetBlockHeaderByHeight implements the GetBlockHeaderByHeight endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getblockheaderbyheight
 func (s *Server) GetBlockHeaderByHeight(_ context.Context, in *access.GetBlockHeaderByHeightRequest) (*access.BlockHeaderResponse, error) {
 	header, err := s.index.Header(in.Height)
 	if err != nil {
@@ -104,6 +112,8 @@ func (s *Server) GetBlockHeaderByHeight(_ context.Context, in *access.GetBlockHe
 	return &resp, err
 }
 
+// GetLatestBlock implements the GetLatestBlock endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getlatestblock
 func (s *Server) GetLatestBlock(ctx context.Context, in *access.GetLatestBlockRequest) (*access.BlockResponse, error) {
 	height, err := s.index.Last()
 	if err != nil {
@@ -117,6 +127,8 @@ func (s *Server) GetLatestBlock(ctx context.Context, in *access.GetLatestBlockRe
 	return s.GetBlockByHeight(ctx, req)
 }
 
+// GetBlockByID implements the GetBlockByID endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getblockbyid
 func (s *Server) GetBlockByID(ctx context.Context, in *access.GetBlockByIDRequest) (*access.BlockResponse, error) {
 	blockID := flow.HashToID(in.Id)
 	height, err := s.index.HeightForBlock(blockID)
@@ -131,6 +143,8 @@ func (s *Server) GetBlockByID(ctx context.Context, in *access.GetBlockByIDReques
 	return s.GetBlockByHeight(ctx, &req)
 }
 
+// GetBlockByHeight implements the GetBlockByHeight endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getblockbyheight
 func (s *Server) GetBlockByHeight(_ context.Context, in *access.GetBlockByHeightRequest) (*access.BlockResponse, error) {
 	header, err := s.index.Header(in.Height)
 	if err != nil {
@@ -198,6 +212,8 @@ func (s *Server) GetBlockByHeight(_ context.Context, in *access.GetBlockByHeight
 	return &resp, nil
 }
 
+// GetCollectionByID implements the GetCollectionByID endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getcollectionbyid
 func (s *Server) GetCollectionByID(_ context.Context, in *access.GetCollectionByIDRequest) (*access.CollectionResponse, error) {
 	collId := flow.HashToID(in.Id)
 	collection, err := s.index.Collection(collId)
@@ -219,6 +235,8 @@ func (s *Server) GetCollectionByID(_ context.Context, in *access.GetCollectionBy
 	return &resp, err
 }
 
+// GetTransaction implements the GetTransaction endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#gettransaction
 func (s *Server) GetTransaction(_ context.Context, in *access.GetTransactionRequest) (*access.TransactionResponse, error) {
 	txID := flow.HashToID(in.Id)
 	tx, err := s.index.Transaction(txID)
@@ -233,6 +251,8 @@ func (s *Server) GetTransaction(_ context.Context, in *access.GetTransactionRequ
 	return &resp, nil
 }
 
+// GetTransactionResult implements the GetTransactionResult endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#gettransactionresult
 func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransactionRequest) (*access.TransactionResultResponse, error) {
 	txID := flow.HashToID(in.Id)
 	result, err := s.index.Result(txID)
@@ -241,9 +261,6 @@ func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransacti
 	}
 
 	// We also need the height of the transaction we're looking at.
-	// TODO: See if it wouldn't make more sense to remove this index and just
-	//		 always return the status as sealed.
-	//		 https://github.com/optakt/flow-dps/issues/317
 	height, err := s.index.HeightForTransaction(txID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve block height: %w", err)
@@ -286,6 +303,8 @@ func (s *Server) GetTransactionResult(_ context.Context, in *access.GetTransacti
 	return &resp, nil
 }
 
+// GetAccount implements the GetAccount endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getaccount
 func (s *Server) GetAccount(ctx context.Context, in *access.GetAccountRequest) (*access.GetAccountResponse, error) {
 	req := access.GetAccountAtLatestBlockRequest{
 		Address: in.Address,
@@ -303,6 +322,8 @@ func (s *Server) GetAccount(ctx context.Context, in *access.GetAccountRequest) (
 	return &resp, nil
 }
 
+// GetAccountAtLatestBlock implements the GetAccountAtLatestBlock endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getaccountatlatestblock
 func (s *Server) GetAccountAtLatestBlock(ctx context.Context, in *access.GetAccountAtLatestBlockRequest) (*access.AccountResponse, error) {
 	height, err := s.index.Last()
 	if err != nil {
@@ -318,6 +339,8 @@ func (s *Server) GetAccountAtLatestBlock(ctx context.Context, in *access.GetAcco
 	return s.GetAccountAtBlockHeight(ctx, req)
 }
 
+// GetAccountAtBlockHeight implements the GetAccountAtBlockHeight endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getaccountatblockheight
 func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccountAtBlockHeightRequest) (*access.AccountResponse, error) {
 	account, err := s.invoker.Account(in.BlockHeight, flow.BytesToAddress(in.Address))
 	if err != nil {
@@ -336,6 +359,8 @@ func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccoun
 	return &resp, nil
 }
 
+// ExecuteScriptAtLatestBlock implements the ExecuteScriptAtLatestBlock endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#executescriptatlatestblock
 func (s *Server) ExecuteScriptAtLatestBlock(ctx context.Context, in *access.ExecuteScriptAtLatestBlockRequest) (*access.ExecuteScriptResponse, error) {
 	height, err := s.index.Last()
 	if err != nil {
@@ -351,6 +376,8 @@ func (s *Server) ExecuteScriptAtLatestBlock(ctx context.Context, in *access.Exec
 	return s.ExecuteScriptAtBlockHeight(ctx, req)
 }
 
+// ExecuteScriptAtBlockID implements the ExecuteScriptAtBlockID endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#executescriptatblockid
 func (s *Server) ExecuteScriptAtBlockID(ctx context.Context, in *access.ExecuteScriptAtBlockIDRequest) (*access.ExecuteScriptResponse, error) {
 	blockID := flow.HashToID(in.BlockId)
 	height, err := s.index.HeightForBlock(blockID)
@@ -367,6 +394,8 @@ func (s *Server) ExecuteScriptAtBlockID(ctx context.Context, in *access.ExecuteS
 	return s.ExecuteScriptAtBlockHeight(ctx, req)
 }
 
+// ExecuteScriptAtBlockHeight implements the ExecuteScriptAtBlockHeight endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#executescriptatblockheight
 func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.ExecuteScriptAtBlockHeightRequest) (*access.ExecuteScriptResponse, error) {
 	var args []cadence.Value
 	for _, arg := range in.Arguments {
@@ -395,6 +424,8 @@ func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.Execut
 	return &resp, nil
 }
 
+// GetEventsForHeightRange implements the GetEventsForHeightRange endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#geteventsforheightrange
 func (s *Server) GetEventsForHeightRange(_ context.Context, in *access.GetEventsForHeightRangeRequest) (*access.EventsResponse, error) {
 	var types []flow.EventType
 	if in.Type != "" {
@@ -441,6 +472,8 @@ func (s *Server) GetEventsForHeightRange(_ context.Context, in *access.GetEvents
 	return &resp, nil
 }
 
+// GetEventsForBlockIDs implements the GetEventsForBlockIDs endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#geteventsforblockids
 func (s *Server) GetEventsForBlockIDs(_ context.Context, in *access.GetEventsForBlockIDsRequest) (*access.EventsResponse, error) {
 	var types []flow.EventType
 	if in.Type != "" {
@@ -492,6 +525,8 @@ func (s *Server) GetEventsForBlockIDs(_ context.Context, in *access.GetEventsFor
 	return &resp, nil
 }
 
+// GetNetworkParameters implements the GetNetworkParameters endpoint from the Flow Access API.
+// See https://docs.onflow.org/access-api/#getnetworkparameters
 func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkParametersRequest) (*access.GetNetworkParametersResponse, error) {
 	root, err := s.index.First()
 	if err != nil {
@@ -506,14 +541,20 @@ func (s *Server) GetNetworkParameters(_ context.Context, _ *access.GetNetworkPar
 	return &access.GetNetworkParametersResponse{ChainId: header.ChainID.String()}, nil
 }
 
+// GetExecutionResultForBlockID is not implemented.
+// See https://docs.onflow.org/access-api/#getexecutionresultforblockid
 func (s *Server) GetExecutionResultForBlockID(_ context.Context, req *access.GetExecutionResultForBlockIDRequest) (*access.ExecutionResultForBlockIDResponse, error) {
 	return nil, errors.New("GetExecutionResultForBlockID is not implemented by the Flow DPS API; please use the Flow Access API on a Flow access node directly")
 }
 
+// SendTransaction is not implemented.
+// See https://docs.onflow.org/access-api/#sendtransaction
 func (s *Server) SendTransaction(ctx context.Context, in *access.SendTransactionRequest) (*access.SendTransactionResponse, error) {
 	return nil, errors.New("SendTransaction is not implemented by the Flow DPS API; please use the Flow Access API on a Flow access node directly")
 }
 
+// GetLatestProtocolStateSnapshot is not implemented.
+// See https://docs.onflow.org/access-api/#getlatestprotocolstatesnapshotrequest
 func (s *Server) GetLatestProtocolStateSnapshot(ctx context.Context, in *access.GetLatestProtocolStateSnapshotRequest) (*access.ProtocolStateSnapshotResponse, error) {
 	return nil, errors.New("GetLatestProtocolSnapshot is not implemented by the Flow DPS API; please use the Flow Access API on a Flow access node directly")
 }

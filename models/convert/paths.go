@@ -20,6 +20,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 )
 
+// PathsToBytes converts a slice of ledger paths into a slice of byte slices.
 func PathsToBytes(paths []ledger.Path) [][]byte {
 	bb := make([][]byte, 0, len(paths))
 	for _, path := range paths {
@@ -30,6 +31,7 @@ func PathsToBytes(paths []ledger.Path) [][]byte {
 	return bb
 }
 
+// BytesToPaths converts a slice of byte slices into a slice of ledger paths.
 func BytesToPaths(bb [][]byte) ([]ledger.Path, error) {
 	paths := make([]ledger.Path, 0, len(bb))
 	for _, b := range bb {

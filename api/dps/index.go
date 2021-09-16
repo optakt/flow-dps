@@ -256,6 +256,7 @@ func (i *Index) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	return txIDs, nil
 }
 
+// Result returns the result for a given transaction ID.
 func (i *Index) Result(txID flow.Identifier) (*flow.TransactionResult, error) {
 
 	req := GetResultRequest{

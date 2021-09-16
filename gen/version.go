@@ -95,8 +95,9 @@ func main() {
 	}
 }
 
+// NodeVersion parses the Go.mod file to retrieve the version of the Flow-go
+// dependency.
 func NodeVersion() (string, error) {
-	// Fetch Node version from the go.mod file.
 	gomod, err := os.ReadFile(pathToGoMod)
 	if err != nil {
 		return "", fmt.Errorf("could not read go mod file: %w", err)

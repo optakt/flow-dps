@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence"
 )
 
+// ParseCadenceArgument parses strings that contain Cadence parameters into cadence values.
 func ParseCadenceArgument(param string) (cadence.Value, error) {
 
 	// Cadence values should be provided in the form of Type(Value), so that we

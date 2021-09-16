@@ -23,6 +23,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
+// Configuration is the configuration for a Flow chain from the perspective of the Rosetta API.
 type Configuration struct {
 	network    identifier.Network
 	version    meta.Version
@@ -31,6 +32,7 @@ type Configuration struct {
 	errors     []meta.ErrorDefinition
 }
 
+// New returns the configuration for a given Flow chain.
 func New(chain flow.ChainID) *Configuration {
 
 	network := identifier.Network{
@@ -90,26 +92,32 @@ func New(chain flow.ChainID) *Configuration {
 	return &c
 }
 
+// Network returns the configuration's network identifier.
 func (c *Configuration) Network() identifier.Network {
 	return c.network
 }
 
+// Version returns the configuration's version information.
 func (c *Configuration) Version() meta.Version {
 	return c.version
 }
 
+// Statuses returns the configuration's status definitions.
 func (c *Configuration) Statuses() []meta.StatusDefinition {
 	return c.statuses
 }
 
+// Operations returns the configuration's supported operations.
 func (c *Configuration) Operations() []string {
 	return c.operations
 }
 
+// Errors returns the configuration's error definitions.
 func (c *Configuration) Errors() []meta.ErrorDefinition {
 	return c.errors
 }
 
+// Check verifies whether a network identifier matches with the configured one.
 func (c *Configuration) Check(network identifier.Network) error {
 	if network.Blockchain != c.network.Blockchain {
 		return failure.InvalidBlockchain{

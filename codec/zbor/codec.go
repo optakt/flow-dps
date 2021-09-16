@@ -21,6 +21,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
+// Codec encodes and decodes Go values using cbor encoding and zstandard compression.
 type Codec struct {
 	encoder      cbor.EncMode
 	compressor   *zstd.Encoder
@@ -61,15 +62,18 @@ func NewCodec() *Codec {
 	return &c
 }
 
+// Encode returns the CBOR encoding of the given value.
 func (c *Codec) Encode(value interface{}) ([]byte, error) {
 	return c.encoder.Marshal(value)
 }
 
+// Compress encodes the given bytes into a compressed format using zstandard.
 func (c *Codec) Compress(data []byte) ([]byte, error) {
 	compressed := c.compressor.EncodeAll(data, nil)
 	return compressed, nil
 }
 
+// Marshal encodes the given value and then compresses it, and returns the resulting slice of bytes.
 func (c *Codec) Marshal(value interface{}) ([]byte, error) {
 	data, err := c.Encode(value)
 	if err != nil {
@@ -82,15 +86,20 @@ func (c *Codec) Marshal(value interface{}) ([]byte, error) {
 	return compressed, nil
 }
 
+// Decode parses CBOR-encoded data into the given value.
 func (c *Codec) Decode(data []byte, value interface{}) error {
 	return cbor.Unmarshal(data, value)
 }
 
+// Decompress reads compressed data that uses the zstandard format and returns the original
+// uncompressed byte slice.
 func (c *Codec) Decompress(compressed []byte) ([]byte, error) {
 	data, err := c.decompressor.DecodeAll(compressed, nil)
 	return data, err
 }
 
+// Unmarshal decompresses the given bytes and decodes the resulting CBOR-encoded data into
+// the given value.
 func (c *Codec) Unmarshal(compressed []byte, value interface{}) error {
 	data, err := c.Decompress(compressed)
 	if err != nil {
