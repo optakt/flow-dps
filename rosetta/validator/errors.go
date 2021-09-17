@@ -17,9 +17,9 @@ package validator
 // Error descriptions for common errors.
 const (
 	// Network identifier errors.
-	unknownBlockchain = "network identifier has unknown blockchain field"
+	blockchainUnknown = "network identifier has unknown blockchain field"
 	blockchainEmpty   = "blockchain identifier has empty blockchain field"
-	unknownNetwork    = "network identifier has unknown network field"
+	networkUnknown    = "network identifier has unknown network field"
 	networkEmpty      = "blockchain identifier has empty network field"
 
 	// Block identifier errors.

@@ -23,7 +23,11 @@ import (
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
-// Configuration is the configuration for a Flow chain from the perspective of the Rosetta API.
+const (
+	blockchainUnknown = "network identifier has unknown blockchain field"
+	networkUnknown    = "network identifier has unknown network field"
+)
+
 type Configuration struct {
 	network    identifier.Network
 	version    meta.Version
@@ -123,14 +127,14 @@ func (c *Configuration) Check(network identifier.Network) error {
 		return failure.InvalidBlockchain{
 			HaveBlockchain: network.Blockchain,
 			WantBlockchain: c.network.Blockchain,
-			Description:    failure.NewDescription("network identifier has unknown blockchain field"),
+			Description:    failure.NewDescription(blockchainUnknown),
 		}
 	}
 	if network.Network != c.network.Network {
 		return failure.InvalidNetwork{
 			HaveNetwork: network.Network,
 			WantNetwork: c.network.Network,
-			Description: failure.NewDescription("network identifier has unknown network field"),
+			Description: failure.NewDescription(networkUnknown),
 		}
 	}
 	return nil

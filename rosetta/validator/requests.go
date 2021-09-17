@@ -135,7 +135,7 @@ func (v *Validator) Request(request interface{}) error {
 		return failure.InvalidNetwork{
 			HaveNetwork: network.Network,
 			WantNetwork: verr.Param(),
-			Description: failure.NewDescription(unknownNetwork),
+			Description: failure.NewDescription(networkUnknown),
 		}
 
 	case blockchainFailTag:
@@ -144,7 +144,7 @@ func (v *Validator) Request(request interface{}) error {
 		return failure.InvalidBlockchain{
 			HaveBlockchain: network.Blockchain,
 			WantBlockchain: verr.Param(),
-			Description:    failure.NewDescription(unknownBlockchain),
+			Description:    failure.NewDescription(blockchainUnknown),
 		}
 
 	default:
