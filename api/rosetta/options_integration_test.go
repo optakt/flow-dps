@@ -62,9 +62,6 @@ func TestAPI_Options(t *testing.T) {
 	var options rosetta.OptionsResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &options))
 
-	// verify the version info
-	// TODO: we're not currently doing exact match of the version, only of the format
-	// check - should we?
 	assert.Regexp(t, versionRe, options.Version.RosettaVersion)
 	assert.Regexp(t, versionRe, options.Version.NodeVersion)
 	assert.Regexp(t, versionRe, options.Version.MiddlewareVersion)
