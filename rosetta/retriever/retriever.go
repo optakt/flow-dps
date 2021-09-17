@@ -31,10 +31,6 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
-const (
-	missingVault = "Could not borrow Balance reference to the Vault"
-)
-
 // Retriever is a component that retrieves information from the DPS index and converts it into
 // a format that is appropriate for the Rosetta API.
 type Retriever struct {
@@ -298,7 +294,7 @@ func (r *Retriever) Transaction(rosBlockID identifier.Block, rosTxID identifier.
 	if !ok {
 		return nil, failure.UnknownTransaction{
 			Hash: rosTxID.Hash,
-			Description: failure.NewDescription("transaction not found in given block",
+			Description: failure.NewDescription(txMissing,
 				failure.WithUint64("block_index", height),
 				failure.WithID("block_hash", blockID),
 			),
