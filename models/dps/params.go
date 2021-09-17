@@ -25,6 +25,7 @@ const (
 	FlowBlockchain = "flow"
 	FlowMainnet    = flow.Mainnet
 	FlowTestnet    = flow.Testnet
+	FlowLocalnet   = flow.Localnet
 	FlowSymbol     = "FLOW"
 	FlowDecimals   = 8
 
@@ -98,6 +99,24 @@ func init() {
 		},
 	}
 	FlowParams[testnet.ChainID] = testnet
+
+	// Hard-code localnet network parameters.
+	// At the moment, these are not publicly documented.
+	flowToken.Address = flow.HexToAddress("0ae53cb6e3f42a79")
+	localnet := Params{
+		ChainID:       FlowLocalnet,
+		FungibleToken: flow.HexToAddress("ee82856bf20e2aa6"),
+		FlowFees:      flow.HexToAddress("e5a8b7f23e8b548f"),
+		// FIXME: figure out rest of these addresses
+		StakingTable:     flow.HexToAddress("9eca2b38b18b5dfe"),
+		LockedTokens:     flow.HexToAddress("95e019a17d0e23d7"),
+		StakingProxy:     flow.HexToAddress("7aad92e5a0715d21"),
+		NonFungibleToken: flow.HexToAddress("631e88ae7f1d7c20"),
+		Tokens: map[string]Token{
+			flowToken.Symbol: flowToken,
+		},
+	}
+	FlowParams[localnet.ChainID] = localnet
 
 	// Hard-code main network parameters from:
 	// https://docs.onflow.org/core-contracts

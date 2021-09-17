@@ -43,9 +43,6 @@ type validateBlockFunc func(identifier.Block)
 type validateTxFunc func([]*object.Transaction)
 
 func TestAPI_Block(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -54,19 +51,19 @@ func TestAPI_Block(t *testing.T) {
 	var (
 		firstHeader  = knownHeader(0)
 		secondHeader = knownHeader(1)
-		midHeader1   = knownHeader(13)
-		midHeader2   = knownHeader(43)
-		midHeader3   = knownHeader(44)
-		lastHeader   = knownHeader(425) // header of last indexed block
+		midHeader1   = knownHeader(47)
+		midHeader2   = knownHeader(60)
+		midHeader3   = knownHeader(65)
+		lastHeader   = knownHeader(173) // header of last indexed block
 	)
 
 	const (
-		rootAccount     = "8c5303eaa26202d6"
-		senderAccount   = "754aed9de6197641"
-		receiverAccount = "631e88ae7f1d7c20"
+		senderAccount         = "10c4fef62310c807"
+		senderReceiverAccount = "e2f72218abeec2b9"
+		receiverAccount       = "06909bc5ba14c266"
 
-		initialLoadTx = "a9c9ab28ea76b7dbfd1f2666f74348e4188d67cf68248df6634cee3f06adf7b1"
-		transferTx    = "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c"
+		firstTx  = "2d394a7841c91c5470e6e3cabb1e7ed57609ef41117bba84ced01d37659f2861"
+		secondTx = "c059880060a66e84b23fbb8f2cd1fb24df64c9baad6e150ed8622e6eeb52031e"
 	)
 
 	tests := []struct {
@@ -101,7 +98,7 @@ func TestAPI_Block(t *testing.T) {
 			validateBlock:    validateByHeader(t, secondHeader),
 		},
 		{
-			// Initial transfer of currency from the root account to the user - 100 tokens.
+			// First transfer of currency from that is not tied to an account creation.
 			name:    "block mid-chain with transactions",
 			request: blockRequest(midHeader1),
 
@@ -109,7 +106,7 @@ func TestAPI_Block(t *testing.T) {
 			wantParentHash:       midHeader1.ParentID.String(),
 			wantParentHeight:     midHeader1.Height - 1,
 			validateBlock:        validateByHeader(t, midHeader1),
-			validateTransactions: validateTransfer(t, initialLoadTx, rootAccount, senderAccount, 100_00000000),
+			validateTransactions: validateTransfer(t, firstTx, senderReceiverAccount, receiverAccount, 5_00000000),
 		},
 		{
 			name:    "block mid-chain without transactions",
@@ -129,7 +126,7 @@ func TestAPI_Block(t *testing.T) {
 			wantParentHash:       midHeader3.ParentID.String(),
 			wantParentHeight:     midHeader3.Height - 1,
 			validateBlock:        validateByHeader(t, midHeader3),
-			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
+			validateTransactions: validateTransfer(t, secondTx, senderAccount, senderReceiverAccount, 5_00000000),
 		},
 		{
 			name: "lookup of a block mid-chain by index only",
@@ -141,7 +138,7 @@ func TestAPI_Block(t *testing.T) {
 			wantTimestamp:        convert.RosettaTime(midHeader3.Timestamp),
 			wantParentHash:       midHeader3.ParentID.String(),
 			wantParentHeight:     midHeader3.Height - 1,
-			validateTransactions: validateTransfer(t, transferTx, senderAccount, receiverAccount, 1),
+			validateTransactions: validateTransfer(t, secondTx, senderAccount, senderReceiverAccount, 5_00000000),
 			validateBlock:        validateBlock(t, midHeader3.Height, midHeader3.ID().String()), // verify that the returned block ID has both height and hash
 		},
 		{
@@ -202,21 +199,18 @@ func TestAPI_Block(t *testing.T) {
 }
 
 func TestAPI_BlockHandlesErrors(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
 	var (
-		validBlockHeight uint64 = 44
-		lastHeight       uint64 = 425
+		validBlockHeight uint64 = 41
+		lastHeight       uint64 = 173
 
 		validBlockHash = knownHeader(validBlockHeight).ID().String()
 	)
 
-	const trimmedBlockHash = "dab186b45199c0c26060ea09288b2f16032da40fc54c81bb2a8267a5c13906e" // blockID a character too short
+	const trimmedBlockHash = "f91704ce2fa9a1513500184ebfec884a1728438463c0104f8a17d5c66dd1af7" // blockID a character too short
 
 	var validBlockID = identifier.Block{
 		Index: &validBlockHeight,
@@ -242,7 +236,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			request: request.Block{
 				NetworkID: identifier.Network{
 					Blockchain: "",
-					Network:    dps.FlowTestnet.String(),
+					Network:    dps.FlowLocalnet.String(),
 				},
 				BlockID: validBlockID,
 			},
@@ -254,7 +248,7 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			request: request.Block{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
-					Network:    dps.FlowTestnet.String(),
+					Network:    dps.FlowLocalnet.String(),
 				},
 				BlockID: validBlockID,
 			},
@@ -296,17 +290,6 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 			},
 
 			checkErr: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
-		},
-		{
-			name: "missing block height",
-			request: request.Block{
-				NetworkID: defaultNetwork(),
-				BlockID: identifier.Block{
-					Hash: validBlockHash,
-				},
-			},
-
-			checkErr: checkRosettaError(http.StatusInternalServerError, configuration.ErrorInternal),
 		},
 		{
 			name: "invalid block hash",
@@ -362,9 +345,6 @@ func TestAPI_BlockHandlesErrors(t *testing.T) {
 }
 
 func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -383,22 +363,22 @@ func TestAPI_BlockHandlesMalformedRequest(t *testing.T) {
 		{
 			"network_identifier": {
 				"blockchain": "flow",
-				"network": "flow-testnet"
+				"network": "flow-localnet"
 			},
-			"block_identifier": {
-				"index": 13,
-				"hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+			"block_identifier" : {
+				"index" : 41,
+				"hash" : "f91704ce2fa9a1513500184ebfec884a1728438463c0104f8a17d5c66dd1af79"
 			}`
 
 		validJSON = `
 		{
 			"network_identifier": {
 				"blockchain": "flow",
-				"network": "flow-testnet"
+				"network": "flow-localnet"
 			},
-			"block_identifier": {
-				"index": 13,
-				"hash": "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+			"block_identifier" : {
+				"index" : 41,
+				"hash" : "f91704ce2fa9a1513500184ebfec884a1728438463c0104f8a17d5c66dd1af79"
 			}
 		}`
 	)
@@ -482,7 +462,6 @@ func validateTransfer(t *testing.T, hash string, from string, to string, amount 
 		tx := transactions[0]
 
 		assert.Equal(t, tx.ID.Hash, hash)
-		assert.Equal(t, len(tx.Operations), 2)
 
 		// Operations come in pairs. A negative transfer of funds for the sender and a positive one for the receiver.
 		require.Equal(t, len(tx.Operations), 2)

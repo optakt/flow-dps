@@ -36,15 +36,12 @@ import (
 )
 
 func TestAPI_Status(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
 	oldestBlockID := knownHeader(0).ID().String()
-	lastBlock := knownHeader(425)
+	lastBlock := knownHeader(173)
 
 	request := request.Status{
 		NetworkID: defaultNetwork(),
@@ -82,9 +79,6 @@ func TestAPI_Status(t *testing.T) {
 }
 
 func TestAPI_StatusHandlesErrors(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -101,7 +95,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 			request: request.Status{
 				NetworkID: identifier.Network{
 					Blockchain: "",
-					Network:    dps.FlowTestnet.String(),
+					Network:    dps.FlowLocalnet.String(),
 				},
 			},
 
@@ -112,7 +106,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 			request: request.Status{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
-					Network:    dps.FlowTestnet.String(),
+					Network:    dps.FlowLocalnet.String(),
 				},
 			},
 
@@ -159,9 +153,6 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 }
 
 func TestAPI_StatusHandlerMalformedRequest(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -179,13 +170,13 @@ func TestAPI_StatusHandlerMalformedRequest(t *testing.T) {
 		unclosedBracket = `{
 			"network_identifier": {
 				"blockchain": "flow",
-				"network": "flow-testnet"
+				"network": "flow-localnet"
 			}`
 
 		validPayload = `{
 			"network_identifier": {
 				"blockchain": "flow",
-				"network": "flow-testnet"
+				"network": "flow-localnet"
 			}
 		}`
 	)
