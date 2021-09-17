@@ -80,7 +80,7 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 	// Verify that we have exactly two operations.
 	if len(operations) != requiredOperations {
 		return nil, failure.InvalidOperations{
-			Description: failure.NewDescription("invalid number of operations"),
+			Description: failure.NewDescription(opsInvalid),
 			Want:        requiredOperations,
 			Have:        uint(len(operations)),
 		}
@@ -92,7 +92,7 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 		amount, err := strconv.ParseInt(op.Amount.Value, 10, 64)
 		if err != nil {
 			return nil, failure.InvalidIntent{
-				Description: failure.NewDescription("could not parse amount",
+				Description: failure.NewDescription(opAmountUnparseable,
 					failure.WithString("amount", op.Amount.Value),
 					failure.WithErr(err),
 				),
@@ -104,7 +104,7 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 	// Verify that the amounts match.
 	if amounts[0] != -amounts[1] {
 		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("transfer amounts do not match",
+			Description: failure.NewDescription(opsAmountsMismatch,
 				failure.WithString("first_amount", operations[0].Amount.Value),
 				failure.WithString("second_amount", operations[1].Amount.Value),
 			),
@@ -134,7 +134,7 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 	// Make sure that both operations are for FLOW tokens.
 	if sendSymbol != dps.FlowSymbol || receiveSymbol != dps.FlowSymbol {
 		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("invalid currencies found",
+			Description: failure.NewDescription(currenciesInvalid,
 				failure.WithString("sender", send.AccountID.Address),
 				failure.WithString("receiver", receive.AccountID.Address),
 				failure.WithString("withdrawal_currency", send.Amount.Currency.Symbol),
@@ -155,7 +155,7 @@ func (t *Transactor) DeriveIntent(operations []object.Operation) (*Intent, error
 	// Validate that the specified operations are transfers.
 	if send.Type != dps.OperationTransfer || receive.Type != dps.OperationTransfer {
 		return nil, failure.InvalidIntent{
-			Description: failure.NewDescription("only transfer operations are supported",
+			Description: failure.NewDescription(opTypeInvalid,
 				failure.WithString("withdrawal_type", send.Type),
 				failure.WithString("deposit_type", receive.Type),
 			),
@@ -234,7 +234,7 @@ func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, s
 	key, err := t.invoke.Key(height, address, 0)
 	if err != nil {
 		return "", "", failure.InvalidKey{
-			Description: failure.NewDescription("invalid account key", failure.WithErr(err)),
+			Description: failure.NewDescription(keyInvalid, failure.WithErr(err)),
 			Height:      height,
 			Address:     address,
 			Index:       0,
@@ -267,7 +267,7 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 		return "", failure.InvalidAuthorizers{
 			Have:        uint(len(unsignedTx.Authorizers)),
 			Want:        requiredAuthorizers,
-			Description: failure.NewDescription("invalid number of authorizers"),
+			Description: failure.NewDescription(authorizersInvalid),
 		}
 	}
 
@@ -276,7 +276,7 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 		return "", failure.InvalidSignatures{
 			Have:        uint(len(signatures)),
 			Want:        uint(len(unsignedTx.Authorizers)),
-			Description: failure.NewDescription("invalid number of signatures"),
+			Description: failure.NewDescription(sigCountInvalid),
 		}
 	}
 
@@ -287,14 +287,14 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 		return "", failure.InvalidPayer{
 			Have:        flow.BytesToAddress(unsignedTx.Payer[:]),
 			Want:        flow.BytesToAddress(sender[:]),
-			Description: failure.NewDescription("invalid transaction payer"),
+			Description: failure.NewDescription(payerInvalid),
 		}
 	}
 
 	// Verify that we do not already have signatures.
 	if len(unsignedTx.EnvelopeSignatures) > 0 {
 		return "", failure.InvalidSignature{
-			Description: failure.NewDescription("unexpected envelope signatures found",
+			Description: failure.NewDescription(envelopeSigFound,
 				failure.WithInt("signatures", len(unsignedTx.EnvelopeSignatures))),
 		}
 	}
@@ -303,7 +303,7 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 	signer := sdk.HexToAddress(signature.SigningPayload.AccountID.Address)
 	if signer != sender {
 		return "", failure.InvalidSignature{
-			Description: failure.NewDescription("invalid signer account",
+			Description: failure.NewDescription(signerInvalid,
 				failure.WithString("have_signer", signer.Hex()),
 				failure.WithString("want_signer", sender.Hex()),
 			),
@@ -312,7 +312,7 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 
 	if signature.SignatureType != requiredAlgorithm {
 		return "", failure.InvalidSignature{
-			Description: failure.NewDescription("invalid signature algorithm",
+			Description: failure.NewDescription(sigAlgoInvalid,
 				failure.WithString("have_algo", signature.SignatureType),
 				failure.WithString("want_algo", requiredAlgorithm),
 			),
@@ -322,7 +322,7 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 	bytes, err := hex.DecodeString(signature.HexBytes)
 	if err != nil {
 		return "", failure.InvalidSignature{
-			Description: failure.NewDescription("invalid signature payload",
+			Description: failure.NewDescription(sigEncoding,
 				failure.WithErr(err)),
 		}
 	}
