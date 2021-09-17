@@ -215,8 +215,8 @@ func (s *Server) GetBlockByHeight(_ context.Context, in *access.GetBlockByHeight
 // GetCollectionByID implements the GetCollectionByID endpoint from the Flow Access API.
 // See https://docs.onflow.org/access-api/#getcollectionbyid
 func (s *Server) GetCollectionByID(_ context.Context, in *access.GetCollectionByIDRequest) (*access.CollectionResponse, error) {
-	collId := flow.HashToID(in.Id)
-	collection, err := s.index.Collection(collId)
+	collID := flow.HashToID(in.Id)
+	collection, err := s.index.Collection(collID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve collection with ID %x: %w", in.Id, err)
 	}
