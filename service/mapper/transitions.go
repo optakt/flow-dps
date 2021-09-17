@@ -29,8 +29,11 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// TransitionFunc is a function that is applied onto the state machine's
+// state.
 type TransitionFunc func(*State) error
 
+// Transitions is what applies transitions to the state of an FSM.
 type Transitions struct {
 	cfg   Config
 	log   zerolog.Logger
@@ -41,6 +44,7 @@ type Transitions struct {
 	once  *sync.Once
 }
 
+// NewTransitions returns a Transitions component using the given dependencies and using the given options.
 func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feeder, index dps.Writer, options ...func(*Config)) *Transitions {
 
 	cfg := DefaultConfig
@@ -61,6 +65,8 @@ func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feede
 	return &t
 }
 
+// BootstrapState bootstraps the state by loading the checkpoint if there is one and initializing
+// the elements subsequently used by the FSM.
 func (t *Transitions) BootstrapState(s *State) error {
 
 	// Bootstrapping should only happen when the state is empty.
@@ -99,7 +105,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("could not read checkpoint: %w", err)
 	}
 
-	// Here, we store all the paths so we can index the payloads, if wanted.
+	// Here, we store all the paths, so we can index the payloads if wanted.
 	var paths []ledger.Path
 	if !t.cfg.SkipBootstrap {
 		paths = allPaths(checkpoint)
@@ -118,6 +124,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 	return nil
 }
 
+// UpdateTree updates the state's tree. If the state's forest already matches with the next block's state commitment,
+// it immediately returns and sets the state's status to StatusMatched.
 func (t *Transitions) UpdateTree(s *State) error {
 	log := t.log.With().Uint64("height", s.height).Hex("last", s.last[:]).Hex("next", s.next[:]).Logger()
 
@@ -129,7 +137,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	}
 
 	// If the forest contains a tree for the commit of the next finalized block,
-	// we have reached our goal and we can go to the next step in order to
+	// we have reached our goal, and we can go to the next step in order to
 	// collect the register payloads we want to index for that block.
 	ok := s.forest.Has(s.next)
 	if ok {
@@ -174,6 +182,8 @@ func (t *Transitions) UpdateTree(s *State) error {
 	return nil
 }
 
+// CollectRegisters reads the payloads for the next block to be indexed from the state's forest, unless payload
+// indexing is disabled.
 func (t *Transitions) CollectRegisters(s *State) error {
 	log := t.log.With().Uint64("height", s.height).Hex("commit", s.next[:]).Logger()
 
@@ -242,6 +252,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	return nil
 }
 
+// IndexRegisters indexes the registers that the state contains.
 func (t *Transitions) IndexRegisters(s *State) error {
 	log := t.log.With().Uint64("height", s.height).Hex("commit", s.next[:]).Logger()
 
@@ -286,6 +297,7 @@ func (t *Transitions) IndexRegisters(s *State) error {
 	return nil
 }
 
+// ForwardHeight increments the height at which the mapping operates, and updates the last indexed height.
 func (t *Transitions) ForwardHeight(s *State) error {
 
 	// We should only forward the height after we have just indexed the payloads
@@ -321,8 +333,8 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	return nil
 }
 
+// IndexChain indexes chain data for the current height.
 func (t *Transitions) IndexChain(s *State) error {
-
 	log := t.log.With().Uint64("height", s.height).Logger()
 
 	// Indexing of chain data should only happen after we have just forwarded

@@ -20,6 +20,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Forest represents a multitude of trees which are mapped by their state commitment hash.
 type Forest interface {
 	Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment)
 	Has(commit flow.StateCommitment) bool

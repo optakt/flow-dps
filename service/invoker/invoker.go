@@ -30,12 +30,15 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// Invoker retrieves account information from and executes Cadence scripts against
+// the Flow virtual machine.
 type Invoker struct {
 	index dps.Reader
 	vm    VirtualMachine
 	cache Cache
 }
 
+// New returns a new Invoker with the given configuration.
 func New(index dps.Reader, options ...func(*Config)) (*Invoker, error) {
 
 	// Initialize the invoker configuration with conservative default values.
@@ -73,6 +76,7 @@ func New(index dps.Reader, options ...func(*Config)) (*Invoker, error) {
 	return &i, nil
 }
 
+// Key returns the public key of the account with the given address.
 func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
 
 	// Retrieve the account at the specified block height.
@@ -99,6 +103,7 @@ func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.Acc
 	return &key, nil
 }
 
+// Account returns the account with the given address.
 func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, error) {
 
 	// Look up the current block and commit for the block.
@@ -127,6 +132,7 @@ func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, e
 	return account, nil
 }
 
+// Script executes the given Cadence script and returns its result.
 func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value) (cadence.Value, error) {
 
 	// Encode the arguments from Cadence values to byte slices.
@@ -163,11 +169,11 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	// Cadence parameters.
 	proc := fvm.Script(script).WithArguments(args...)
 
-	// finally, we initialize an empty programs cache
+	// Finally, we initialize an empty programs cache.
 	programs := programs.NewEmptyPrograms()
 
-	// the script procedure is then run using the Flow virtual machine and all
-	// of the constructed contextual parameters
+	// The script procedure is then run using the Flow virtual machine and all
+	// the constructed contextual parameters.
 	err = i.vm.Run(ctx, proc, view, programs)
 	if err != nil {
 		return nil, fmt.Errorf("could not run script: %w", err)

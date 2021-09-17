@@ -18,6 +18,8 @@ import (
 	"github.com/onflow/flow-go/ledger"
 )
 
+// Feeder represents something that can be consumed to get trie updates
+// in chronological order.
 type Feeder interface {
 	Update() (*ledger.TrieUpdate, error)
 }

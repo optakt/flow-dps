@@ -46,7 +46,7 @@ func FromDisk(db *badger.DB) *Disk {
 	return &d
 }
 
-// Root is a
+// Root retrieves the root height of the chain.
 func (d *Disk) Root() (uint64, error) {
 	var height uint64
 	err := d.db.View(operation.RetrieveRootHeight(&height))
@@ -56,6 +56,7 @@ func (d *Disk) Root() (uint64, error) {
 	return height, nil
 }
 
+// Commit retrieves the state commitment at the given height.
 func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 
 	blockID, err := d.block(height)
@@ -75,6 +76,7 @@ func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 	return commit, nil
 }
 
+// Header retrieves the block header at the given height.
 func (d *Disk) Header(height uint64) (*flow.Header, error) {
 
 	blockID, err := d.block(height)
@@ -90,6 +92,7 @@ func (d *Disk) Header(height uint64) (*flow.Header, error) {
 	return &header, nil
 }
 
+// Collections retrieves the collections at the given height.
 func (d *Disk) Collections(height uint64) ([]*flow.LightCollection, error) {
 
 	blockID, err := d.block(height)
@@ -116,6 +119,7 @@ func (d *Disk) Collections(height uint64) ([]*flow.LightCollection, error) {
 	return collections, nil
 }
 
+// Guarantees retrieves the guarantees at the given height.
 func (d *Disk) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
 
 	blockID, err := d.block(height)
@@ -142,6 +146,7 @@ func (d *Disk) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
 	return guarantees, nil
 }
 
+// Transactions retrieves the transactions at the given height.
 func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 
 	blockID, err := d.block(height)
@@ -175,6 +180,7 @@ func (d *Disk) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 	return transactions, nil
 }
 
+// Results retrieves the results at the given height.
 func (d *Disk) Results(height uint64) ([]*flow.TransactionResult, error) {
 	blockID, err := d.block(height)
 	if err != nil {
@@ -197,6 +203,7 @@ func (d *Disk) Results(height uint64) ([]*flow.TransactionResult, error) {
 	return converted, nil
 }
 
+// Seals retrieves the seals at the given height.
 func (d *Disk) Seals(height uint64) ([]*flow.Seal, error) {
 
 	blockID, err := d.block(height)
@@ -230,6 +237,7 @@ func (d *Disk) Seals(height uint64) ([]*flow.Seal, error) {
 	return seals, nil
 }
 
+// Events retrieves the events at the given height.
 func (d *Disk) Events(height uint64) ([]flow.Event, error) {
 
 	blockID, err := d.block(height)

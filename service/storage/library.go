@@ -18,10 +18,12 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// Library is the storage library.
 type Library struct {
 	codec dps.Codec
 }
 
+// New returns a new storage library using the given codec.
 func New(codec dps.Codec) *Library {
 	lib := Library{
 		codec: codec,

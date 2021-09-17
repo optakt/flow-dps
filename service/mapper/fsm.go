@@ -22,12 +22,15 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// FSM is a finite state machine which is used to map block data from multiple sources into
+// the DPS index.
 type FSM struct {
 	state       *State
 	transitions map[Status]TransitionFunc
 	wg          *sync.WaitGroup
 }
 
+// NewFSM returns a new FSM using the given state and options.
 func NewFSM(state *State, options ...func(*FSM)) *FSM {
 
 	f := FSM{
@@ -43,9 +46,11 @@ func NewFSM(state *State, options ...func(*FSM)) *FSM {
 	return &f
 }
 
+// Run starts the state machine.
 func (f *FSM) Run() error {
 	f.wg.Add(1)
 	defer f.wg.Done()
+
 	for {
 		select {
 		case <-f.state.done:
@@ -53,10 +58,12 @@ func (f *FSM) Run() error {
 		default:
 			// continue
 		}
+
 		transition, ok := f.transitions[f.state.status]
 		if !ok {
 			return fmt.Errorf("could not find transition for status (%d)", f.state.status)
 		}
+
 		err := transition(f.state)
 		if errors.Is(err, dps.ErrFinished) {
 			return nil
@@ -67,6 +74,7 @@ func (f *FSM) Run() error {
 	}
 }
 
+// Stop gracefully stops the state machine.
 func (f *FSM) Stop() error {
 	close(f.state.done)
 	f.wg.Wait()
