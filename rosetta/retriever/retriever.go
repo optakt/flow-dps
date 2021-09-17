@@ -164,7 +164,11 @@ func (r *Retriever) Balances(rosBlockID identifier.Block, rosAccountID identifie
 		// balance here, which is zero.
 		balance := uint64(0)
 		if err == nil {
-			balance = result.ToGoValue().(uint64)
+			var ok bool
+			balance, ok = result.ToGoValue().(uint64)
+			if !ok {
+				return identifier.Block{}, nil, fmt.Errorf("unexpected script result type (got: %s, want uint64)", result.String())
+			}
 		}
 
 		amount := object.Amount{
