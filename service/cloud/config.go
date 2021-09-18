@@ -14,16 +14,21 @@
 
 package cloud
 
+// DefaultConfig is the default configuration for the Google Cloud Streamer.
 var DefaultConfig = Config{
 	BufferSize: 32,
 }
 
+// Config is the configuration for a Google Cloud Streamer.
 type Config struct {
 	BufferSize uint
 }
 
+// Option is a function that can be applied to a Config.
 type Option func(*Config)
 
+// WithBufferSize can be used to specify the buffer size for a
+// Google Cloud Streamer to use.
 func WithBufferSize(size uint) Option {
 	return func(cfg *Config) {
 		cfg.BufferSize = size

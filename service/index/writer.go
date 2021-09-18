@@ -108,6 +108,7 @@ func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger
 	})
 }
 
+// Collections indexes the collections at the given height.
 func (w *Writer) Collections(height uint64, collections []*flow.LightCollection) error {
 	var collIDs []flow.Identifier
 	return w.apply(func(tx *badger.Txn) error {
@@ -131,6 +132,7 @@ func (w *Writer) Collections(height uint64, collections []*flow.LightCollection)
 	})
 }
 
+// Guarantees indexes the guarantees at the given height.
 func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) error {
 	return w.apply(func(tx *badger.Txn) error {
 		for _, guarantee := range guarantees {
@@ -143,6 +145,7 @@ func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) er
 	})
 }
 
+// Transactions indexes the transactions at the given height.
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
 	var txIDs []flow.Identifier
 	return w.apply(func(tx *badger.Txn) error {
@@ -168,6 +171,7 @@ func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBod
 	})
 }
 
+// Results indexes the transaction results at the given height.
 func (w *Writer) Results(results []*flow.TransactionResult) error {
 	return w.apply(func(tx *badger.Txn) error {
 		for _, result := range results {
@@ -270,6 +274,7 @@ func (w *Writer) done(err error) {
 	w.sema.Release(1)
 }
 
+// Close closes the writer and commits the pending transaction, if there is one.
 func (w *Writer) Close() error {
 
 	// The first transaction we created did not claim a slot on the semaphore.

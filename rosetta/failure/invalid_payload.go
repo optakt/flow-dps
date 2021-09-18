@@ -18,11 +18,13 @@ import (
 	"fmt"
 )
 
+// InvalidPayload is the error for an invalid transaction payload encoding.
 type InvalidPayload struct {
 	Description Description
 	Encoding    string
 }
 
+// Error implements the error interface.
 func (i InvalidPayload) Error() string {
 	return fmt.Sprintf("invalid transaction payload (encoding: %s): %s", i.Encoding, i.Description)
 }

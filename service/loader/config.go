@@ -14,6 +14,7 @@
 
 package loader
 
+// WithCheckpointPath specifies the path to the checkpoint a Loader should use.
 func WithCheckpointPath(path string) func(*Loader) {
 	return func(l *Loader) {
 		l.path = path

@@ -14,10 +14,12 @@
 
 package retriever
 
+// Config is the configuration for the Rosetta retriever component.
 type Config struct {
 	TransactionLimit uint
 }
 
+// WithTransactionLimit sets a transaction limit in a Config.
 func WithTransactionLimit(limit uint) func(*Config) {
 	return func(c *Config) {
 		c.TransactionLimit = limit

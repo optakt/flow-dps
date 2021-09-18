@@ -20,6 +20,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// InvalidKey is the error for an invalid signer key.
 type InvalidKey struct {
 	Description Description
 	Height      uint64
@@ -27,6 +28,7 @@ type InvalidKey struct {
 	Index       int
 }
 
+// Error implements the error interface.
 func (i InvalidKey) Error() string {
 	return fmt.Sprintf("invalid signer key (height: %d, address: %s, key index: %d): %s", i.Height, i.Address.Hex(), i.Index, i.Description)
 }

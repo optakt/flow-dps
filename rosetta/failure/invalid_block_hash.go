@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// InvalidBlockHash is the error for a block hash of invalid length.
 type InvalidBlockHash struct {
 	Description Description
 	WantLength  int
 	HaveLength  int
 }
 
+// Error implements the error interface.
 func (i InvalidBlockHash) Error() string {
 	return fmt.Sprintf("invalid block hash length (want: %d, have: %d): %s", i.WantLength, i.HaveLength, i.Description)
 }

@@ -28,11 +28,13 @@ import (
 	"github.com/optakt/flow-dps/rosetta/retriever"
 )
 
+// Converter converts Flow Events into Rosetta Operations.
 type Converter struct {
 	deposit    flow.EventType
 	withdrawal flow.EventType
 }
 
+// New instantiates and returns a new converter using the given Generator.
 func New(gen Generator) (*Converter, error) {
 	deposit, err := gen.TokensDeposited(dps.FlowSymbol)
 	if err != nil {
@@ -43,9 +45,6 @@ func New(gen Generator) (*Converter, error) {
 		return nil, fmt.Errorf("could not generate withdrawal event type: %w", err)
 	}
 
-	// TODO: Generate more event types (stake/unstake, delegate/lock, etc.)
-	//		 https://github.com/optakt/flow-dps/issues/214
-
 	c := Converter{
 		deposit:    flow.EventType(deposit),
 		withdrawal: flow.EventType(withdrawal),
@@ -54,6 +53,7 @@ func New(gen Generator) (*Converter, error) {
 	return &c, nil
 }
 
+// EventToOperation converts a flow.Event into a Rosetta Operation.
 func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operation, err error) {
 
 	// Decode the event payload into a Cadence value and cast it to a Cadence event.
@@ -110,8 +110,6 @@ func (c *Converter) EventToOperation(event flow.Event) (operation *object.Operat
 	}
 
 	switch event.Type {
-	// TODO: Support more event types (stake/unstake, delegate/lock, etc.)
-	//		 https://github.com/optakt/flow-dps/issues/214
 	case c.deposit:
 		op.Type = dps.OperationTransfer
 

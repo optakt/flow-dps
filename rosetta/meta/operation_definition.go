@@ -14,6 +14,7 @@
 
 package meta
 
+// StatusDefinition is a Rosetta operation's status definition.
 type StatusDefinition struct {
 	Status     string `json:"status"`
 	Successful bool   `json:"successful"`

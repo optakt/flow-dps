@@ -19,6 +19,8 @@ import (
 )
 
 var (
+	// Data API specific errors.
+
 	ErrorInternal           = meta.ErrorDefinition{Code: 1, Message: "internal error", Retriable: false}
 	ErrorInvalidEncoding    = meta.ErrorDefinition{Code: 2, Message: "invalid request encoding", Retriable: false}
 	ErrorInvalidFormat      = meta.ErrorDefinition{Code: 3, Message: "invalid request format", Retriable: false}
@@ -32,6 +34,7 @@ var (
 	ErrorUnknownTransaction = meta.ErrorDefinition{Code: 11, Message: "unknown block transaction", Retriable: false}
 
 	// Construction API specific errors.
+
 	ErrorInvalidIntent      = meta.ErrorDefinition{Code: 12, Message: "invalid transaction intent", Retriable: false}
 	ErrorInvalidAuthorizers = meta.ErrorDefinition{Code: 13, Message: "invalid transaction authorizers", Retriable: false}
 	ErrorInvalidPayer       = meta.ErrorDefinition{Code: 14, Message: "invalid transaction payer", Retriable: false}

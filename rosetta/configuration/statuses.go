@@ -18,6 +18,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/meta"
 )
 
+// Status definitions.
 var (
 	StatusCompleted = meta.StatusDefinition{Status: "COMPLETED", Successful: true}
 )

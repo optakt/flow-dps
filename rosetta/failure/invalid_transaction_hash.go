@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// InvalidTransactionHash is the error for an invalid transaction hash length.
 type InvalidTransactionHash struct {
 	Description Description
 	WantLength  int
 	HaveLength  int
 }
 
+// Error implements the error interface.
 func (i InvalidTransactionHash) Error() string {
 	return fmt.Sprintf("invalid transaction hash length (want: %d, have: %d): %s", i.WantLength, i.HaveLength, i.Description)
 }

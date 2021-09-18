@@ -60,6 +60,7 @@ func (r *Reader) Last() (uint64, error) {
 	return height, err
 }
 
+// HeightForBlock returns the height for the given block identifier.
 func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 	var height uint64
 	err := r.db.View(r.lib.LookupHeightForBlock(blockID, &height))
@@ -144,6 +145,8 @@ func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error
 	return &transaction, err
 }
 
+// HeightForTransaction returns the height of the block within which the given
+// transaction identifier is.
 func (r *Reader) HeightForTransaction(txID flow.Identifier) (uint64, error) {
 	var height uint64
 	err := r.db.View(r.lib.LookupHeightForTransaction(txID, &height))

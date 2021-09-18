@@ -31,6 +31,11 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// GCPStreamer is a component that downloads block data from a Google Cloud bucket.
+// It exposes a callback to be used by the consensus follower to notify the Streamer
+// when a new block has been finalized. The streamer will then add that block to the
+// queue, which is consumed by downloading the block data for the identifiers it
+// contains.
 type GCPStreamer struct {
 	log    zerolog.Logger
 	bucket *storage.BucketHandle
@@ -40,6 +45,7 @@ type GCPStreamer struct {
 	busy   uint32         // used as a guard to avoid concurrent polling
 }
 
+// NewGCPStreamer returns a new GCP Streamer using the given bucket and options.
 func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ...Option) *GCPStreamer {
 
 	cfg := DefaultConfig
@@ -70,6 +76,8 @@ func (g *GCPStreamer) OnBlockFinalized(blockID flow.Identifier) {
 	g.log.Debug().Hex("block", blockID[:]).Msg("execution record queued for download")
 }
 
+// Next returns the next available block data. It returns an ErrUnavailable if no block
+// data is available at the moment.
 func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
 
 	// If we are not polling already, we want to start polling in the

@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// InvalidOperations is the error for an invalid set of operations.
 type InvalidOperations struct {
 	Description Description
 	Want        uint
 	Have        uint
 }
 
+// Error implements the error interface.
 func (i InvalidOperations) Error() string {
 	return fmt.Sprintf("invalid operations (want: %d, have: %d): %s", i.Want, i.Have, i.Description)
 }

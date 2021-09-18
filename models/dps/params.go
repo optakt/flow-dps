@@ -20,6 +20,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Flow constant parameters.
 const (
 	FlowBlockchain = "flow"
 	FlowMainnet    = flow.Mainnet
@@ -32,8 +33,10 @@ const (
 	OperationTransfer = "TRANSFER"
 )
 
+// FlowParams is a map that contains the parameters for each known Flow chain.
 var FlowParams = make(map[flow.ChainID]Params)
 
+// Params contains the parameters of a Flow chain.
 type Params struct {
 	ChainID          flow.ChainID
 	FungibleToken    flow.Address
@@ -45,15 +48,18 @@ type Params struct {
 	Tokens           map[string]Token
 }
 
+// Symbols returns the sorted symbols of all tokens within the parameters.
 func (p Params) Symbols() []string {
 	symbols := make([]string, 0, len(p.Tokens))
 	for symbol := range p.Tokens {
 		symbols = append(symbols, symbol)
 	}
 	sort.Strings(symbols)
+
 	return symbols
 }
 
+// Token contains the details of a crypto token.
 type Token struct {
 	Symbol   string
 	Address  flow.Address

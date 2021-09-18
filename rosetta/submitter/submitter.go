@@ -41,5 +41,6 @@ func (s *Submitter) Transaction(tx *sdk.Transaction) error {
 	if err != nil {
 		return fmt.Errorf("could not submit transaction: %w", err)
 	}
+
 	return nil
 }

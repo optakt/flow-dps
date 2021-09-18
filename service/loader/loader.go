@@ -23,20 +23,28 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
+// Loader loads the trie from its checkpoint, or an empty trie if it does not
+// have any checkpoint file.
 type Loader struct {
 	path string
 }
 
+// New returns a new Loader with the given options.
 func New(options ...func(*Loader)) *Loader {
 	l := Loader{
 		path: "",
 	}
+
 	for _, option := range options {
 		option(&l)
 	}
+
 	return &l
 }
 
+// Checkpoint loads its checkpoint if one was specified, and otherwise
+// returns an empty trie. It errors when given a checkpoint with more than
+// one single tree.
 func (l *Loader) Checkpoint() (*trie.MTrie, error) {
 
 	if l.path == "" {

@@ -31,6 +31,8 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
+// TransactionParser is a wrapper around a pointer to a sdk.Transaction which exposes methods to
+// individually parse different elements of the transaction.
 type TransactionParser struct {
 	tx       *sdk.Transaction
 	validate Validator
@@ -38,6 +40,7 @@ type TransactionParser struct {
 	invoke   Invoker
 }
 
+// BlockID parses the transaction's BlockID.
 func (p *TransactionParser) BlockID() (identifier.Block, error) {
 	// Validate the reference block identifier.
 	refBlockID := identifier.Block{
@@ -52,10 +55,12 @@ func (p *TransactionParser) BlockID() (identifier.Block, error) {
 	return rosettaBlockID(height, blockID), nil
 }
 
+// Sequence parses the transaction's sequence number.
 func (p *TransactionParser) Sequence() uint64 {
 	return p.tx.ProposalKey.SequenceNumber
 }
 
+// Signers parses the transaction's signer accounts.
 func (p *TransactionParser) Signers() ([]identifier.Account, error) {
 	// Since we only support sender as the payer/proposer, we never expect any payload signatures.
 	if len(p.tx.PayloadSignatures) > 0 {
@@ -145,6 +150,7 @@ func (p *TransactionParser) Signers() ([]identifier.Account, error) {
 	return signers, nil
 }
 
+// Operations parses the transaction's operations.
 func (p *TransactionParser) Operations() ([]object.Operation, error) {
 	// Validate the transaction actors. We expect a single authorizer - the sender account.
 	// For now, the sender must also be the proposer and the payer for the transaction.

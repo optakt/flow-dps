@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-// DefaultConfig has the default values of the config set.
+// DefaultConfig is the default configuration for the Mapper.
 var DefaultConfig = Config{
 	IndexCommit:       false,
 	IndexHeader:       false,
@@ -33,8 +33,9 @@ var DefaultConfig = Config{
 	WaitInterval:      100 * time.Millisecond,
 }
 
-// Config contains optional parameters for the mapper.
+// Config contains optional parameters for the Mapper.
 type Config struct {
+	// The following attributes specify whether to index specific elements.
 	IndexCommit       bool
 	IndexHeader       bool
 	IndexCollections  bool
@@ -44,8 +45,13 @@ type Config struct {
 	IndexEvents       bool
 	IndexPayloads     bool
 	IndexSeals        bool
-	SkipBootstrap     bool
-	WaitInterval      time.Duration
+
+	// Whether to skip the bootstrapping part.
+	SkipBootstrap bool
+
+	// The interval of time to wait between each attempt to map blocks when
+	// reading from live components.
+	WaitInterval time.Duration
 }
 
 // WithIndexCommit sets up the mapper to build the commits index.

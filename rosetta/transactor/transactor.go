@@ -50,6 +50,7 @@ type Transactor struct {
 	submit   Submitter
 }
 
+// Parser represents something that can parse a transaction into individual parts.
 type Parser interface {
 	BlockID() (identifier.Block, error)
 	Sequence() uint64
@@ -184,9 +185,6 @@ func (t *Transactor) CompileTransaction(rosBlockID identifier.Block, intent *Int
 		return "", fmt.Errorf("could not generate transfer script: %w", err)
 	}
 
-	// TODO: Allow arbitrary proposal key index
-	// => https://github.com/optakt/flow-dps/issues/369
-
 	// Create the transaction.
 	unsignedTx := sdk.NewTransaction().
 		SetScript(script).
@@ -212,6 +210,8 @@ func (t *Transactor) CompileTransaction(rosBlockID identifier.Block, intent *Int
 	return payload, nil
 }
 
+// HashPayload returns the algorithm and hash of a given unsigned transaction when signed by
+// a given account's public key.
 func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, signer identifier.Account) (string, string, error) {
 
 	unsignedTx, err := t.decodeTransaction(unsigned)
@@ -254,7 +254,7 @@ func (t *Transactor) HashPayload(rosBlockID identifier.Block, unsigned string, s
 	return requiredAlgorithm, hash, nil
 }
 
-// AttachSignatures adds the given signatures to the transaction.
+// AttachSignatures returns the given transaction with the given signatures attached to it.
 func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signature) (string, error) {
 
 	unsignedTx, err := t.decodeTransaction(unsigned)
@@ -327,8 +327,6 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 		}
 	}
 
-	// TODO: allow arbitrary key index
-	// => https://github.com/optakt/flow-dps/issues/369
 	signedTx := unsignedTx.AddEnvelopeSignature(signer, 0, bytes)
 	signed, err := t.encodeTransaction(signedTx)
 	if err != nil {
@@ -338,6 +336,7 @@ func (t *Transactor) AttachSignatures(unsigned string, signatures []object.Signa
 	return signed, nil
 }
 
+// TransactionIdentifier returns the transaction identifier of a given signed transaction.
 func (t *Transactor) TransactionIdentifier(signed string) (identifier.Transaction, error) {
 
 	signedTx, err := t.decodeTransaction(signed)
@@ -352,6 +351,7 @@ func (t *Transactor) TransactionIdentifier(signed string) (identifier.Transactio
 	return rosTxID, nil
 }
 
+// SubmitTransaction submits the given signed transaction.
 func (t *Transactor) SubmitTransaction(signed string) (identifier.Transaction, error) {
 
 	signedTx, err := t.decodeTransaction(signed)

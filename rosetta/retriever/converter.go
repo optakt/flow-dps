@@ -20,6 +20,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/object"
 )
 
+// Converter represents something that can convert Flow events into Rosetta operations.
 type Converter interface {
 	EventToOperation(event flow.Event) (operation *object.Operation, err error)
 }

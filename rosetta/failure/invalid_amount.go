@@ -18,11 +18,13 @@ import (
 	"fmt"
 )
 
+// InvalidAmount is the error for an invalid transaction amount.
 type InvalidAmount struct {
 	Description Description
 	Amount      string
 }
 
+// Error implements the error interface.
 func (i InvalidAmount) Error() string {
 	return fmt.Sprintf("invalid transaction amount (amount: %s): %s", i.Amount, i.Description)
 }

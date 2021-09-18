@@ -322,7 +322,8 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 
 			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorInvalidTransaction),
 		},
-		// TODO: add - transaction that has no events/transfers
+		// TODO: Add test case for transaction with no events/transfers.
+		//       See https://github.com/optakt/flow-dps/issues/452
 		{
 			name: "transaction missing from block",
 			request: rosetta.TransactionRequest{

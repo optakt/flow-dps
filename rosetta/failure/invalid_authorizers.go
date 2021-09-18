@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// InvalidAuthorizers is the error for an invalid number of authorizers.
 type InvalidAuthorizers struct {
 	Description Description
 	Have        uint
 	Want        uint
 }
 
+// Error implements the error interface.
 func (i InvalidAuthorizers) Error() string {
 	return fmt.Sprintf("invalid number of authorizers (have: %d, want: %d): %s", i.Have, i.Want, i.Description)
 }

@@ -18,8 +18,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
-// Amount is some value of a currency. It is considered invalid to specify a
-// value without a currency.
+// Amount is some value of a currency. An amount must have both a value and a currency.
 type Amount struct {
 	Value    string              `json:"value"`
 	Currency identifier.Currency `json:"currency"`

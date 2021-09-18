@@ -19,6 +19,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Writer represents something that can write on a DPS index.
 type Writer interface {
 	First(height uint64) error
 	Last(height uint64) error

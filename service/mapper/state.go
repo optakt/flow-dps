@@ -21,6 +21,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// State is the state machine's state.
 type State struct {
 	forest    Forest
 	status    Status
@@ -31,8 +32,9 @@ type State struct {
 	done      chan struct{}
 }
 
+// EmptyState returns a new empty state that uses the given Forest.
 func EmptyState(forest Forest) *State {
-	s := &State{
+	s := State{
 		forest:    forest,
 		status:    StatusEmpty,
 		height:    math.MaxUint64,
@@ -41,5 +43,6 @@ func EmptyState(forest Forest) *State {
 		registers: make(map[ledger.Path]*ledger.Payload),
 		done:      make(chan struct{}),
 	}
-	return s
+
+	return &s
 }

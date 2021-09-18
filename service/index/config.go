@@ -14,14 +14,18 @@
 
 package index
 
+// DefaultConfig is the default configuration for the DPS index.
 var DefaultConfig = Config{
 	ConcurrentTransactions: 16, // same value as used for batches in badger
 }
 
+// Config is the configuration of a DPS index.
 type Config struct {
 	ConcurrentTransactions uint
 }
 
+// WithConcurrentTransactions specifies the maximum concurrent transactions
+// that a DPS index should have.
 func WithConcurrentTransactions(concurrent uint) func(*Config) {
 	return func(cfg *Config) {
 		cfg.ConcurrentTransactions = concurrent

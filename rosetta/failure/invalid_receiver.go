@@ -18,11 +18,13 @@ import (
 	"fmt"
 )
 
+// InvalidReceiver is the error for an invalid transaction receiver address.
 type InvalidReceiver struct {
 	Description Description
 	Receiver    string
 }
 
+// Error implements the error interface.
 func (i InvalidReceiver) Error() string {
 	return fmt.Sprintf("invalid transaction receiver (receiver: %s): %s", i.Receiver, i.Description)
 }

@@ -14,6 +14,11 @@
 
 package zbor
 
+// Dictionary is a byte slice that contains the result of running the Zstandard training mode
+// on the DPS index. This allows zstandard to achieve a better compression ratio, specifically for
+// small data.
+// See http://facebook.github.io/zstd/#small-data
+// See https://github.com/facebook/zstd/blob/master/doc/zstd_compression_format.md#dictionary-format
 var Dictionary = []byte{
 	0x37, 0xa4, 0x30, 0xec, 0x07, 0x81, 0x4a, 0x29, 0x25, 0x10, 0x30, 0xdd,
 	0x01, 0xf0, 0x97, 0x3b, 0xff, 0x7f, 0x84, 0xc1, 0x03, 0xeb, 0xd8, 0x20,

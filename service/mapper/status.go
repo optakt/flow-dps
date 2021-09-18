@@ -14,8 +14,11 @@
 
 package mapper
 
+// Status is a representation of the state machine's status.
 type Status uint8
 
+// The following is an enumeration of all possible statuses the
+// state machine can have.
 const (
 	StatusEmpty Status = iota + 1
 	StatusUpdating
@@ -25,6 +28,7 @@ const (
 	StatusForwarded
 )
 
+// String implements the Stringer interface.
 func (s Status) String() string {
 	switch s {
 	case StatusEmpty:

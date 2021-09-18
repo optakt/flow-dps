@@ -18,11 +18,13 @@ import (
 	"fmt"
 )
 
+// InvalidScript is the error for an invalid transaction script.
 type InvalidScript struct {
 	Description Description
 	Script      string
 }
 
+// Error implements the error interface.
 func (i InvalidScript) Error() string {
 	// We don't want to print the entire script, that would be gigantic.
 	return fmt.Sprintf("invalid transaction script: %s", i.Description)

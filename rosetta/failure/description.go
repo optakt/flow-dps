@@ -22,11 +22,13 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Description is the description of a Rosetta API failure.
 type Description struct {
 	Text   string
 	Fields Fields
 }
 
+// NewDescription returns a new description from a given text and fields.
 func NewDescription(text string, fields ...FieldFunc) Description {
 	d := Description{
 		Text:   text,
@@ -38,6 +40,7 @@ func NewDescription(text string, fields ...FieldFunc) Description {
 	return d
 }
 
+// String implements the Stringer interface.
 func (d Description) String() string {
 	if len(d.Fields) == 0 {
 		return d.Text
@@ -45,19 +48,23 @@ func (d Description) String() string {
 	return fmt.Sprintf("%s (%s)", d.Text, d.Fields)
 }
 
+// Field is a key/value pair used to add context to a Description.
 type Field struct {
 	Key string
 	Val interface{}
 }
 
+// Fields is a slice of Field.
 type Fields []Field
 
+// Iterate is used to give external access to the fields to consumers of this package.
 func (f Fields) Iterate(handle func(key string, val interface{})) {
 	for _, field := range f {
 		handle(field.Key, field.Val)
 	}
 }
 
+// String implements the Stringer interface.
 func (f Fields) String() string {
 	parts := make([]string, 0, len(f))
 	for _, field := range f {
@@ -67,8 +74,10 @@ func (f Fields) String() string {
 	return strings.Join(parts, ", ")
 }
 
+// FieldFunc is a function that is applied to a Fields pointer.
 type FieldFunc func(*Fields)
 
+// WithErr returns a function that adds an error value to a slice of Fields.
 func WithErr(err error) FieldFunc {
 	return func(f *Fields) {
 		field := Field{Key: "error", Val: err.Error()}
@@ -76,6 +85,7 @@ func WithErr(err error) FieldFunc {
 	}
 }
 
+// WithInt returns a function that adds an integer value to a slice of Fields.
 func WithInt(key string, val int) FieldFunc {
 	return func(f *Fields) {
 		field := Field{Key: key, Val: strconv.FormatInt(int64(val), 10)}
@@ -83,6 +93,7 @@ func WithInt(key string, val int) FieldFunc {
 	}
 }
 
+// WithUint64 returns a function that adds an unsigned integer value to a slice of Fields.
 func WithUint64(key string, val uint64) FieldFunc {
 	return func(f *Fields) {
 		field := Field{Key: key, Val: strconv.FormatUint(val, 10)}
@@ -90,6 +101,7 @@ func WithUint64(key string, val uint64) FieldFunc {
 	}
 }
 
+// WithID returns a function that adds a flow Identifier value to a slice of Fields.
 func WithID(key string, val flow.Identifier) FieldFunc {
 	return func(f *Fields) {
 		field := Field{Key: key, Val: val}
@@ -97,6 +109,7 @@ func WithID(key string, val flow.Identifier) FieldFunc {
 	}
 }
 
+// WithString returns a function that adds a string value to a slice of Fields.
 func WithString(key string, val string) FieldFunc {
 	return func(f *Fields) {
 		field := Field{Key: key, Val: val}
@@ -104,6 +117,7 @@ func WithString(key string, val string) FieldFunc {
 	}
 }
 
+// WithStrings returns a function that adds a slice of strings to a slice of Fields.
 func WithStrings(key string, vals ...string) FieldFunc {
 	return func(f *Fields) {
 		field := Field{Key: key, Val: vals}

@@ -20,12 +20,14 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// InvalidPayer is the error for an invalid transaction payer.
 type InvalidPayer struct {
 	Description Description
 	Have        flow.Address
 	Want        flow.Address
 }
 
+// Error implements the error interface.
 func (i InvalidPayer) Error() string {
 	return fmt.Sprintf("invalid transaction payer (have: %s, want: %s): %s", i.Have.Hex(), i.Want.Hex(), i.Description)
 }

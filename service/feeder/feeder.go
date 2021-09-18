@@ -23,6 +23,7 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// Feeder is a component that retrieves trie updates and feeds them to its consumer.
 type Feeder struct {
 	reader WALReader
 }
@@ -37,6 +38,7 @@ func FromWAL(reader WALReader) *Feeder {
 	return &f
 }
 
+// Update returns the next trie update.
 func (f *Feeder) Update() (*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie

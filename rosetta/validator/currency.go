@@ -20,6 +20,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// Currency validates the given currency identifier and if it is, returns its symbol and decimals.
 func (v *Validator) Currency(currency identifier.Currency) (string, uint, error) {
 
 	// We already checked the token symbol is given, so this merely checks if

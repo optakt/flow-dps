@@ -14,6 +14,7 @@
 
 package configuration
 
+// Supported operations.
 const (
 	OperationTransfer = "TRANSFER"
 )

@@ -26,10 +26,12 @@ type step struct {
 	parent flow.StateCommitment
 }
 
+// Forest is a representation of multiple tries mapped by their state commitment hash.
 type Forest struct {
 	steps map[flow.StateCommitment]step
 }
 
+// New returns a new empty forest.
 func New() *Forest {
 	f := Forest{
 		steps: make(map[flow.StateCommitment]step),
@@ -37,6 +39,7 @@ func New() *Forest {
 	return &f
 }
 
+// Save adds a tree to the forest.
 func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
 	commit := flow.StateCommitment(tree.RootHash())
 	s := step{
@@ -47,11 +50,13 @@ func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCo
 	f.steps[commit] = s
 }
 
+// Has returns whether a state commitment matches one of the trees within the forest.
 func (f *Forest) Has(commit flow.StateCommitment) bool {
 	_, ok := f.steps[commit]
 	return ok
 }
 
+// Tree returns the matching tree for the given state commitment.
 func (f *Forest) Tree(commit flow.StateCommitment) (*trie.MTrie, bool) {
 	s, ok := f.steps[commit]
 	if !ok {
@@ -60,6 +65,7 @@ func (f *Forest) Tree(commit flow.StateCommitment) (*trie.MTrie, bool) {
 	return s.tree, true
 }
 
+// Paths returns the matching tree's paths for the given state commitment.
 func (f *Forest) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
 	s, ok := f.steps[commit]
 	if !ok {
@@ -68,6 +74,7 @@ func (f *Forest) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
 	return s.paths, true
 }
 
+// Parent returns the parent of the given state commitment.
 func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool) {
 	s, ok := f.steps[commit]
 	if !ok {
@@ -76,6 +83,7 @@ func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool
 	return s.parent, true
 }
 
+// Reset deletes all tries that do not match the given state commitment.
 func (f *Forest) Reset(finalized flow.StateCommitment) {
 	for commit := range f.steps {
 		if commit != finalized {

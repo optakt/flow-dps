@@ -18,12 +18,14 @@ import (
 	"fmt"
 )
 
+// InvalidCurrency is the error for a currency with missing or unexpected decimals.
 type InvalidCurrency struct {
 	Description Description
 	Symbol      string
 	Decimals    uint
 }
 
+// Error implements the error interface.
 func (i InvalidCurrency) Error() string {
 	return fmt.Sprintf("invalid currency (symbol: %s, decimals: %d): %s", i.Symbol, i.Decimals, i.Description)
 }

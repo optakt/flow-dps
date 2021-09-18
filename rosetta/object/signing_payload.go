@@ -18,6 +18,7 @@ import (
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
 
+// SigningPayload is the payload of an account's signature.
 type SigningPayload struct {
 	AccountID     identifier.Account `json:"account_identifier"`
 	HexBytes      string             `json:"hex_bytes"`

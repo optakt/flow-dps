@@ -16,26 +16,41 @@ package convert_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/onflow/flow-go/model/flow"
-
 	"github.com/optakt/flow-dps/models/convert"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestTypesToStrings(t *testing.T) {
-	t1 := "test1"
-	t2 := "test2"
-	t3 := "test3"
-	t4 := "test4"
+	types := mocks.GenericEventTypes(4)
 
-	typ1 := flow.EventType(t1)
-	typ2 := flow.EventType(t2)
-	typ3 := flow.EventType(t3)
-	typ4 := flow.EventType(t4)
+	got := convert.TypesToStrings(types)
 
-	ss := convert.TypesToStrings([]flow.EventType{typ1, typ2, typ3, typ4})
+	for _, typ := range types {
+		assert.Contains(t, got, string(typ))
+	}
+}
 
-	assert.Equal(t, []string{t1, t2, t3, t4}, ss)
+func TestStringsToTypes(t *testing.T) {
+	types := mocks.GenericEventTypes(4)
+
+	var ss []string
+	for _, typ := range types {
+		ss = append(ss, string(typ))
+	}
+
+	got := convert.StringsToTypes(ss)
+
+	assert.Equal(t, types, got)
+}
+
+func TestRosettaTime(t *testing.T) {
+	ti := time.Now()
+
+	got := convert.RosettaTime(ti)
+
+	assert.Equal(t, ti.UnixNano()/1_000_000, got)
 }

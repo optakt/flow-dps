@@ -14,6 +14,8 @@
 
 package converter
 
+// Generator represents something that can generate scripts for retrieving the amounts
+// deposited and withdrawn for a given token.
 type Generator interface {
 	TokensDeposited(symbol string) (string, error)
 	TokensWithdrawn(symbol string) (string, error)

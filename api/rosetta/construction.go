@@ -14,12 +14,6 @@
 
 package rosetta
 
-// TODO: Sender is also the proposer and the payer. Consider allowing more granular control.
-// => https://github.com/optakt/flow-dps/issues/331
-
-// TODO: Specify Gas limit for the transaction.
-// => https://github.com/optakt/flow-dps/issues/332
-
 // Construction implements the Rosetta Construction API specification.
 // See https://www.rosetta-api.org/docs/construction_api_introduction.html
 type Construction struct {
@@ -35,8 +29,6 @@ type Construction struct {
 
 // NewConstruction creates a new instance of the Construction API using the given configuration
 // to handle transaction construction requests.
-// TODO: Decide if the retriever dependency should be kept or this functionality should be part of the transactor.
-// => https://github.com/optakt/flow-dps/issues/406
 func NewConstruction(config Configuration, transact Transactor, retrieve Retriever, validate Validator) *Construction {
 
 	c := Construction{
