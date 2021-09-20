@@ -100,8 +100,6 @@ func run() int {
 
 	pflag.Parse()
 
-	pflag.CommandLine.MarkHidden("skip-registers")
-
 	// Increase the GOMAXPROCS value in order to use the full IOPS available, see:
 	// https://groups.google.com/g/golang-nuts/c/jPb_h3TvlKE
 	_ = runtime.GOMAXPROCS(128)
