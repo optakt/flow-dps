@@ -77,7 +77,6 @@ func run() int {
 		flagBucket     string
 		flagCheckpoint string
 		flagData       string
-		flagForce      bool
 		flagIndex      string
 		flagLevel      string
 		flagSkip       bool
@@ -91,7 +90,6 @@ func run() int {
 	pflag.StringVarP(&flagBucket, "bucket", "u", "", "name of the Google Cloud Storage bucket which contains the block data")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "data", "database directory for protocol data")
-	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
@@ -301,7 +299,9 @@ func run() int {
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
+		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
+		mapper.WithTransition(mapper.StatusResume, transitions.ResumeIndexing),
 		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),
 		mapper.WithTransition(mapper.StatusUpdate, transitions.UpdateTree),
 		mapper.WithTransition(mapper.StatusCollect, transitions.CollectRegisters),

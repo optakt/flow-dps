@@ -15,6 +15,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"os/signal"
 	"runtime"
@@ -55,7 +56,6 @@ func run() int {
 	var (
 		flagCheckpoint string
 		flagData       string
-		flagForce      bool
 		flagIndex      string
 		flagLevel      string
 		flagTrie       string
@@ -64,7 +64,6 @@ func run() int {
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
-	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
@@ -110,9 +109,12 @@ func run() int {
 
 	// Check if index already exists.
 	_, err = index.NewReader(db, storage).First()
-	indexExists := err == nil
-	if indexExists && !flagForce {
-		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
+	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+		log.Error().Err(err).Msg("could not get first height from index reader")
+		return failure
+	}
+	if errors.Is(err, badger.ErrKeyNotFound) && flagCheckpoint == "" {
+		log.Error().Err(err).Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
 		return failure
 	}
 
@@ -152,7 +154,9 @@ func run() int {
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
+		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
+		mapper.WithTransition(mapper.StatusResume, transitions.ResumeIndexing),
 		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),
 		mapper.WithTransition(mapper.StatusUpdate, transitions.UpdateTree),
 		mapper.WithTransition(mapper.StatusCollect, transitions.CollectRegisters),

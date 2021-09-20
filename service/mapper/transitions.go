@@ -63,6 +63,16 @@ func NewTransitions(log zerolog.Logger, chain dps.Chain, feed Feeder, index dps.
 	return &t
 }
 
+// InitializeMapper initializes the mapper and determines whether we resume from
+// a previous indexing operation, or whether we bootstrap the state.
+func (t *Transitions) InitializeMapper(s *State) error {
+	if s.status != StatusInitialize {
+		return fmt.Errorf("invalid states for initializing mapper (%s)", s.status)
+	}
+
+	return nil
+}
+
 // BootstrapState bootstraps the state by loading the checkpoint if there is one
 // and initializing the elements subsequently used by the FSM.
 func (t *Transitions) BootstrapState(s *State) error {
@@ -116,16 +126,22 @@ func (t *Transitions) BootstrapState(s *State) error {
 	return nil
 }
 
+// ResumeIndexing resumes indexing the data from a previous run.
+func (t *Transitions) ResumeIndexing(s *State) error {
+	if s.status != StatusResume {
+		return fmt.Errorf("invalid status for resuming indexing (%s)", s.status)
+	}
+
+	return nil
+}
+
 // IndexChain indexes chain data for the current height.
 func (t *Transitions) IndexChain(s *State) error {
-
-	log := t.log.With().Uint64("height", s.height).Logger()
-
-	// Indexing of chain data should only happen after we have just forwarded
-	// to the next height. This is also the case after bootstrapping.
 	if s.status != StatusIndex {
 		return fmt.Errorf("invalid status for indexing chain (%s)", s.status)
 	}
+
+	log := t.log.With().Uint64("height", s.height).Logger()
 
 	// We try to retrieve the next header until it becomes available, which
 	// means all data coming from the protocol state is available after this
@@ -414,9 +430,6 @@ func (t *Transitions) MapRegisters(s *State) error {
 
 // ForwardHeight increments the height at which the mapping operates, and updates the last indexed height.
 func (t *Transitions) ForwardHeight(s *State) error {
-
-	// We should only forward the height after we have just indexed the payloads
-	// of a finalized block.
 	if s.status != StatusForward {
 		return fmt.Errorf("invalid status for forwarding height (%s)", s.status)
 	}
