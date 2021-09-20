@@ -156,9 +156,8 @@ func run() int {
 		log.Error().Err(err).Msg("could not get first height from index reader")
 		return failure
 	}
-	indexExists := (err == nil)
-	if indexExists && !flagForce {
-		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
+	if errors.Is(err, badger.ErrKeyNotFound) && flagCheckpoint == "" {
+		log.Error().Err(err).Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
 		return failure
 	}
 	write := index.NewWriter(indexDB, storage)
@@ -289,7 +288,7 @@ func run() int {
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
 	var opts []mapper.Option
-	if flagCheckpoint != "" && !indexExists {
+	if flagCheckpoint != "" {
 		root, err := initializer.RootTrie(flagCheckpoint)
 		if err != nil {
 			log.Error().Err(err).Msg("could not load root checkpoint")
