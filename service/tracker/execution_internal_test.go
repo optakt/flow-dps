@@ -51,7 +51,6 @@ func TestNewExecution(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, stream, exec.stream)
 		assert.NotNil(t, exec.queue)
-		assert.NotNil(t, exec.records)
 		assert.NotEmpty(t, exec.records)
 	})
 
@@ -142,16 +141,11 @@ func TestNewExecution(t *testing.T) {
 }
 
 func TestExecution_Purge(t *testing.T) {
-	blockIDs := mocks.GenericBlockIDs(4)
-	var blocks []*uploader.BlockData
-	for idx := range blockIDs {
-		blocks = append(blocks, &uploader.BlockData{
-			Block: &flow.Block{
-				Header: &flow.Header{
-					Height: uint64(idx), // Block height is equal to its index in the slice.
-				},
-			},
-		})
+	blocks := []*uploader.BlockData{
+		{Block: &flow.Block{Header: &flow.Header{Height: 4}}},
+		{Block: &flow.Block{Header: &flow.Header{Height: 5}}},
+		{Block: &flow.Block{Header: &flow.Header{Height: 6}}},
+		{Block: &flow.Block{Header: &flow.Header{Height: 7}}},
 	}
 
 	tests := []struct {
@@ -163,94 +157,123 @@ func TestExecution_Purge(t *testing.T) {
 		after map[flow.Identifier]*uploader.BlockData
 	}{
 		{
-			name: "nominal case",
+			name: "purge threshold at middle height",
 
-			threshold: 2,
+			threshold: blocks[2].Block.Header.Height,
 			before: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[0]: blocks[0],
-				blockIDs[1]: blocks[1],
-				blockIDs[2]: blocks[2],
-				blockIDs[3]: blocks[3],
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
 			},
 
 			after: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[2]: blocks[2],
-				blockIDs[3]: blocks[3],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
 			},
 		},
 		{
-			name: "purge threshold vastly over max height",
+			name: "purge threshold at lowest height",
 
-			threshold: 42,
+			threshold: blocks[0].Block.Header.Height,
 			before: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[0]: blocks[0],
-				blockIDs[1]: blocks[1],
-				blockIDs[2]: blocks[2],
-				blockIDs[3]: blocks[3],
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
+
+			after: map[flow.Identifier]*uploader.BlockData{
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
+		},
+		{
+			name: "purge threshold at lowest height - 1",
+
+			threshold: blocks[0].Block.Header.Height - 1,
+			before: map[flow.Identifier]*uploader.BlockData{
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
+
+			after: map[flow.Identifier]*uploader.BlockData{
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
+		},
+		{
+			name: "purge threshold at lowest height + 1",
+
+			threshold: blocks[0].Block.Header.Height + 1,
+			before: map[flow.Identifier]*uploader.BlockData{
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
+
+			after: map[flow.Identifier]*uploader.BlockData{
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
+		},
+		{
+			name: "purge threshold at last height - 1",
+
+			threshold: blocks[3].Block.Header.Height - 1,
+			before: map[flow.Identifier]*uploader.BlockData{
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
+
+			after: map[flow.Identifier]*uploader.BlockData{
+				blocks[3].Block.ID(): blocks[3],
+				blocks[2].Block.ID(): blocks[2],
+			},
+		},
+		{
+			name: "purge threshold last height",
+
+			threshold: blocks[3].Block.Header.Height,
+			before: map[flow.Identifier]*uploader.BlockData{
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
+
+			after: map[flow.Identifier]*uploader.BlockData{
+				blocks[3].Block.ID(): blocks[3],
+			},
+		},
+		{
+			name: "purge threshold at last height + 1",
+
+			threshold: blocks[3].Block.Header.Height + 1,
+			before: map[flow.Identifier]*uploader.BlockData{
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
 			},
 
 			after: map[flow.Identifier]*uploader.BlockData{},
 		},
 		{
-			name: "purge threshold at 0",
+			name: "does nothing when there is nothing to purge",
 
-			threshold: 0,
-			before: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[0]: blocks[0],
-				blockIDs[1]: blocks[1],
-				blockIDs[2]: blocks[2],
-				blockIDs[3]: blocks[3],
-			},
-
-			after: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[0]: blocks[0],
-				blockIDs[1]: blocks[1],
-				blockIDs[2]: blocks[2],
-				blockIDs[3]: blocks[3],
-			},
-		},
-		{
-			name: "purge threshold at 1",
-
-			threshold: 1,
-			before: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[0]: blocks[0],
-				blockIDs[1]: blocks[1],
-				blockIDs[2]: blocks[2],
-				blockIDs[3]: blocks[3],
-			},
-
-			after: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[1]: blocks[1],
-				blockIDs[2]: blocks[2],
-				blockIDs[3]: blocks[3],
-			},
-		},
-		{
-			name: "purge threshold just below last record height",
-
-			threshold: 3,
-			before: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[0]: blocks[0],
-				blockIDs[1]: blocks[1],
-				blockIDs[2]: blocks[2],
-				blockIDs[3]: blocks[3],
-			},
-
-			after: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[3]: blocks[3],
-			},
-		},
-		{
-			name: "purge threshold exactly at last record height",
-
-			threshold: 4,
-			before: map[flow.Identifier]*uploader.BlockData{
-				blockIDs[0]: blocks[0],
-				blockIDs[1]: blocks[1],
-				blockIDs[2]: blocks[2],
-				blockIDs[3]: blocks[3],
-			},
+			threshold: blocks[2].Block.Header.Height,
+			before:    map[flow.Identifier]*uploader.BlockData{},
 
 			after: map[flow.Identifier]*uploader.BlockData{},
 		},

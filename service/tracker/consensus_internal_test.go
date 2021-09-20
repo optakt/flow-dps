@@ -38,14 +38,16 @@ func TestNewConsensus(t *testing.T) {
 		hold := mocks.BaselineRecordHolder(t)
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 
-		cons, err := NewConsensus(log, db, hold)
+		consensus, err := NewConsensus(log, db, hold)
 
 		require.NoError(t, err)
-		assert.Equal(t, hold, cons.hold)
-		assert.Equal(t, db, cons.db)
-		assert.Equal(t, header.Height, cons.last)
+		assert.Equal(t, hold, consensus.hold)
+		assert.Equal(t, db, consensus.db)
+		assert.Equal(t, header.Height, consensus.last)
 	})
 
 	t.Run("handles missing root height", func(t *testing.T) {
@@ -55,8 +57,7 @@ func TestNewConsensus(t *testing.T) {
 		hold := mocks.BaselineRecordHolder(t)
 
 		db := helpers.InMemoryDB(t)
-		// Root height missing from database.
-		//require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
+		defer db.Close()
 
 		_, err := NewConsensus(log, db, hold)
 
@@ -88,9 +89,6 @@ func TestConsensus_OnBlockFinalized(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Header missing from database.
-		//require.NoError(t, db.Update(operation.InsertHeader(header.ID(), header)))
-
 		cons := BaselineConsensus(t, WithDB(db))
 
 		cons.OnBlockFinalized(header.ID())
@@ -106,8 +104,7 @@ func BaselineConsensus(t *testing.T, opts ...func(*Consensus)) *Consensus {
 	hold := mocks.BaselineRecordHolder(t)
 
 	cons := Consensus{
-		// DB is omitted on purpose, since if we set it here it will never be closed properly.
-		// Tests that need to use the DB should set it using the WithDB function.
+		db:   nil, // must be injected to handle closing deferral.
 		hold: hold,
 		log:  log,
 	}

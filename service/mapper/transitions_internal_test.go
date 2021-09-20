@@ -155,7 +155,7 @@ func TestTransitions_BootstrapState(t *testing.T) {
 }
 
 func TestTransitions_UpdateTree(t *testing.T) {
-	trieUpdate := mocks.GenericTrieUpdate(0)
+	update := mocks.GenericTrieUpdate(0)
 	tree := mocks.GenericTrie
 
 	t.Run("nominal case without match", func(t *testing.T) {
@@ -166,12 +166,12 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		forest := mocks.BaselineForest(t, false)
 		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
 			// Parent is RootHash of the mocks.GenericTrie.
-			assert.Equal(t, trieUpdate.RootHash[:], parent[:])
-			assert.ElementsMatch(t, paths, trieUpdate.Paths)
+			assert.Equal(t, update.RootHash[:], parent[:])
+			assert.ElementsMatch(t, paths, update.Paths)
 			assert.NotZero(t, tree)
 		}
 		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.MTrie, bool) {
-			assert.Equal(t, trieUpdate.RootHash[:], commit[:])
+			assert.Equal(t, update.RootHash[:], commit[:])
 
 			return tree, true
 		}
@@ -197,7 +197,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 				updateCalled = true
 				return nil, dps.ErrUnavailable
 			}
-			return trieUpdate, nil
+			return update, nil
 		}
 		tr.feed = feeder
 

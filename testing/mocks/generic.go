@@ -541,7 +541,7 @@ func GenericSeal(index int) *flow.Seal {
 	return GenericSeals(index + 1)[index]
 }
 
-func GenericBlockData() *uploader.BlockData {
+func GenericRecord() *uploader.BlockData {
 	var collections []*entity.CompleteCollection
 	for _, guarantee := range GenericGuarantees(4) {
 		collections = append(collections, &entity.CompleteCollection{

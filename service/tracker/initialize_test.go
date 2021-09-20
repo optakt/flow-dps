@@ -42,6 +42,8 @@ func TestInitialize(t *testing.T) {
 		t.Parallel()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		file := bytes.NewBuffer(data)
 
 		err := tracker.Initialize(file, db)
@@ -53,6 +55,8 @@ func TestInitialize(t *testing.T) {
 		t.Parallel()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 
 		file := bytes.NewBuffer(data)
@@ -66,6 +70,8 @@ func TestInitialize(t *testing.T) {
 		t.Parallel()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 
 		file := bytes.NewBuffer(data)
@@ -79,6 +85,8 @@ func TestInitialize(t *testing.T) {
 		t.Parallel()
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 
 		err := tracker.Initialize(bytes.NewBuffer(mocks.GenericBytes), db)
@@ -96,6 +104,8 @@ func TestInitialize(t *testing.T) {
 		reader := bytes.NewBuffer(data)
 
 		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 
 		err = tracker.Initialize(reader, db)

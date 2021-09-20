@@ -15,12 +15,19 @@
 package cloud
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/storage"
+	gcloud "cloud.google.com/go/storage"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/option"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
@@ -34,11 +41,14 @@ func TestNewGCPStreamer(t *testing.T) {
 	streamer := NewGCPStreamer(log, bucket, WithBufferSize(limit))
 
 	require.NotNil(t, streamer)
+	assert.NotZero(t, streamer.log)
 	assert.Equal(t, bucket, streamer.bucket)
 	assert.Equal(t, limit, streamer.limit)
+	assert.NotNil(t, streamer.queue)
+	assert.NotNil(t, streamer.buffer)
 }
 
-func TestNewGCPStreamer_OnBlockFinalized(t *testing.T) {
+func TestGCPStreamer_OnBlockFinalized(t *testing.T) {
 	blockID := mocks.GenericHeader.ID()
 	queue := dps.NewDeque()
 
@@ -49,43 +59,107 @@ func TestNewGCPStreamer_OnBlockFinalized(t *testing.T) {
 
 	streamer.OnBlockFinalized(blockID)
 
-	got := queue.PopFront()
-
-	assert.Equal(t, blockID, got)
+	require.Equal(t, 1, queue.Len())
+	assert.Equal(t, queue.PopFront(), blockID)
 }
 
-func BaselineStreamer(t *testing.T, opts ...func(*GCPStreamer)) *GCPStreamer {
-	t.Helper()
+func TestGCPStreamer_Next(t *testing.T) {
+	record := mocks.GenericRecord()
+	data, err := cbor.Marshal(record)
+	require.NoError(t, err)
 
-	stream := GCPStreamer{
-		log:    zerolog.Nop(),
-		bucket: &storage.BucketHandle{},
-		queue:  dps.NewDeque(),
-		buffer: dps.NewDeque(),
-		limit:  42,
-	}
+	t.Run("returns available record if buffer not empty", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+			rw.WriteHeader(http.StatusOK)
+		}))
 
-	for _, opt := range opts {
-		opt(&stream)
-	}
+		client, err := gcloud.NewClient(
+			context.Background(),
+			option.WithoutAuthentication(),
+			option.WithEndpoint(server.URL),
+		)
+		require.NoError(t, err)
+		bucket := client.Bucket("test")
 
-	return &stream
-}
+		streamer := &GCPStreamer{
+			log:    zerolog.Nop(),
+			bucket: bucket,
+			queue:  dps.NewDeque(),
+			buffer: dps.NewDeque(),
+			limit:  999,
+		}
 
-func WithBucket(bucket *storage.BucketHandle) func(*GCPStreamer) {
-	return func(streamer *GCPStreamer) {
-		streamer.bucket = bucket
-	}
-}
+		streamer.buffer.PushFront(record)
 
-func WithQueue(queue *dps.SafeDeque) func(*GCPStreamer) {
-	return func(streamer *GCPStreamer) {
-		streamer.queue = queue
-	}
-}
+		got, err := streamer.Next()
 
-func WithBuffer(buffer *dps.SafeDeque) func(*GCPStreamer) {
-	return func(streamer *GCPStreamer) {
-		streamer.buffer = buffer
-	}
+		require.NoError(t, err)
+		assert.Equal(t, record, got)
+	})
+
+	t.Run("returns unavailable when no block data in buffer", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+			rw.WriteHeader(http.StatusOK)
+		}))
+
+		client, err := gcloud.NewClient(
+			context.Background(),
+			option.WithoutAuthentication(),
+			option.WithEndpoint(server.URL),
+		)
+		require.NoError(t, err)
+		bucket := client.Bucket("test")
+
+		streamer := &GCPStreamer{
+			log:    zerolog.Nop(),
+			bucket: bucket,
+			queue:  dps.NewDeque(),
+			buffer: dps.NewDeque(),
+			limit:  999,
+		}
+
+		_, err = streamer.Next()
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, dps.ErrUnavailable)
+	})
+
+	t.Run("downloads records from queue when they are available", func(t *testing.T) {
+		serverCalled := make(chan struct{})
+		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+			_, _ = rw.Write(data)
+			serverCalled <- struct{}{}
+		}))
+
+		client, err := gcloud.NewClient(
+			context.Background(),
+			option.WithoutAuthentication(),
+			option.WithEndpoint(server.URL),
+		)
+		require.NoError(t, err)
+		bucket := client.Bucket("test")
+
+		streamer := &GCPStreamer{
+			log:    zerolog.Nop(),
+			bucket: bucket,
+			queue:  dps.NewDeque(),
+			buffer: dps.NewDeque(),
+			limit:  999,
+		}
+
+		streamer.queue.PushFront(record.Block.ID())
+
+		_, err = streamer.Next()
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, dps.ErrUnavailable)
+
+		select {
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("GCP Streamer did not attempt to download record from bucket")
+		case <-serverCalled:
+		}
+
+		assert.Zero(t, streamer.queue.Len())
+	})
 }

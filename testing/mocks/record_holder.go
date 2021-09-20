@@ -69,23 +69,3 @@ func BaselineRecordHolder(t *testing.T) *RecordHolder {
 func (r *RecordHolder) Record(blockID flow.Identifier) (*uploader.BlockData, error) {
 	return r.RecordFunc(blockID)
 }
-
-type RecordStreamer struct {
-	NextFunc func() (*uploader.BlockData, error)
-}
-
-func BaselineRecordStreamer(t *testing.T) *RecordStreamer {
-	t.Helper()
-
-	r := RecordStreamer{
-		NextFunc: func() (*uploader.BlockData, error) {
-			return GenericBlockData(), nil
-		},
-	}
-
-	return &r
-}
-
-func (r *RecordStreamer) Next() (*uploader.BlockData, error) {
-	return r.NextFunc()
-}

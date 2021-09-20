@@ -54,9 +54,6 @@ func TestConsensus_Root(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Root height missing from database.
-		//require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
-
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db))
 
 		_, err := cons.Root()
@@ -96,7 +93,7 @@ func TestConsensus_Header(t *testing.T) {
 
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db), tracker.WithLast(header.Height))
 
-		_, err := cons.Header(header.Height + 999)
+		_, err := cons.Header(header.Height + 1)
 
 		assert.Error(t, err)
 	})
@@ -107,8 +104,6 @@ func TestConsensus_Header(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Missing block height index in database.
-		//require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
 		require.NoError(t, db.Update(operation.InsertHeader(header.ID(), header)))
 
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db), tracker.WithLast(header.Height))
@@ -125,8 +120,6 @@ func TestConsensus_Header(t *testing.T) {
 		defer db.Close()
 
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
-		// Missing header in database.
-		//require.NoError(t, db.Update(operation.InsertHeader(header.ID(), header)))
 
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db), tracker.WithLast(header.Height))
 
@@ -142,7 +135,7 @@ func TestConsensus_Guarantees(t *testing.T) {
 
 	var collectionIDs []flow.Identifier
 	for _, guarantee := range guarantees {
-		collectionIDs = append(collectionIDs, guarantee.ID())
+		collectionIDs = append(collectionIDs, guarantee.CollectionID)
 	}
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -154,7 +147,7 @@ func TestConsensus_Guarantees(t *testing.T) {
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
 		require.NoError(t, db.Update(operation.IndexPayloadGuarantees(header.ID(), collectionIDs)))
 		for _, guarantee := range guarantees {
-			require.NoError(t, db.Update(operation.InsertGuarantee(guarantee.ID(), guarantee)))
+			require.NoError(t, db.Update(operation.InsertGuarantee(guarantee.CollectionID, guarantee)))
 		}
 
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db), tracker.WithLast(header.Height))
@@ -174,7 +167,7 @@ func TestConsensus_Guarantees(t *testing.T) {
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
 		require.NoError(t, db.Update(operation.IndexPayloadGuarantees(header.ID(), collectionIDs)))
 		for _, guarantee := range guarantees {
-			require.NoError(t, db.Update(operation.InsertGuarantee(guarantee.ID(), guarantee)))
+			require.NoError(t, db.Update(operation.InsertGuarantee(guarantee.CollectionID, guarantee)))
 		}
 
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db), tracker.WithLast(header.Height))
@@ -190,11 +183,9 @@ func TestConsensus_Guarantees(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Missing block height index in database.
-		//require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
 		require.NoError(t, db.Update(operation.IndexPayloadGuarantees(header.ID(), collectionIDs)))
 		for _, guarantee := range guarantees {
-			require.NoError(t, db.Update(operation.InsertGuarantee(guarantee.ID(), guarantee)))
+			require.NoError(t, db.Update(operation.InsertGuarantee(guarantee.CollectionID, guarantee)))
 		}
 
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db), tracker.WithLast(header.Height))
@@ -211,10 +202,8 @@ func TestConsensus_Guarantees(t *testing.T) {
 		defer db.Close()
 
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
-		// Missing guarantee index in database.
-		//require.NoError(t, db.Update(operation.IndexPayloadGuarantees(header.ID(), collectionIDs)))
 		for _, guarantee := range guarantees {
-			require.NoError(t, db.Update(operation.InsertGuarantee(guarantee.ID(), guarantee)))
+			require.NoError(t, db.Update(operation.InsertGuarantee(guarantee.CollectionID, guarantee)))
 		}
 
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db), tracker.WithLast(header.Height))
@@ -232,10 +221,6 @@ func TestConsensus_Guarantees(t *testing.T) {
 
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
 		require.NoError(t, db.Update(operation.IndexPayloadGuarantees(header.ID(), collectionIDs)))
-		// Missing guarantee index in database.
-		//for _, guarantee := range guarantees {
-		//	require.NoError(t, db.Update(operation.InsertGuarantee(guarantee.ID(), guarantee)))
-		//}
 
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db), tracker.WithLast(header.Height))
 
@@ -295,8 +280,6 @@ func TestConsensus_Seals(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Missing block height index in database.
-		//require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
 		require.NoError(t, db.Update(operation.IndexPayloadSeals(header.ID(), sealIDs)))
 		for _, seal := range seals {
 			require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
@@ -316,8 +299,6 @@ func TestConsensus_Seals(t *testing.T) {
 		defer db.Close()
 
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
-		// Missing seal index in database.
-		//require.NoError(t, db.Update(operation.IndexPayloadSeals(header.ID(), sealIDs)))
 		for _, seal := range seals {
 			require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 		}
@@ -337,10 +318,6 @@ func TestConsensus_Seals(t *testing.T) {
 
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
 		require.NoError(t, db.Update(operation.IndexPayloadSeals(header.ID(), sealIDs)))
-		// Missing seal index in database.
-		//for _, seal := range seals {
-		//	require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
-		//}
 
 		cons := tracker.BaselineConsensus(t, tracker.WithDB(db), tracker.WithLast(header.Height), tracker.WithLast(header.Height))
 
@@ -352,7 +329,7 @@ func TestConsensus_Seals(t *testing.T) {
 
 func TestConsensus_Commit(t *testing.T) {
 	header := mocks.GenericHeader
-	blockData := mocks.GenericBlockData()
+	record := mocks.GenericRecord()
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -366,7 +343,7 @@ func TestConsensus_Commit(t *testing.T) {
 		holder.RecordFunc = func(blockID flow.Identifier) (*uploader.BlockData, error) {
 			assert.Equal(t, header.ID(), blockID)
 
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -379,7 +356,7 @@ func TestConsensus_Commit(t *testing.T) {
 		got, err := cons.Commit(header.Height)
 
 		require.NoError(t, err)
-		assert.Equal(t, blockData.FinalStateCommitment, got)
+		assert.Equal(t, record.FinalStateCommitment, got)
 	})
 
 	t.Run("handles requested height over last finalized height", func(t *testing.T) {
@@ -392,7 +369,7 @@ func TestConsensus_Commit(t *testing.T) {
 
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -413,12 +390,9 @@ func TestConsensus_Commit(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Missing block index in database.
-		//require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
-
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -461,7 +435,7 @@ func TestConsensus_Commit(t *testing.T) {
 
 func TestConsensus_Collections(t *testing.T) {
 	header := mocks.GenericHeader
-	blockData := mocks.GenericBlockData()
+	record := mocks.GenericRecord()
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -475,7 +449,7 @@ func TestConsensus_Collections(t *testing.T) {
 		holder.RecordFunc = func(blockID flow.Identifier) (*uploader.BlockData, error) {
 			assert.Equal(t, header.ID(), blockID)
 
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -488,10 +462,10 @@ func TestConsensus_Collections(t *testing.T) {
 		got, err := cons.Collections(header.Height)
 
 		require.NoError(t, err)
-		require.Len(t, got, len(blockData.Collections))
-		for idx, collection := range blockData.Collections {
+		require.Len(t, got, len(record.Collections))
+		for i, collection := range record.Collections {
 			for _, tx := range collection.Transactions {
-				assert.Contains(t, got[idx].Transactions, tx.ID())
+				assert.Contains(t, got[i].Transactions, tx.ID())
 			}
 		}
 	})
@@ -506,7 +480,7 @@ func TestConsensus_Collections(t *testing.T) {
 
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -527,12 +501,9 @@ func TestConsensus_Collections(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Missing block height index in database.
-		//require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
-
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -575,7 +546,7 @@ func TestConsensus_Collections(t *testing.T) {
 
 func TestConsensus_Transactions(t *testing.T) {
 	header := mocks.GenericHeader
-	blockData := mocks.GenericBlockData()
+	record := mocks.GenericRecord()
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -589,7 +560,7 @@ func TestConsensus_Transactions(t *testing.T) {
 		holder.RecordFunc = func(blockID flow.Identifier) (*uploader.BlockData, error) {
 			assert.Equal(t, header.ID(), blockID)
 
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -602,7 +573,7 @@ func TestConsensus_Transactions(t *testing.T) {
 		got, err := cons.Transactions(header.Height)
 
 		require.NoError(t, err)
-		for _, collection := range blockData.Collections {
+		for _, collection := range record.Collections {
 			for _, tx := range collection.Transactions {
 				assert.Contains(t, got, tx)
 			}
@@ -619,7 +590,7 @@ func TestConsensus_Transactions(t *testing.T) {
 
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -640,12 +611,9 @@ func TestConsensus_Transactions(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Missing block height index in database.
-		//require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
-
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -688,7 +656,7 @@ func TestConsensus_Transactions(t *testing.T) {
 
 func TestConsensus_Results(t *testing.T) {
 	header := mocks.GenericHeader
-	blockData := mocks.GenericBlockData()
+	record := mocks.GenericRecord()
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -702,7 +670,7 @@ func TestConsensus_Results(t *testing.T) {
 		holder.RecordFunc = func(blockID flow.Identifier) (*uploader.BlockData, error) {
 			assert.Equal(t, header.ID(), blockID)
 
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -715,7 +683,7 @@ func TestConsensus_Results(t *testing.T) {
 		got, err := cons.Results(header.Height)
 
 		require.NoError(t, err)
-		assert.Equal(t, blockData.TxResults, got)
+		assert.Equal(t, record.TxResults, got)
 	})
 
 	t.Run("handles requested height over last finalized height", func(t *testing.T) {
@@ -728,7 +696,7 @@ func TestConsensus_Results(t *testing.T) {
 
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -749,12 +717,9 @@ func TestConsensus_Results(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Missing block height index in database.
-		//require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
-
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -797,7 +762,7 @@ func TestConsensus_Results(t *testing.T) {
 
 func TestConsensus_Events(t *testing.T) {
 	header := mocks.GenericHeader
-	blockData := mocks.GenericBlockData()
+	record := mocks.GenericRecord()
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -811,7 +776,7 @@ func TestConsensus_Events(t *testing.T) {
 		holder.RecordFunc = func(blockID flow.Identifier) (*uploader.BlockData, error) {
 			assert.Equal(t, header.ID(), blockID)
 
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -824,8 +789,8 @@ func TestConsensus_Events(t *testing.T) {
 		got, err := cons.Events(header.Height)
 
 		require.NoError(t, err)
-		assert.Len(t, got, len(blockData.Events))
-		for _, event := range blockData.Events {
+		assert.Len(t, got, len(record.Events))
+		for _, event := range record.Events {
 			assert.Contains(t, got, *event)
 		}
 	})
@@ -840,7 +805,7 @@ func TestConsensus_Events(t *testing.T) {
 
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
@@ -861,12 +826,9 @@ func TestConsensus_Events(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		// Missing block height index in database.
-		//require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, header.ID())))
-
 		holder := mocks.BaselineRecordHolder(t)
 		holder.RecordFunc = func(flow.Identifier) (*uploader.BlockData, error) {
-			return blockData, nil
+			return record, nil
 		}
 
 		cons := tracker.BaselineConsensus(
