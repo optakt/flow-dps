@@ -167,7 +167,6 @@ func (e *Execution) processNext() error {
 	// Check if we already processed a block with this ID recently. This should
 	// be idempotent, but we should be aware if something like this happens.
 	blockID := record.Block.Header.ID()
-
 	_, ok := e.records[blockID]
 	if ok {
 		return fmt.Errorf("duplicate execution record (block: %x)", blockID)
