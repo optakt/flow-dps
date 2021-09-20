@@ -157,23 +157,7 @@ func TestExecution_Purge(t *testing.T) {
 		after map[flow.Identifier]*uploader.BlockData
 	}{
 		{
-			name: "purge threshold at middle height",
-
-			threshold: blocks[2].Block.Header.Height,
-			before: map[flow.Identifier]*uploader.BlockData{
-				blocks[0].Block.ID(): blocks[0],
-				blocks[1].Block.ID(): blocks[1],
-				blocks[2].Block.ID(): blocks[2],
-				blocks[3].Block.ID(): blocks[3],
-			},
-
-			after: map[flow.Identifier]*uploader.BlockData{
-				blocks[2].Block.ID(): blocks[2],
-				blocks[3].Block.ID(): blocks[3],
-			},
-		},
-		{
-			name: "purge threshold at lowest height",
+			name: "threshold is at lowest height",
 
 			threshold: blocks[0].Block.Header.Height,
 			before: map[flow.Identifier]*uploader.BlockData{
@@ -191,73 +175,7 @@ func TestExecution_Purge(t *testing.T) {
 			},
 		},
 		{
-			name: "purge threshold at lowest height - 1",
-
-			threshold: blocks[0].Block.Header.Height - 1,
-			before: map[flow.Identifier]*uploader.BlockData{
-				blocks[0].Block.ID(): blocks[0],
-				blocks[1].Block.ID(): blocks[1],
-				blocks[2].Block.ID(): blocks[2],
-				blocks[3].Block.ID(): blocks[3],
-			},
-
-			after: map[flow.Identifier]*uploader.BlockData{
-				blocks[0].Block.ID(): blocks[0],
-				blocks[1].Block.ID(): blocks[1],
-				blocks[2].Block.ID(): blocks[2],
-				blocks[3].Block.ID(): blocks[3],
-			},
-		},
-		{
-			name: "purge threshold at lowest height + 1",
-
-			threshold: blocks[0].Block.Header.Height + 1,
-			before: map[flow.Identifier]*uploader.BlockData{
-				blocks[0].Block.ID(): blocks[0],
-				blocks[1].Block.ID(): blocks[1],
-				blocks[2].Block.ID(): blocks[2],
-				blocks[3].Block.ID(): blocks[3],
-			},
-
-			after: map[flow.Identifier]*uploader.BlockData{
-				blocks[1].Block.ID(): blocks[1],
-				blocks[2].Block.ID(): blocks[2],
-				blocks[3].Block.ID(): blocks[3],
-			},
-		},
-		{
-			name: "purge threshold at last height - 1",
-
-			threshold: blocks[3].Block.Header.Height - 1,
-			before: map[flow.Identifier]*uploader.BlockData{
-				blocks[0].Block.ID(): blocks[0],
-				blocks[1].Block.ID(): blocks[1],
-				blocks[2].Block.ID(): blocks[2],
-				blocks[3].Block.ID(): blocks[3],
-			},
-
-			after: map[flow.Identifier]*uploader.BlockData{
-				blocks[3].Block.ID(): blocks[3],
-				blocks[2].Block.ID(): blocks[2],
-			},
-		},
-		{
-			name: "purge threshold last height",
-
-			threshold: blocks[3].Block.Header.Height,
-			before: map[flow.Identifier]*uploader.BlockData{
-				blocks[0].Block.ID(): blocks[0],
-				blocks[1].Block.ID(): blocks[1],
-				blocks[2].Block.ID(): blocks[2],
-				blocks[3].Block.ID(): blocks[3],
-			},
-
-			after: map[flow.Identifier]*uploader.BlockData{
-				blocks[3].Block.ID(): blocks[3],
-			},
-		},
-		{
-			name: "purge threshold at last height + 1",
+			name: "threshold is above highest height",
 
 			threshold: blocks[3].Block.Header.Height + 1,
 			before: map[flow.Identifier]*uploader.BlockData{
@@ -268,6 +186,22 @@ func TestExecution_Purge(t *testing.T) {
 			},
 
 			after: map[flow.Identifier]*uploader.BlockData{},
+		},
+		{
+			name: "threshold is in-between",
+
+			threshold: blocks[2].Block.Header.Height,
+			before: map[flow.Identifier]*uploader.BlockData{
+				blocks[0].Block.ID(): blocks[0],
+				blocks[1].Block.ID(): blocks[1],
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
+
+			after: map[flow.Identifier]*uploader.BlockData{
+				blocks[2].Block.ID(): blocks[2],
+				blocks[3].Block.ID(): blocks[3],
+			},
 		},
 		{
 			name: "does nothing when there is nothing to purge",
