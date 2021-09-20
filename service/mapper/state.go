@@ -36,7 +36,7 @@ type State struct {
 func EmptyState(forest Forest) *State {
 	s := State{
 		forest:    forest,
-		status:    StatusBootstrap,
+		status:    StatusInitialize,
 		height:    math.MaxUint64,
 		last:      flow.DummyStateCommitment,
 		next:      flow.DummyStateCommitment,

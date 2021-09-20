@@ -67,6 +67,39 @@ func TestNewTransitions(t *testing.T) {
 	})
 }
 
+func TestTransitions_InitializeMapper(t *testing.T) {
+	t.Run("nominal case without root trie", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusInitialize)
+		tr.cfg.RootTrie = nil
+
+		err := tr.InitializeMapper(st)
+		require.NoError(t, err)
+		assert.Equal(t, StatusResume, st.status)
+	})
+
+	t.Run("nominal case with root trie", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusInitialize)
+		tr.cfg.RootTrie = mocks.GenericTrie
+
+		err := tr.InitializeMapper(st)
+		require.NoError(t, err)
+		assert.Equal(t, StatusBootstrap, st.status)
+	})
+
+	t.Run("invalid state", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusMap)
+
+		err := tr.InitializeMapper(st)
+		require.Error(t, err)
+	})
+}
+
 func TestTransitions_BootstrapState(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -118,371 +151,6 @@ func TestTransitions_BootstrapState(t *testing.T) {
 		tr.chain = chain
 
 		err := tr.BootstrapState(st)
-		assert.Error(t, err)
-	})
-}
-
-func TestTransitions_UpdateTree(t *testing.T) {
-	update := mocks.GenericTrieUpdate(0)
-	tree := mocks.GenericTrie
-
-	t.Run("nominal case without match", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusUpdate)
-
-		forest := mocks.BaselineForest(t, false)
-		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
-			// Parent is RootHash of the mocks.GenericTrie.
-			assert.Equal(t, update.RootHash[:], parent[:])
-			assert.ElementsMatch(t, paths, update.Paths)
-			assert.NotZero(t, tree)
-		}
-		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.MTrie, bool) {
-			assert.Equal(t, update.RootHash[:], commit[:])
-
-			return tree, true
-		}
-		st.forest = forest
-
-		err := tr.UpdateTree(st)
-
-		require.NoError(t, err)
-		assert.Equal(t, StatusUpdate, st.status)
-	})
-
-	t.Run("nominal case with no available update temporarily", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusUpdate)
-
-		// Set up the mock feeder to return an unavailable error on the first call and return successfully
-		// to subsequent calls.
-		var updateCalled bool
-		feeder := mocks.BaselineFeeder(t)
-		feeder.UpdateFunc = func() (*ledger.TrieUpdate, error) {
-			if !updateCalled {
-				updateCalled = true
-				return nil, dps.ErrUnavailable
-			}
-			return update, nil
-		}
-		tr.feed = feeder
-
-		forest := mocks.BaselineForest(t, true)
-		forest.HasFunc = func(flow.StateCommitment) bool {
-			return updateCalled
-		}
-		st.forest = forest
-
-		// The first call should not error but should not change the status of the FSM to updating. It should
-		// instead remain Updating until a match is found.
-		err := tr.UpdateTree(st)
-
-		require.NoError(t, err)
-		assert.Equal(t, StatusUpdate, st.status)
-
-		// The second call is now successful and matches.
-		err = tr.UpdateTree(st)
-
-		require.NoError(t, err)
-		assert.Equal(t, StatusCollect, st.status)
-	})
-
-	t.Run("nominal case with match", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusUpdate)
-
-		err := tr.UpdateTree(st)
-
-		require.NoError(t, err)
-		assert.Equal(t, StatusCollect, st.status)
-	})
-
-	t.Run("handles invalid status", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusBootstrap)
-
-		err := tr.UpdateTree(st)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("handles feeder update failure", func(t *testing.T) {
-		t.Parallel()
-
-		feed := mocks.BaselineFeeder(t)
-		feed.UpdateFunc = func() (*ledger.TrieUpdate, error) {
-			return nil, mocks.GenericError
-		}
-
-		tr, st := baselineFSM(t, StatusUpdate)
-		st.forest = mocks.BaselineForest(t, false)
-		tr.feed = feed
-
-		err := tr.UpdateTree(st)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("handles forest parent tree not found", func(t *testing.T) {
-		t.Parallel()
-
-		forest := mocks.BaselineForest(t, false)
-		forest.TreeFunc = func(_ flow.StateCommitment) (*trie.MTrie, bool) {
-			return nil, false
-		}
-
-		tr, st := baselineFSM(t, StatusUpdate)
-		st.forest = forest
-
-		err := tr.UpdateTree(st)
-
-		assert.NoError(t, err)
-	})
-}
-
-func TestTransitions_CollectRegisters(t *testing.T) {
-	t.Run("nominal case", func(t *testing.T) {
-		t.Parallel()
-
-		forest := mocks.BaselineForest(t, true)
-		forest.ParentFunc = func(commit flow.StateCommitment) (flow.StateCommitment, bool) {
-			assert.Equal(t, mocks.GenericCommit(0), commit)
-
-			return mocks.GenericCommit(1), true
-		}
-
-		tr, st := baselineFSM(t, StatusCollect)
-		st.forest = forest
-
-		err := tr.CollectRegisters(st)
-
-		require.NoError(t, err)
-		assert.Equal(t, StatusMap, st.status)
-		for _, wantPath := range mocks.GenericLedgerPaths(6) {
-			assert.Contains(t, st.registers, wantPath)
-		}
-	})
-
-	t.Run("indexing payloads disabled", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusCollect)
-		tr.cfg.SkipRegisters = true
-
-		err := tr.CollectRegisters(st)
-
-		require.NoError(t, err)
-		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusForward, st.status)
-	})
-
-	t.Run("handles invalid status", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusBootstrap)
-
-		err := tr.CollectRegisters(st)
-
-		assert.Error(t, err)
-		assert.Empty(t, st.registers)
-	})
-
-	t.Run("handles missing tree for commit", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusCollect)
-		st.forest = mocks.BaselineForest(t, false)
-
-		err := tr.CollectRegisters(st)
-
-		assert.Error(t, err)
-		assert.Empty(t, st.registers)
-	})
-}
-
-func TestTransitions_MapRegisters(t *testing.T) {
-	t.Run("nominal case with registers to index", func(t *testing.T) {
-		t.Parallel()
-
-		// Path 2 and 4 are the same so the map effectively contains 5 entries.
-		testRegisters := map[ledger.Path]*ledger.Payload{
-			mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
-			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
-			mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
-			mocks.GenericLedgerPath(3): mocks.GenericLedgerPayload(3),
-			mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
-			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
-		}
-
-		index := mocks.BaselineWriter(t)
-		index.PayloadsFunc = func(height uint64, paths []ledger.Path, value []*ledger.Payload) error {
-			assert.Equal(t, mocks.GenericHeight, height)
-
-			// Expect the 5 entries from the map.
-			assert.Len(t, paths, 6)
-			assert.Len(t, value, 6)
-			return nil
-		}
-
-		tr, st := baselineFSM(t, StatusMap)
-		tr.index = index
-		st.registers = testRegisters
-
-		err := tr.MapRegisters(st)
-
-		require.NoError(t, err)
-
-		// Should not be StateIndexed because registers map was not empty.
-		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusMap, st.status)
-	})
-
-	t.Run("nominal case no more registers left to index", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusMap)
-
-		err := tr.MapRegisters(st)
-
-		assert.NoError(t, err)
-		assert.Equal(t, StatusForward, st.status)
-	})
-
-	t.Run("handles invalid status", func(t *testing.T) {
-		t.Parallel()
-
-		testRegisters := map[ledger.Path]*ledger.Payload{
-			mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
-			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
-			mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
-			mocks.GenericLedgerPath(3): mocks.GenericLedgerPayload(3),
-			mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
-			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
-		}
-
-		tr, st := baselineFSM(t, StatusBootstrap)
-		st.registers = testRegisters
-
-		err := tr.MapRegisters(st)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("handles indexer failure", func(t *testing.T) {
-		t.Parallel()
-
-		testRegisters := map[ledger.Path]*ledger.Payload{
-			mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
-			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
-			mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
-			mocks.GenericLedgerPath(3): mocks.GenericLedgerPayload(3),
-			mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
-			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
-		}
-
-		index := mocks.BaselineWriter(t)
-		index.PayloadsFunc = func(uint64, []ledger.Path, []*ledger.Payload) error { return mocks.GenericError }
-
-		tr, st := baselineFSM(t, StatusMap)
-		tr.index = index
-		st.registers = testRegisters
-
-		err := tr.MapRegisters(st)
-
-		assert.Error(t, err)
-	})
-}
-
-func TestTransitions_ForwardHeight(t *testing.T) {
-	t.Run("nominal case", func(t *testing.T) {
-		t.Parallel()
-
-		var (
-			firstCalled int
-			lastCalled  int
-		)
-		index := mocks.BaselineWriter(t)
-		index.FirstFunc = func(height uint64) error {
-			assert.Equal(t, mocks.GenericHeight, height)
-			firstCalled++
-			return nil
-		}
-		index.LastFunc = func(height uint64) error {
-			assert.Equal(t, mocks.GenericHeight+uint64(lastCalled), height)
-			lastCalled++
-			return nil
-		}
-
-		forest := mocks.BaselineForest(t, true)
-		forest.ResetFunc = func(finalized flow.StateCommitment) {
-			assert.Equal(t, mocks.GenericCommit(0), finalized)
-		}
-
-		tr, st := baselineFSM(t, StatusForward)
-		st.forest = forest
-		tr.index = index
-
-		err := tr.ForwardHeight(st)
-
-		assert.NoError(t, err)
-		assert.Equal(t, StatusIndex, st.status)
-		assert.Equal(t, mocks.GenericHeight+1, st.height)
-
-		// Reset status to allow next call.
-		st.status = StatusForward
-		err = tr.ForwardHeight(st)
-
-		require.NoError(t, err)
-		assert.Equal(t, StatusIndex, st.status)
-		assert.Equal(t, mocks.GenericHeight+2, st.height)
-
-		// First should have been called only once.
-		assert.Equal(t, 1, firstCalled)
-	})
-
-	t.Run("handles invalid status", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusBootstrap)
-
-		err := tr.ForwardHeight(st)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("handles indexer error on first", func(t *testing.T) {
-		t.Parallel()
-
-		index := mocks.BaselineWriter(t)
-		index.FirstFunc = func(uint64) error {
-			return mocks.GenericError
-		}
-
-		tr, st := baselineFSM(t, StatusForward)
-		tr.index = index
-
-		err := tr.ForwardHeight(st)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("handles indexer error on last", func(t *testing.T) {
-		t.Parallel()
-
-		index := mocks.BaselineWriter(t)
-		index.LastFunc = func(uint64) error {
-			return mocks.GenericError
-		}
-
-		tr, st := baselineFSM(t, StatusForward)
-		tr.index = index
-
-		err := tr.ForwardHeight(st)
-
 		assert.Error(t, err)
 	})
 }
@@ -844,6 +512,370 @@ func TestTransitions_IndexChain(t *testing.T) {
 		tr.index = index
 
 		err := tr.IndexChain(st)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestTransitions_UpdateTree(t *testing.T) {
+	update := mocks.GenericTrieUpdate(0)
+	tree := mocks.GenericTrie
+
+	t.Run("nominal case without match", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusUpdate)
+
+		forest := mocks.BaselineForest(t, false)
+		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
+			// Parent is RootHash of the mocks.GenericTrie.
+			assert.Equal(t, update.RootHash[:], parent[:])
+			assert.ElementsMatch(t, paths, update.Paths)
+			assert.NotZero(t, tree)
+		}
+		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.MTrie, bool) {
+			assert.Equal(t, update.RootHash[:], commit[:])
+			return tree, true
+		}
+		st.forest = forest
+
+		err := tr.UpdateTree(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusUpdate, st.status)
+	})
+
+	t.Run("nominal case with no available update temporarily", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusUpdate)
+
+		// Set up the mock feeder to return an unavailable error on the first call and return successfully
+		// to subsequent calls.
+		var updateCalled bool
+		feeder := mocks.BaselineFeeder(t)
+		feeder.UpdateFunc = func() (*ledger.TrieUpdate, error) {
+			if !updateCalled {
+				updateCalled = true
+				return nil, dps.ErrUnavailable
+			}
+			return mocks.GenericTrieUpdate(0), nil
+		}
+		tr.feed = feeder
+
+		forest := mocks.BaselineForest(t, true)
+		forest.HasFunc = func(flow.StateCommitment) bool {
+			return updateCalled
+		}
+		st.forest = forest
+
+		// The first call should not error but should not change the status of the FSM to updating. It should
+		// instead remain Updating until a match is found.
+		err := tr.UpdateTree(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusUpdate, st.status)
+
+		// The second call is now successful and matches.
+		err = tr.UpdateTree(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusCollect, st.status)
+	})
+
+	t.Run("nominal case with match", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusUpdate)
+
+		err := tr.UpdateTree(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusCollect, st.status)
+	})
+
+	t.Run("handles invalid status", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusBootstrap)
+
+		err := tr.UpdateTree(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles feeder update failure", func(t *testing.T) {
+		t.Parallel()
+
+		feed := mocks.BaselineFeeder(t)
+		feed.UpdateFunc = func() (*ledger.TrieUpdate, error) {
+			return nil, mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusUpdate)
+		st.forest = mocks.BaselineForest(t, false)
+		tr.feed = feed
+
+		err := tr.UpdateTree(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles forest parent tree not found", func(t *testing.T) {
+		t.Parallel()
+
+		forest := mocks.BaselineForest(t, false)
+		forest.TreeFunc = func(_ flow.StateCommitment) (*trie.MTrie, bool) {
+			return nil, false
+		}
+
+		tr, st := baselineFSM(t, StatusUpdate)
+		st.forest = forest
+
+		err := tr.UpdateTree(st)
+
+		assert.NoError(t, err)
+	})
+}
+
+func TestTransitions_CollectRegisters(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		forest := mocks.BaselineForest(t, true)
+		forest.ParentFunc = func(commit flow.StateCommitment) (flow.StateCommitment, bool) {
+			assert.Equal(t, mocks.GenericCommit(0), commit)
+
+			return mocks.GenericCommit(1), true
+		}
+
+		tr, st := baselineFSM(t, StatusCollect)
+		st.forest = forest
+
+		err := tr.CollectRegisters(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusMap, st.status)
+		for _, wantPath := range mocks.GenericLedgerPaths(6) {
+			assert.Contains(t, st.registers, wantPath)
+		}
+	})
+
+	t.Run("indexing payloads disabled", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusCollect)
+		tr.cfg.SkipRegisters = true
+
+		err := tr.CollectRegisters(st)
+
+		require.NoError(t, err)
+		assert.Empty(t, st.registers)
+		assert.Equal(t, StatusForward, st.status)
+	})
+
+	t.Run("handles invalid status", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusBootstrap)
+
+		err := tr.CollectRegisters(st)
+
+		assert.Error(t, err)
+		assert.Empty(t, st.registers)
+	})
+
+	t.Run("handles missing tree for commit", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusCollect)
+		st.forest = mocks.BaselineForest(t, false)
+
+		err := tr.CollectRegisters(st)
+
+		assert.Error(t, err)
+		assert.Empty(t, st.registers)
+	})
+}
+
+func TestTransitions_MapRegisters(t *testing.T) {
+	t.Run("nominal case with registers to index", func(t *testing.T) {
+		t.Parallel()
+
+		// Path 2 and 4 are the same so the map effectively contains 5 entries.
+		testRegisters := map[ledger.Path]*ledger.Payload{
+			mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
+			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
+			mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
+			mocks.GenericLedgerPath(3): mocks.GenericLedgerPayload(3),
+			mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
+			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
+		}
+
+		index := mocks.BaselineWriter(t)
+		index.PayloadsFunc = func(height uint64, paths []ledger.Path, value []*ledger.Payload) error {
+			assert.Equal(t, mocks.GenericHeight, height)
+
+			// Expect the 5 entries from the map.
+			assert.Len(t, paths, 6)
+			assert.Len(t, value, 6)
+			return nil
+		}
+
+		tr, st := baselineFSM(t, StatusMap)
+		tr.index = index
+		st.registers = testRegisters
+
+		err := tr.MapRegisters(st)
+
+		require.NoError(t, err)
+
+		// Should not be StateIndexed because registers map was not empty.
+		assert.Empty(t, st.registers)
+		assert.Equal(t, StatusMap, st.status)
+	})
+
+	t.Run("nominal case no more registers left to index", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusMap)
+
+		err := tr.MapRegisters(st)
+
+		assert.NoError(t, err)
+		assert.Equal(t, StatusForward, st.status)
+	})
+
+	t.Run("handles invalid status", func(t *testing.T) {
+		t.Parallel()
+
+		testRegisters := map[ledger.Path]*ledger.Payload{
+			mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
+			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
+			mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
+			mocks.GenericLedgerPath(3): mocks.GenericLedgerPayload(3),
+			mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
+			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
+		}
+
+		tr, st := baselineFSM(t, StatusBootstrap)
+		st.registers = testRegisters
+
+		err := tr.MapRegisters(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer failure", func(t *testing.T) {
+		t.Parallel()
+
+		testRegisters := map[ledger.Path]*ledger.Payload{
+			mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
+			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
+			mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
+			mocks.GenericLedgerPath(3): mocks.GenericLedgerPayload(3),
+			mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
+			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
+		}
+
+		index := mocks.BaselineWriter(t)
+		index.PayloadsFunc = func(uint64, []ledger.Path, []*ledger.Payload) error { return mocks.GenericError }
+
+		tr, st := baselineFSM(t, StatusMap)
+		tr.index = index
+		st.registers = testRegisters
+
+		err := tr.MapRegisters(st)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestTransitions_ForwardHeight(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		var (
+			firstCalled int
+			lastCalled  int
+		)
+		index := mocks.BaselineWriter(t)
+		index.FirstFunc = func(height uint64) error {
+			assert.Equal(t, mocks.GenericHeight, height)
+			firstCalled++
+			return nil
+		}
+		index.LastFunc = func(height uint64) error {
+			assert.Equal(t, mocks.GenericHeight+uint64(lastCalled), height)
+			lastCalled++
+			return nil
+		}
+
+		forest := mocks.BaselineForest(t, true)
+		forest.ResetFunc = func(finalized flow.StateCommitment) {
+			assert.Equal(t, mocks.GenericCommit(0), finalized)
+		}
+
+		tr, st := baselineFSM(t, StatusForward)
+		st.forest = forest
+		tr.index = index
+
+		err := tr.ForwardHeight(st)
+
+		assert.NoError(t, err)
+		assert.Equal(t, StatusIndex, st.status)
+		assert.Equal(t, mocks.GenericHeight+1, st.height)
+
+		// Reset status to allow next call.
+		st.status = StatusForward
+		err = tr.ForwardHeight(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusIndex, st.status)
+		assert.Equal(t, mocks.GenericHeight+2, st.height)
+
+		// First should have been called only once.
+		assert.Equal(t, 1, firstCalled)
+	})
+
+	t.Run("handles invalid status", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusBootstrap)
+
+		err := tr.ForwardHeight(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer error on first", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineWriter(t)
+		index.FirstFunc = func(uint64) error {
+			return mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForward)
+		tr.index = index
+
+		err := tr.ForwardHeight(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles indexer error on last", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineWriter(t)
+		index.LastFunc = func(uint64) error {
+			return mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusForward)
+		tr.index = index
+
+		err := tr.ForwardHeight(st)
 
 		assert.Error(t, err)
 	})

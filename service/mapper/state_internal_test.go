@@ -27,7 +27,7 @@ func TestEmptyState(t *testing.T) {
 	s := EmptyState(f)
 
 	assert.Equal(t, f, s.forest)
-	assert.Equal(t, StatusBootstrap, s.status)
+	assert.Equal(t, StatusInitialize, s.status)
 	assert.Zero(t, s.last)
 	assert.Zero(t, s.next)
 }

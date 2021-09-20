@@ -70,6 +70,17 @@ func (t *Transitions) InitializeMapper(s *State) error {
 		return fmt.Errorf("invalid states for initializing mapper (%s)", s.status)
 	}
 
+	// For now, we are assuming that we need to bootstrap if the root checkpoint
+	// is given, and that we need to resume if no root checkpoint is given.
+	if t.cfg.RootTrie != nil {
+		t.log.Info().Msg("root trie found, bootstrapping index")
+		s.status = StatusBootstrap
+		return nil
+	}
+
+	t.log.Info().Msg("no root trie found, resuming indexing")
+
+	s.status = StatusResume
 	return nil
 }
 
@@ -122,7 +133,6 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// forwarded the state to this height, so we go straight to the chain data
 	// indexing.
 	s.status = StatusUpdate
-
 	return nil
 }
 
@@ -259,7 +269,6 @@ func (t *Transitions) IndexChain(s *State) error {
 	// tree until we find the commit of the finalized block. This will allow us
 	// to index the payloads then.
 	s.status = StatusUpdate
-
 	return nil
 }
 
@@ -381,7 +390,6 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	// At this point, we have collected all the payloads, so we go to the next
 	// step, where we will index them.
 	s.status = StatusMap
-
 	return nil
 }
 
@@ -457,6 +465,5 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	// Once the height is forwarded, we can set the status so that we index
 	// the blockchain data next.
 	s.status = StatusIndex
-
 	return nil
 }
