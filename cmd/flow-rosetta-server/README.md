@@ -38,6 +38,7 @@ Usage of flow-rosetta-server:
   -l, --level string            log output level (default "info")
   -p, --port uint16             port to host Rosetta API on (default 8080)
   -t, --transaction-limit int   maximum amount of transactions to include in a block response (default 200)
+      --smart-status-codes      enable smart non-500 HTTP status codes for Rosetta API errors
 ```
 
 ## Example

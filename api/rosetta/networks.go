@@ -15,8 +15,6 @@
 package rosetta
 
 import (
-	"net/http"
-
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/identifier"
@@ -40,5 +38,5 @@ func (d *Data) Networks(ctx echo.Context) error {
 		NetworkIDs: []identifier.Network{d.config.Network()},
 	}
 
-	return ctx.JSON(http.StatusOK, res)
+	return ctx.JSON(statusOK, res)
 }
