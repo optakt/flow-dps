@@ -217,3 +217,8 @@ func (r *Reader) SealsByHeight(height uint64) ([]flow.Identifier, error) {
 	err := r.db.View(r.lib.LookupSealsForHeight(height, &sealIDs))
 	return sealIDs, err
 }
+
+// Updates returns the set of ledger paths and payloads that we have in the index at the given height.
+func (r *Reader) Updates(height uint64) ([]ledger.Path, []*ledger.Payload, error) {
+	return nil, nil, fmt.Errorf("not implemented")
+}

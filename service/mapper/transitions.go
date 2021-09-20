@@ -144,6 +144,67 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 		return fmt.Errorf("invalid status for resuming indexing (%s)", s.status)
 	}
 
+	// We need to know where to start and where to stop streaming previous paths
+	// and payloads into the execution trie.
+	first, err := t.read.First()
+	if err != nil {
+		return fmt.Errorf("could not get first height: %w", err)
+	}
+	last, err := t.read.Last()
+	if err != nil {
+		return fmt.Errorf("could not get last height: %w", err)
+	}
+
+	// Then, we step through all of the heights, get the respective paths and
+	// payloads from the index database and replay them into the trie.
+	tree := trie.NewEmptyMTrie()
+	for height := first; height <= last; height++ {
+		paths, payloads, err := t.read.Updates(height)
+		if err != nil {
+			return fmt.Errorf("could not get updates (height: %d): %w", height, err)
+		}
+		for i, path := range paths {
+			payload := payloads[i]
+			tree, err = trie.NewTrieWithUpdatedRegisters(tree, []ledger.Path{path}, []ledger.Payload{*payload})
+			if err != nil {
+				return fmt.Errorf("could not update trie (height: %d, path: %x)", height, path)
+			}
+		}
+	}
+
+	// At this point, we have streamed all of the previous updates back into the
+	// state trie, including all of the root checkpoint paths and payloads,
+	// which we also indexed. We can do a sanity check to see if the commit
+	// matches.
+	commit, err := t.read.Commit(last)
+	if err != nil {
+		return fmt.Errorf("could not get last commit: %w", err)
+	}
+	hash := flow.StateCommitment(tree.RootHash())
+	if hash != commit {
+		return fmt.Errorf("trie hash does not match last commit (hash: %x, commit: %x)", hash, commit)
+	}
+
+	// With the trie in the correct state for the last height, we can store the
+	// trie in our forest with the correct paths. The state commitment here
+	// should not matter, as the loop should break when reaching it and we don't
+	// need to stop back further.
+	paths, _, err := t.read.Updates(last)
+	if err != nil {
+		return fmt.Errorf("could not get last paths: %w", err)
+	}
+	s.forest.Save(tree, paths, flow.DummyStateCommitment)
+	s.last = flow.DummyStateCommitment // irrelevant
+	s.next = commit
+
+	// The next height should be one higher than the last one indexed. The chain
+	// indexing code will then automatically forward the next and last fields
+	// appropriately.
+	s.height = last + 1
+
+	// At this point, we should be able to start indexing the chain data for
+	// the next height.
+	s.status = StatusIndex
 	return nil
 }
 
