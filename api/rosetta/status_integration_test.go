@@ -31,6 +31,8 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
 
 func TestAPI_Status(t *testing.T) {
@@ -44,7 +46,7 @@ func TestAPI_Status(t *testing.T) {
 	oldestBlockID := knownHeader(0).ID().String()
 	lastBlock := knownHeader(425)
 
-	request := rosetta.StatusRequest{
+	request := request.Status{
 		NetworkID: defaultNetwork(),
 	}
 
@@ -56,7 +58,7 @@ func TestAPI_Status(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-	var status rosetta.StatusResponse
+	var status response.Status
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &status))
 
 	currentHeight := status.CurrentBlockID.Index
@@ -90,13 +92,13 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request rosetta.StatusRequest
+		request request.Status
 
 		checkError assert.ErrorAssertionFunc
 	}{
 		{
 			name: "missing blockchain",
-			request: rosetta.StatusRequest{
+			request: request.Status{
 				NetworkID: identifier.Network{
 					Blockchain: "",
 					Network:    dps.FlowTestnet.String(),
@@ -107,7 +109,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid blockchain",
-			request: rosetta.StatusRequest{
+			request: request.Status{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
 					Network:    dps.FlowTestnet.String(),
@@ -118,7 +120,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing network",
-			request: rosetta.StatusRequest{
+			request: request.Status{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    "",
@@ -129,7 +131,7 @@ func TestAPI_StatusHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid network",
-			request: rosetta.StatusRequest{
+			request: request.Status{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    invalidNetwork,

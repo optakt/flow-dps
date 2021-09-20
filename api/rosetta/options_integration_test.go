@@ -31,6 +31,8 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
 
 func TestAPI_Options(t *testing.T) {
@@ -46,7 +48,7 @@ func TestAPI_Options(t *testing.T) {
 	// verify version string is in the format of x.y.z
 	versionRe := regexp.MustCompile(`\d+\.\d+\.\d+`)
 
-	request := rosetta.OptionsRequest{
+	request := request.Options{
 		NetworkID: defaultNetwork(),
 	}
 
@@ -59,7 +61,7 @@ func TestAPI_Options(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-	var options rosetta.OptionsResponse
+	var options response.Options
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &options))
 
 	assert.Regexp(t, versionRe, options.Version.RosettaVersion)
@@ -195,13 +197,13 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request rosetta.OptionsRequest
+		request request.Options
 
 		checkError assert.ErrorAssertionFunc
 	}{
 		{
 			name: "missing blockchain",
-			request: rosetta.OptionsRequest{
+			request: request.Options{
 				NetworkID: identifier.Network{
 					Blockchain: "",
 					Network:    dps.FlowTestnet.String(),
@@ -212,7 +214,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid blockchain",
-			request: rosetta.OptionsRequest{
+			request: request.Options{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
 					Network:    dps.FlowTestnet.String(),
@@ -223,7 +225,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing network",
-			request: rosetta.OptionsRequest{
+			request: request.Options{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    "",
@@ -234,7 +236,7 @@ func TestAPI_OptionsHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid network",
-			request: rosetta.OptionsRequest{
+			request: request.Options{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    invalidNetwork,

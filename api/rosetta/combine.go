@@ -19,23 +19,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
-
-// CombineRequest implements the request schema for /construction/combine.
-// See https://www.rosetta-api.org/docs/ConstructionApi.html#request
-type CombineRequest struct {
-	NetworkID           identifier.Network `json:"network_identifier"`
-	UnsignedTransaction string             `json:"unsigned_transaction"`
-	Signatures          []object.Signature `json:"signatures"`
-}
-
-// CombineResponse implements the response schema for /construction/combine.
-// See https://www.rosetta-api.org/docs/ConstructionApi.html#response
-type CombineResponse struct {
-	SignedTransaction string `json:"signed_transaction"`
-}
 
 // Combine implements the /construction/combine endpoint of the Rosetta Construction API.
 // It creates a signed transaction by combining an unsigned transaction and
@@ -43,7 +29,7 @@ type CombineResponse struct {
 // See https://www.rosetta-api.org/docs/ConstructionApi.html#constructioncombine
 func (c *Construction) Combine(ctx echo.Context) error {
 
-	var req CombineRequest
+	var req request.Combine
 	err := ctx.Bind(&req)
 	if err != nil {
 		return unpackError(err)
@@ -59,7 +45,7 @@ func (c *Construction) Combine(ctx echo.Context) error {
 		return apiError(txSigning, err)
 	}
 
-	res := CombineResponse{
+	res := response.Combine{
 		SignedTransaction: signed,
 	}
 

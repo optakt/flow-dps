@@ -19,29 +19,15 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
-
-// BlockRequest implements the request schema for /block.
-// See https://www.rosetta-api.org/docs/BlockApi.html#request
-type BlockRequest struct {
-	NetworkID identifier.Network `json:"network_identifier"`
-	BlockID   identifier.Block   `json:"block_identifier"`
-}
-
-// BlockResponse implements the response schema for /block.
-// See https://www.rosetta-api.org/docs/BlockApi.html#200---ok
-type BlockResponse struct {
-	Block             *object.Block            `json:"block"`
-	OtherTransactions []identifier.Transaction `json:"other_transactions,omitempty"`
-}
 
 // Block implements the /block endpoint of the Rosetta Data API.
 // See https://www.rosetta-api.org/docs/BlockApi.html#block
 func (d *Data) Block(ctx echo.Context) error {
 
-	var req BlockRequest
+	var req request.Block
 	err := ctx.Bind(&req)
 	if err != nil {
 		return unpackError(err)
@@ -57,7 +43,7 @@ func (d *Data) Block(ctx echo.Context) error {
 		return apiError(blockRetrieval, err)
 	}
 
-	res := BlockResponse{
+	res := response.Block{
 		Block:             block,
 		OtherTransactions: extraTxIDs,
 	}

@@ -32,6 +32,8 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/rosetta/configuration"
 	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
 
 func TestAPI_Balance(t *testing.T) {
@@ -54,7 +56,7 @@ func TestAPI_Balance(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request rosetta.BalanceRequest
+		request request.Balance
 
 		wantBalance   string
 		validateBlock validateBlockFunc
@@ -86,7 +88,7 @@ func TestAPI_Balance(t *testing.T) {
 		{
 			// Use block height only to retrieve data, but verify hash is set in the response.
 			name: "get block via height only",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID: defaultNetwork(),
 				AccountID: identifier.Account{
 					Address: testAccount,
@@ -102,7 +104,7 @@ func TestAPI_Balance(t *testing.T) {
 		},
 		{
 			name: "get latest block by omitting block identifier",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID: defaultNetwork(),
 				AccountID: identifier.Account{
 					Address: testAccount,
@@ -131,7 +133,7 @@ func TestAPI_Balance(t *testing.T) {
 
 			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 
-			var balanceResponse rosetta.BalanceResponse
+			var balanceResponse response.Balance
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &balanceResponse))
 
 			test.validateBlock(balanceResponse.BlockID)
@@ -180,19 +182,19 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 	tests := []struct {
 		name string
 
-		request rosetta.BalanceRequest
+		request request.Balance
 
 		checkError assert.ErrorAssertionFunc
 	}{
 		{
 			name:    "empty balance request",
-			request: rosetta.BalanceRequest{},
+			request: request.Balance{},
 
 			checkError: checkRosettaError(http.StatusBadRequest, configuration.ErrorInvalidFormat),
 		},
 		{
 			name: "missing blockchain name",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID: identifier.Network{
 					Blockchain: "",
 					Network:    dps.FlowTestnet.String(),
@@ -206,7 +208,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid blockchain name",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
 					Network:    dps.FlowTestnet.String(),
@@ -220,7 +222,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing network name",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    "",
@@ -233,7 +235,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid network name",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID: identifier.Network{
 					Blockchain: dps.FlowBlockchain,
 					Network:    invalidNetwork,
@@ -247,7 +249,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid length of block id",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: &testHeight, Hash: trimmedBlockHash},
@@ -258,7 +260,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing account address",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: ""},
 				BlockID:    testBlock,
@@ -269,7 +271,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid length of account address",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: trimmedAddress},
 				BlockID:    testBlock,
@@ -280,7 +282,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing currency data",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    testBlock,
@@ -291,7 +293,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing currency symbol",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    testBlock,
@@ -302,7 +304,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "some currency symbols missing",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID: defaultNetwork(),
 				AccountID: testAccount,
 				BlockID:   testBlock,
@@ -317,7 +319,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "missing block height",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: nil, Hash: "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"},
@@ -328,7 +330,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid block hash",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: &testHeight, Hash: invalidBlockHash},
@@ -339,7 +341,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "unkown block requested",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: getUint64P(lastHeight + 1)},
@@ -350,7 +352,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "mismatched block id and height",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    identifier.Block{Index: &testHeight, Hash: "9035c558379b208eba11130c928537fe50ad93cdee314980fccb695aa31df7fc"},
@@ -361,7 +363,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid account ID hex",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: invalidAddressHex},
 				BlockID:    testBlock,
@@ -372,7 +374,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid account ID",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  identifier.Account{Address: invalidAddress},
 				BlockID:    testBlock,
@@ -383,7 +385,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "unknown currency requested",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    testBlock,
@@ -394,7 +396,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid currency decimal count",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID:  defaultNetwork(),
 				AccountID:  testAccount,
 				BlockID:    testBlock,
@@ -405,7 +407,7 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 		},
 		{
 			name: "invalid currency decimal count in a list of currencies",
-			request: rosetta.BalanceRequest{
+			request: request.Balance{
 				NetworkID: defaultNetwork(),
 				AccountID: testAccount,
 				BlockID:   testBlock,
@@ -543,9 +545,9 @@ func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 }
 
 // requestBalance generates a BalanceRequest with the specified parameters.
-func requestBalance(address string, header flow.Header) rosetta.BalanceRequest {
+func requestBalance(address string, header flow.Header) request.Balance {
 
-	return rosetta.BalanceRequest{
+	return request.Balance{
 		NetworkID: defaultNetwork(),
 		AccountID: identifier.Account{
 			Address: address,

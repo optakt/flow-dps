@@ -19,30 +19,15 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps/rosetta/request"
+	"github.com/optakt/flow-dps/rosetta/response"
 )
-
-// StatusRequest implements the request schema for /network/status.
-// See https://www.rosetta-api.org/docs/NetworkApi.html#request-2
-type StatusRequest struct {
-	NetworkID identifier.Network `json:"network_identifier"`
-}
-
-// StatusResponse implements the successful response schema for /network/status.
-// See https://www.rosetta-api.org/docs/NetworkApi.html#200---ok-2
-type StatusResponse struct {
-	CurrentBlockID        identifier.Block `json:"current_block_identifier"`
-	CurrentBlockTimestamp int64            `json:"current_block_timestamp"`
-	OldestBlockID         identifier.Block `json:"oldest_block_identifier"`
-	GenesisBlockID        identifier.Block `json:"genesis_block_identifier"`
-	Peers                 []struct{}       `json:"peers"` // not used
-}
 
 // Status implements the /network/status endpoint of the Rosetta Data API.
 // See https://www.rosetta-api.org/docs/NetworkApi.html#networkstatus
 func (d *Data) Status(ctx echo.Context) error {
 
-	var req StatusRequest
+	var req request.Status
 	err := ctx.Bind(&req)
 	if err != nil {
 		return unpackError(err)
@@ -63,7 +48,7 @@ func (d *Data) Status(ctx echo.Context) error {
 		return apiError(currentRetrieval, err)
 	}
 
-	res := StatusResponse{
+	res := response.Status{
 		CurrentBlockID:        current,
 		CurrentBlockTimestamp: timestamp.UnixNano() / 1_000_000,
 		OldestBlockID:         oldest,
