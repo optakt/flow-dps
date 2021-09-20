@@ -295,7 +295,7 @@ func run() int {
 		opts = append(opts, mapper.WithRootTrie(root))
 	}
 	opts = append(opts, mapper.WithSkipRegisters(flagSkip))
-	transitions := mapper.NewTransitions(log, consensus, execution, write, opts...)
+	transitions := mapper.NewTransitions(log, consensus, execution, read, write, opts...)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,

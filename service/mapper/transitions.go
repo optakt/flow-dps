@@ -39,12 +39,13 @@ type Transitions struct {
 	log   zerolog.Logger
 	chain dps.Chain
 	feed  Feeder
-	index dps.Writer
+	read  dps.Reader
+	write dps.Writer
 	once  *sync.Once
 }
 
 // NewTransitions returns a Transitions component using the given dependencies and using the given options
-func NewTransitions(log zerolog.Logger, chain dps.Chain, feed Feeder, index dps.Writer, options ...Option) *Transitions {
+func NewTransitions(log zerolog.Logger, chain dps.Chain, feed Feeder, read dps.Reader, write dps.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -56,7 +57,8 @@ func NewTransitions(log zerolog.Logger, chain dps.Chain, feed Feeder, index dps.
 		cfg:   cfg,
 		chain: chain,
 		feed:  feed,
-		index: index,
+		read:  read,
+		write: write,
 		once:  &sync.Once{},
 	}
 
@@ -182,19 +184,19 @@ func (t *Transitions) IndexChain(s *State) error {
 	// state, before dealing with anything related to execution data, which
 	// might go into the wait state.
 	blockID := header.ID()
-	err = t.index.Height(blockID, s.height)
+	err = t.write.Height(blockID, s.height)
 	if err != nil {
 		return fmt.Errorf("could not index height: %w", err)
 	}
-	err = t.index.Header(s.height, header)
+	err = t.write.Header(s.height, header)
 	if err != nil {
 		return fmt.Errorf("could not index header: %w", err)
 	}
-	err = t.index.Guarantees(s.height, guarantees)
+	err = t.write.Guarantees(s.height, guarantees)
 	if err != nil {
 		return fmt.Errorf("could not index guarantees: %w", err)
 	}
-	err = t.index.Seals(s.height, seals)
+	err = t.write.Seals(s.height, seals)
 	if err != nil {
 		return fmt.Errorf("could not index seals: %w", err)
 	}
@@ -230,23 +232,23 @@ func (t *Transitions) IndexChain(s *State) error {
 
 	// Next, all we need to do is index the remaining data and we have fully
 	// processed indexing for this block height.
-	err = t.index.Commit(s.height, commit)
+	err = t.write.Commit(s.height, commit)
 	if err != nil {
 		return fmt.Errorf("could not index commit: %w", err)
 	}
-	err = t.index.Collections(s.height, collections)
+	err = t.write.Collections(s.height, collections)
 	if err != nil {
 		return fmt.Errorf("could not index collections: %w", err)
 	}
-	err = t.index.Transactions(s.height, transactions)
+	err = t.write.Transactions(s.height, transactions)
 	if err != nil {
 		return fmt.Errorf("could not index transactions: %w", err)
 	}
-	err = t.index.Results(results)
+	err = t.write.Results(results)
 	if err != nil {
 		return fmt.Errorf("could not index transaction results: %w", err)
 	}
-	err = t.index.Events(s.height, events)
+	err = t.write.Events(s.height, events)
 	if err != nil {
 		return fmt.Errorf("could not index events: %w", err)
 	}
@@ -426,7 +428,7 @@ func (t *Transitions) MapRegisters(s *State) error {
 	}
 
 	// Then we store the (maximum) 1000 paths and payloads.
-	err := t.index.Payloads(s.height, paths, payloads)
+	err := t.write.Payloads(s.height, paths, payloads)
 	if err != nil {
 		return fmt.Errorf("could not index registers: %w", err)
 	}
@@ -446,11 +448,11 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	// skipping it, we should document the last indexed height. On the first
 	// pass, we will also index the first indexed height here.
 	var err error
-	t.once.Do(func() { err = t.index.First(s.height) })
+	t.once.Do(func() { err = t.write.First(s.height) })
 	if err != nil {
 		return fmt.Errorf("could not index first height: %w", err)
 	}
-	err = t.index.Last(s.height)
+	err = t.write.Last(s.height)
 	if err != nil {
 		return fmt.Errorf("could not index last height: %w", err)
 	}

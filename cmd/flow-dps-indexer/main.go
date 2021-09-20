@@ -86,20 +86,20 @@ func run() int {
 	log = log.Level(level)
 
 	// Open index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex))
+	indexDB, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
 		return failure
 	}
-	defer db.Close()
+	defer indexDB.Close()
 
 	// Open protocol state database.
-	data, err := badger.Open(dps.DefaultOptions(flagData))
+	protocolDB, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
 		log.Error().Err(err).Msg("could not open blockchain database")
 		return failure
 	}
-	defer data.Close()
+	defer protocolDB.Close()
 
 	// The storage library is initialized with a codec and provides functions to
 	// interact with a Badger database while encoding and compressing
@@ -108,7 +108,8 @@ func run() int {
 	storage := storage.New(codec)
 
 	// Check if index already exists.
-	_, err = index.NewReader(db, storage).First()
+	read := index.NewReader(indexDB, storage)
+	_, err = read.First()
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		log.Error().Err(err).Msg("could not get first height from index reader")
 		return failure
@@ -119,7 +120,7 @@ func run() int {
 	}
 
 	// The chain is responsible for reading blockchain data from the protocol state.
-	disk := chain.FromDisk(data)
+	disk := chain.FromDisk(protocolDB)
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
 	segments, err := wal.NewSegmentsReader(flagTrie)
@@ -130,7 +131,7 @@ func run() int {
 	feed := feeder.FromWAL(wal.NewReader(segments))
 
 	// Writer is responsible for writing the index data to the index database.
-	index := index.NewWriter(db, storage)
+	index := index.NewWriter(indexDB, storage)
 	defer func() {
 		err := index.Close()
 		if err != nil {
@@ -150,7 +151,7 @@ func run() int {
 		opts = append(opts, mapper.WithRootTrie(root))
 	}
 	opts = append(opts, mapper.WithSkipRegisters(flagSkip))
-	transitions := mapper.NewTransitions(log, disk, feed, write, opts...)
+	transitions := mapper.NewTransitions(log, disk, feed, read, write, opts...)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
