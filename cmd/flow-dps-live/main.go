@@ -50,6 +50,7 @@ import (
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/initializer"
+	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
 	"github.com/optakt/flow-dps/service/tracker"
@@ -77,6 +78,7 @@ func run() int {
 		flagBucket     string
 		flagCheckpoint string
 		flagData       string
+		flagForce      bool
 		flagIndex      string
 		flagLevel      string
 		flagSkip       bool
@@ -90,6 +92,7 @@ func run() int {
 	pflag.StringVarP(&flagBucket, "bucket", "u", "", "name of the Google Cloud Storage bucket which contains the block data")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "data", "database directory for protocol data")
+	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
@@ -155,8 +158,11 @@ func run() int {
 		return failure
 	}
 	if errors.Is(err, badger.ErrKeyNotFound) && flagCheckpoint == "" {
-		log.Error().Err(err).Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
+		log.Error().Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
 		return failure
+	}
+	if err == nil && flagCheckpoint != "" && !flagForce {
+		log.Error().Msg("index already exists, please force bootstrapping (-f, --force) to overwrite with given checkpoint")
 	}
 	write := index.NewWriter(indexDB, storage)
 	defer func() {
@@ -282,24 +288,31 @@ func run() int {
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
+	// At this point, we need to decide whether we are bootstrapping from an
+	// existing state, or whether we resume indexing from a previous run.
+
 	// At this point, we can initialize the core business logic of the indexer,
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
-	var opts []mapper.Option
-	if flagCheckpoint != "" {
-		root, err := initializer.RootTrie(flagCheckpoint)
+	var load mapper.Loader
+	load = loader.FromIndex(indexDB)
+	bootstrap := (flagCheckpoint != "")
+	if bootstrap {
+		file, err := os.Open(flagCheckpoint)
 		if err != nil {
-			log.Error().Err(err).Msg("could not load root checkpoint")
+			log.Error().Err(err).Msg("could not open checkpoint file")
 			return failure
 		}
-		opts = append(opts, mapper.WithRootTrie(root))
+		load = loader.FromCheckpoint(file)
 	}
-	opts = append(opts, mapper.WithSkipRegisters(flagSkip))
-	transitions := mapper.NewTransitions(log, consensus, execution, read, write, opts...)
+	transitions := mapper.NewTransitions(log, load, consensus, execution, read, write,
+		mapper.WithBootstrapState(bootstrap),
+		mapper.WithSkipRegisters(flagSkip),
+		mapper.WithStartStatus(status),
+	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
-		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
 		mapper.WithTransition(mapper.StatusResume, transitions.ResumeIndexing),
 		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),

@@ -33,6 +33,7 @@ import (
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/initializer"
+	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
 )
@@ -56,6 +57,7 @@ func run() int {
 	var (
 		flagCheckpoint string
 		flagData       string
+		flagForce      bool
 		flagIndex      string
 		flagLevel      string
 		flagTrie       string
@@ -64,6 +66,7 @@ func run() int {
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
 	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
+	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
@@ -115,8 +118,11 @@ func run() int {
 		return failure
 	}
 	if errors.Is(err, badger.ErrKeyNotFound) && flagCheckpoint == "" {
-		log.Error().Err(err).Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
+		log.Error().Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
 		return failure
+	}
+	if err == nil && flagCheckpoint != "" && !flagForce {
+		log.Error().Msg("index already exists, please force bootstrapping (-f, --force) to overwrite with given checkpoint")
 	}
 
 	// The chain is responsible for reading blockchain data from the protocol state.
@@ -141,6 +147,8 @@ func run() int {
 	write := dps.Writer(index)
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
+	var load mapper.Loader
+	load = loader.FromIndex(indexDB)
 	var opts []mapper.Option
 	if flagCheckpoint != "" {
 		root, err := initializer.RootTrie(flagCheckpoint)
@@ -151,7 +159,9 @@ func run() int {
 		opts = append(opts, mapper.WithRootTrie(root))
 	}
 	opts = append(opts, mapper.WithSkipRegisters(flagSkip))
-	transitions := mapper.NewTransitions(log, disk, feed, read, write, opts...)
+	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
+		mapper.WithSkipRegisters(flagSkip),
+	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,

@@ -37,6 +37,7 @@ type TransitionFunc func(*State) error
 type Transitions struct {
 	cfg   Config
 	log   zerolog.Logger
+	load  Loader
 	chain dps.Chain
 	feed  Feeder
 	read  dps.Reader
@@ -45,7 +46,7 @@ type Transitions struct {
 }
 
 // NewTransitions returns a Transitions component using the given dependencies and using the given options
-func NewTransitions(log zerolog.Logger, chain dps.Chain, feed Feeder, read dps.Reader, write dps.Writer, options ...Option) *Transitions {
+func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feeder, read dps.Reader, write dps.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -55,6 +56,7 @@ func NewTransitions(log zerolog.Logger, chain dps.Chain, feed Feeder, read dps.R
 	t := Transitions{
 		log:   log.With().Str("component", "mapper_transitions").Logger(),
 		cfg:   cfg,
+		load:  load,
 		chain: chain,
 		feed:  feed,
 		read:  read,
@@ -65,40 +67,12 @@ func NewTransitions(log zerolog.Logger, chain dps.Chain, feed Feeder, read dps.R
 	return &t
 }
 
-// InitializeMapper initializes the mapper and determines whether we resume from
-// a previous indexing operation, or whether we bootstrap the state.
-func (t *Transitions) InitializeMapper(s *State) error {
-	if s.status != StatusInitialize {
-		return fmt.Errorf("invalid states for initializing mapper (%s)", s.status)
-	}
-
-	// For now, we are assuming that we need to bootstrap if the root checkpoint
-	// is given, and that we need to resume if no root checkpoint is given.
-	if t.cfg.RootTrie != nil {
-		t.log.Info().Msg("root trie found, bootstrapping index")
-		s.status = StatusBootstrap
-		return nil
-	}
-
-	t.log.Info().Msg("no root trie found, resuming indexing")
-
-	s.status = StatusResume
-	return nil
-}
-
 // BootstrapState bootstraps the state by loading the checkpoint if there is one
 // and initializing the elements subsequently used by the FSM.
 func (t *Transitions) BootstrapState(s *State) error {
 	if s.status != StatusBootstrap {
 		return fmt.Errorf("invalid status for bootstrapping state (%s)", s.status)
 	}
-
-	// If we are bootstrapping, we need the root trie to extract the ledger
-	// registers that need to be indexed for the root block.
-	if t.cfg.RootTrie == nil {
-		return fmt.Errorf("no root trie available for bootstrapping index")
-	}
-	tree := t.cfg.RootTrie
 
 	// We always need at least one step in our forest, which is used as the
 	// stopping point when indexing the payloads since the last finalized
@@ -123,7 +97,12 @@ func (t *Transitions) BootstrapState(s *State) error {
 	}
 	s.height = height
 
-	// Here, we store all the paths so we can index the payloads, if wanted.
+	// When bootstrapping, the loader injected into the mapper loads the root
+	// checkpoint.
+	tree, err := t.load.Trie()
+	if err != nil {
+		return fmt.Errorf("could not load root trie: %w", err)
+	}
 	paths := allPaths(tree)
 	s.forest.Save(tree, paths, first)
 
@@ -144,62 +123,42 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 		return fmt.Errorf("invalid status for resuming indexing (%s)", s.status)
 	}
 
-	// We need to know where to start and where to stop streaming previous paths
-	// and payloads into the execution trie.
-	first, err := t.read.First()
-	if err != nil {
-		return fmt.Errorf("could not get first height: %w", err)
-	}
+	// We need to know what the last indexed height was at the point we stopped
+	// indexing.
 	last, err := t.read.Last()
 	if err != nil {
 		return fmt.Errorf("could not get last height: %w", err)
 	}
 
-	// Then, we step through all of the heights, get the respective paths and
-	// payloads from the index database and replay them into the trie.
-	tree := trie.NewEmptyMTrie()
-	for height := first; height <= last; height++ {
-		paths, payloads, err := t.read.Updates(height)
-		if err != nil {
-			return fmt.Errorf("could not get updates (height: %d): %w", height, err)
-		}
-		for i, path := range paths {
-			payload := payloads[i]
-			tree, err = trie.NewTrieWithUpdatedRegisters(tree, []ledger.Path{path}, []ledger.Payload{*payload})
-			if err != nil {
-				return fmt.Errorf("could not update trie (height: %d, path: %x)", height, path)
-			}
-		}
+	// When resuming, the loader injected into the mapper rebuilds the trie from
+	// the paths and payloads stored in the index database.
+	tree, err := t.load.Trie()
+	if err != nil {
+		return fmt.Errorf("could not restore index trie: %w", err)
 	}
 
-	// At this point, we have streamed all of the previous updates back into the
-	// state trie, including all of the root checkpoint paths and payloads,
-	// which we also indexed. We can do a sanity check to see if the commit
-	// matches.
+	// After loading the trie, we should do a sanity check on its hash against
+	// the commit we indexed for it.
+	hash := flow.StateCommitment(tree.RootHash())
 	commit, err := t.read.Commit(last)
 	if err != nil {
 		return fmt.Errorf("could not get last commit: %w", err)
 	}
-	hash := flow.StateCommitment(tree.RootHash())
 	if hash != commit {
-		return fmt.Errorf("trie hash does not match last commit (hash: %x, commit: %x)", hash, commit)
+		return fmt.Errorf("restored trie hash does not match last commit (hash: %x, commit: %x)", hash, commit)
 	}
 
-	// With the trie in the correct state for the last height, we can store the
-	// trie in our forest with the correct paths. The state commitment here
-	// should not matter, as the loop should break when reaching it and we don't
-	// need to stop back further.
-	paths, _, err := t.read.Updates(last)
-	if err != nil {
-		return fmt.Errorf("could not get last paths: %w", err)
-	}
-	s.forest.Save(tree, paths, flow.DummyStateCommitment)
-	s.last = flow.DummyStateCommitment // irrelevant
+	// At this point, we can store the restored trie in our forest, as the trie
+	// for the last finalized block. We do not need to care about the parent
+	// state commitment, as it should not be used.
+	paths := allPaths(tree)
+	s.last = flow.DummyStateCommitment
 	s.next = commit
+	s.forest.Save(tree, paths, flow.DummyStateCommitment)
 
-	// The next height should be one higher than the last one indexed. The chain
-	// indexing code will then automatically forward the next and last fields
-	// appropriately.
+	// Lastly, we just need to point to the next height. The chain indexing will
+	// then proceed with the first non-indexed block and forward the state
+	// commitments accordingly.
 	s.height = last + 1
 
 	// At this point, we should be able to start indexing the chain data for

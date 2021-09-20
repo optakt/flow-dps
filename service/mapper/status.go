@@ -20,8 +20,7 @@ type Status uint8
 // The following is an enumeration of all possible statuses the
 // state machine can have.
 const (
-	StatusInitialize Status = iota + 1
-	StatusBootstrap
+	StatusBootstrap Status = iota + 1
 	StatusResume
 	StatusIndex
 	StatusUpdate
@@ -33,8 +32,6 @@ const (
 // String implements the Stringer interface.
 func (s Status) String() string {
 	switch s {
-	case StatusInitialize:
-		return "initialize"
 	case StatusBootstrap:
 		return "bootstrap"
 	case StatusResume:

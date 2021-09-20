@@ -31,12 +31,13 @@ import (
 
 func TestNewTransitions(t *testing.T) {
 	t.Run("nominal case, without options", func(t *testing.T) {
+		load := mocks.BaselineLoader(t)
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		read := mocks.BaselineReader(t)
 		write := mocks.BaselineWriter(t)
 
-		tr := NewTransitions(mocks.NoopLogger, chain, feed, read, write)
+		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, read, write)
 
 		assert.NotNil(t, tr)
 		assert.Equal(t, chain, tr.chain)
@@ -47,13 +48,14 @@ func TestNewTransitions(t *testing.T) {
 	})
 
 	t.Run("nominal case, with option", func(t *testing.T) {
+		load := mocks.BaselineLoader(t)
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		read := mocks.BaselineReader(t)
 		write := mocks.BaselineWriter(t)
 
 		skip := true
-		tr := NewTransitions(mocks.NoopLogger, chain, feed, read, write,
+		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, read, write,
 			WithSkipRegisters(skip),
 		)
 
@@ -69,45 +71,11 @@ func TestNewTransitions(t *testing.T) {
 	})
 }
 
-func TestTransitions_InitializeMapper(t *testing.T) {
-	t.Run("nominal case without root trie", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusInitialize)
-		tr.cfg.RootTrie = nil
-
-		err := tr.InitializeMapper(st)
-		require.NoError(t, err)
-		assert.Equal(t, StatusResume, st.status)
-	})
-
-	t.Run("nominal case with root trie", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusInitialize)
-		tr.cfg.RootTrie = mocks.GenericTrie
-
-		err := tr.InitializeMapper(st)
-		require.NoError(t, err)
-		assert.Equal(t, StatusBootstrap, st.status)
-	})
-
-	t.Run("invalid state", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusMap)
-
-		err := tr.InitializeMapper(st)
-		require.Error(t, err)
-	})
-}
-
 func TestTransitions_BootstrapState(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusBootstrap)
-		tr.cfg.RootTrie = mocks.GenericTrie
 
 		// Copy state in local scope so that we can override its SaveFunc without impacting other
 		// tests running in parallel.
@@ -897,9 +865,9 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 
 	tr := &Transitions{
 		cfg: Config{
-			RootTrie:      nil,
-			SkipRegisters: false,
-			WaitInterval:  0,
+			BootstrapState: false,
+			SkipRegisters:  false,
+			WaitInterval:   0,
 		},
 		log:   mocks.NoopLogger,
 		chain: chain,

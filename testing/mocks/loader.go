@@ -21,14 +21,14 @@ import (
 )
 
 type Loader struct {
-	CheckpointFunc func() (*trie.MTrie, error)
+	TrieFunc func() (*trie.MTrie, error)
 }
 
 func BaselineLoader(t *testing.T) *Loader {
 	t.Helper()
 
 	l := Loader{
-		CheckpointFunc: func() (*trie.MTrie, error) {
+		TrieFunc: func() (*trie.MTrie, error) {
 			return GenericTrie, nil
 		},
 	}
@@ -36,6 +36,6 @@ func BaselineLoader(t *testing.T) *Loader {
 	return &l
 }
 
-func (l *Loader) Checkpoint() (*trie.MTrie, error) {
-	return l.CheckpointFunc()
+func (l *Loader) Trie() (*trie.MTrie, error) {
+	return l.TrieFunc()
 }

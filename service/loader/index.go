@@ -12,22 +12,31 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package loader
 
 import (
-	"testing"
+	"github.com/dgraph-io/badger/v2"
 
-	"github.com/stretchr/testify/assert"
-
-	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 )
 
-func TestEmptyState(t *testing.T) {
-	f := mocks.BaselineForest(t, true)
-	s := EmptyState(f)
+type Index struct {
+	db *badger.DB
+}
 
-	assert.Equal(t, f, s.forest)
-	assert.Equal(t, StatusResume, s.status)
-	assert.Zero(t, s.last)
-	assert.Zero(t, s.next)
+func FromIndex(db *badger.DB) *Index {
+
+	i := Index{
+		db: db,
+	}
+
+	return &i
+}
+
+// Trie restores the execution state trie from the DPS index database.
+func (i *Index) Trie() (*trie.MTrie, error) {
+
+	tree := trie.NewEmptyMTrie()
+
+	return tree, nil
 }
