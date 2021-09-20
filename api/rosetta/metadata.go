@@ -15,8 +15,6 @@
 package rosetta
 
 import (
-	"net/http"
-
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/object"
@@ -64,5 +62,5 @@ func (c *Construction) Metadata(ctx echo.Context) error {
 		},
 	}
 
-	return ctx.JSON(http.StatusOK, res)
+	return ctx.JSON(statusOK, res)
 }

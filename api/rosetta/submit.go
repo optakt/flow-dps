@@ -15,8 +15,6 @@
 package rosetta
 
 import (
-	"net/http"
-
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/request"
@@ -49,5 +47,5 @@ func (c *Construction) Submit(ctx echo.Context) error {
 		TransactionID: rosTxID,
 	}
 
-	return ctx.JSON(http.StatusOK, res)
+	return ctx.JSON(statusOK, res)
 }

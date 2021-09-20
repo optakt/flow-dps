@@ -15,8 +15,6 @@
 package rosetta
 
 import (
-	"net/http"
-
 	"github.com/labstack/echo/v4"
 
 	"github.com/optakt/flow-dps/rosetta/request"
@@ -48,5 +46,5 @@ func (d *Data) Balance(ctx echo.Context) error {
 		Balances: balances,
 	}
 
-	return ctx.JSON(http.StatusOK, res)
+	return ctx.JSON(statusOK, res)
 }

@@ -16,7 +16,6 @@ package rosetta
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/labstack/echo/v4"
 
@@ -302,7 +301,7 @@ func invalidPayload(fail failure.InvalidPayload) Error {
 
 // unpackError returns the HTTP status code and Rosetta Error for malformed JSON requests.
 func unpackError(err error) *echo.HTTPError {
-	return echo.NewHTTPError(http.StatusBadRequest, invalidEncoding(invalidJSON, err))
+	return echo.NewHTTPError(statusBadRequest, invalidEncoding(invalidJSON, err))
 }
 
 // formatError returns the HTTP status code and Rosetta Error for requests
@@ -311,39 +310,39 @@ func formatError(err error) *echo.HTTPError {
 
 	var ibErr failure.InvalidBlockHash
 	if errors.As(err, &ibErr) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(ibErr.Description.Text,
+		return echo.NewHTTPError(statusBadRequest, invalidFormat(ibErr.Description.Text,
 			withDetail("want_length", ibErr.WantLength),
 			withDetail("have_length", ibErr.HaveLength),
 		))
 	}
 	var iaErr failure.InvalidAccountAddress
 	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(iaErr.Description.Text,
+		return echo.NewHTTPError(statusBadRequest, invalidFormat(iaErr.Description.Text,
 			withDetail("want_length", iaErr.WantLength),
 			withDetail("have_length", iaErr.HaveLength),
 		))
 	}
 	var itErr failure.InvalidTransactionHash
 	if errors.As(err, &itErr) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(itErr.Description.Text,
+		return echo.NewHTTPError(statusBadRequest, invalidFormat(itErr.Description.Text,
 			withDetail("want_length", itErr.WantLength),
 			withDetail("have_length", itErr.HaveLength),
 		))
 	}
 	var icErr failure.IncompleteBlock
 	if errors.As(err, &icErr) {
-		return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(icErr.Description.Text))
+		return echo.NewHTTPError(statusBadRequest, invalidFormat(icErr.Description.Text))
 	}
 	var inErr failure.InvalidNetwork
 	if errors.As(err, &inErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(inErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidNetwork(inErr))
 	}
 	var iblErr failure.InvalidBlockchain
 	if errors.As(err, &iblErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlockchain(iblErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidBlockchain(iblErr))
 	}
 
-	return echo.NewHTTPError(http.StatusBadRequest, invalidFormat(err.Error()))
+	return echo.NewHTTPError(statusBadRequest, invalidFormat(err.Error()))
 }
 
 // apiError returns the HTTP status code and Rosetta Error for various errors
@@ -353,90 +352,90 @@ func apiError(description string, err error) *echo.HTTPError {
 	// Common errors, found both in Data and Construction API.
 	var inErr failure.InvalidNetwork
 	if errors.As(err, &inErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidNetwork(inErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidNetwork(inErr))
 	}
 	var ibErr failure.InvalidBlock
 	if errors.As(err, &ibErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidBlock(ibErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidBlock(ibErr))
 	}
 	var ubErr failure.UnknownBlock
 	if errors.As(err, &ubErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownBlock(ubErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, unknownBlock(ubErr))
 	}
 	var iaErr failure.InvalidAccount
 	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAccount(iaErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidAccount(iaErr))
 	}
 	var icErr failure.InvalidCurrency
 	if errors.As(err, &icErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidCurrency(icErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidCurrency(icErr))
 	}
 	var ucErr failure.UnknownCurrency
 	if errors.As(err, &ucErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownCurrency(ucErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, unknownCurrency(ucErr))
 	}
 	var itErr failure.InvalidTransaction
 	if errors.As(err, &itErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidTransaction(itErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidTransaction(itErr))
 	}
 	var utErr failure.UnknownTransaction
 	if errors.As(err, &utErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, unknownTransaction(utErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, unknownTransaction(utErr))
 	}
 
 	// Construction API specific errors.
 	var iautErr failure.InvalidAuthorizers
 	if errors.As(err, &iaErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAuthorizers(iautErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidAuthorizers(iautErr))
 	}
 	var ipyErr failure.InvalidPayer
 	if errors.As(err, &ipyErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidPayer(ipyErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidPayer(ipyErr))
 	}
 	var iprErr failure.InvalidProposer
 	if errors.As(err, &iprErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidProposer(iprErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidProposer(iprErr))
 	}
 	var isgErr failure.InvalidSignature
 	if errors.As(err, &isgErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignature(isgErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidSignature(isgErr))
 	}
 	var isgsErr failure.InvalidSignatures
 	if errors.As(err, &isgsErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidSignatures(isgsErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidSignatures(isgsErr))
 	}
 	var opErr failure.InvalidOperations
 	if errors.As(err, &opErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txInvalidOps))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidFormat(txInvalidOps))
 	}
 	var intErr failure.InvalidIntent
 	if errors.As(err, &intErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidIntent(intErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidIntent(intErr))
 	}
 	var ikErr failure.InvalidKey
 	if errors.As(err, &ipyErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidKey(ikErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidKey(ikErr))
 	}
 	var isErr failure.InvalidScript
 	if errors.As(err, &isErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidScript(isErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidScript(isErr))
 	}
 	var iargErr failure.InvalidArguments
 	if errors.As(err, &iargErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidArguments(iargErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidArguments(iargErr))
 	}
 	var imErr failure.InvalidAmount
 	if errors.As(err, &imErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidAmount(imErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidAmount(imErr))
 	}
 	var irErr failure.InvalidReceiver
 	if errors.As(err, &irErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidReceiver(irErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidReceiver(irErr))
 	}
 	var iplErr failure.InvalidPayload
 	if errors.As(err, &iplErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidPayload(iplErr))
+		return echo.NewHTTPError(statusUnprocessableEntity, invalidPayload(iplErr))
 	}
 
-	return echo.NewHTTPError(http.StatusInternalServerError, internal(description, err))
+	return echo.NewHTTPError(statusInternalServerError, internal(description, err))
 }

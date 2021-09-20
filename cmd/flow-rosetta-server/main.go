@@ -62,20 +62,22 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagDPSAPI       string
-		flagAccessAPI    string
+		flagDPS          string
+		flagAccess       string
 		flagCache        uint64
 		flagLevel        string
 		flagPort         uint16
 		flagTransactions uint
+		flagSmart        bool
 	)
 
-	pflag.StringVarP(&flagDPSAPI, "dps-api", "a", "127.0.0.1:5005", "host address for GRPC API endpoint")
-	pflag.StringVarP(&flagAccessAPI, "access-api", "c", "access.canary.nodes.onflow.org:9000", "host address for Flow network's Access API endpoint")
+	pflag.StringVarP(&flagDPS, "dps-api", "a", "127.0.0.1:5005", "host address for GRPC API endpoint")
+	pflag.StringVarP(&flagAccess, "access-api", "c", "access.canary.nodes.onflow.org:9000", "host address for Flow network's Access API endpoint")
 	pflag.Uint64VarP(&flagCache, "cache", "e", 1_000_000_000, "maximum cache size for register reads in bytes")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.Uint16VarP(&flagPort, "port", "p", 8080, "port to host Rosetta API on")
 	pflag.UintVarP(&flagTransactions, "transaction-limit", "t", 200, "maximum amount of transactions to include in a block response")
+	pflag.BoolVar(&flagSmart, "smart-status-codes", false, "enable smart non-500 HTTP status codes for Rosetta API errors")
 
 	pflag.Parse()
 
@@ -94,9 +96,9 @@ func run() int {
 	codec := zbor.NewCodec()
 
 	// Initialize the DPS API client and wrap it for easy usage.
-	conn, err := grpc.Dial(flagDPSAPI, grpc.WithInsecure())
+	conn, err := grpc.Dial(flagDPS, grpc.WithInsecure())
 	if err != nil {
-		log.Error().Str("api", flagDPSAPI).Err(err).Msg("could not dial API host")
+		log.Error().Str("api", flagDPS).Err(err).Msg("could not dial API host")
 		return failure
 	}
 	defer conn.Close()
@@ -121,16 +123,22 @@ func run() int {
 	}
 
 	// Initialize the SDK client.
-	if flagAccessAPI == "" {
+	if flagAccess == "" {
 		log.Error().Msg("Flow Access API endpoint is missing")
 		return failure
 	}
-	accessAPI, err := client.New(flagAccessAPI, grpc.WithInsecure())
+	accessAPI, err := client.New(flagAccess, grpc.WithInsecure())
 	if err != nil {
-		log.Error().Str("address", flagAccessAPI).Err(err).Msg("could not dial Flow Access API address")
+		log.Error().Str("address", flagAccess).Err(err).Msg("could not dial Flow Access API address")
 		return failure
 	}
 	defer accessAPI.Close()
+
+	// If smart status codes are enabled for the Rosetta API, we change the HTTP
+	// status code constants here.
+	if flagSmart {
+		rosetta.EnableSmartCodes()
+	}
 
 	// Rosetta API initialization.
 	config := configuration.New(params.ChainID)
