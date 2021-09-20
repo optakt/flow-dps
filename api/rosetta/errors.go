@@ -30,19 +30,7 @@ import (
 const (
 	invalidJSON = "request does not contain valid JSON-encoded body"
 
-	BlockchainEmpty = "blockchain identifier has empty blockchain field"
-	NetworkEmpty    = "blockchain identifier has empty network field"
-	BlockNotFull    = "block identifier needs both fields filled for this request"
-	BlockLength     = "block identifier has invalid hash field length"
-	AddressEmpty    = "account identifier has empty address field"
-	AddressLength   = "account identifier has invalid address field length"
-	CurrenciesEmpty = "currency identifier list is empty"
-	SymbolEmpty     = "currency identifier has empty symbol field"
-	TxHashEmpty     = "transaction identifier has empty hash field"
-	TxLength        = "transaction identifier has invalid hash field length"
-	TxInvalidOps    = "transaction operations are invalid"
-	TxBodyEmpty     = "transaction text is empty"
-	SignaturesEmpty = "signature list is empty"
+	txInvalidOps = "transaction operations are invalid"
 
 	blockRetrieval          = "unable to retrieve block"
 	balancesRetrieval       = "unable to retrieve balances"
@@ -419,7 +407,7 @@ func apiError(description string, err error) *echo.HTTPError {
 	}
 	var opErr failure.InvalidOperations
 	if errors.As(err, &opErr) {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(TxInvalidOps))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, invalidFormat(txInvalidOps))
 	}
 	var intErr failure.InvalidIntent
 	if errors.As(err, &intErr) {

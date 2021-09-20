@@ -65,7 +65,7 @@ func (p *TransactionParser) Signers() ([]identifier.Account, error) {
 	// Since we only support sender as the payer/proposer, we never expect any payload signatures.
 	if len(p.tx.PayloadSignatures) > 0 {
 		return nil, failure.InvalidSignature{
-			Description: failure.NewDescription("unexpected payload signature found",
+			Description: failure.NewDescription(payloadSigFound,
 				failure.WithInt("signatures", len(p.tx.PayloadSignatures))),
 		}
 	}
@@ -78,7 +78,7 @@ func (p *TransactionParser) Signers() ([]identifier.Account, error) {
 	// We don't support multiple signatures.
 	if len(p.tx.EnvelopeSignatures) > 1 {
 		return nil, failure.InvalidSignature{
-			Description: failure.NewDescription("unexpected number of envelope signatures",
+			Description: failure.NewDescription(envelopeSigCountInvalid,
 				failure.WithInt("signatures", len(p.tx.EnvelopeSignatures))),
 		}
 	}
@@ -88,7 +88,7 @@ func (p *TransactionParser) Signers() ([]identifier.Account, error) {
 	authorizer := p.tx.Authorizers[0]
 	if signer != authorizer {
 		return nil, failure.InvalidSignature{
-			Description: failure.NewDescription("invalid signer account",
+			Description: failure.NewDescription(signerInvalid,
 				failure.WithString("have_signer", signer.String()),
 				failure.WithString("want_signer", authorizer.String()),
 				failure.WithString("signature", hex.EncodeToString(p.tx.EnvelopeSignatures[0].Signature))),
@@ -127,7 +127,7 @@ func (p *TransactionParser) Signers() ([]identifier.Account, error) {
 	}
 	if !valid {
 		return nil, failure.InvalidSignature{
-			Description: failure.NewDescription("provided signature is not valid",
+			Description: failure.NewDescription(sigInvalid,
 				failure.WithString("signature", hex.EncodeToString(signature))),
 		}
 	}
@@ -158,7 +158,7 @@ func (p *TransactionParser) Operations() ([]object.Operation, error) {
 		return nil, failure.InvalidAuthorizers{
 			Have:        uint(len(p.tx.Authorizers)),
 			Want:        requiredAuthorizers,
-			Description: failure.NewDescription("invalid number of authorizers"),
+			Description: failure.NewDescription(authorizersInvalid),
 		}
 	}
 
@@ -178,14 +178,14 @@ func (p *TransactionParser) Operations() ([]object.Operation, error) {
 		return nil, failure.InvalidPayer{
 			Have:        flow.BytesToAddress(p.tx.Payer[:]),
 			Want:        flow.BytesToAddress(authorizer[:]),
-			Description: failure.NewDescription("invalid transaction payer"),
+			Description: failure.NewDescription(payerInvalid),
 		}
 	}
 	if p.tx.ProposalKey.Address != authorizer {
 		return nil, failure.InvalidProposer{
 			Have:        flow.BytesToAddress(p.tx.ProposalKey.Address[:]),
 			Want:        flow.BytesToAddress(authorizer[:]),
-			Description: failure.NewDescription("invalid transaction proposer"),
+			Description: failure.NewDescription(proposerInvalid),
 		}
 	}
 
@@ -197,7 +197,7 @@ func (p *TransactionParser) Operations() ([]object.Operation, error) {
 	if !bytes.Equal(script, p.tx.Script) {
 		return nil, failure.InvalidScript{
 			Script:      string(p.tx.Script),
-			Description: failure.NewDescription("transaction text is not valid token transfer script"),
+			Description: failure.NewDescription(scriptInvalid),
 		}
 	}
 
@@ -207,7 +207,7 @@ func (p *TransactionParser) Operations() ([]object.Operation, error) {
 		return nil, failure.InvalidArguments{
 			Have:        uint(len(args)),
 			Want:        requiredArguments,
-			Description: failure.NewDescription("invalid number of arguments"),
+			Description: failure.NewDescription(scriptArgsInvalid),
 		}
 	}
 
@@ -216,7 +216,7 @@ func (p *TransactionParser) Operations() ([]object.Operation, error) {
 	if err != nil {
 		return nil, failure.InvalidAmount{
 			Amount: string(args[0]),
-			Description: failure.NewDescription("could not parse transaction amount",
+			Description: failure.NewDescription(amountUnparseable,
 				failure.WithErr(err)),
 		}
 	}
@@ -224,7 +224,7 @@ func (p *TransactionParser) Operations() ([]object.Operation, error) {
 	if !ok {
 		return nil, failure.InvalidAmount{
 			Amount:      string(args[0]),
-			Description: failure.NewDescription("invalid amount"),
+			Description: failure.NewDescription(amountInvalid),
 		}
 	}
 	amount := strconv.FormatUint(amountArg, 10)
@@ -234,7 +234,7 @@ func (p *TransactionParser) Operations() ([]object.Operation, error) {
 	if err != nil {
 		return nil, failure.InvalidReceiver{
 			Receiver: string(args[1]),
-			Description: failure.NewDescription("could not parse transaction receiver address",
+			Description: failure.NewDescription(receiverUnparseable,
 				failure.WithErr(err)),
 		}
 	}

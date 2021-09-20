@@ -29,6 +29,7 @@ type Validator struct {
 
 // New returns a new Validator.
 func New(params dps.Params, index dps.Reader, config Configuration) *Validator {
+
 	v := Validator{
 		params:   params,
 		index:    index,

@@ -30,7 +30,7 @@ func (v *Validator) Currency(currency identifier.Currency) (string, uint, error)
 		return "", 0, failure.UnknownCurrency{
 			Symbol:   currency.Symbol,
 			Decimals: currency.Decimals,
-			Description: failure.NewDescription("currency symbol is unknown",
+			Description: failure.NewDescription(symbolUnknown,
 				failure.WithStrings("available_symbols", v.params.Symbols()...),
 			),
 		}
@@ -42,7 +42,7 @@ func (v *Validator) Currency(currency identifier.Currency) (string, uint, error)
 		return "", 0, failure.InvalidCurrency{
 			Symbol:   currency.Symbol,
 			Decimals: currency.Decimals,
-			Description: failure.NewDescription("currency decimals mismatch with authoritative decimals for symbol",
+			Description: failure.NewDescription(decimalsMismatch,
 				failure.WithInt("want_decimals", dps.FlowDecimals),
 			),
 		}

@@ -19,7 +19,6 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/api/rosetta"
 	"github.com/optakt/flow-dps/rosetta/failure"
 	"github.com/optakt/flow-dps/rosetta/identifier"
 )
@@ -48,7 +47,7 @@ func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier,
 		_, err := flow.HexStringToIdentifier(rosBlockID.Hash)
 		if err != nil {
 			return 0, flow.ZeroID, failure.InvalidBlock{
-				Description: failure.NewDescription("block hash is not a valid hex-encoded string",
+				Description: failure.NewDescription(blockInvalid,
 					failure.WithString("block_hash", rosBlockID.Hash),
 				),
 			}
@@ -63,7 +62,7 @@ func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier,
 		}
 		if *rosBlockID.Index < first {
 			return 0, flow.ZeroID, failure.InvalidBlock{
-				Description: failure.NewDescription("block index is below first indexed height",
+				Description: failure.NewDescription(blockTooLow,
 					failure.WithUint64("block_index", *rosBlockID.Index),
 					failure.WithUint64("first_index", first),
 				),
@@ -77,7 +76,7 @@ func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier,
 			return 0, flow.ZeroID, failure.UnknownBlock{
 				Index: *rosBlockID.Index,
 				Hash:  rosBlockID.Hash,
-				Description: failure.NewDescription("block index is above last indexed height",
+				Description: failure.NewDescription(blockTooHigh,
 					failure.WithUint64("last_index", last),
 				),
 			}
@@ -101,7 +100,7 @@ func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier,
 	}
 	if rosBlockID.Hash != "" && rosBlockID.Hash != header.ID().String() {
 		return 0, flow.ZeroID, failure.InvalidBlock{
-			Description: failure.NewDescription("block hash mismatches with authoritative hash for index",
+			Description: failure.NewDescription(blockMismatch,
 				failure.WithUint64("block_index", *rosBlockID.Index),
 				failure.WithString("block_hash", rosBlockID.Hash),
 				failure.WithString("want_hash", header.ID().String()),
@@ -116,7 +115,7 @@ func (v *Validator) Block(rosBlockID identifier.Block) (uint64, flow.Identifier,
 func (v *Validator) CompleteBlockID(rosBlockID identifier.Block) error {
 	if rosBlockID.Index == nil || rosBlockID.Hash == "" {
 		return failure.IncompleteBlock{
-			Description: failure.NewDescription(rosetta.BlockNotFull),
+			Description: failure.NewDescription(blockNotFull),
 		}
 	}
 	return nil
