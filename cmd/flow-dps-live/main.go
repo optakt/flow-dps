@@ -22,11 +22,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"time"
 
-	googlecloud "cloud.google.com/go/storage"
+	gcloud "cloud.google.com/go/storage"
 	"github.com/dgraph-io/badger/v2"
 	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -40,6 +41,7 @@ import (
 	"github.com/onflow/flow-go/cmd/bootstrap/utils"
 	"github.com/onflow/flow-go/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
+	"github.com/onflow/flow-go/model/bootstrap"
 
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
@@ -97,8 +99,6 @@ func run() int {
 	pflag.BoolVar(&flagSkip, "skip-registers", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
-
-	pflag.CommandLine.MarkHidden("skip-registers")
 
 	// Increase the GOMAXPROCS value in order to use the full IOPS available, see:
 	// https://groups.google.com/g/golang-nuts/c/jPb_h3TvlKE
@@ -165,7 +165,14 @@ func run() int {
 	// finalization of the first few blocks, which breaks our logic. We thus
 	// must ensure that the protocol state is already bootstrapped manually
 	// before starting the consensus follower.
-	err = tracker.Initialize(flagBootstrap, data)
+	path := filepath.Join(flagBootstrap, bootstrap.PathRootProtocolStateSnapshot)
+	file, err := os.Open(path)
+	if err != nil {
+		log.Error().Err(err).Str("path", path).Msg("could not open protocol state snapshot")
+		return failure
+	}
+
+	err = tracker.Initialize(file, data)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize protocol state")
 		return failure
@@ -226,7 +233,7 @@ func run() int {
 
 	// Initialize the execution follower that will read block records from the
 	// Google Cloud Platform bucket.
-	client, err := googlecloud.NewClient(context.Background(),
+	client, err := gcloud.NewClient(context.Background(),
 		option.WithoutAuthentication(),
 	)
 	if err != nil {

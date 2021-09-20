@@ -12,14 +12,30 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package tracker
+package mocks
 
 import (
-	"github.com/onflow/flow-go/model/flow"
+	"testing"
+
+	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 )
 
-type Payload struct {
-	Header     *flow.Header
-	Guarantees []*flow.CollectionGuarantee
-	Seals      []*flow.Seal
+type RecordStreamer struct {
+	NextFunc func() (*uploader.BlockData, error)
+}
+
+func BaselineRecordStreamer(t *testing.T) *RecordStreamer {
+	t.Helper()
+
+	r := RecordStreamer{
+		NextFunc: func() (*uploader.BlockData, error) {
+			return GenericRecord(), nil
+		},
+	}
+
+	return &r
+}
+
+func (r *RecordStreamer) Next() (*uploader.BlockData, error) {
+	return r.NextFunc()
 }

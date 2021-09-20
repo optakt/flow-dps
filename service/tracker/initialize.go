@@ -18,24 +18,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
+	"io"
 
 	"github.com/dgraph-io/badger/v2"
 
-	"github.com/onflow/flow-go/model/bootstrap"
 	"github.com/onflow/flow-go/module/metrics"
 	protocol "github.com/onflow/flow-go/state/protocol/badger"
 	"github.com/onflow/flow-go/state/protocol/inmem"
 	"github.com/onflow/flow-go/storage"
 	cache "github.com/onflow/flow-go/storage/badger"
 	"github.com/onflow/flow-go/storage/badger/operation"
-	"github.com/onflow/flow-go/utils/io"
 )
 
 // Initialize will initialize the Flow protocol state in the given database. The
 // code is inspired by the related unexported code in the Flow Go code base:
 // https://github.com/onflow/flow-go/blob/v0.21.0/cmd/bootstrap/cmd/finalize.go#L452
-func Initialize(dir string, db *badger.DB) error {
+func Initialize(reader io.Reader, db *badger.DB) error {
 
 	// Check if there is already a protocol state, in which case we error.
 	var root uint64
@@ -48,7 +46,7 @@ func Initialize(dir string, db *badger.DB) error {
 	}
 
 	// Load the protocol snapshot from disk.
-	data, err := io.ReadFile(filepath.Join(dir, bootstrap.PathRootProtocolStateSnapshot))
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		return fmt.Errorf("could not read protocol snapshot file: %w", err)
 	}

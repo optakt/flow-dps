@@ -15,6 +15,7 @@
 package feeder
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,8 +37,8 @@ func TestFromWAL(t *testing.T) {
 }
 
 func TestFeeder_Update(t *testing.T) {
-	update := encoding.EncodeTrieUpdate(mocks.GenericTrieUpdate)
-	rootHash := mocks.GenericTrieUpdate.RootHash[:]
+	update := mocks.GenericTrieUpdate(0)
+	data := encoding.EncodeTrieUpdate(update)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -45,14 +46,22 @@ func TestFeeder_Update(t *testing.T) {
 		var recordCalled bool
 		reader := mocks.BaselineWALReader(t)
 		reader.RecordFunc = func() []byte {
+			builder := strings.Builder{}
+
 			// On the first call, return a Delete operation which should get ignored and skipped.
 			if !recordCalled {
 				recordCalled = true
-				return append([]byte{byte(wal.WALDelete)}, rootHash...)
+				_ = builder.WriteByte(byte(wal.WALDelete))
+				_, _ = builder.Write(update.RootHash[:])
+
+				return []byte(builder.String())
 			}
 
 			// On any subsequent call, return the Update operation.
-			return append([]byte{byte(wal.WALUpdate)}, update...)
+			_ = builder.WriteByte(byte(wal.WALUpdate))
+			_, _ = builder.Write(data[:])
+
+			return []byte(builder.String())
 		}
 
 		feeder := &Feeder{
@@ -62,7 +71,7 @@ func TestFeeder_Update(t *testing.T) {
 		got, err := feeder.Update()
 
 		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericTrieUpdate, got)
+		assert.Equal(t, update, got)
 	})
 
 	t.Run("handles reader failure", func(t *testing.T) {
