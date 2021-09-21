@@ -52,6 +52,8 @@ type ReadLibrary interface {
 	RetrieveTransaction(txID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error
 	RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error
 	RetrieveSeal(sealID flow.Identifier, seal *flow.Seal) func(*badger.Txn) error
+
+	IterateLedger(func(path ledger.Path, payload *ledger.Payload) error) func(*badger.Txn) error
 }
 
 // WriteLibrary represents something that produces operations to write on

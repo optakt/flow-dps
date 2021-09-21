@@ -258,3 +258,61 @@ func (l *Library) LookupSealsForHeight(height uint64, sealIDs *[]flow.Identifier
 func (l *Library) RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixResults, txID), result)
 }
+
+// IterateLedger will step through the entire ledger for ledger keys and payloads
+// and call the given callback for each of them.
+func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.Payload) error) func(*badger.Txn) error {
+
+	prefix := encodeKey(prefixPayload)
+	opts := badger.IteratorOptions{
+		PrefetchSize:   10,
+		PrefetchValues: true,
+		Reverse:        true,
+		AllVersions:    false,
+		InternalAccess: false,
+		Prefix:         prefix,
+	}
+	return func(tx *badger.Txn) error {
+
+		it := tx.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.ValidForPrefix(prefix); it.Next() {
+
+			// First, we extract the path from the key.
+			var path ledger.Path
+			item := it.Item()
+			key := item.Key()
+			copy(path[:], key[1:33])
+
+			// Then we extract the payload from the value.
+			var payload ledger.Payload
+			err := item.Value(func(val []byte) error {
+				err := l.codec.Unmarshal(val, &payload)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("could not decode value (path: %x): %w", path, err)
+			}
+
+			// Process the ledger path and payload with the callback.
+			err = callback(path, &payload)
+			if err != nil {
+				return fmt.Errorf("could not process register: %w", err)
+			}
+
+			// We only need to deal with the first value for each register, as
+			// we hit the highest height first, so we get the most recent
+			// payload for the path first. By skipping to the key with height
+			// zero, which we never have, we are thus sure that we go to the
+			// next register right away.
+			next := encodeKey(prefixPayload, path, uint64(0))
+			it.Seek(next)
+		}
+
+		return nil
+	}
+}

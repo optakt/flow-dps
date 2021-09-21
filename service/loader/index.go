@@ -15,19 +15,29 @@
 package loader
 
 import (
-	"github.com/dgraph-io/badger/v2"
+	"fmt"
 
+	"github.com/dgraph-io/badger/v2"
+	"github.com/rs/zerolog"
+
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Index struct {
-	db *badger.DB
+	log zerolog.Logger
+	lib dps.ReadLibrary
+	db  *badger.DB
 }
 
-func FromIndex(db *badger.DB) *Index {
+func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB) *Index {
 
 	i := Index{
-		db: db,
+		log: log.With().Str("component", "index_loader").Logger(),
+		lib: lib,
+		db:  db,
 	}
 
 	return &i
@@ -36,7 +46,25 @@ func FromIndex(db *badger.DB) *Index {
 // Trie restores the execution state trie from the DPS index database.
 func (i *Index) Trie() (*trie.MTrie, error) {
 
+	processed := 0
 	tree := trie.NewEmptyMTrie()
+	callback := func(path ledger.Path, payload *ledger.Payload) error {
+		var err error
+		tree, err = trie.NewTrieWithUpdatedRegisters(tree, []ledger.Path{path}, []ledger.Payload{*payload})
+		if err != nil {
+			return fmt.Errorf("could not update trie: %w", err)
+		}
+		processed++
+		if processed%10000 == 0 {
+			i.log.Debug().Int("processed", processed).Msg("processing registers for trie restoration")
+		}
+		return nil
+	}
+
+	err := i.db.View(i.lib.IterateLedger(callback))
+	if err != nil {
+		return nil, fmt.Errorf("could not iterate ledger: %w", err)
+	}
 
 	return tree, nil
 }
