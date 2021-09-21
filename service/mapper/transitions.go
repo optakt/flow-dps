@@ -166,11 +166,10 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 
 	// At this point, we can store the restored trie in our forest, as the trie
 	// for the last finalized block. We do not need to care about the parent
-	// state commitment, as it should not be used.
-	paths := allPaths(tree)
+	// state commitment or the paths, as they should not be used.
 	s.last = flow.DummyStateCommitment
 	s.next = commit
-	s.forest.Save(tree, paths, flow.DummyStateCommitment)
+	s.forest.Save(tree, nil, flow.DummyStateCommitment)
 
 	// Lastly, we just need to point to the next height. The chain indexing will
 	// then proceed with the first non-indexed block and forward the state
