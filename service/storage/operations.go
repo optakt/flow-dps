@@ -277,7 +277,13 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 		it := tx.NewIterator(opts)
 		defer it.Close()
 
-		for it.Rewind(); it.ValidForPrefix(prefix); it.Next() {
+		it.Rewind()
+		for {
+
+			// If we are done iterating, break out.
+			if !it.ValidForPrefix(prefix) {
+				break
+			}
 
 			// First, we extract the path from the key.
 			var path ledger.Path
@@ -301,7 +307,7 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 			// Process the ledger path and payload with the callback.
 			err = callback(path, &payload)
 			if err != nil {
-				return fmt.Errorf("could not process register: %w", err)
+				return fmt.Errorf("could not process register (path: %x): %w", path, err)
 			}
 
 			// We only need to deal with the first value for each register, as
