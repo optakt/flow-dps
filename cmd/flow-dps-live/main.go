@@ -295,7 +295,7 @@ func run() int {
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
 	var load mapper.Loader
-	load = loader.FromIndex(log, indexDB)
+	load = loader.FromIndex(log, storage, indexDB)
 	bootstrap := (flagCheckpoint != "")
 	if bootstrap {
 		file, err := os.Open(flagCheckpoint)

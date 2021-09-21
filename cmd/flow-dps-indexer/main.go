@@ -147,7 +147,7 @@ func run() int {
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	var load mapper.Loader
-	load = loader.FromIndex(log, indexDB)
+	load = loader.FromIndex(log, storage, indexDB)
 	bootstrap := (flagCheckpoint != "")
 	if bootstrap {
 		file, err := os.Open(flagCheckpoint)

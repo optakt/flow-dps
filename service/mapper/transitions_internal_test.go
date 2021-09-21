@@ -854,6 +854,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 	t.Helper()
 
+	load := mocks.BaselineLoader(t)
 	chain := mocks.BaselineChain(t)
 	feeder := mocks.BaselineFeeder(t)
 	read := mocks.BaselineReader(t)
@@ -870,6 +871,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 			WaitInterval:   0,
 		},
 		log:   mocks.NoopLogger,
+		load:  load,
 		chain: chain,
 		feed:  feeder,
 		read:  read,
