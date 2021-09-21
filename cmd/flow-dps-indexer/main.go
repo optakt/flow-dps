@@ -32,7 +32,6 @@ import (
 	"github.com/optakt/flow-dps/service/feeder"
 	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
-	"github.com/optakt/flow-dps/service/initializer"
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
 	"github.com/optakt/flow-dps/service/storage"
@@ -149,17 +148,17 @@ func run() int {
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	var load mapper.Loader
 	load = loader.FromIndex(indexDB)
-	var opts []mapper.Option
-	if flagCheckpoint != "" {
-		root, err := initializer.RootTrie(flagCheckpoint)
+	bootstrap := (flagCheckpoint != "")
+	if bootstrap {
+		file, err := os.Open(flagCheckpoint)
 		if err != nil {
-			log.Error().Err(err).Msg("could not load root checkpoint")
+			log.Error().Err(err).Msg("could not open checkpoint file")
 			return failure
 		}
-		opts = append(opts, mapper.WithRootTrie(root))
+		load = loader.FromCheckpoint(file)
 	}
-	opts = append(opts, mapper.WithSkipRegisters(flagSkip))
 	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
+		mapper.WithBootstrapState(bootstrap),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()

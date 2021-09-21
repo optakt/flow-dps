@@ -20,7 +20,8 @@ type Status uint8
 // The following is an enumeration of all possible statuses the
 // state machine can have.
 const (
-	StatusBootstrap Status = iota + 1
+	StatusInitialize Status = iota + 1
+	StatusBootstrap
 	StatusResume
 	StatusIndex
 	StatusUpdate

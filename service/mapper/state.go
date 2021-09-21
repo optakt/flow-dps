@@ -37,7 +37,7 @@ func EmptyState(forest Forest) *State {
 
 	s := State{
 		forest:    forest,
-		status:    StatusBootstrap,
+		status:    StatusInitialize,
 		height:    math.MaxUint64,
 		last:      flow.DummyStateCommitment,
 		next:      flow.DummyStateCommitment,
@@ -46,13 +46,4 @@ func EmptyState(forest Forest) *State {
 	}
 
 	return &s
-}
-
-// ResumeState returns a new empty state primed for resuming indexing.
-func ResumeState(forest Forest) *State {
-
-	s := EmptyState(forest)
-	s.status = StatusResume
-
-	return s
 }

@@ -308,11 +308,11 @@ func run() int {
 	transitions := mapper.NewTransitions(log, load, consensus, execution, read, write,
 		mapper.WithBootstrapState(bootstrap),
 		mapper.WithSkipRegisters(flagSkip),
-		mapper.WithStartStatus(status),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
+		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
 		mapper.WithTransition(mapper.StatusResume, transitions.ResumeIndexing),
 		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),

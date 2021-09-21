@@ -67,6 +67,22 @@ func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feede
 	return &t
 }
 
+// InitializeMapper will initialize the mapper by either going into
+// bootstrapping or into resuming, depending on the configuration.
+func (t *Transitions) InitializeMapper(s *State) error {
+	if s.status != StatusInitialize {
+		return fmt.Errorf("invalid status for initializing mapper (%s)", s.status)
+	}
+
+	if t.cfg.BootstrapState {
+		s.status = StatusBootstrap
+		return nil
+	}
+
+	s.status = StatusResume
+	return nil
+}
+
 // BootstrapState bootstraps the state by loading the checkpoint if there is one
 // and initializing the elements subsequently used by the FSM.
 func (t *Transitions) BootstrapState(s *State) error {
