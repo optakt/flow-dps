@@ -68,6 +68,10 @@ func TestGCPStreamer_Next(t *testing.T) {
 	data, err := cbor.Marshal(record)
 	require.NoError(t, err)
 
+	decOptions := cbor.DecOptions{ExtraReturnErrors: cbor.ExtraDecErrorUnknownField}
+	decoder, err := decOptions.DecMode()
+	require.NoError(t, err)
+
 	t.Run("returns available record if buffer not empty", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 			rw.WriteHeader(http.StatusOK)
@@ -82,11 +86,12 @@ func TestGCPStreamer_Next(t *testing.T) {
 		bucket := client.Bucket("test")
 
 		streamer := &GCPStreamer{
-			log:    zerolog.Nop(),
-			bucket: bucket,
-			queue:  dps.NewDeque(),
-			buffer: dps.NewDeque(),
-			limit:  999,
+			log:     zerolog.Nop(),
+			bucket:  bucket,
+			decoder: decoder,
+			queue:   dps.NewDeque(),
+			buffer:  dps.NewDeque(),
+			limit:   999,
 		}
 
 		streamer.buffer.PushFront(record)
@@ -111,11 +116,12 @@ func TestGCPStreamer_Next(t *testing.T) {
 		bucket := client.Bucket("test")
 
 		streamer := &GCPStreamer{
-			log:    zerolog.Nop(),
-			bucket: bucket,
-			queue:  dps.NewDeque(),
-			buffer: dps.NewDeque(),
-			limit:  999,
+			log:     zerolog.Nop(),
+			bucket:  bucket,
+			decoder: decoder,
+			queue:   dps.NewDeque(),
+			buffer:  dps.NewDeque(),
+			limit:   999,
 		}
 
 		_, err = streamer.Next()
@@ -140,11 +146,12 @@ func TestGCPStreamer_Next(t *testing.T) {
 		bucket := client.Bucket("test")
 
 		streamer := &GCPStreamer{
-			log:    zerolog.Nop(),
-			bucket: bucket,
-			queue:  dps.NewDeque(),
-			buffer: dps.NewDeque(),
-			limit:  999,
+			log:     zerolog.Nop(),
+			bucket:  bucket,
+			decoder: decoder,
+			queue:   dps.NewDeque(),
+			buffer:  dps.NewDeque(),
+			limit:   999,
 		}
 
 		streamer.queue.PushFront(record.Block.ID())

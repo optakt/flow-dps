@@ -37,12 +37,13 @@ import (
 // queue, which is consumed by downloading the block data for the identifiers it
 // contains.
 type GCPStreamer struct {
-	log    zerolog.Logger
-	bucket *storage.BucketHandle
-	queue  *dps.SafeDeque // queue of block identifiers for next downloads
-	buffer *dps.SafeDeque // queue of downloaded execution data records
-	limit  uint           // buffer size limit for downloaded records
-	busy   uint32         // used as a guard to avoid concurrent polling
+	log     zerolog.Logger
+	decoder cbor.DecMode
+	bucket  *storage.BucketHandle
+	queue   *dps.SafeDeque // queue of block identifiers for next downloads
+	buffer  *dps.SafeDeque // queue of downloaded execution data records
+	limit   uint           // buffer size limit for downloaded records
+	busy    uint32         // used as a guard to avoid concurrent polling
 }
 
 // NewGCPStreamer returns a new GCP Streamer using the given bucket and options.
@@ -53,13 +54,22 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ..
 		option(&cfg)
 	}
 
+	decOptions := cbor.DecOptions{
+		ExtraReturnErrors: cbor.ExtraDecErrorUnknownField,
+	}
+	decoder, err := decOptions.DecMode()
+	if err != nil {
+		panic(err)
+	}
+
 	g := GCPStreamer{
-		log:    log.With().Str("component", "gcp_streamer").Logger(),
-		bucket: bucket,
-		queue:  dps.NewDeque(),
-		buffer: dps.NewDeque(),
-		limit:  cfg.BufferSize,
-		busy:   0,
+		log:     log.With().Str("component", "gcp_streamer").Logger(),
+		decoder: decoder,
+		bucket:  bucket,
+		queue:   dps.NewDeque(),
+		buffer:  dps.NewDeque(),
+		limit:   cfg.BufferSize,
+		busy:    0,
 	}
 
 	return &g
@@ -189,7 +199,7 @@ func (g *GCPStreamer) pullRecord(name string) (*uploader.BlockData, error) {
 	}
 
 	var record uploader.BlockData
-	err = cbor.Unmarshal(data, &record)
+	err = g.decoder.Unmarshal(data, &record)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode execution record: %w", err)
 	}
