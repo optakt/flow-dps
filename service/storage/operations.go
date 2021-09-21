@@ -265,8 +265,8 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 
 	prefix := encodeKey(prefixPayload)
 	opts := badger.IteratorOptions{
-		PrefetchSize:   10,
-		PrefetchValues: true,
+		PrefetchSize:   100,
+		PrefetchValues: false,
 		Reverse:        true,
 		AllVersions:    false,
 		InternalAccess: false,
