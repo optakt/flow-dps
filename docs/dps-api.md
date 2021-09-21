@@ -111,10 +111,10 @@ Here is an example of how to decode this field in a small Go program:
 
 ```go
    var header flow.Header
-err := cbor.Unmarshal(response.Data, &header)
-if err != nil {
-return err
-}
+   err := cbor.Unmarshal(response.Data, &header)
+   if err != nil {
+        return err
+   }
 ```
 
 ### GetEventsRequest
@@ -138,10 +138,10 @@ Here is an example of how to decode this field in a small Go program:
 
 ```go
    var events []flow.Event
-err := cbor.Unmarshal(response.Data, &events)
-if err != nil {
-return err
-}
+   err := cbor.Unmarshal(response.Data, &events)
+   if err != nil {
+        return err
+   }
 ```
 
 ### GetTransactionRequest
