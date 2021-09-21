@@ -338,8 +338,3 @@ func (i *Index) SealsByHeight(height uint64) ([]flow.Identifier, error) {
 
 	return sealIDs, nil
 }
-
-// Updates is not implemented for the DPS API server.
-func (i *Index) Updates(height uint64) ([]ledger.Path, []*ledger.Payload, error) {
-	return nil, nil, fmt.Errorf("not implented for remote index")
-}
