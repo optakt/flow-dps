@@ -87,22 +87,29 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// Open index database.
+	// Open the needed databases.
 	indexDB, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index database")
 		return failure
 	}
-	defer indexDB.Close()
-
-	// Open protocol state database.
+	defer func() {
+		err := indexDB.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close index database")
+		}
+	}()
 	protocolDB, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
-		log.Error().Err(err).Msg("could not open blockchain database")
+		log.Error().Err(err).Msg("could not open protocol state database")
 		return failure
 	}
-	defer protocolDB.Close()
-
+	defer func() {
+		err := protocolDB.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close protocol state database")
+		}
+	}()
 	// The storage library is initialized with a codec and provides functions to
 	// interact with a Badger database while encoding and compressing
 	// transparently.
