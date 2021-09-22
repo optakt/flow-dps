@@ -87,18 +87,18 @@ func run() int {
 		flagSeedKey     string
 	)
 
-	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
-	pflag.StringVarP(&flagBootstrap, "bootstrap", "b", "bootstrap", "path to directory with public bootstrap information for the spork")
-	pflag.StringVarP(&flagBucket, "bucket", "u", "", "name of the Google Cloud Storage bucket which contains the block data")
-	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "checkpoint file for state trie")
-	pflag.StringVarP(&flagData, "data", "d", "data", "database directory for protocol data")
+	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
+	pflag.StringVarP(&flagBootstrap, "bootstrap", "b", "bootstrap", "path to directory with bootstrap information for spork")
+	pflag.StringVarP(&flagBucket, "bucket", "u", "", "Google Cloude Storage bucket with block data records")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "path to root checkpoint file for execution state trie")
+	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
-	pflag.StringVar(&flagSeedAddress, "seed-address", "", "address of the seed node to follow unstaked consensus")
-	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of the seed node to follow unstaked consensus")
+	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
+	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
 
 	pflag.Parse()
 
@@ -287,9 +287,6 @@ func run() int {
 	// for finalized blocks.
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
-
-	// At this point, we need to decide whether we are bootstrapping from an
-	// existing state, or whether we resume indexing from a previous run.
 
 	// At this point, we can initialize the core business logic of the indexer,
 	// with the mapper's finite state machine and transitions. We also want to

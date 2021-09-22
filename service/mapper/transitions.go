@@ -129,7 +129,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// block has been indexed yet. This is why we "pretend" that we just
 	// forwarded the state to this height, so we go straight to the chain data
 	// indexing.
-	s.status = StatusUpdate
+	s.status = StatusIndex
 	return nil
 }
 
