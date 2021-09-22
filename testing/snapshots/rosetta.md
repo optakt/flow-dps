@@ -13,6 +13,18 @@ This document describes the contents of the index snapshot defined in `testing/s
 
 ### Notable blocks referenced in tests
 
+| Height | ID                                                               | Timestamp                    | State Commitment                                                 |
+| ------ | ---------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------- |
+| 0      | f767f0bd0d2249f86b35207ba1b4dcf6b0654fb60ef18e5dec32a4358f9981bb | 2021-09-20T13:07:01.831215Z  | 996d075b55df55345e6282ad0e82759b5100cbacf3dc0c827cb0019d675b44ba |
+| 1      | 5c03f83b47287d75180b51df95aa1d6086b0f692d05cd93fea60434490dd4021 | 2021-09-20T13:08:08.4743938Z | 996d075b55df55345e6282ad0e82759b5100cbacf3dc0c827cb0019d675b44ba |
+| 41     | f91704ce2fa9a1513500184ebfec884a1728438463c0104f8a17d5c66dd1af79 | 2021-09-20T13:08:46.9155861Z | 87a8061361e84c9fb0a9ddcd7ff34e5fcfe5c1b2fadddf68356b61610fe5a4ae |
+| 47     | 6719ece30981b88759568852f8654ba0665a6b53206c09f6fd3ed4413a7d38f1 | 2021-09-20T13:08:52.7104417Z | 7d60ea77f0367777cf7367b89a5cca189babffebc1ef05e8c308a7a2e82e40b3 |
+| 57     | 40ccd41348dba11fe2dc3b2207d2698257d09164eeac157e5740d63438292138 | 2021-09-20T13:09:02.3800691Z | e986210b6e1b0efe7ab5abc1021e6a5710c1c023b138850d8a5329dbfae6d9ef |
+| 60     | 3c25b539c6e11ec75d657e5a7ea1d510d5eaf87dfc46c86524ed17f61bb31fba | 2021-09-20T13:09:05.2790756Z | e986210b6e1b0efe7ab5abc1021e6a5710c1c023b138850d8a5329dbfae6d9ef |
+| 65     | b2cb8d19ea13817415119950ac2532562af77b17f4204173154882808c9d470c | 2021-09-20T13:09:10.194403Z  | f7eb3061ee86599ef06d9ec12f632927142a26e462b7eb2f47dc949a8a69f977 |
+| 116    | 800bc463583793e024ea012109e76da13390fc1c9d214056771e4cd82ee6c1f5 | 2021-09-20T13:10:00.616305Z  | 7d44cd90b47bb91bf4ae56021130ab3c1abd5d64ede2ca02a1b49e2342d1751d |
+| 164    | 2c6f03bcf3c50745a05a39cf7aa249c7d5ea1a49b68c6a2295abb217662e0c19 | 2021-09-20T13:10:49.3284339Z | 26ce2264ce5c1a93c31e87c9b7ea5cedb0c96862fca64512b2569026d186409c |
+| 173    | e9601d5179250f2e7f2de42bcc4a6688148f5e17ed179f96d75db50f73e6a1f1 | 2021-09-20T13:10:57.9619831Z | 26ce2264ce5c1a93c31e87c9b7ea5cedb0c96862fca64512b2569026d186409c |
 
 ### Full block listing
 
@@ -210,6 +222,104 @@ Events are also ordered by their index within the transaction.
 
 ```yaml
 
+block_id: f91704ce2fa9a1513500184ebfec884a1728438463c0104f8a17d5c66dd1af79
+height: 41
+transactions:
+- ID: 1348bbea50a47434811cda3028a9daa42c308316a7b9d1a01e9eb68e239fb0a1
+  events:
+  - event: 'FlowToken.TokensWithdrawn: account=0xf8d6e0586b0a20c7, amount=0.00100000'
+    ID: a40246ce74d269b9de52b9488fbb78d22bf14c6caea5435290f08d782db1d8c0
+  - event: 'FlowToken.TokensWithdrawn: account=nil, amount=0.00100000'
+    ID: bb7cc4144206d592b4ac9c7cfc521d9cce0a8d1cd801ede970fcfb475e3b6966
+  - event: 'FlowToken.TokensDeposited: account=0xe5a8b7f23e8b548f, amount=0.00000000'
+    ID: b13de37d85f86688e5f499f400fe957ada8d581eaa589083211cf7b6d0159d82
+  - event: A.e5a8b7f23e8b548f.FlowFees.TokensDeposited
+    ID: 63f5309a493f2ce353d27f377ced601a9493824610d39140c1d9960e91488eaa
+  - event: 'FlowToken.TokensDeposited: account=0x10c4fef62310c807, amount=0.00100000'
+    ID: d40184f2893175767dc48f1ff061ee70ad876730cbcf7c8e0ce390f30f44c80b
+  - event: 'AccountCreated: 0x10c4fef62310c807'
+    ID: f2a6992157a629e22807ef581f60bb92b357a7db0570bfa5e29cdcc58448c8d9
+  - event: flow.AccountKeyAdded
+    ID: 0d45a93d71cf09361948348e78bf3b728e76e37b6ee6f1568b62136e3b23d390
+  - event: 'FlowToken.TokensWithdrawn: account=0xf8d6e0586b0a20c7, amount=1000.00000000'
+    ID: ff51b4fd31ade75da9e789eaf125463197550c61e554ce66d2496c4e8baf00a4
+  - event: 'FlowToken.TokensDeposited: account=0x10c4fef62310c807, amount=1000.00000000'
+    ID: d2593fdc7de9afc31027eae2208d6d76dc6f5b7ea7da9a04a08d393518dde30f
+
+
+block_id: 6719ece30981b88759568852f8654ba0665a6b53206c09f6fd3ed4413a7d38f1
+height: 47
+transactions:
+- ID: 2d394a7841c91c5470e6e3cabb1e7ed57609ef41117bba84ced01d37659f2861
+  events:
+  - event: 'FlowToken.TokensWithdrawn: account=0xe2f72218abeec2b9, amount=5.00000000'
+    ID: f3133089448586c5501cfeac19692a8a8884d4aaff764df6bbf42cd2531cb5ee
+  - event: 'FlowToken.TokensDeposited: account=0x6909bc5ba14c266, amount=5.00000000'
+    ID: 4476bc2a23a970ac8e7cd7b93f7106d37b0d1547b1b6289b8f2799c3578d1581            
+
+
+block_id: 40ccd41348dba11fe2dc3b2207d2698257d09164eeac157e5740d63438292138
+height: 57
+transactions:
+- ID: 9d8fb8f7d55ee3904fe5dc846236bafeac50fc64eb528d5e0eb1f693bdfd47d4
+  events:
+  - event: 'FlowToken.TokensWithdrawn: account=0xf8d6e0586b0a20c7, amount=0.00100000'
+    ID: 9580147b724622d5b10201fdb35dbb42c10f2b4ffe1475a642321fecf9411dec
+  - event: 'FlowToken.TokensWithdrawn: account=nil, amount=0.00100000'
+    ID: 663d3964a1d1337fffffdf775fa6ede13d19d91f812528497a9bf6debfdade47
+  - event: 'FlowToken.TokensDeposited: account=0xe5a8b7f23e8b548f, amount=0.00000000'
+    ID: dca3912750357576834aae5577eb465e1e30b0e0ce9a9c429a27c3ef15bdd241
+  - event: A.e5a8b7f23e8b548f.FlowFees.TokensDeposited
+    ID: d83258f9dd6cdf5f66303d955b53cb01a1494e835d8839e73dc59926edd2ce2d
+  - event: 'FlowToken.TokensDeposited: account=0xf4a3472b32eac8d8, amount=0.00100000'
+    ID: 8cbcda54ed71974d12b0b4f4abe53f6ed12adf0c7e6cfada40482849969880c0
+  - event: 'AccountCreated: 0xf4a3472b32eac8d8'
+    ID: 36415b4e66571dd1e911d804a0741902a3ff455a16c203309e3cc598b2e68982
+  - event: flow.AccountKeyAdded
+    ID: a616bf60ca12f31acd3b0b0075f8431473e5fbf2e0010ea689342dc304b6a8f0
+  - event: 'FlowToken.TokensWithdrawn: account=0xf8d6e0586b0a20c7, amount=1000.00000000'
+    ID: ada4cf515427ee57672c617e44e424cb9a6f1fa33930d19fd545ccd0386dcf42
+  - event: 'FlowToken.TokensDeposited: account=0xf4a3472b32eac8d8, amount=1000.00000000'
+    ID: afb0deac28c30ed44da3b8791c253bcec752a74c3dd2b4e109395e4823421b92
+- ID: 9cb22148c60e23001dc1d22a8d16fa74bb6363674e2b1a8f6f1c02b34a9a5e11
+  events:
+  - event: 'FlowToken.TokensWithdrawn: account=0x6909bc5ba14c266, amount=5.00000000'
+    ID: 5f40805ef54973cc7a0b9752e980d6bfc26aa0062a44860af4de8cf64c57d67b
+  - event: 'FlowToken.TokensDeposited: account=0x10c4fef62310c807, amount=5.00000000'
+    ID: ae608ced2636b00cbd9c7cebbbcf36b7d4e76c16493581e97309640d98f398ca
+
+
+block_id: b2cb8d19ea13817415119950ac2532562af77b17f4204173154882808c9d470c
+height: 65
+transactions:
+- ID: c059880060a66e84b23fbb8f2cd1fb24df64c9baad6e150ed8622e6eeb52031e
+  events:
+  - event: 'FlowToken.TokensWithdrawn: account=0x10c4fef62310c807, amount=5.00000000'
+    ID: a39595c70a8c70e32931eb8bc5dfce7319ce3d598b42e30e63a084fb753d4408
+  - event: 'FlowToken.TokensDeposited: account=0xe2f72218abeec2b9, amount=5.00000000'
+    ID: 357884ae3430574436af1a6e59badef1e9c795b56b6b2d6ad62ec02d25d2f36c
+
+
+block_id: 800bc463583793e024ea012109e76da13390fc1c9d214056771e4cd82ee6c1f5
+height: 116
+transactions:
+- ID: af42bf5ee6b1f95b6d39ece0c734099078d9160737a6f1e9002fc8799f6537f5
+  events:
+  - event: 'FlowToken.TokensWithdrawn: account=0xe2f72218abeec2b9, amount=5.00000000'
+    ID: 9325a65f7bb07df0d49843f00560e635a183846092c1696210718dac9476de52
+  - event: 'FlowToken.TokensDeposited: account=0x10c4fef62310c807, amount=5.00000000'
+    ID: 4d445583fe408f0cb97871fbf8807a002cfcc2d928b03aeb35e4173587e8b5b3
+
+
+block_id: 2c6f03bcf3c50745a05a39cf7aa249c7d5ea1a49b68c6a2295abb217662e0c19
+height: 164
+transactions:
+- ID: d7b8696b9a73550c228168d1fc5b771d35356d10eb7bba98edd1408d36a2f92b
+  events:
+  - event: 'FlowToken.TokensWithdrawn: account=0x1beecc6fef95b62e, amount=5.00000000'
+    ID: ec484c03476999950f6a03207af4fd69e4876992ef50b372d8852c26a295f6a2
+  - event: 'FlowToken.TokensDeposited: account=0x10c4fef62310c807, amount=5.00000000'
+    ID: 92ca9654e619a21edac0574e4650dde8cc86ea0d53e34c16f274ea86ad61d308
 
 ```
 
@@ -857,3 +967,8 @@ transactions:
 
 ### Notable balances referenced in tests
 
+| Account ID       | Block Height | Balance      |
+|------------------|--------------|--------------|
+| 10c4fef62310c807 | 41           | 100000100000 |
+| 10c4fef62310c807 | 116          | 102000100000 |
+| 10c4fef62310c807 | 173          | 104000100000 |
