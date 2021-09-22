@@ -90,7 +90,7 @@ func run() int {
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
 	pflag.StringVarP(&flagBootstrap, "bootstrap", "b", "bootstrap", "path to directory with bootstrap information for spork")
 	pflag.StringVarP(&flagBucket, "bucket", "u", "", "Google Cloude Storage bucket with block data records")
-	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "path to root checkpoint file for execution state trie")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to root checkpoint file for execution state trie")
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")

@@ -63,7 +63,7 @@ func run() int {
 		flagSkip       bool
 	)
 
-	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "root.checkpoint", "path to root checkpoint file for execution state trie")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to root checkpoint file for execution state trie")
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
 	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")

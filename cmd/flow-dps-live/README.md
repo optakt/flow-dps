@@ -13,7 +13,7 @@ Usage of flow-dps-live:
   -a, --address string        bind address for serving DPS API (default "127.0.0.1:5005")
   -b, --bootstrap string      path to directory with bootstrap information for spork (default "bootstrap")
   -u, --bucket string         Google Cloude Storage bucket with block data records
-  -c, --checkpoint string     path to root checkpoint file for execution state trie (default "root.checkpoint")
+  -c, --checkpoint string     path to root checkpoint file for execution state trie
   -d, --data string           path to database directory for protocol data (default "data")
   -f, --force                 force indexing to bootstrap from root checkpoint and overwrite existing index
   -i, --index string          path to database directory for state index (default "index")

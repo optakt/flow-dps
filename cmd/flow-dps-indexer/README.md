@@ -10,7 +10,7 @@ The index is generated in the form of a Badger database that allows random acces
 
 ```sh
 Usage of flow-dps-indexer:
-  -c, --checkpoint string   path to root checkpoint file for execution state trie (default "root.checkpoint")
+  -c, --checkpoint string   path to root checkpoint file for execution state trie
   -d, --data string         path to database directory for protocol data (default "data")
   -f, --force               force indexing to bootstrap from root checkpoint and overwrite existing index
   -i, --index string        path to database directory for state index (default "index")
