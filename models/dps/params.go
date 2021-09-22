@@ -107,7 +107,8 @@ func init() {
 		ChainID:       FlowLocalnet,
 		FungibleToken: flow.HexToAddress("ee82856bf20e2aa6"),
 		FlowFees:      flow.HexToAddress("e5a8b7f23e8b548f"),
-		// FIXME: figure out rest of these addresses
+		// TODO: Update the rest of the core contracts addresses
+		// => https://github.com/optakt/flow-dps/issues/461
 		StakingTable:     flow.HexToAddress("9eca2b38b18b5dfe"),
 		LockedTokens:     flow.HexToAddress("95e019a17d0e23d7"),
 		StakingProxy:     flow.HexToAddress("7aad92e5a0715d21"),
