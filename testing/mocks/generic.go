@@ -38,8 +38,6 @@ import (
 	"github.com/onflow/flow-go/module/mempool/entity"
 
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 // Offsets used to ensure different flow identifiers that do not overlap.
@@ -112,10 +110,6 @@ var (
 
 	GenericTrie, _ = trie.NewMTrie(GenericRootNode)
 
-	GenericCurrency = identifier.Currency{
-		Symbol:   dps.FlowSymbol,
-		Decimals: dps.FlowDecimals,
-	}
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),
 		Balance: 84,
@@ -128,13 +122,6 @@ var (
 			},
 		},
 	}
-
-	GenericRosBlockID = identifier.Block{
-		Index: &GenericHeight,
-		Hash:  GenericHeader.ID().String(),
-	}
-
-	GenericParams = dps.Params{ChainID: dps.FlowTestnet}
 )
 
 func GenericBlockIDs(number int) []flow.Identifier {
@@ -337,10 +324,6 @@ func GenericAddress(index int) flow.Address {
 	return GenericAddresses(index + 1)[index]
 }
 
-func GenericAccountID(index int) identifier.Account {
-	return identifier.Account{Address: GenericAddress(index).String()}
-}
-
 func GenericCadenceEvents(number int) []cadence.Event {
 	// Ensure consistent deterministic results.
 	random := rand.New(rand.NewSource(6))
@@ -397,44 +380,6 @@ func GenericEvents(number int, types ...flow.EventType) []flow.Event {
 
 func GenericEvent(index int) flow.Event {
 	return GenericEvents(index + 1)[index]
-}
-
-func GenericTransactionQualifier(index int) identifier.Transaction {
-	txID := GenericTransaction(index).ID()
-	return identifier.Transaction{Hash: txID.String()}
-}
-
-func GenericOperations(number int) []object.Operation {
-	var operations []object.Operation
-	for i := 0; i < number; i++ {
-		// We want only two accounts to simulate transactions between them.
-		account := GenericAccountID(i % 2)
-
-		// Simulate that every second operation is the withdrawal.
-		value := GenericAmount(i / 2).String()
-		if i%2 == 1 {
-			value = "-" + value
-		}
-
-		operation := object.Operation{
-			ID:        identifier.Operation{Index: uint(i)},
-			Type:      dps.OperationTransfer,
-			Status:    dps.StatusCompleted,
-			AccountID: account,
-			Amount: object.Amount{
-				Value:    value,
-				Currency: GenericCurrency,
-			},
-		}
-
-		operations = append(operations, operation)
-	}
-
-	return operations
-}
-
-func GenericOperation(index int) object.Operation {
-	return GenericOperations(index + 1)[index]
 }
 
 func GenericCollections(number int) []*flow.LightCollection {

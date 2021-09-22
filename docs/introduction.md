@@ -45,7 +45,6 @@ The Flow Data Provisioning Service (DPS) is a web service that maintains and pro
 The reason for this need is that the in-memory execution state is pruned after 300 chunks, which makes it impossible to access the state history.
 Also, script execution is currently proxied from the [access nodes](#access-nodes) to [execution nodes](#execution-nodes), which is not scalable.
 The DPS makes access to the execution state _available_ (at any block height) and _scalable_ (so it does not infer load on the network nodes).
-Doing so also makes it possible to provide an API which exposes the Flow chain history and implements the widely used [Rosetta API specification](https://www.rosetta-api.org/), which allows many 3rd party developers to integrate the Flow blockchain into their applications and tools.
 
 Flow is often [upgraded with breaking changes](#sporks) that require a network restart. The new network with the updated version is started from a snapshot of the previous execution state.
 The final version of the previous execution state remains available through a legacy access node that connects to a legacy [execution node](#execution-nodes), but once again this is limited to the last 300 chunks.
@@ -438,7 +437,6 @@ It is however safe to run the indexer and any command that uses the database in 
 
 * [DPS Architecture](./architecture.md)
 * APIs
-    * [Rosetta API](./rosetta-api.md)
     * [Access API](./access-api.md)
     * [DPS API](./dps-api.md)
 
