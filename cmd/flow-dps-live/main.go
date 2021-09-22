@@ -373,9 +373,6 @@ func run() int {
 		err = gsvr.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Warn().Err(err).Msg("Flow DPS Server failed")
-			close(failed)
-		} else {
-			close(done)
 		}
 		log.Info().Msg("Flow DPS Live Server stopped")
 	}()
