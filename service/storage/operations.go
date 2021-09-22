@@ -259,7 +259,7 @@ func (l *Library) RetrieveResult(txID flow.Identifier, result *flow.TransactionR
 	return l.retrieve(encodeKey(prefixResults, txID), result)
 }
 
-// IterateLedger will step through the entire ledger for ledger keys and payloads
+// IterateLedger steps through the entire ledger for ledger keys and payloads
 // and call the given callback for each of them.
 func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.Payload) error) func(*badger.Txn) error {
 
@@ -272,6 +272,7 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 		InternalAccess: false,
 		Prefix:         prefix,
 	}
+
 	return func(tx *badger.Txn) error {
 
 		it := tx.NewIterator(opts)

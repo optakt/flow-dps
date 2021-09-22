@@ -54,5 +54,4 @@ func (c *Checkpoint) Trie() (*trie.MTrie, error) {
 	}
 
 	return trees[0], nil
-
 }

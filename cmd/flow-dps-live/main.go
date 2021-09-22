@@ -163,6 +163,7 @@ func run() int {
 	}
 	if err == nil && flagCheckpoint != "" && !flagForce {
 		log.Error().Msg("index already exists, please force bootstrapping (-f, --force) to overwrite with given checkpoint")
+		return failure
 	}
 	write := index.NewWriter(indexDB, storage)
 	defer func() {
@@ -282,7 +283,7 @@ func run() int {
 
 	// We can now register the consensus tracker and the cloud streamer as
 	// finalization listeners with the consensus follower. The consensus tracker
-	// will use the call back to make additional data available to the mapper,
+	// will use the callback to make additional data available to the mapper,
 	// while the cloud streamer will use the callback to download execution data
 	// for finalized blocks.
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
@@ -300,6 +301,7 @@ func run() int {
 			log.Error().Err(err).Msg("could not open checkpoint file")
 			return failure
 		}
+		defer file.Close()
 		load = loader.FromCheckpoint(file)
 	}
 	transitions := mapper.NewTransitions(log, load, consensus, execution, read, write,
@@ -380,7 +382,7 @@ func run() int {
 
 	// Here, we are waiting for a signal, or for one of the components to fail
 	// or finish. In both cases, we proceed to shut down everything, while also
-	// entering a go-routine that allows us to force shut down by sending
+	// entering a goroutine that allows us to force shut down by sending
 	// another signal.
 	select {
 	case <-sig:

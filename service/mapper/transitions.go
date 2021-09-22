@@ -67,8 +67,8 @@ func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feede
 	return &t
 }
 
-// InitializeMapper will initialize the mapper by either going into
-// bootstrapping or into resuming, depending on the configuration.
+// InitializeMapper initializes the mapper by either going into bootstrapping or
+// into resuming, depending on the configuration.
 func (t *Transitions) InitializeMapper(s *State) error {
 	if s.status != StatusInitialize {
 		return fmt.Errorf("invalid status for initializing mapper (%s)", s.status)

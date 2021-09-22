@@ -122,6 +122,7 @@ func run() int {
 	}
 	if err == nil && flagCheckpoint != "" && !flagForce {
 		log.Error().Msg("index already exists, please force bootstrapping (-f, --force) to overwrite with given checkpoint")
+		return failure
 	}
 
 	// The chain is responsible for reading blockchain data from the protocol state.
@@ -155,6 +156,7 @@ func run() int {
 			log.Error().Err(err).Msg("could not open checkpoint file")
 			return failure
 		}
+		defer file.Close()
 		load = loader.FromCheckpoint(file)
 	}
 	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,

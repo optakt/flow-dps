@@ -27,7 +27,7 @@ import (
 	cache "github.com/onflow/flow-go/storage/badger"
 )
 
-// ProtocolState will initialize the Flow protocol state in the given database. The
+// ProtocolState initializes the Flow protocol state in the given database. The
 // code is inspired by the related unexported code in the Flow Go code base:
 // https://github.com/onflow/flow-go/blob/v0.21.0/cmd/bootstrap/cmd/finalize.go#L452
 func ProtocolState(file io.Reader, db *badger.DB) error {

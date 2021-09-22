@@ -262,7 +262,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer failure to write commit", func(t *testing.T) {
+	t.Run("handles writer failure to index commit", func(t *testing.T) {
 		t.Parallel()
 
 		write := mocks.BaselineWriter(t)
@@ -294,7 +294,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer failure to write header", func(t *testing.T) {
+	t.Run("handles writer failure to index header", func(t *testing.T) {
 		t.Parallel()
 
 		write := mocks.BaselineWriter(t)
@@ -342,7 +342,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer failure to write transactions", func(t *testing.T) {
+	t.Run("handles writer failure to index transactions", func(t *testing.T) {
 		t.Parallel()
 
 		write := mocks.BaselineWriter(t)
@@ -374,7 +374,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer failure to write collections", func(t *testing.T) {
+	t.Run("handles writer failure to index collections", func(t *testing.T) {
 		t.Parallel()
 
 		write := mocks.BaselineWriter(t)
@@ -406,7 +406,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer failure to write guarantees", func(t *testing.T) {
+	t.Run("handles writer failure to index guarantees", func(t *testing.T) {
 		t.Parallel()
 
 		write := mocks.BaselineWriter(t)
@@ -438,7 +438,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer failure to write events", func(t *testing.T) {
+	t.Run("handles writer failure to index events", func(t *testing.T) {
 		t.Parallel()
 
 		write := mocks.BaselineWriter(t)
@@ -470,7 +470,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer failure to write seals", func(t *testing.T) {
+	t.Run("handles writer failure to index seals", func(t *testing.T) {
 		t.Parallel()
 
 		write := mocks.BaselineWriter(t)
@@ -631,7 +631,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		}
 	})
 
-	t.Run("writeing payloads disabled", func(t *testing.T) {
+	t.Run("indexing payloads disabled", func(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusCollect)
@@ -677,7 +677,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 			mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
 			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
 			mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
-			mocks.GenericLedgerPath(3): mocks.GenericLedgerPayload(3),
+			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(3),
 			mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
 			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
 		}
@@ -687,8 +687,8 @@ func TestTransitions_MapRegisters(t *testing.T) {
 			assert.Equal(t, mocks.GenericHeight, height)
 
 			// Expect the 5 entries from the map.
-			assert.Len(t, paths, 6)
-			assert.Len(t, value, 6)
+			assert.Len(t, paths, 5)
+			assert.Len(t, value, 5)
 			return nil
 		}
 
@@ -736,7 +736,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer failure", func(t *testing.T) {
+	t.Run("handles writer failure", func(t *testing.T) {
 		t.Parallel()
 
 		testRegisters := map[ledger.Path]*ledger.Payload{
@@ -818,7 +818,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer error on first", func(t *testing.T) {
+	t.Run("handles writer error on first", func(t *testing.T) {
 		t.Parallel()
 
 		write := mocks.BaselineWriter(t)
@@ -834,7 +834,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writeer error on last", func(t *testing.T) {
+	t.Run("handles writer error on last", func(t *testing.T) {
 		t.Parallel()
 
 		write := mocks.BaselineWriter(t)

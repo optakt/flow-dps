@@ -26,12 +26,17 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// Index implements an execution state trie loader on top of a DPS index,
+// able to restore an execution state trie from the index database.
 type Index struct {
 	log zerolog.Logger
 	lib dps.ReadLibrary
 	db  *badger.DB
 }
 
+// FromIndex creates a new index loader, which can restore the execution state
+// from the given index database, using the given library for decoding ledger
+// paths and payloads.
 func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB) *Index {
 
 	i := Index{
@@ -43,7 +48,8 @@ func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB) *Index {
 	return &i
 }
 
-// Trie restores the execution state trie from the DPS index database.
+// Trie restores the execution state trie from the DPS index database, as it was
+// when indexing was stopped.
 func (i *Index) Trie() (*trie.MTrie, error) {
 
 	processed := 0
