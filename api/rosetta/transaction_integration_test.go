@@ -39,28 +39,25 @@ import (
 )
 
 func TestAPI_Transaction(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
 	var (
-		firstHeader      = knownHeader(44)
-		multipleTxHeader = knownHeader(165)
-		lastHeader       = knownHeader(181)
+		firstHeader      = knownHeader(47)
+		multipleTxHeader = knownHeader(57)
+		lastHeader       = knownHeader(164)
 
 		// two transactions in a single block
 		midBlockTxs = []string{
-			"23c486cfd54bca7138b519203322327bf46e43a780a237d1c5bb0a82f0a06c1d",
-			"3d6922d6c6fd161a76cec23b11067f22cac6409a49b28b905989db64f5cb05a5",
+			"9d8fb8f7d55ee3904fe5dc846236bafeac50fc64eb528d5e0eb1f693bdfd47d4",
+			"9cb22148c60e23001dc1d22a8d16fa74bb6363674e2b1a8f6f1c02b34a9a5e11",
 		}
 	)
 
 	const (
-		firstTx = "d5c18baf6c8d11f0693e71dbb951c4856d4f25a456f4d5285a75fd73af39161c"
-		lastTx  = "780bafaf4721ca4270986ea51e659951a8912c2eb99fb1bfedeb753b023cd4d9"
+		firstTx = "2d394a7841c91c5470e6e3cabb1e7ed57609ef41117bba84ced01d37659f2861"
+		lastTx  = "d7b8696b9a73550c228168d1fc5b771d35356d10eb7bba98edd1408d36a2f92b"
 	)
 
 	tests := []struct {
@@ -72,23 +69,18 @@ func TestAPI_Transaction(t *testing.T) {
 		{
 			name:       "some cherry picked transaction",
 			request:    requestTransaction(firstHeader, firstTx),
-			validateTx: validateTransfer(t, firstTx, "754aed9de6197641", "631e88ae7f1d7c20", 1),
-		},
-		{
-			name:       "first in a block with multiple",
-			request:    requestTransaction(multipleTxHeader, midBlockTxs[0]),
-			validateTx: validateTransfer(t, midBlockTxs[0], "8c5303eaa26202d6", "72157877737ce077", 100_00000000),
+			validateTx: validateTransfer(t, firstTx, "e2f72218abeec2b9", "06909bc5ba14c266", 5_00000000),
 		},
 		{
 			// The test does not have blocks with more than two transactions, so this is the same as 'get the last transaction from a block'.
 			name:       "second in a block with multiple",
 			request:    requestTransaction(multipleTxHeader, midBlockTxs[1]),
-			validateTx: validateTransfer(t, midBlockTxs[1], "89c61aa64423504c", "82ec283f88a62e65", 1),
+			validateTx: validateTransfer(t, midBlockTxs[1], "06909bc5ba14c266", "10c4fef62310c807", 5_00000000),
 		},
 		{
 			name:       "last transaction recorded",
 			request:    requestTransaction(lastHeader, lastTx),
-			validateTx: validateTransfer(t, lastTx, "668b91e2995c2eba", "89c61aa64423504c", 1),
+			validateTx: validateTransfer(t, lastTx, "1beecc6fef95b62e", "10c4fef62310c807", 5_00000000),
 		},
 	}
 
@@ -116,25 +108,22 @@ func TestAPI_Transaction(t *testing.T) {
 }
 
 func TestAPI_TransactionHandlesErrors(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	var testHeight uint64 = 106
+	var testHeight uint64 = 105
 
 	const (
-		lastHeight = 425
+		lastHeight = 173
 
-		testBlockHash = "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
-		testTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
+		testBlockHash = "344368ba77ba47fb0a062dc8610c46cb2fe1539dbdedb0ba5fe8b46c629b0628"
+		testTxHash    = "88419614bf6cda15586bb686f33eea15835db13c0f9f997dcce275afb325102a"
 
-		trimmedBlockHash = "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d27"  // block hash a character short
-		trimmedTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c68"  // tx hash a character short
-		invalidTxHash    = "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c68z" // testTxHash with a hex-invalid last character
-		unknownTxHash    = "602dd6b7fad80b0e6869eaafd55625faa16341f09027dc925a8e8cef267e5683" // tx from another block
+		trimmedBlockHash = "344368ba77ba47fb0a062dc8610c46cb2fe1539dbdedb0ba5fe8b46c629b062"  // block hash a character short
+		trimmedTxHash    = "88419614bf6cda15586bb686f33eea15835db13c0f9f997dcce275afb325102"  // tx hash a character short
+		invalidTxHash    = "88419614bf6cda15586bb686f33eea15835db13c0f9f997dcce275afb325102z" // testTxHash with a hex-invalid last character
+		unknownTxHash    = "4262ac5a22fc593917a332fa80872ff88a57ccb211a3636a498b433149da4dee" // tx from another block
 	)
 
 	var (
@@ -165,7 +154,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			request: request.Transaction{
 				NetworkID: identifier.Network{
 					Blockchain: "",
-					Network:    dps.FlowTestnet.String(),
+					Network:    dps.FlowLocalnet.String(),
 				},
 				BlockID:       testBlock,
 				TransactionID: testTx,
@@ -178,7 +167,7 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			request: request.Transaction{
 				NetworkID: identifier.Network{
 					Blockchain: invalidBlockchain,
-					Network:    dps.FlowTestnet.String(),
+					Network:    dps.FlowLocalnet.String(),
 				},
 				BlockID:       testBlock,
 				TransactionID: testTx,
@@ -330,10 +319,10 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 			name: "transaction missing from block",
 			request: request.Transaction{
 				NetworkID: defaultNetwork(),
+				BlockID:   testBlock,
 				TransactionID: identifier.Transaction{
 					Hash: unknownTxHash,
 				},
-				BlockID: testBlock,
 			},
 
 			checkErr: checkRosettaError(http.StatusUnprocessableEntity, configuration.ErrorUnknownTransaction),
@@ -355,9 +344,6 @@ func TestAPI_TransactionHandlesErrors(t *testing.T) {
 }
 
 func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -376,28 +362,28 @@ func TestAPI_TransactionHandlesMalformedRequest(t *testing.T) {
 		{
 			"network_identifier" : {
 				"blockchain": "flow",
-				"network": "flow-testnet"
+				"network": "flow-localnet"
 			},
 			"block_identifier": {
-				"index": 106,
-				"hash": "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
+				"index": 105,
+				"hash": "344368ba77ba47fb0a062dc8610c46cb2fe1539dbdedb0ba5fe8b46c629b0628"
 			},
 			"transaction_identifier": {
-				"hash": "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
+				"hash": "88419614bf6cda15586bb686f33eea15835db13c0f9f997dcce275afb325102a"
 			}`
 
 		validJSON = `
 		{
 			"network_identifier" : {
 				"blockchain": "flow",
-				"network": "flow-testnet"
+				"network": "flow-localnet"
 			},
 			"block_identifier": {
-				"index": 106,
-				"hash": "1f269f0f45cd2e368e82902d96247113b74da86f6205adf1fd8cf2365418d275"
+				"index": 105,
+				"hash": "344368ba77ba47fb0a062dc8610c46cb2fe1539dbdedb0ba5fe8b46c629b0628"
 			},
 			"transaction_identifier": {
-				"hash": "071e5810f1c8c934aec260f7847400af8f77607ed27ecc02668d7bb2c287c683"
+				"hash": "88419614bf6cda15586bb686f33eea15835db13c0f9f997dcce275afb325102a"
 			}
 		}`
 	)

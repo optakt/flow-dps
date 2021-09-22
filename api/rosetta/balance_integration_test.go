@@ -37,20 +37,17 @@ import (
 )
 
 func TestAPI_Balance(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
-	const testAccount = "754aed9de6197641"
+	const testAccount = "10c4fef62310c807"
 
 	var (
 		zeroBlock   = knownHeader(1)   // block before the account appears
-		firstBlock  = knownHeader(13)  // block where the account first appears
-		secondBlock = knownHeader(50)  // a block mid-chain
-		lastBlock   = knownHeader(425) // last indexed block
+		firstBlock  = knownHeader(41)  // block where the account first appears
+		secondBlock = knownHeader(116) // a block mid-chain
+		lastBlock   = knownHeader(173) // last indexed block
 	)
 
 	tests := []struct {
@@ -70,19 +67,19 @@ func TestAPI_Balance(t *testing.T) {
 		{
 			name:          "first occurrence of the account",
 			request:       requestBalance(testAccount, firstBlock),
-			wantBalance:   "10000100000",
+			wantBalance:   "100000100000",
 			validateBlock: validateBlock(t, firstBlock.Height, firstBlock.ID().String()),
 		},
 		{
 			name:          "mid chain",
 			request:       requestBalance(testAccount, secondBlock),
-			wantBalance:   "10000099999",
+			wantBalance:   "102000100000",
 			validateBlock: validateBlock(t, secondBlock.Height, secondBlock.ID().String()),
 		},
 		{
 			name:          "last indexed block",
 			request:       requestBalance(testAccount, lastBlock),
-			wantBalance:   "10000100002",
+			wantBalance:   "104000100000",
 			validateBlock: validateBlock(t, lastBlock.Height, lastBlock.ID().String()),
 		},
 		{
@@ -99,7 +96,7 @@ func TestAPI_Balance(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			wantBalance:   "10000099999",
+			wantBalance:   "102000100000",
 			validateBlock: validateBlock(t, secondBlock.Height, secondBlock.ID().String()),
 		},
 		{
@@ -113,7 +110,7 @@ func TestAPI_Balance(t *testing.T) {
 				Currencies: defaultCurrency(),
 			},
 
-			wantBalance:   "10000100002",
+			wantBalance:   "104000100000",
 			validateBlock: validateBlock(t, lastBlock.Height, lastBlock.ID().String()),
 		},
 	}
@@ -149,32 +146,29 @@ func TestAPI_Balance(t *testing.T) {
 }
 
 func TestAPI_BalanceHandlesErrors(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
 
 	// Defined valid balance request fields.
 	var (
-		testAccount        = identifier.Account{Address: "754aed9de6197641"}
-		testHeight  uint64 = 13
-		lastHeight  uint64 = 425
+		testAccount        = identifier.Account{Address: "10c4fef62310c807"}
+		testHeight  uint64 = 41
+		lastHeight  uint64 = 173
 
 		testBlock = identifier.Block{
 			Index: &testHeight,
-			Hash:  "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23",
+			Hash:  "f91704ce2fa9a1513500184ebfec884a1728438463c0104f8a17d5c66dd1af79",
 		}
 	)
 
 	const (
 		invalidAddress = "0000000000000000" // valid 16-digit hex value but not a valid account ID
 
-		trimmedBlockHash = "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb2" // block hash a character short
+		trimmedBlockHash = "f91704ce2fa9a1513500184ebfec884a1728438463c0104f8a17d5c66dd1af7" // block hash a character short
 
-		trimmedAddress    = "754aed9de619764"  // account ID a character short
-		invalidAddressHex = "754aed9de619764z" // invalid hex string
+		trimmedAddress    = "10c4fef62310c80"  // account ID a character short
+		invalidAddressHex = "10c4fef62310c80z" // invalid hex string
 
 		accFirstOccurrence = 13
 	)
@@ -441,9 +435,6 @@ func TestAPI_BalanceHandlesErrors(t *testing.T) {
 
 // TestAPI_BalanceHandlesMalformedRequest tests whether an improper JSON (e.g. wrong field types) results in a '400 Bad Request' error.
 func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
-	// TODO: Repair integration tests
-	//       See https://github.com/optakt/flow-dps/issues/333
-	t.Skip("integration tests disabled until new snapshot is generated")
 
 	db := setupDB(t)
 	api := setupAPI(t, db)
@@ -459,14 +450,14 @@ func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 		unclosedBracket = `{
 			"network_identifier": {
 				"blockchain" : "flow",
-				"network" : "flow-testnet"
+				"network" : "flow-localnet"
 			},
 			"block_identifier" : {
-				"index" : 13,
-				"hash" : "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+				"index" : 41,
+				"hash" : "f91704ce2fa9a1513500184ebfec884a1728438463c0104f8a17d5c66dd1af79"
 			},
 			"account_identifier" : {
-				"address" : "754aed9de6197641"
+				"address" : "10c4fef62310c807"
 			},
 			"currencies" : [
 				{ "symbol" : "FLOW" , "decimals" : 8 }
@@ -475,14 +466,14 @@ func TestAPI_BalanceHandlesMalformedRequest(t *testing.T) {
 		validJSON = `{
 			"network_identifier": {
 				"blockchain" : "flow",
-				"network" : "flow-testnet"
+				"network" : "flow-localnet"
 			},
 			"block_identifier" : {
-				"index" : 13,
-				"hash" : "af528bb047d6cd1400a326bb127d689607a096f5ccd81d8903dfebbac26afb23"
+				"index" : 41,
+				"hash" : "f91704ce2fa9a1513500184ebfec884a1728438463c0104f8a17d5c66dd1af79"
 			},
 			"account_identifier" : {
-				"address" : "754aed9de6197641"
+				"address" : "10c4fef62310c807"
 			},
 			"currencies" : [
 				{ "symbol" : "FLOW" , "decimals" : 8 }
