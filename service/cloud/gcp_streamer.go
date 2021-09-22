@@ -72,6 +72,11 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ..
 		busy:    0,
 	}
 
+	for _, blockID := range cfg.CatchupBlocks {
+		g.queue.PushFront(blockID)
+		g.log.Debug().Hex("block", blockID[:]).Msg("execution record queued for catch-up")
+	}
+
 	return &g
 }
 

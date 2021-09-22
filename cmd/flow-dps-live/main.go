@@ -246,6 +246,15 @@ func run() int {
 		return failure
 	}
 
+	// If we are resuming, and the consensus follower has already finalized some
+	// blocks that were not yet indexed, we need to download them again in the
+	// cloud streamer. Here, we figure out which blocks these are.
+	blockIDs, err := initializer.CatchupBlocks(protocolDB, read)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize catch-up blocks")
+		return failure
+	}
+
 	// On the other side, we also need access to the execution data. The cloud
 	// streamer is responsible for retrieving block execution records from a
 	// Google Cloud Storage bucket. This component plays the role of what would
@@ -264,7 +273,9 @@ func run() int {
 		}
 	}()
 	bucket := client.Bucket(flagBucket)
-	stream := cloud.NewGCPStreamer(log, bucket)
+	stream := cloud.NewGCPStreamer(log, bucket,
+		cloud.WithCatchupBlocks(blockIDs),
+	)
 
 	// Next, we can initialize our consensus and execution trackers. They are
 	// responsible for tracking changes to the available data, for the consensus
