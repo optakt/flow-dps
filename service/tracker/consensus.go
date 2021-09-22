@@ -44,17 +44,17 @@ type Consensus struct {
 // holder.
 func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) (*Consensus, error) {
 
-	var root uint64
-	err := db.View(operation.RetrieveRootHeight(&root))
+	var last uint64
+	err := db.View(operation.RetrieveFinalizedHeight(&last))
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve root height: %w", err)
+		return nil, fmt.Errorf("could not retrieve last height: %w", err)
 	}
 
 	c := Consensus{
 		log:  log.With().Str("component", "consensus_tracker").Logger(),
 		db:   db,
 		hold: hold,
-		last: root,
+		last: last,
 	}
 
 	return &c, nil
