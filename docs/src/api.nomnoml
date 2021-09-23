@@ -1,0 +1,31 @@
+#title: api
+#direction: right
+#background: #262626
+#stroke: #fff
+#fill: #888
+
+[<flow> Flow Network]
+[<external> Flow DPS Live]
+[<external> Flow DPS Indexer]
+[<indexer> Indexer]
+[<dps> DPS API]
+[<access> DPS Access API]
+[<rosetta> Rosetta API]
+
+[<label> SubmitTransaction]
+
+[Flow DPS Indexer]-->[Indexer]
+[Flow DPS Live]-->[Indexer]
+[Flow DPS Live]<--[Flow Network]
+[Indexer]->[DPS API]
+[DPS API]->[DPS Access API]
+[DPS API]->[Rosetta API]
+[SubmitTransaction]-[Rosetta API]
+[Flow Network]<-[SubmitTransaction]
+
+#.flow: fill=#262626 stroke=#00bff3 visual=ellipse dashed title=bold
+#.dps: fill=#262626 stroke=#fbb363 title=bold visual=receiver
+#.rosetta: fill=#262626 stroke=#fbb363 title=bold visual=transceiver
+#.access: fill=#262626 stroke=#fbb363 title=bold visual=transceiver
+#.indexer: fill=#262626 stroke=#fbb363 visual=database title=bold
+#.external: dashed

@@ -1,0 +1,40 @@
+#title: flow_dps_indexer
+#direction: right
+#background: #262626
+#stroke: #fff
+#fill: #888
+
+[Root Checkpoint]
+[<comp> Loader]
+[<cons> Chain]
+[<protocol> Protocol State Database]
+[<wal> Write-Ahead Log]
+[<exec> Feeder]
+[<mapper> Mapper]
+[<indexer> Indexer]
+[<api> DPS API]
+
+[<label> Root Tree]
+[<label> Trie Updates]
+[<label> Block Data]
+
+[Root Checkpoint]->[Loader]
+[Loader]-[Root Tree]
+[Root Tree]->[Mapper]
+[Protocol State Database]->[Chain]
+[Chain]-[Block Data]
+[Block Data]->[Mapper]
+[Write-Ahead Log]->[Feeder]
+[Feeder]-[Trie Updates]
+[Trie Updates]->[Mapper]
+[Mapper]->[Indexer]
+[Indexer]<-[DPS API]
+
+#.comp: title=bold visual=roundrect
+#.wal: fill=#262626 stroke=#55de51 title=bold
+#.exec: fill=#262626 stroke=#55de51 title=bold visual=roundrect
+#.protocol: fill=#262626 stroke=#e53e65 title=bold
+#.cons: fill=#262626 stroke=#e53e65 title=bold visual=roundrect
+#.mapper: fill=#262626 stroke=#fbb363 title=bold visual=roundrect
+#.indexer: fill=#262626 stroke=#fbb363 visual=database title=bold
+#.api: fill=#262626 stroke=#fbb363 title=bold visual=transceiver

@@ -1,0 +1,38 @@
+#title: flow_dps_live
+#direction: right
+#background: #262626
+#stroke: #fff
+#fill: #eee
+
+[<flow> Flow Network]
+[<gcp> Google Cloud Bucket]
+[<indexer> Indexer]
+[<exec> GCP Streamer]
+[<exec> Execution Tracker]
+[<cons> Consensus Follower]
+[<cons> Consensus Tracker]
+[<mapper> Mapper]
+[<api> DPS API]
+
+[<label> Records]
+[<label> OnFinalizedBlock]
+
+[Flow Network]->[Google Cloud Bucket]
+[Google Cloud Bucket]-[Records]
+[Records]->[GCP Streamer]
+[GCP Streamer]->[Execution Tracker]
+[Execution Tracker]->[Consensus Tracker]
+[Flow Network]-[OnFinalizedBlock]
+[OnFinalizedBlock]->[Consensus Follower]
+[Consensus Follower]->[Consensus Tracker]
+[Consensus Tracker]->[Mapper]
+[Mapper]->[Indexer]
+[Indexer]->[DPS API]
+
+#.flow: fill=#262626 stroke=#00bff3 visual=ellipse dashed title=bold
+#.gcp: fill=#262626 stroke=#55de51 visual=database title=bold
+#.exec: fill=#262626 stroke=#55de51 title=bold visual=roundrect
+#.cons: fill=#262626 stroke=#e53e65 title=bold visual=roundrect
+#.mapper: fill=#262626 stroke=#fbb363 title=bold visual=roundrect
+#.indexer: fill=#262626 stroke=#fbb363 visual=database title=bold
+#.api: fill=#262626 stroke=#fbb363 title=bold visual=transceiver
