@@ -24,8 +24,8 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/models/dps"
 
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -713,7 +713,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 		err := tr.MapRegisters(st)
 
 		assert.NoError(t, err)
-		assert.Equal(t, StatusForward, st.status)
+		assert.Equal(t, StatusCheck, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
@@ -758,6 +758,211 @@ func TestTransitions_MapRegisters(t *testing.T) {
 		err := tr.MapRegisters(st)
 
 		assert.Error(t, err)
+	})
+}
+
+func TestTransitions_CheckSeals(t *testing.T) {
+	seals := mocks.GenericSeals(4)
+	sealIDs := mocks.GenericSealIDs(4)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		i := 0
+		reader := mocks.BaselineReader(t)
+		reader.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return sealIDs, nil
+		}
+		reader.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
+			return seals[i], nil
+		}
+		reader.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return mocks.GenericHeight, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			commit := seals[i].FinalState
+			i++
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(t, StatusCheck)
+
+		err := tr.CheckSeals(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusForward, st.status)
+	})
+
+	t.Run("handles wrong status for transition", func(t *testing.T) {
+		t.Parallel()
+
+		i := 0
+		reader := mocks.BaselineReader(t)
+		reader.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return sealIDs, nil
+		}
+		reader.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
+			return seals[i], nil
+		}
+		reader.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return mocks.GenericHeight, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			commit := seals[i].FinalState
+			i++
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(t, StatusMap)
+		tr.read = reader
+
+		err := tr.CheckSeals(st)
+
+		assert.Error(t, err)
+		assert.Equal(t, StatusMap, st.status)
+	})
+
+	t.Run("handles state mismatch", func(t *testing.T) {
+		t.Parallel()
+
+		i := 0
+		reader := mocks.BaselineReader(t)
+		reader.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return sealIDs, nil
+		}
+		reader.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
+			return seals[i], nil
+		}
+		reader.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return mocks.GenericHeight, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			i++
+			// Return a generic commit that does not match the commit within the seals.
+			return mocks.GenericCommit(0), nil
+		}
+
+		tr, st := baselineFSM(t, StatusCheck)
+		tr.read = reader
+
+		err := tr.CheckSeals(st)
+
+		assert.Error(t, err)
+		assert.Equal(t, StatusCheck, st.status)
+	})
+
+	t.Run("handles reader failure on SealsByHeight", func(t *testing.T) {
+		t.Parallel()
+
+		i := 0
+		reader := mocks.BaselineReader(t)
+		reader.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return nil, mocks.GenericError
+		}
+		reader.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
+			return seals[i], nil
+		}
+		reader.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return mocks.GenericHeight, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			commit := seals[i].FinalState
+			i++
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(t, StatusCheck)
+		tr.read = reader
+
+		err := tr.CheckSeals(st)
+
+		assert.Error(t, err)
+		assert.Equal(t, StatusCheck, st.status)
+	})
+
+	t.Run("handles reader failure on Seal", func(t *testing.T) {
+		t.Parallel()
+
+		i := 0
+		reader := mocks.BaselineReader(t)
+		reader.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return sealIDs, nil
+		}
+		reader.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
+			return nil, mocks.GenericError
+		}
+		reader.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return mocks.GenericHeight, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			commit := seals[i].FinalState
+			i++
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(t, StatusCheck)
+		tr.read = reader
+
+		err := tr.CheckSeals(st)
+
+		assert.Error(t, err)
+		assert.Equal(t, StatusCheck, st.status)
+	})
+
+	t.Run("handles reader failure on HeightForBlock", func(t *testing.T) {
+		t.Parallel()
+
+		i := 0
+		reader := mocks.BaselineReader(t)
+		reader.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return sealIDs, nil
+		}
+		reader.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
+			return seals[i], nil
+		}
+		reader.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return 0, mocks.GenericError
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			commit := seals[i].FinalState
+			i++
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(t, StatusCheck)
+		tr.read = reader
+
+		err := tr.CheckSeals(st)
+
+		assert.Error(t, err)
+		assert.Equal(t, StatusCheck, st.status)
+	})
+
+	t.Run("handles reader failure on Commit", func(t *testing.T) {
+		t.Parallel()
+
+		i := 0
+		reader := mocks.BaselineReader(t)
+		reader.SealsByHeightFunc = func(uint64) ([]flow.Identifier, error) {
+			return sealIDs, nil
+		}
+		reader.SealFunc = func(sealID flow.Identifier) (*flow.Seal, error) {
+			return seals[i], nil
+		}
+		reader.HeightForBlockFunc = func(flow.Identifier) (uint64, error) {
+			return mocks.GenericHeight, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			return flow.DummyStateCommitment, mocks.GenericError
+		}
+
+		tr, st := baselineFSM(t, StatusCheck)
+		tr.read = reader
+
+		err := tr.CheckSeals(st)
+
+		assert.Error(t, err)
+		assert.Equal(t, StatusCheck, st.status)
 	})
 }
 

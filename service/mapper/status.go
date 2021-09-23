@@ -27,6 +27,7 @@ const (
 	StatusUpdate
 	StatusCollect
 	StatusMap
+	StatusCheck
 	StatusForward
 )
 
@@ -45,6 +46,8 @@ func (s Status) String() string {
 		return "collect"
 	case StatusMap:
 		return "map"
+	case StatusCheck:
+		return "check"
 	case StatusForward:
 		return "forward"
 	default:
