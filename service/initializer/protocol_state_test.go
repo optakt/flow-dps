@@ -47,7 +47,6 @@ func TestProtocolState(t *testing.T) {
 		file := bytes.NewBuffer(data)
 
 		err := initializer.ProtocolState(file, db)
-
 		assert.NoError(t, err)
 	})
 
@@ -57,28 +56,17 @@ func TestProtocolState(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
+		root := header.Height + 1
+		require.NoError(t, db.Update(operation.InsertRootHeight(root)))
 
 		file := bytes.NewBuffer(data)
 
 		err := initializer.ProtocolState(file, db)
+		assert.NoError(t, err)
 
-		assert.Error(t, err)
-	})
-
-	t.Run("handles already populated protocol state DB", func(t *testing.T) {
-		t.Parallel()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
-
-		file := bytes.NewBuffer(data)
-
-		err := initializer.ProtocolState(file, db)
-
-		assert.Error(t, err)
+		var have uint64
+		assert.NoError(t, db.View(operation.RetrieveRootHeight(&have)))
+		assert.Equal(t, root, have)
 	})
 
 	t.Run("handles invalid snapshot encoding", func(t *testing.T) {
@@ -87,29 +75,22 @@ func TestProtocolState(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
-
 		err := initializer.ProtocolState(bytes.NewBuffer(mocks.GenericBytes), db)
-
 		assert.Error(t, err)
 	})
 
 	t.Run("handles empty snapshot", func(t *testing.T) {
 		t.Parallel()
 
-		// Empty snapshot should result in a failed bootstrap.
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
 		data, err := json.Marshal(&inmem.EncodableSnapshot{})
 		require.NoError(t, err)
 
 		reader := bytes.NewBuffer(data)
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
-
 		err = initializer.ProtocolState(reader, db)
-
 		assert.Error(t, err)
 	})
 }
