@@ -50,7 +50,7 @@ const (
 `
 
 const (
-	middlewareVersion = "1.3.3"
+	middlewareVersion = "1.3.4"
 	rosettaVersion    = "1.4.10"
 
 	pathToGoMod            = "../go.mod"
