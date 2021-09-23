@@ -240,6 +240,7 @@ func run() int {
 		log.Error().Err(err).Str("path", path).Msg("could not open protocol state snapshot")
 		return failure
 	}
+	defer file.Close()
 	err = initializer.ProtocolState(file, protocolDB)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize protocol state")

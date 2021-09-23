@@ -14,7 +14,9 @@
 
 package cloud
 
-import "github.com/onflow/flow-go/model/flow"
+import (
+	"github.com/onflow/flow-go/model/flow"
+)
 
 // DefaultConfig is the default configuration for the Google Cloud Streamer.
 var DefaultConfig = Config{

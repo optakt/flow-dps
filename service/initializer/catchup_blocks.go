@@ -29,13 +29,13 @@ func CatchupBlocks(db *badger.DB, read dps.Reader) ([]flow.Identifier, error) {
 
 	indexed, err := read.Last()
 	if err != nil {
-		return nil, fmt.Errorf("could not get indexed: %w", err)
+		return nil, fmt.Errorf("could not get last indexed: %w", err)
 	}
 
 	var finalized uint64
 	err = db.View(operation.RetrieveFinalizedHeight(&finalized))
 	if err != nil {
-		return nil, fmt.Errorf("could not get finalized: %w", err)
+		return nil, fmt.Errorf("could not get last finalized: %w", err)
 	}
 
 	var blockIDs []flow.Identifier
