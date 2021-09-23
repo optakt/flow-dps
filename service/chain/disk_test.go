@@ -112,6 +112,19 @@ func TestDisk_Header(t *testing.T) {
 
 		assert.Error(t, err)
 	})
+
+	t.Run("returns ErrFinished when no more entries are in the DB", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		c := chain.FromDisk(db)
+
+		_, err := c.Header(mocks.GenericHeight)
+
+		assert.Equal(t, dps.ErrFinished, err)
+	})
 }
 
 func TestDisk_Commit(t *testing.T) {
@@ -150,19 +163,6 @@ func TestDisk_Commit(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.NotEqual(t, dps.ErrFinished, err)
-	})
-
-	t.Run("returns ErrFinished when no more entries are in the DB", func(t *testing.T) {
-		t.Parallel()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		c := chain.FromDisk(db)
-
-		_, err := c.Commit(mocks.GenericHeight)
-
-		assert.Equal(t, dps.ErrFinished, err)
 	})
 }
 
