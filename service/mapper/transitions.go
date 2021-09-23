@@ -430,7 +430,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	return nil
 }
 
-// IndexRegisters maps the collected registers to the current block.
+// MapRegisters maps the collected registers to the current block.
 func (t *Transitions) MapRegisters(s *State) error {
 	if s.status != StatusMap {
 		return fmt.Errorf("invalid status for indexing registers (%s)", s.status)
