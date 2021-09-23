@@ -17,9 +17,9 @@ require (
 	github.com/klauspost/compress v1.13.5
 	github.com/labstack/echo/v4 v4.5.0
 	github.com/onflow/cadence v0.19.1
-	github.com/onflow/flow-go v0.21.2
+	github.com/onflow/flow-go v0.21.4
 	github.com/onflow/flow-go-sdk v0.21.0
-	github.com/onflow/flow-go/crypto v0.21.2
+	github.com/onflow/flow-go/crypto v0.21.4
 	github.com/onflow/flow/protobuf/go/flow v0.2.2
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rs/zerolog v1.25.0
