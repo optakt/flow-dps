@@ -47,11 +47,13 @@ func FromDisk(db *badger.DB) *Disk {
 
 // Root retrieves the root height of the chain.
 func (d *Disk) Root() (uint64, error) {
+
 	var height uint64
 	err := d.db.View(operation.RetrieveRootHeight(&height))
 	if err != nil {
 		return 0, fmt.Errorf("could not look up root height: %w", err)
 	}
+
 	return height, nil
 }
 
@@ -88,6 +90,7 @@ func (d *Disk) Header(height uint64) (*flow.Header, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve header: %w", err)
 	}
+
 	return &header, nil
 }
 
