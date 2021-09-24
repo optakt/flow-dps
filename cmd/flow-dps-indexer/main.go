@@ -180,6 +180,7 @@ func run() int {
 		mapper.WithTransition(mapper.StatusUpdate, transitions.UpdateTree),
 		mapper.WithTransition(mapper.StatusCollect, transitions.CollectRegisters),
 		mapper.WithTransition(mapper.StatusMap, transitions.MapRegisters),
+		mapper.WithTransition(mapper.StatusCheck, transitions.CheckSeals),
 		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
 	)
 
