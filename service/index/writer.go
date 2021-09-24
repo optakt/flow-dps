@@ -58,12 +58,13 @@ func NewWriter(db *badger.DB, lib dps.WriteLibrary, options ...func(*Config)) *W
 	}
 
 	w := Writer{
-		db:    db,
-		lib:   lib,
-		cfg:   cfg,
-		tx:    db.NewTransaction(true),
-		sema:  semaphore.NewWeighted(int64(cfg.ConcurrentTransactions)),
-		err:   make(chan error, cfg.ConcurrentTransactions),
+		db:   db,
+		lib:  lib,
+		cfg:  cfg,
+		tx:   db.NewTransaction(true),
+		sema: semaphore.NewWeighted(int64(cfg.ConcurrentTransactions)),
+		err:  make(chan error, cfg.ConcurrentTransactions),
+
 		tick:  make(chan struct{}, 1),
 		done:  make(chan struct{}),
 		mutex: &sync.Mutex{},
