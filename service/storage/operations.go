@@ -275,29 +275,22 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 		InternalAccess: false,
 		Prefix:         prefix,
 	}
-	highest := ledger.Path{
+	path := ledger.Path{
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 	}
-	start := encodeKey(prefixPayload, highest, uint64(math.MaxUint64))
+	next := encodeKey(prefixPayload, path, uint64(math.MaxUint64))
 
 	return func(tx *badger.Txn) error {
 
 		it := tx.NewIterator(opts)
 		defer it.Close()
 
-		it.Seek(start)
-		for {
-
-			// If we are done iterating, break out.
-			if !it.ValidForPrefix(prefix) {
-				break
-			}
+		for it.Seek(next); it.ValidForPrefix(prefix); it.Seek(next) {
 
 			// First, we extract the path from the key.
-			var path ledger.Path
 			item := it.Item()
 			key := item.Key()
 			copy(path[:], key[1:33])
@@ -326,8 +319,7 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 			// payload for the path first. By skipping to the key with height
 			// zero, which we never have, we are thus sure that we go to the
 			// next register right away.
-			next := encodeKey(prefixPayload, path, uint64(0))
-			it.Seek(next)
+			next = encodeKey(prefixPayload, path, uint64(0))
 		}
 
 		return nil
