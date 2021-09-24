@@ -321,6 +321,10 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 			// use the maximum possible height. If the decrement doesn't work,
 			// we have reached the zero path and we can break; otherwise, we
 			// would just wrap around to the maximum key again.
+			var zero ledger.Path
+			if path == zero {
+				break
+			}
 			for i := len(path) - 1; i >= 0; i-- {
 				path[i] = path[i] - 1
 				if path[i] != 0xff {
