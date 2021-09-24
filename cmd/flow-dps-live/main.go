@@ -83,8 +83,9 @@ func run() int {
 		flagLevel      string
 		flagSkip       bool
 
-		flagSeedAddress string
-		flagSeedKey     string
+		flagFlushInterval time.Duration
+		flagSeedAddress   string
+		flagSeedKey       string
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
@@ -97,6 +98,7 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
+	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "idle time before flushing badger transactions")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
 
@@ -165,7 +167,9 @@ func run() int {
 		log.Error().Msg("index already exists, please force bootstrapping (-f, --force) to overwrite with given checkpoint")
 		return failure
 	}
-	write := index.NewWriter(indexDB, storage)
+	write := index.NewWriter(indexDB, storage,
+		index.WithFlushInterval(flagFlushInterval),
+	)
 	defer func() {
 		err := write.Close()
 		if err != nil {
