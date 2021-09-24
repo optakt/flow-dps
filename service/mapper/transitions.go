@@ -442,7 +442,7 @@ func (t *Transitions) MapRegisters(s *State) error {
 	// which is about forwarding the height to the next finalized block.
 	if len(s.registers) == 0 {
 		log.Info().Msg("indexed all registers for finalized block")
-		s.status = StatusCheck
+		s.status = StatusForward
 		return nil
 	}
 
@@ -470,48 +470,6 @@ func (t *Transitions) MapRegisters(s *State) error {
 
 	log.Debug().Int("batch", len(paths)).Int("remaining", len(s.registers)).Msg("indexed register batch for finalized block")
 
-	return nil
-}
-
-// CheckSeals runs a sanity check by comparing the seals of the latest block with the previously indexed state
-// commitments.
-func (t *Transitions) CheckSeals(s *State) error {
-	if s.status != StatusCheck {
-		return fmt.Errorf("invalid status for sanity checking seals (%s)", s.status)
-	}
-
-	// List all indexed seals at the current height.
-	sealIDs, err := t.read.SealsByHeight(s.height)
-	if err != nil {
-		return fmt.Errorf("could not list seals: %w", err)
-	}
-
-	// Compare each seal's final state with the previously indexed state commitments.
-	// If a mismatch occurs, it means that the wrong execution result was computed
-	// by the blockchain at some point, and that we should crash.
-	for _, sealID := range sealIDs {
-		seal, err := t.read.Seal(sealID)
-		if err != nil {
-			return fmt.Errorf("could not retrieve seal: %w", err)
-		}
-
-		height, err := t.read.HeightForBlock(seal.BlockID)
-		if err != nil {
-			return fmt.Errorf("could not retrieve height for block: %w", err)
-		}
-
-		commit, err := t.read.Commit(height)
-		if err != nil {
-			return fmt.Errorf("could not retrieve commit for height: %w", err)
-		}
-
-		if seal.FinalState != commit {
-			return fmt.Errorf("execution state mismatch at height %d", height)
-		}
-	}
-
-	// No mismatch was detected, we can forward to the next height.
-	s.status = StatusForward
 	return nil
 }
 
