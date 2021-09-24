@@ -32,11 +32,12 @@ type State struct {
 	done      chan struct{}
 }
 
-// EmptyState returns a new empty state that uses the given Forest.
+// EmptyState returns a new empty state that uses the given forest.
 func EmptyState(forest Forest) *State {
+
 	s := State{
 		forest:    forest,
-		status:    StatusEmpty,
+		status:    StatusInitialize,
 		height:    math.MaxUint64,
 		last:      flow.DummyStateCommitment,
 		next:      flow.DummyStateCommitment,

@@ -15,6 +15,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"os/signal"
 	"runtime"
@@ -53,40 +54,22 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagCheckpoint        string
-		flagData              string
-		flagForce             bool
-		flagIndex             string
-		flagIndexAll          bool
-		flagIndexCollections  bool
-		flagIndexGuarantees   bool
-		flagIndexCommit       bool
-		flagIndexEvents       bool
-		flagIndexHeader       bool
-		flagIndexPayloads     bool
-		flagIndexResults      bool
-		flagIndexTransactions bool
-		flagIndexSeals        bool
-		flagLevel             string
-		flagTrie              string
+		flagCheckpoint string
+		flagData       string
+		flagForce      bool
+		flagIndex      string
+		flagLevel      string
+		flagTrie       string
+		flagSkip       bool
 	)
 
-	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "checkpoint file for state trie")
-	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol data")
-	pflag.BoolVarP(&flagForce, "force", "f", false, "overwrite existing index database")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
-	pflag.BoolVarP(&flagIndexAll, "index-all", "a", false, "index everything")
-	pflag.BoolVar(&flagIndexCollections, "index-collections", false, "index collections")
-	pflag.BoolVar(&flagIndexGuarantees, "index-guarantees", false, "index collection guarantees")
-	pflag.BoolVar(&flagIndexCommit, "index-commits", false, "index commits")
-	pflag.BoolVar(&flagIndexEvents, "index-events", false, "index events")
-	pflag.BoolVar(&flagIndexHeader, "index-headers", false, "index headers")
-	pflag.BoolVar(&flagIndexPayloads, "index-payloads", false, "index payloads")
-	pflag.BoolVar(&flagIndexResults, "index-results", false, "index transaction results")
-	pflag.BoolVar(&flagIndexTransactions, "index-transactions", false, "index transactions")
-	pflag.BoolVar(&flagIndexSeals, "index-seals", false, "index seals")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to root checkpoint file for execution state trie")
+	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
+	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagTrie, "trie", "t", "", "data directory for state ledger")
+	pflag.StringVarP(&flagTrie, "trie", "t", "", "path to data directory for execution state ledger")
+	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
 
@@ -104,39 +87,29 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// Ensure that at least one index is specified.
-	if !flagIndexAll && !flagIndexCommit && !flagIndexHeader && !flagIndexPayloads && !flagIndexCollections &&
-		!flagIndexGuarantees && !flagIndexTransactions && !flagIndexResults && !flagIndexEvents && !flagIndexSeals {
-		log.Error().Str("level", flagLevel).Msg("no indexing option specified, use -a/--all to build all indexes")
-		pflag.Usage()
-		return failure
-	}
-
-	// Fail if IndexAll is specified along with other index flags, as this would most likely mean that the user does
-	// not understand what they are doing.
-	if flagIndexAll && (flagIndexCommit || flagIndexHeader || flagIndexPayloads || flagIndexGuarantees ||
-		flagIndexCollections || flagIndexTransactions || flagIndexResults || flagIndexEvents || flagIndexSeals) {
-		log.Error().Str("level", flagLevel).Msg("-a/--all is mutually exclusive with specific indexing flags")
-		pflag.Usage()
-		return failure
-	}
-
-	// Open index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex))
+	// Open the needed databases.
+	indexDB, err := badger.Open(dps.DefaultOptions(flagIndex))
 	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index database")
 		return failure
 	}
-	defer db.Close()
-
-	// Open protocol state database.
-	data, err := badger.Open(dps.DefaultOptions(flagData))
+	defer func() {
+		err := indexDB.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close index database")
+		}
+	}()
+	protocolDB, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
-		log.Error().Err(err).Msg("could not open blockchain database")
+		log.Error().Err(err).Msg("could not open protocol state database")
 		return failure
 	}
-	defer data.Close()
-
+	defer func() {
+		err := protocolDB.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close protocol state database")
+		}
+	}()
 	// The storage library is initialized with a codec and provides functions to
 	// interact with a Badger database while encoding and compressing
 	// transparently.
@@ -144,20 +117,23 @@ func run() int {
 	storage := storage.New(codec)
 
 	// Check if index already exists.
-	_, err = index.NewReader(db, storage).First()
-	indexExists := err == nil
-	if indexExists && !flagForce {
-		log.Error().Err(err).Msg("index already exists, manually delete it or use (-f, --force) to overwrite it")
+	read := index.NewReader(indexDB, storage)
+	_, err = read.First()
+	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+		log.Error().Err(err).Msg("could not get first height from index reader")
+		return failure
+	}
+	if errors.Is(err, badger.ErrKeyNotFound) && flagCheckpoint == "" {
+		log.Error().Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
+		return failure
+	}
+	if err == nil && flagCheckpoint != "" && !flagForce {
+		log.Error().Msg("index already exists, please force bootstrapping (-f, --force) to overwrite with given checkpoint")
 		return failure
 	}
 
-	// The loader component is responsible for loading and decoding the checkpoint.
-	load := loader.New(
-		loader.WithCheckpointPath(flagCheckpoint),
-	)
-
 	// The chain is responsible for reading blockchain data from the protocol state.
-	disk := chain.FromDisk(data)
+	disk := chain.FromDisk(protocolDB)
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
 	segments, err := wal.NewSegmentsReader(flagTrie)
@@ -168,7 +144,7 @@ func run() int {
 	feed := feeder.FromWAL(wal.NewReader(segments))
 
 	// Writer is responsible for writing the index data to the index database.
-	index := index.NewWriter(db, storage)
+	index := index.NewWriter(indexDB, storage)
 	defer func() {
 		err := index.Close()
 		if err != nil {
@@ -178,26 +154,33 @@ func run() int {
 	write := dps.Writer(index)
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	transitions := mapper.NewTransitions(log, load, disk, feed, write,
-		mapper.WithIndexCommit(flagIndexAll || flagIndexCommit),
-		mapper.WithIndexHeader(flagIndexAll || flagIndexHeader),
-		mapper.WithIndexCollections(flagIndexAll || flagIndexCollections),
-		mapper.WithIndexGuarantees(flagIndexAll || flagIndexGuarantees),
-		mapper.WithIndexTransactions(flagIndexAll || flagIndexTransactions),
-		mapper.WithIndexResults(flagIndexAll || flagIndexResults),
-		mapper.WithIndexEvents(flagIndexAll || flagIndexEvents),
-		mapper.WithIndexPayloads(flagIndexAll || flagIndexPayloads),
-		mapper.WithIndexSeals(flagIndexAll || flagIndexSeals),
+	var load mapper.Loader
+	load = loader.FromIndex(log, storage, indexDB)
+	bootstrap := (flagCheckpoint != "")
+	if bootstrap {
+		file, err := os.Open(flagCheckpoint)
+		if err != nil {
+			log.Error().Err(err).Msg("could not open checkpoint file")
+			return failure
+		}
+		defer file.Close()
+		load = loader.FromCheckpoint(file)
+	}
+	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
+		mapper.WithBootstrapState(bootstrap),
+		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
 	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
-		mapper.WithTransition(mapper.StatusEmpty, transitions.BootstrapState),
-		mapper.WithTransition(mapper.StatusUpdating, transitions.UpdateTree),
-		mapper.WithTransition(mapper.StatusMatched, transitions.CollectRegisters),
-		mapper.WithTransition(mapper.StatusCollected, transitions.IndexRegisters),
-		mapper.WithTransition(mapper.StatusIndexed, transitions.ForwardHeight),
-		mapper.WithTransition(mapper.StatusForwarded, transitions.IndexChain),
+		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
+		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
+		mapper.WithTransition(mapper.StatusResume, transitions.ResumeIndexing),
+		mapper.WithTransition(mapper.StatusIndex, transitions.IndexChain),
+		mapper.WithTransition(mapper.StatusUpdate, transitions.UpdateTree),
+		mapper.WithTransition(mapper.StatusCollect, transitions.CollectRegisters),
+		mapper.WithTransition(mapper.StatusMap, transitions.MapRegisters),
+		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
 	)
 
 	// This section launches the main executing components in their own

@@ -12,9 +12,9 @@ Access to the execution state is provided through a GRPC API.
 
 ```sh
 Usage of flow-dps-server:
-  -i, --index string   database directory for state index (default "index")
-  -l, --log string     log output level (default "info")
-  -p, --port uint16    port to serve GRPC API on (default 5005)
+  -a, --address string   bind address for serving DPS API (default "127.0.0.1:5005")
+  -i, --index string     path to database directory for state index (default "index")
+  -l, --level string     log output level (default "info")
 ```
 
 ## Example

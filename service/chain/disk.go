@@ -20,12 +20,11 @@ import (
 	"math"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
-
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Disk is a component used to access chain data from a badger database.
@@ -48,11 +47,13 @@ func FromDisk(db *badger.DB) *Disk {
 
 // Root retrieves the root height of the chain.
 func (d *Disk) Root() (uint64, error) {
+
 	var height uint64
 	err := d.db.View(operation.RetrieveRootHeight(&height))
 	if err != nil {
 		return 0, fmt.Errorf("could not look up root height: %w", err)
 	}
+
 	return height, nil
 }
 
@@ -60,9 +61,6 @@ func (d *Disk) Root() (uint64, error) {
 func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 
 	blockID, err := d.block(height)
-	if errors.Is(err, storage.ErrNotFound) {
-		return flow.DummyStateCommitment, dps.ErrFinished
-	}
 	if err != nil {
 		return flow.DummyStateCommitment, fmt.Errorf("could not get block for height: %w", err)
 	}
@@ -80,6 +78,9 @@ func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 func (d *Disk) Header(height uint64) (*flow.Header, error) {
 
 	blockID, err := d.block(height)
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, dps.ErrFinished
+	}
 	if err != nil {
 		return nil, fmt.Errorf("could not get block for height: %w", err)
 	}
@@ -89,6 +90,7 @@ func (d *Disk) Header(height uint64) (*flow.Header, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve header: %w", err)
 	}
+
 	return &header, nil
 }
 

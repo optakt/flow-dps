@@ -40,7 +40,7 @@ func TestNewConsensus(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
+		require.NoError(t, db.Update(operation.InsertFinalizedHeight(header.Height)))
 
 		consensus, err := NewConsensus(log, db, hold)
 

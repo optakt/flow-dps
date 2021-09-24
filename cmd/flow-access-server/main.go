@@ -16,14 +16,12 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
@@ -37,7 +35,6 @@ import (
 	accessApi "github.com/optakt/flow-dps/api/access"
 	dpsApi "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/invoker"
 )
 
@@ -58,18 +55,17 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAPI   string
-		flagCache uint64
-		flagIndex string
-		flagLevel string
-		flagPort  uint16
+		flagAddress string
+		flagDPS     string
+		flagCache   uint64
+		flagLevel   string
 	)
 
-	pflag.StringVarP(&flagAPI, "api", "a", "127.0.0.1:5005", "host URL for GRPC API endpoint")
-	pflag.Uint64VarP(&flagCache, "cache", "e", 1_000_000_000, "maximum cache size for register reads in bytes")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5006", "address to serve Access API on")
+	pflag.StringVarP(&flagDPS, "dps", "d", "127.0.0.1:5005", "host URL for DPS API endpoint")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.Uint16VarP(&flagPort, "port", "p", 5006, "port to serve Access API on")
+
+	pflag.Uint64Var(&flagCache, "cache-size", 1_000_000_000, "maximum cache size for register reads in bytes")
 
 	pflag.Parse()
 
@@ -82,14 +78,6 @@ func run() int {
 		return failure
 	}
 	log = log.Level(level)
-
-	// Initialize the index core state and open database in read-only mode.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
-	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
-		return failure
-	}
-	defer db.Close()
 
 	// Initialize codec.
 	codec := zbor.NewCodec()
@@ -110,9 +98,9 @@ func run() int {
 	)
 
 	// Initialize the API client.
-	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
+	conn, err := grpc.Dial(flagDPS, grpc.WithInsecure())
 	if err != nil {
-		log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
+		log.Error().Str("dps", flagDPS).Err(err).Msg("could not dial API host")
 		return failure
 	}
 	defer conn.Close()
@@ -131,9 +119,9 @@ func run() int {
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the next section.
-	listener, err := net.Listen("tcp", fmt.Sprint(":", flagPort))
+	listener, err := net.Listen("tcp", flagAddress)
 	if err != nil {
-		log.Error().Uint16("port", flagPort).Err(err).Msg("could not listen")
+		log.Error().Str("address", flagAddress).Err(err).Msg("could not listen")
 		return failure
 	}
 	done := make(chan struct{})

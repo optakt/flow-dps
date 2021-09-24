@@ -17,6 +17,7 @@ package storage
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
@@ -185,6 +186,7 @@ func (l *Library) RetrieveEvents(height uint64, types []flow.EventType, events *
 // RetrievePayload retrieves the ledger payloads at the given height that match the given path.
 func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
+
 		key := encodeKey(prefixPayload, path, height)
 		it := tx.NewIterator(badger.IteratorOptions{
 			PrefetchSize:   0,
@@ -204,6 +206,7 @@ func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledg
 		err := it.Item().Value(func(val []byte) error {
 			return l.codec.Unmarshal(val, payload)
 		})
+
 		return err
 	}
 }
@@ -257,4 +260,80 @@ func (l *Library) LookupSealsForHeight(height uint64, sealIDs *[]flow.Identifier
 // RetrieveResult retrieves the result with the given transaction identifier.
 func (l *Library) RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error {
 	return l.retrieve(encodeKey(prefixResults, txID), result)
+}
+
+// IterateLedger steps through the entire ledger for ledger keys and payloads
+// and call the given callback for each of them.
+func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.Payload) error) func(*badger.Txn) error {
+
+	prefix := encodeKey(prefixPayload)
+	opts := badger.IteratorOptions{
+		PrefetchSize:   100,
+		PrefetchValues: false,
+		Reverse:        true,
+		AllVersions:    false,
+		InternalAccess: false,
+		Prefix:         prefix,
+	}
+	highest := ledger.Path{
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	}
+
+	return func(tx *badger.Txn) error {
+
+		it := tx.NewIterator(opts)
+		defer it.Close()
+
+		next := encodeKey(prefixPayload, highest, uint64(math.MaxUint64))
+		for it.Seek(next); it.ValidForPrefix(prefix); it.Seek(next) {
+
+			// First, we extract the path from the key.
+			var path ledger.Path
+			item := it.Item()
+			key := item.Key()
+			copy(path[:], key[1:33])
+
+			// Then we extract the payload from the value.
+			var payload ledger.Payload
+			err := item.Value(func(val []byte) error {
+				err := l.codec.Unmarshal(val, &payload)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("could not decode value (path: %x): %w", path, err)
+			}
+
+			// Process the ledger path and payload with the callback.
+			err = callback(path, &payload)
+			if err != nil {
+				return fmt.Errorf("could not process register (path: %x): %w", path, err)
+			}
+
+			// We need want to go to the first value that is below the current
+			// path. In order to cover all potential cases, including payloads
+			// at height zero, we need to decrement the current path by one and
+			// use the maximum possible height. If the decrement doesn't work,
+			// we have reached the zero path and we can break; otherwise, we
+			// would just wrap around to the maximum key again.
+			var zero ledger.Path
+			if path == zero {
+				break
+			}
+			for i := len(path) - 1; i >= 0; i-- {
+				path[i] = path[i] - 1
+				if path[i] != 0xff {
+					break
+				}
+			}
+			next = encodeKey(prefixPayload, path, uint64(math.MaxUint64))
+		}
+
+		return nil
+	}
 }

@@ -20,5 +20,5 @@ import (
 
 // Loader represents something that loads its checkpoint and builds it into a trie.
 type Loader interface {
-	Checkpoint() (*trie.MTrie, error)
+	Trie() (*trie.MTrie, error)
 }

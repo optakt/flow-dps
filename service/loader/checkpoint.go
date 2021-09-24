@@ -16,46 +16,30 @@ package loader
 
 import (
 	"fmt"
-	"os"
+	"io"
 
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
-// Loader loads the trie from its checkpoint, or an empty trie if it does not
-// have any checkpoint file.
-type Loader struct {
-	path string
+type Checkpoint struct {
+	file io.Reader
 }
 
-// New returns a new Loader with the given options.
-func New(options ...func(*Loader)) *Loader {
-	l := Loader{
-		path: "",
+func FromCheckpoint(file io.Reader) *Checkpoint {
+
+	c := Checkpoint{
+		file: file,
 	}
 
-	for _, option := range options {
-		option(&l)
-	}
-
-	return &l
+	return &c
 }
 
-// Checkpoint loads its checkpoint if one was specified, and otherwise
-// returns an empty trie. It errors when given a checkpoint with more than
-// one single tree.
-func (l *Loader) Checkpoint() (*trie.MTrie, error) {
+// Trie loads the execution state trie from the LedgerWAL root checkpoint.
+func (c *Checkpoint) Trie() (*trie.MTrie, error) {
 
-	if l.path == "" {
-		return trie.NewEmptyMTrie(), nil
-	}
-
-	file, err := os.Open(l.path)
-	if err != nil {
-		return nil, fmt.Errorf("could not open file: %w", err)
-	}
-	checkpoint, err := wal.ReadCheckpoint(file)
+	checkpoint, err := wal.ReadCheckpoint(c.file)
 	if err != nil {
 		return nil, fmt.Errorf("could not read checkpoint: %w", err)
 	}

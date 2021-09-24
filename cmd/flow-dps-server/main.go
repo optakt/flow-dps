@@ -60,8 +60,8 @@ func run() int {
 		flagIndex   string
 	)
 
-	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "address to serve the GRPC DPS API on")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 
 	pflag.Parse()
