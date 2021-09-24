@@ -275,22 +275,23 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 		InternalAccess: false,
 		Prefix:         prefix,
 	}
-	path := ledger.Path{
+	highest := ledger.Path{
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 	}
-	next := encodeKey(prefixPayload, path, uint64(math.MaxUint64))
 
 	return func(tx *badger.Txn) error {
 
 		it := tx.NewIterator(opts)
 		defer it.Close()
 
+		next := encodeKey(prefixPayload, highest, uint64(math.MaxUint64))
 		for it.Seek(next); it.ValidForPrefix(prefix); it.Seek(next) {
 
 			// First, we extract the path from the key.
+			var path ledger.Path
 			item := it.Item()
 			key := item.Key()
 			copy(path[:], key[1:33])
@@ -314,12 +315,21 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 				return fmt.Errorf("could not process register (path: %x): %w", path, err)
 			}
 
-			// We only need to deal with the first value for each register, as
-			// we hit the highest height first, so we get the most recent
-			// payload for the path first. By skipping to the key with height
-			// zero, which we never have, we are thus sure that we go to the
-			// next register right away.
-			next = encodeKey(prefixPayload, path, uint64(0))
+			// We need want to go to the first value that is below the current
+			// path. In order to cover all potential cases, including payloads
+			// at height zero, we need to decrease the path by one and use the
+			// maximum height value.
+			for i := len(path) - 1; i >= 0; i-- {
+				if path[i] > 0x00 {
+					path[i] = path[i] - 0x01
+					break
+				}
+				path[i] = 0xff
+			}
+			if path == highest {
+				break
+			}
+			next = encodeKey(prefixPayload, path, uint64(math.MaxUint64))
 		}
 
 		return nil

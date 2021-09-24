@@ -52,6 +52,9 @@ func Test_Fallback(t *testing.T) {
 			failFn,
 		)(txn)
 
+		// shut up the linter
+		_ = multierror.Error{}
+
 		assert.Error(t, err)
 		merr, ok := err.(*multierror.Error)
 		assert.True(t, ok)
