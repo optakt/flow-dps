@@ -35,16 +35,17 @@ import (
 // an underlying Badger database.
 type Writer struct {
 	sync.RWMutex
-	db    *badger.DB
-	lib   dps.WriteLibrary
-	cfg   Config
-	tx    *badger.Txn
-	sema  *semaphore.Weighted
-	err   chan error
-	tick  chan struct{}
-	done  chan struct{}
-	mutex *sync.Mutex
-	wg    *sync.WaitGroup
+	db   *badger.DB
+	lib  dps.WriteLibrary
+	cfg  Config
+	tx   *badger.Txn
+	sema *semaphore.Weighted
+	err  chan error
+
+	tick  chan struct{}   // signals when an operation is added to the transaction
+	done  chan struct{}   // signals when no more new operations are added
+	mutex *sync.Mutex     // guards the current transaction against concurrent access
+	wg    *sync.WaitGroup // keeps track of when the flush goroutine is done
 }
 
 // NewWriter creates a new index writer that writes new indexing data to the
@@ -70,7 +71,7 @@ func NewWriter(db *badger.DB, lib dps.WriteLibrary, options ...func(*Config)) *W
 	}
 
 	w.wg.Add(1)
-	go w.ticker()
+	go w.flush()
 
 	return &w
 }
@@ -326,12 +327,16 @@ func (w *Writer) Close() error {
 	return merr.ErrorOrNil()
 }
 
-func (w *Writer) ticker() {
+func (w *Writer) flush() {
 	defer w.wg.Done()
 
+FlushLoop:
 	for {
 		select {
 
+		// If this case is triggered, it means there was no new operation added
+		// to the transaction for flush interval. We thus want to flush the
+		// transaction.
 		case <-time.After(w.cfg.FlushInterval):
 			w.mutex.Lock()
 			w.tx.CommitWith(w.committed)
@@ -339,11 +344,19 @@ func (w *Writer) ticker() {
 			w.tx = w.db.NewTransaction(true)
 			w.mutex.Unlock()
 
+		// If this case is triggered, an operation was added to the transaction
+		// and we reset the trigger to commit the transaction for flushing.
 		case <-w.tick:
 			// resets the `time.After`
 
+		// If this case is triggered, we are done adding operations for good and
+		// we can shut down.
 		case <-w.done:
-			return
+			break FlushLoop
 		}
+	}
+
+	// Drain the ticker channel.
+	for range w.tick {
 	}
 }

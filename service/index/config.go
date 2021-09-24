@@ -14,7 +14,9 @@
 
 package index
 
-import "time"
+import (
+	"time"
+)
 
 // DefaultConfig is the default configuration for the DPS index.
 var DefaultConfig = Config{
