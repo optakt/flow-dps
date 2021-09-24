@@ -21,7 +21,7 @@ import (
 // DefaultConfig is the default configuration for the DPS index.
 var DefaultConfig = Config{
 	ConcurrentTransactions: 16,          // same value as used for batches in badger
-	FlushInterval:          time.Second, // how often to flush Badger transactions
+	FlushInterval:          time.Second, // maximum idle time before flushing transaction
 }
 
 // Config is the configuration of a DPS index.

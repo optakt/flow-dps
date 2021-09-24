@@ -43,9 +43,9 @@ type Writer struct {
 	err  chan error
 
 	tick  chan struct{}   // signals when an operation is added to the transaction
-	done  chan struct{}   // signals when no more new operations are added
+	done  chan struct{}   // signals when no more new operations will be added
 	mutex *sync.Mutex     // guards the current transaction against concurrent access
-	wg    *sync.WaitGroup // keeps track of when the flush goroutine is done
+	wg    *sync.WaitGroup // keeps track of when the flush goroutine should exit
 }
 
 // NewWriter creates a new index writer that writes new indexing data to the
