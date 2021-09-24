@@ -436,9 +436,7 @@ It is however safe to run the indexer and any command that uses the database in 
 ### Internal
 
 * [DPS Architecture](./architecture.md)
-* APIs
-    * [Access API](./access-api.md)
-    * [DPS API](./dps-api.md)
+* [DPS API](./dps-api.md)
 
 ### External
 
