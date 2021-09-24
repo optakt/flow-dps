@@ -317,16 +317,12 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 
 			// We need want to go to the first value that is below the current
 			// path. In order to cover all potential cases, including payloads
-			// at height zero, we need to decrease the path by one and use the
-			// maximum height value.
-			for i := len(path) - 1; i >= 0; i-- {
-				if path[i] > 0x00 {
-					path[i] = path[i] - 0x01
-					break
-				}
-				path[i] = 0xff
-			}
-			if path == highest {
+			// at height zero, we need to decrement the current path by one and
+			// use the maximum possible height. If the decrement doesn't work,
+			// we have reached the zero path and we can break; otherwise, we
+			// would just wrap around to the maximum key again.
+			path, ok := decrement(path)
+			if !ok {
 				break
 			}
 			next = encodeKey(prefixPayload, path, uint64(math.MaxUint64))
@@ -334,4 +330,20 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 
 		return nil
 	}
+}
+
+func decrement(path ledger.Path) (ledger.Path, bool) {
+	zero := ledger.Path{}
+	if path == zero {
+		return zero, false
+	}
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == 0x00 {
+			path[i] = 0xff
+			continue
+		}
+		path[i] = path[i] - 0x01
+		break
+	}
+	return path, true
 }
