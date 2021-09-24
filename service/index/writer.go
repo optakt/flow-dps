@@ -299,9 +299,12 @@ func (w *Writer) committed(err error) {
 func (w *Writer) Close() error {
 
 	// Shut down the ticker that makes sure we commit after a certain time
-	// without new operations.
+	// without new operations, then drain the tick channel.
 	close(w.done)
 	w.wg.Wait()
+	close(w.tick)
+	for range w.tick {
+	}
 
 	// The first transaction we created did not claim a slot on the semaphore.
 	// This makes sense, because we only want to limit in-flight (committing)
@@ -331,7 +334,6 @@ func (w *Writer) Close() error {
 func (w *Writer) flush() {
 	defer w.wg.Done()
 
-FlushLoop:
 	for {
 		select {
 
@@ -353,11 +355,7 @@ FlushLoop:
 		// If this case is triggered, we are done adding operations for good and
 		// we can shut down.
 		case <-w.done:
-			break FlushLoop
+			return
 		}
-	}
-
-	// Drain the ticker channel.
-	for range w.tick {
 	}
 }
