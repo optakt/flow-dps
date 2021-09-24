@@ -1,6 +1,5 @@
 /cmd/check-duplicate-transactions/check-duplicate-transactions
 /cmd/create-index-snapshot/create-index-snapshot
-/cmd/flow-access-server/flow-access-server
 /cmd/flow-dps-client/flow-dps-client
 /cmd/flow-dps-indexer/flow-dps-indexer
 /cmd/flow-dps-live/flow-dps-live
