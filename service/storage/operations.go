@@ -17,6 +17,7 @@ package storage
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
@@ -185,6 +186,7 @@ func (l *Library) RetrieveEvents(height uint64, types []flow.EventType, events *
 // RetrievePayload retrieves the ledger payloads at the given height that match the given path.
 func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
+
 		key := encodeKey(prefixPayload, path, height)
 		it := tx.NewIterator(badger.IteratorOptions{
 			PrefetchSize:   0,
@@ -204,6 +206,7 @@ func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledg
 		err := it.Item().Value(func(val []byte) error {
 			return l.codec.Unmarshal(val, payload)
 		})
+
 		return err
 	}
 }
@@ -272,13 +275,20 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 		InternalAccess: false,
 		Prefix:         prefix,
 	}
+	highest := ledger.Path{
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	}
+	start := encodeKey(prefixPayload, highest, uint64(math.MaxUint64))
 
 	return func(tx *badger.Txn) error {
 
 		it := tx.NewIterator(opts)
 		defer it.Close()
 
-		it.Rewind()
+		it.Seek(start)
 		for {
 
 			// If we are done iterating, break out.
