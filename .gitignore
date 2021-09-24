@@ -5,7 +5,6 @@
 /cmd/flow-dps-indexer/flow-dps-indexer
 /cmd/flow-dps-live/flow-dps-live
 /cmd/flow-dps-server/flow-dps-server
-/cmd/flow-rosetta-server/flow-rosetta-server
 /cmd/restore-index-snapshot/restore-index-snapshot
 /bootstrap/
 /data/
