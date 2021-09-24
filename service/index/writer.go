@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/hashicorp/go-multierror"
@@ -40,6 +41,11 @@ type Writer struct {
 	tx   *badger.Txn
 	sema *semaphore.Weighted
 	err  chan error
+
+	tick  chan struct{}   // signals when an operation is added to the transaction
+	done  chan struct{}   // signals when no more new operations will be added
+	mutex *sync.Mutex     // guards the current transaction against concurrent access
+	wg    *sync.WaitGroup // keeps track of when the flush goroutine should exit
 }
 
 // NewWriter creates a new index writer that writes new indexing data to the
@@ -58,7 +64,15 @@ func NewWriter(db *badger.DB, lib dps.WriteLibrary, options ...func(*Config)) *W
 		tx:   db.NewTransaction(true),
 		sema: semaphore.NewWeighted(int64(cfg.ConcurrentTransactions)),
 		err:  make(chan error, cfg.ConcurrentTransactions),
+
+		tick:  make(chan struct{}, 1),
+		done:  make(chan struct{}),
+		mutex: &sync.Mutex{},
+		wg:    &sync.WaitGroup{},
 	}
+
+	w.wg.Add(1)
+	go w.flush()
 
 	return &w
 }
@@ -241,18 +255,25 @@ func (w *Writer) apply(op func(*badger.Txn) error) error {
 		// skip
 	}
 
+	// We should also reset the timer for committing at regular intervals. Any
+	// period of inactivity for the configured amount will lead us to commit
+	// the currently building Badger transaction.
+	w.tick <- struct{}{}
+
 	// If we had no error in a previous transaction, we try applying the
 	// operation to the current transaction. If the transaction is already too
 	// big, we simply commit it with our callback and start a new transaction.
 	// Transaction creation is guarded by a semaphore that limits it to the
 	// configured number of inflight transactions.
+	w.mutex.Lock()
 	err := op(w.tx)
 	if errors.Is(err, badger.ErrTxnTooBig) {
-		w.tx.CommitWith(w.done)
+		w.tx.CommitWith(w.committed)
 		_ = w.sema.Acquire(context.Background(), 1)
 		w.tx = w.db.NewTransaction(true)
 		err = op(w.tx)
 	}
+	w.mutex.Unlock()
 	if err != nil {
 		return fmt.Errorf("could not apply operation: %w", err)
 	}
@@ -260,7 +281,7 @@ func (w *Writer) apply(op func(*badger.Txn) error) error {
 	return nil
 }
 
-func (w *Writer) done(err error) {
+func (w *Writer) committed(err error) {
 
 	// When a transaction is fully committed, we get the result in this
 	// callback. In case of an error, we pipe it to the apply function through
@@ -276,6 +297,14 @@ func (w *Writer) done(err error) {
 
 // Close closes the writer and commits the pending transaction, if there is one.
 func (w *Writer) Close() error {
+
+	// Shut down the ticker that makes sure we commit after a certain time
+	// without new operations, then drain the tick channel.
+	close(w.done)
+	w.wg.Wait()
+	close(w.tick)
+	for range w.tick {
+	}
 
 	// The first transaction we created did not claim a slot on the semaphore.
 	// This makes sense, because we only want to limit in-flight (committing)
@@ -300,4 +329,33 @@ func (w *Writer) Close() error {
 	}
 
 	return merr.ErrorOrNil()
+}
+
+func (w *Writer) flush() {
+	defer w.wg.Done()
+
+	for {
+		select {
+
+		// If this case is triggered, it means there was no new operation added
+		// to the transaction for flush interval. We thus want to flush the
+		// transaction.
+		case <-time.After(w.cfg.FlushInterval):
+			w.mutex.Lock()
+			w.tx.CommitWith(w.committed)
+			_ = w.sema.Acquire(context.Background(), 1)
+			w.tx = w.db.NewTransaction(true)
+			w.mutex.Unlock()
+
+		// If this case is triggered, an operation was added to the transaction
+		// and we reset the trigger to commit the transaction for flushing.
+		case <-w.tick:
+			// resets the `time.After`
+
+		// If this case is triggered, we are done adding operations for good and
+		// we can shut down.
+		case <-w.done:
+			return
+		}
+	}
 }
