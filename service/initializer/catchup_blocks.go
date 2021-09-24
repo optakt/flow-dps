@@ -15,11 +15,13 @@
 package initializer
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
 
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -28,12 +30,26 @@ import (
 func CatchupBlocks(db *badger.DB, read dps.Reader) ([]flow.Identifier, error) {
 
 	indexed, err := read.Last()
-	if err != nil {
+	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		return nil, fmt.Errorf("could not get last indexed: %w", err)
+	}
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		var root uint64
+		err = db.View(operation.RetrieveRootHeight(&root))
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("could not get root height: %w", err)
+		}
+		indexed = root
 	}
 
 	var finalized uint64
 	err = db.View(operation.RetrieveFinalizedHeight(&finalized))
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("could not get last finalized: %w", err)
 	}
