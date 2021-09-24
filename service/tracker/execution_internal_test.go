@@ -248,12 +248,6 @@ func BaselineExecution(t *testing.T, opts ...func(*Execution)) *Execution {
 	return &e
 }
 
-func WithLogger(log zerolog.Logger) func(*Execution) {
-	return func(execution *Execution) {
-		execution.log = log
-	}
-}
-
 func WithStreamer(stream RecordStreamer) func(*Execution) {
 	return func(execution *Execution) {
 		execution.stream = stream
