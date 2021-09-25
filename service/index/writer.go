@@ -268,8 +268,8 @@ func (w *Writer) apply(op func(*badger.Txn) error) error {
 	w.mutex.Lock()
 	err := op(w.tx)
 	if errors.Is(err, badger.ErrTxnTooBig) {
-		w.tx.CommitWith(w.committed)
 		_ = w.sema.Acquire(context.Background(), 1)
+		w.tx.CommitWith(w.committed)
 		w.tx = w.db.NewTransaction(true)
 		err = op(w.tx)
 	}
@@ -342,8 +342,8 @@ func (w *Writer) flush() {
 		// transaction.
 		case <-time.After(w.cfg.FlushInterval):
 			w.mutex.Lock()
-			w.tx.CommitWith(w.committed)
 			_ = w.sema.Acquire(context.Background(), 1)
+			w.tx.CommitWith(w.committed)
 			w.tx = w.db.NewTransaction(true)
 			w.mutex.Unlock()
 
