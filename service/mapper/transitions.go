@@ -139,6 +139,23 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 		return fmt.Errorf("invalid status for resuming indexing (%s)", s.status)
 	}
 
+	// When resuming, we want to avoid overwriting the `first` height in the
+	// index with the height we are resuming from. Theoretically, all that would
+	// be needed would be to execute a no-op on `once`, which would subsequently
+	// be skipped in the height forwarding code. However, this bug was already
+	// released, so we have databases where `first` was incorrectly set to the
+	// height we resume from. In order to fix them, we explicitly write the
+	// correct `first` height here again, while at the same time using `once` to
+	// disable any subsequent attempts to write it.
+	first, err := t.chain.Root()
+	if err != nil {
+		return fmt.Errorf("could not get root height: %w", err)
+	}
+	t.once.Do(func() { err = t.write.First(first) })
+	if err != nil {
+		return fmt.Errorf("could not write first: %w", err)
+	}
+
 	// We need to know what the last indexed height was at the point we stopped
 	// indexing.
 	last, err := t.read.Last()
