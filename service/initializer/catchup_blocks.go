@@ -80,7 +80,6 @@ func CatchupBlocks(db *badger.DB, read dps.Reader) ([]flow.Identifier, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not look up block (height: %d): %w", height, err)
 		}
-		fmt.Printf(">>> at %d, got %x\n", height, blockID)
 		blockIDs = append(blockIDs, blockID)
 	}
 

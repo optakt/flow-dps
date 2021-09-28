@@ -1259,6 +1259,8 @@ func TestIndexAndLookup_Seals(t *testing.T) {
 
 func TestLibrary_IterateLedger(t *testing.T) {
 	entries := 5
+	paths := mocks.GenericLedgerPaths(entries)
+	payloads := mocks.GenericLedgerPayloads(entries)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -1270,15 +1272,15 @@ func TestLibrary_IterateLedger(t *testing.T) {
 		l := &Library{codec}
 
 		for i := 0; i < entries; i++ {
-			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(i), mocks.GenericLedgerPayload(i))))
+			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, paths[i], payloads[i])))
 		}
 
 		var callCount int
 		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
 			callCount++
 
-			assert.NotZero(t, path)
-			assert.NotNil(t, payload)
+			assert.Contains(t, paths, path)
+			assert.Contains(t, payloads, payload)
 
 			return nil
 		})
@@ -1287,6 +1289,32 @@ func TestLibrary_IterateLedger(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, entries, callCount)
+	})
+
+	t.Run("handles multiple payloads with the same path", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := zbor.NewCodec()
+		l := &Library{codec}
+
+		for i := 0; i < entries; i++ {
+			// Always use paths[0] for every payload.
+			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, paths[0], payloads[i])))
+		}
+
+		var callCount int
+		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
+			callCount++
+			return nil
+		})
+
+		err := db.View(op)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, callCount)
 	})
 
 	t.Run("handles codec failure", func(t *testing.T) {
@@ -1302,7 +1330,7 @@ func TestLibrary_IterateLedger(t *testing.T) {
 		l := &Library{codec}
 
 		for i := 0; i < entries; i++ {
-			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(i), mocks.GenericLedgerPayload(i))))
+			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, paths[i], payloads[i])))
 		}
 
 		var callCount int
@@ -1326,7 +1354,7 @@ func TestLibrary_IterateLedger(t *testing.T) {
 		l := &Library{codec}
 
 		for i := 0; i < entries; i++ {
-			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(i), mocks.GenericLedgerPayload(i))))
+			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, paths[i], payloads[i])))
 		}
 
 		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
