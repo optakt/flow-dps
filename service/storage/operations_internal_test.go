@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/codec/zbor"
 
 	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
@@ -1253,5 +1254,87 @@ func TestIndexAndLookup_Seals(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, 1, decodeCallCount)
+	})
+}
+
+func TestLibrary_IterateLedger(t *testing.T) {
+	entries := 5
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := zbor.NewCodec()
+		l := &Library{codec}
+
+		for i := 0; i < entries; i++ {
+			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(i), mocks.GenericLedgerPayload(i))))
+		}
+
+		var callCount int
+		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
+			callCount++
+
+			assert.NotZero(t, path)
+			assert.NotNil(t, payload)
+
+			return nil
+		})
+
+		err := db.View(op)
+
+		assert.NoError(t, err)
+		assert.Equal(t, entries, callCount)
+	})
+
+	t.Run("handles codec failure", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func([]byte, interface{}) error {
+			return mocks.GenericError
+		}
+		l := &Library{codec}
+
+		for i := 0; i < entries; i++ {
+			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(i), mocks.GenericLedgerPayload(i))))
+		}
+
+		var callCount int
+		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
+			return mocks.GenericError
+		})
+
+		err := db.View(op)
+
+		require.Error(t, err)
+		assert.Zero(t, callCount)
+	})
+
+	t.Run("handles callback error", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := zbor.NewCodec()
+		l := &Library{codec}
+
+		for i := 0; i < entries; i++ {
+			require.NoError(t, db.Update(l.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(i), mocks.GenericLedgerPayload(i))))
+		}
+
+		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
+			return mocks.GenericError
+		})
+
+		err := db.View(op)
+
+		assert.Error(t, err)
 	})
 }
