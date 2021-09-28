@@ -65,7 +65,7 @@ func TestCatchupBlocks(t *testing.T) {
 
 		require.NoError(t, db.Update(operation.InsertRootHeight(rootHeight)))
 		require.NoError(t, db.Update(operation.InsertFinalizedHeight(toIndex)))
-		for i := rootHeight+1; i <= rootHeight+toIndex; i++ {
+		for i := rootHeight + 1; i <= rootHeight+toIndex; i++ {
 			require.NoError(t, db.Update(operation.IndexBlockHeight(i, blockIDs[i-1])))
 		}
 
@@ -88,7 +88,7 @@ func TestCatchupBlocks(t *testing.T) {
 
 		require.NoError(t, db.Update(operation.InsertRootHeight(rootHeight)))
 		require.NoError(t, db.Update(operation.InsertFinalizedHeight(toIndex)))
-		for i := rootHeight+1; i <= rootHeight+toIndex; i++ {
+		for i := rootHeight + 1; i <= rootHeight+toIndex; i++ {
 			require.NoError(t, db.Update(operation.IndexBlockHeight(i, blockIDs[i-1])))
 		}
 
