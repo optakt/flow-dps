@@ -40,7 +40,7 @@ func CatchupBlocks(db *badger.DB, read dps.Reader) ([]flow.Identifier, error) {
 	}
 
 	// If there is no last indexed block, we should start downloading execution
-	// records just after root height (for all of the blocks), so we put the
+	// records just after root height (for all the blocks), so we put the
 	// last indexed height at root. If there is no root height, we don't need
 	// to catch up with anything, because the protocol state is also empty.
 	if errors.Is(err, badger.ErrKeyNotFound) {
@@ -71,7 +71,7 @@ func CatchupBlocks(db *badger.DB, read dps.Reader) ([]flow.Identifier, error) {
 
 	// We can now step from the first height after the indexed height to the
 	// finalized height and collect all the block IDs on the way. These can then
-	// be queueed in the cloud streamer to download the block records for blocks
+	// be queued in the cloud streamer to download the block records for blocks
 	// that have not yet been indexed in the correct order.
 	var blockIDs []flow.Identifier
 	for height := indexed + 1; height <= finalized; height++ {
@@ -80,6 +80,7 @@ func CatchupBlocks(db *badger.DB, read dps.Reader) ([]flow.Identifier, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not look up block (height: %d): %w", height, err)
 		}
+		fmt.Printf(">>> at %d, got %x\n", height, blockID)
 		blockIDs = append(blockIDs, blockID)
 	}
 
