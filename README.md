@@ -6,23 +6,19 @@
 [![Internal Documentation](https://img.shields.io/badge/-documentation-grey?logo=markdown)](./docs/introduction.md)
 
 The Flow Data Provisioning Service (DPS) aims at providing a scalable and efficient way to access the history of the Flow
-execution state, both for the current live sporks and for past sporks.
+execution state, both for current live sporks and for past sporks.
 
 The state of past sporks is indexed by reading an execution node's protocol state and state trie write-ahead log.
-Optionally, a root checkpoint can be used to bootstrap state before a spork's start. In more specific terms, indexing
+Optionally, a root checkpoint is required to bootstrap state before a spork's start. In more specific terms, indexing
 of past sporks requires a Badger key-value database containing the Flow protocol state of the spork and a LedgerWAL with
 all the trie updates that happened on the spork.
 
-Indexing the live spork works similarly, but it reads the protocol state by acting as a consensus follower and reading
-block records from a Google Cloud Storage bucket.
+Indexing the live spork works similarly, but it reads the protocol state by acting as a consensus follower, and it reads
+the execution-related data from records written to a Google Cloud Storage bucket by an execution node.
 
 The Flow DPS maintains multiple specialized indexes for different purposes.
-Contrary to the execution node's state trie, the indexes allow random access to the execution state at any block height
-which enables state retrieval at any point in history and beyond the execution node's pruning limit.
-
-The DPS also supports a set of custom smart contract resources that serve as wrapper for locked token vaults and as
-proxy to staking and delegating resources. This allows the DPS to track multiple balances per account, including locked,
-staked and delegated tokens, for accounts which deploy these custom resources.
+Contrary to the execution node's state trie, the index for ledger registers allows random access to the execution state at any block height
+which enables state retrieval at any point in history, overcoming the pruning limit seen on the execution node.
 
 ## Documentation
 
@@ -34,19 +30,23 @@ Below are links to the individual documentation for the binaries within this rep
 * [`flow-dps-indexer`](./cmd/flow-dps-indexer/README.md)
 * [`flow-dps-live`](./cmd/flow-dps-live/README.md)
 * [`flow-dps-server`](./cmd/flow-dps-server/README.md)
-* [`flow-rosetta-server`](./cmd/flow-rosetta-server/README.md)
 
-### API
+### APIs
+
+The DPS API gives access to historical data at any given height.
 
 * [DPS API](./docs/dps-api.md)
-* [Access API](./docs/access-api.md)
-* [Rosetta API](./docs/rosetta-api.md)
+
+There are also additional API layers that can be run on top of the DPS API:
+
+* [Access API](https://github.com/optakt/flow-dps-access)
+* [Rosetta API](https://github.com/optakt/flow-dps-rosetta)
 
 ### Developer Documentation
 
 * [Introduction](./docs/introduction.md)
 * [Architecture](./docs/architecture.md)
-* [Database Schema](./docs/index.md)
+* [Database Schema](./docs/database.md)
 * [Snapshots](./docs/snapshots.md)
 
 ## Dependencies
@@ -79,4 +79,4 @@ You can then verify that the installation of the flow-go crypto package has been
 
 ## Build
 
-You can build every binary by running `go build -tags="relic" -o . ./...` from the root of the repository.
+You can build every binary by running `go build -tags=relic -o . ./...` from the root of the repository.

@@ -1,7 +1,6 @@
 ## Index Schema
 
 The DPS uses [BadgerDB](https://github.com/dgraph-io/badger) to store datasets of state changes and block information to build all the indexes required for random protocol and execution state access.
-It does not re-use any of the protocol state database, but instead re-indexes everything, so that all databases used to bootstrap the index can be discarded subsequently.
 
 #### First Height
 
@@ -101,7 +100,7 @@ In this record, transactions are mapped by their IDs.
 | **Description**    | Index type prefix | Transaction ID         |
 | **Example Value**  | `8`               | `45D66Q565F5DEDB[...]` |
 
-The value stored at that key is the **CBOR-encoded [flow.Transaction](https://pkg.go.dev/github.com/onflow/model/flow#Transaction)** with the referenced ID.
+The value stored at that key is the **CBOR-encoded [flow.TransactionBody](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#TransactionBody)** with the referenced ID.
 
 #### Block Transaction Index
 
@@ -113,7 +112,7 @@ In this index, block IDs are mapped to the IDs of the transactions within their 
 | **Description**    | Index type prefix | Block ID               |
 | **Example Value**  | `9`               | `45D66Q565F5DEDB[...]` |
 
-The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/model/flow#Identifier)** for the transactions within the referenced block.
+The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#Identifier)** for the transactions within the referenced block.
 
 #### Collection Index
 
@@ -122,10 +121,10 @@ In this record, collections are mapped by their IDs.
 | **Length** (bytes) | `1`               | `64`                   |
 |:-------------------|:------------------|:-----------------------|
 | **Type**           | byte              | flow.Identifier        |
-| **Description**    | Index type prefix | Collection ID         |
+| **Description**    | Index type prefix | Collection ID          |
 | **Example Value**  | `10`              | `45D66Q565F5DEDB[...]` |
 
-The value stored at that key is the **CBOR-encoded [flow.LightCollection](https://pkg.go.dev/github.com/onflow/model/flow#LightCollection)** with the referenced ID.
+The value stored at that key is the **CBOR-encoded [flow.LightCollection](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#LightCollection)** with the referenced ID.
 
 #### Collection Guarantee Index
 
@@ -134,14 +133,14 @@ In this record, collections guarantees are mapped by their collection IDs.
 | **Length** (bytes) | `1`               | `64`                   |
 |:-------------------|:------------------|:-----------------------|
 | **Type**           | byte              | flow.Identifier        |
-| **Description**    | Index type prefix | Collection ID         |
+| **Description**    | Index type prefix | Collection ID          |
 | **Example Value**  | `10`              | `45D66Q565F5DEDB[...]` |
 
-The value stored at that key is the **CBOR-encoded [flow.CollectionGuarantee](https://pkg.go.dev/github.com/onflow/model/flow#CollectionGuarantee)** with the referenced ID.
+The value stored at that key is the **CBOR-encoded [flow.CollectionGuarantee](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#CollectionGuarantee)** with the referenced ID.
 
 #### Block Collection Index
 
-In this index, block IDs are mapped to the IDs of the collections within their block.
+In this index, block IDs are mapped to the IDs of the collections within that block.
 
 | **Length** (bytes) | `1`               | `64`                   |
 |:-------------------|:------------------|:-----------------------|
@@ -149,7 +148,7 @@ In this index, block IDs are mapped to the IDs of the collections within their b
 | **Description**    | Index type prefix | Block ID               |
 | **Example Value**  | `11`              | `45D66Q565F5DEDB[...]` |
 
-The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/model/flow#Identifier)** for the collections within the referenced block.
+The value stored at that key is the **CBOR-encoded slice of [flow.Identifier](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#Identifier)** for the collections within the referenced block.
 
 #### Transaction Result Index
 
@@ -161,7 +160,7 @@ In this index, transaction IDs are mapped to their results.
 | **Description**    | Index type prefix | Transaction ID         |
 | **Example Value**  | `12`              | `45D66Q565F5DEDB[...]` |
 
-The value stored at that key is the **CBOR-encoded [flow.TransactionResult](https://pkg.go.dev/github.com/onflow/model/flow#TransactionResult)** for the referenced transaction.
+The value stored at that key is the **CBOR-encoded [flow.TransactionResult](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#TransactionResult)** for the referenced transaction.
 
 #### Seals Index
 
@@ -173,15 +172,17 @@ In this index, seals are mapped by their IDs.
 | **Description**    | Index type prefix | Seal ID                |
 | **Example Value**  | `14`              | `45D66Q565F5DEDB[...]` |
 
+The value stored at that key is the **CBOR-encoded [flow.Seal](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#Seal)** with the referenced ID.
+
 #### Block Seals Index
 
-In this index, block IDs are mapped to the IDs of the seals within that block.
+In this index, heights are mapped to the IDs of the seals at that height.
 
-| **Length** (bytes) | `1`               | `64`                   |
+| **Length** (bytes) | `1`               | `8`                    |
 |:-------------------|:------------------|:-----------------------|
-| **Type**           | byte              | flow.Identifier        |
-| **Description**    | Index type prefix | Block ID               |
-| **Example Value**  | `15`              | `45D66Q565F5DEDB[...]` |
+| **Type**           | byte              | uint64                 |
+| **Description**    | Index type prefix | Block Height           |
+| **Example Value**  | `15`              | `425`                  |
 
 #### Transaction Height Index
 

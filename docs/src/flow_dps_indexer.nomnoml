@@ -1,5 +1,5 @@
 #title: flow_dps_indexer
-#direction: right
+#direction: bottom
 #background: #262626
 #stroke: #fff
 #fill: #888
@@ -8,27 +8,27 @@
 [<comp> Loader]
 [<cons> Chain]
 [<protocol> Protocol State Database]
-[<wal> Write-Ahead Log]
+[<wal> Ledger WAL]
 [<exec> Feeder]
 [<mapper> Mapper]
-[<indexer> Indexer]
+[<indexer> Index]
 [<api> DPS API]
 
-[<label> Root Tree]
+[<label> Root Trie]
 [<label> Trie Updates]
-[<label> Block Data]
+[<label> Chain Data]
 
 [Root Checkpoint]->[Loader]
-[Loader]-[Root Tree]
-[Root Tree]->[Mapper]
+[Loader]-[Root Trie]
+[Root Trie]->[Mapper]
 [Protocol State Database]->[Chain]
-[Chain]-[Block Data]
-[Block Data]->[Mapper]
-[Write-Ahead Log]->[Feeder]
+[Chain]-[Chain Data]
+[Chain Data]->[Mapper]
+[Ledger WAL]->[Feeder]
 [Feeder]-[Trie Updates]
 [Trie Updates]->[Mapper]
-[Mapper]->[Indexer]
-[Indexer]<-[DPS API]
+[Mapper]->[Index]
+[Index]->[DPS API]
 
 #.comp: title=bold visual=roundrect
 #.wal: fill=#262626 stroke=#55de51 title=bold
@@ -36,5 +36,5 @@
 #.protocol: fill=#262626 stroke=#e53e65 title=bold
 #.cons: fill=#262626 stroke=#e53e65 title=bold visual=roundrect
 #.mapper: fill=#262626 stroke=#fbb363 title=bold visual=roundrect
-#.indexer: fill=#262626 stroke=#fbb363 visual=database title=bold
+#.indexer: fill=#262626 stroke=#fbb363 title=bold visual=database
 #.api: fill=#262626 stroke=#fbb363 title=bold visual=transceiver

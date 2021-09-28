@@ -1,12 +1,12 @@
 #title: flow_dps_live
-#direction: right
+#direction: bottom
 #background: #262626
 #stroke: #fff
 #fill: #eee
 
 [<flow> Flow Network]
 [<gcp> Google Cloud Bucket]
-[<indexer> Indexer]
+[<indexer> Index]
 [<exec> GCP Streamer]
 [<exec> Execution Tracker]
 [<cons> Consensus Follower]
@@ -14,20 +14,25 @@
 [<mapper> Mapper]
 [<api> DPS API]
 
-[<label> Records]
-[<label> OnFinalizedBlock]
+[<label> Block Execution Records]
+[<label> Block Execution Data]
+[<label> Chain Data]
+[<label> Trie Updates]
 
 [Flow Network]->[Google Cloud Bucket]
-[Google Cloud Bucket]-[Records]
-[Records]->[GCP Streamer]
+[Google Cloud Bucket]-[Block Execution Records]
+[Block Execution Records]->[GCP Streamer]
 [GCP Streamer]->[Execution Tracker]
-[Execution Tracker]->[Consensus Tracker]
-[Flow Network]-[OnFinalizedBlock]
-[OnFinalizedBlock]->[Consensus Follower]
+[Execution Tracker]-[Block Execution Data]
+[Block Execution Data]->[Consensus Tracker]
+[Execution Tracker]-[Trie Updates]
+[Trie Updates]->[Mapper]
+[Flow Network]-[Chain Data]
+[Chain Data]->[Consensus Follower]
 [Consensus Follower]->[Consensus Tracker]
 [Consensus Tracker]->[Mapper]
-[Mapper]->[Indexer]
-[Indexer]->[DPS API]
+[Mapper]->[Index]
+[Index]->[DPS API]
 
 #.flow: fill=#262626 stroke=#00bff3 visual=ellipse dashed title=bold
 #.gcp: fill=#262626 stroke=#55de51 visual=database title=bold

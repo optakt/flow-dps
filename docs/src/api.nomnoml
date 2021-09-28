@@ -1,5 +1,5 @@
 #title: api
-#direction: right
+#direction: bottom
 #background: #262626
 #stroke: #fff
 #fill: #888
@@ -7,17 +7,17 @@
 [<flow> Flow Network]
 [<external> Flow DPS Live]
 [<external> Flow DPS Indexer]
-[<indexer> Indexer]
+[<indexer> Index]
 [<dps> DPS API]
 [<access> DPS Access API]
 [<rosetta> Rosetta API]
 
 [<label> SubmitTransaction]
 
-[Flow DPS Indexer]-->[Indexer]
-[Flow DPS Live]-->[Indexer]
+[Flow DPS Indexer]-->[Index]
+[Flow DPS Live]-->[Index]
 [Flow DPS Live]<--[Flow Network]
-[Indexer]->[DPS API]
+[Index]->[DPS API]
 [DPS API]->[DPS Access API]
 [DPS API]->[Rosetta API]
 [SubmitTransaction]-[Rosetta API]

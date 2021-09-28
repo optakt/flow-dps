@@ -1,8 +1,8 @@
-<svg version="1.1" baseProfile="full" width="863" height="229" viewbox="0 0 863 229" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:ev="http://www.w3.org/2001/xml-events" style="font:bold  12pt Helvetica, Helvetica, sans-serif;;stroke-linejoin:round;stroke-linecap:round">
+<svg version="1.1" baseProfile="full" width="590.5" height="458" viewbox="0 0 590.5 458" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:ev="http://www.w3.org/2001/xml-events" style="font:bold  12pt Helvetica, Helvetica, sans-serif;;stroke-linejoin:round;stroke-linecap:round">
   <title >flow_dps_indexer</title>
-  <desc >#direction: right
+  <desc >#title: flow_dps_indexer
+#direction: bottom
 #background: #262626
-#title: flow_dps_indexer
 #stroke: #fff
 #fill: #888
 
@@ -10,27 +10,27 @@
 [&lt;comp&gt; Loader]
 [&lt;cons&gt; Chain]
 [&lt;protocol&gt; Protocol State Database]
-[&lt;wal&gt; Write-Ahead Log]
+[&lt;wal&gt; Ledger WAL]
 [&lt;exec&gt; Feeder]
 [&lt;mapper&gt; Mapper]
-[&lt;indexer&gt; Indexer]
+[&lt;indexer&gt; Index]
 [&lt;api&gt; DPS API]
 
-[&lt;label&gt; Root Tree]
+[&lt;label&gt; Root Trie]
 [&lt;label&gt; Trie Updates]
-[&lt;label&gt; Block Data]
+[&lt;label&gt; Chain Data]
 
 [Root Checkpoint]-&gt;[Loader]
-[Loader]-[Root Tree]
-[Root Tree]-&gt;[Mapper]
+[Loader]-[Root Trie]
+[Root Trie]-&gt;[Mapper]
 [Protocol State Database]-&gt;[Chain]
-[Chain]-[Block Data]
-[Block Data]-&gt;[Mapper]
-[Write-Ahead Log]-&gt;[Feeder]
+[Chain]-[Chain Data]
+[Chain Data]-&gt;[Mapper]
+[Ledger WAL]-&gt;[Feeder]
 [Feeder]-[Trie Updates]
 [Trie Updates]-&gt;[Mapper]
-[Mapper]-&gt;[Indexer]
-[Indexer]&lt;-[DPS API]
+[Mapper]-&gt;[Index]
+[Index]-&gt;[DPS API]
 
 #.comp: title=bold visual=roundrect
 #.wal: fill=#262626 stroke=#55de51 title=bold
@@ -38,52 +38,52 @@
 #.protocol: fill=#262626 stroke=#e53e65 title=bold
 #.cons: fill=#262626 stroke=#e53e65 title=bold visual=roundrect
 #.mapper: fill=#262626 stroke=#fbb363 title=bold visual=roundrect
-#.indexer: fill=#262626 stroke=#fbb363 visual=database title=bold
+#.indexer: fill=#262626 stroke=#fbb363 title=bold visual=database
 #.api: fill=#262626 stroke=#fbb363 title=bold visual=transceiver
 </desc>
-  <rect x="0" y="0" height="229" width="863" style="stroke:none; fill:#262626;"></rect>
-  <path d="M200.5 44 L248.5 44 L261.8 44 L261.8 44 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M255.2 49.3 L261.8 44 L255.2 38.7 L268.5 44 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M337.5 44 L357.5 44 L388.5 44 L388.5 44 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M478.5 44 L509.5 44 L549.5 94.3 L549.5 94.3 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M541.2 92.4 L549.5 94.3 L549.5 85.7 L553.7 99.5 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M228.5 115 L248.5 115 L266.3 115 L266.3 115 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M259.7 120.3 L266.3 115 L259.7 109.7 L273 115 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M333 115 L357.5 115 L384 115 L384 115 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M483 115 L509.5 115 L522.8 115 L522.8 115 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M516.2 120.3 L522.8 115 L516.2 109.7 L529.5 115 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M200.5 186 L248.5 186 L262.3 186 L262.3 186 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M255.7 191.3 L262.3 186 L255.7 180.7 L269 186 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M337 186 L357.5 186 L377.5 186 L377.5 186 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M489.5 186 L509.5 186 L549.5 135.7 L549.5 135.7 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M549.5 144.3 L549.5 135.7 L541.2 137.6 L553.7 130.5 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M602.5 115 L622.5 115 L635.8 115 L635.8 115 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M629.2 120.3 L635.8 115 L629.2 109.7 L642.5 115 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M722.2 115 L735.5 115 L755.5 115 L755.5 115 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M728.8 109.7 L722.2 115 L728.8 120.3 L715.5 115 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
-  <rect x="56.5" y="28.5" height="31" width="144" data-name="Root Checkpoint" style="stroke:#fff;fill:#888;stroke-dasharray:none;stroke-width:3;"></rect>
-  <text x="128.5" y="50" style="fill: #fff;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Root Checkpoint">Root Checkpoint</text>
-  <rect x="268.5" y="28.5" rx="15.5" ry="15.5" height="31" width="69" data-name="Loader" style="stroke:#fff;fill:#888;stroke-dasharray:none;stroke-width:3;"></rect>
-  <text x="303" y="50" style="fill: #fff;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Loader">Loader</text>
-  <rect x="273.5" y="99.5" rx="15.5" ry="15.5" height="31" width="60" data-name="Chain" style="stroke:#e53e65;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
-  <text x="303.5" y="121" style="fill: #e53e65;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Chain">Chain</text>
-  <rect x="28.5" y="99.5" height="31" width="200" data-name="Protocol State Database" style="stroke:#e53e65;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
-  <text x="128.5" y="121" style="fill: #e53e65;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Protocol State Database">Protocol State Database</text>
-  <rect x="56.5" y="170.5" height="31" width="144" data-name="Write-Ahead Log" style="stroke:#55de51;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
-  <text x="128.5" y="192" style="fill: #55de51;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Write-Ahead Log">Write-Ahead Log</text>
-  <rect x="269.5" y="170.5" rx="15.5" ry="15.5" height="31" width="68" data-name="Feeder" style="stroke:#55de51;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
-  <text x="303.5" y="192" style="fill: #55de51;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Feeder">Feeder</text>
-  <rect x="529.5" y="99.5" rx="15.5" ry="15.5" height="31" width="73" data-name="Mapper" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
-  <text x="566" y="121" style="fill: #fbb363;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Mapper">Mapper</text>
-  <rect x="642.5" y="99.5" height="35" width="73" data-name="Indexer" style="stroke:none; fill:#262626;"></rect>
-  <path d="M642.5 99.5 L642.5 130.5" data-name="Indexer" style="stroke:#fbb363;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <path d="M715.5 99.5 L715.5 130.5" data-name="Indexer" style="stroke:#fbb363;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
-  <ellipse cx="679" cy="99.5" rx="36.5" ry="6" data-name="Indexer" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></ellipse>
-  <path d="M715.5 130.5 L715.5 130.8 L715.3 131.1 L715.1 131.4 L714.8 131.7 L714.4 132 L713.9 132.3 L713.3 132.6 L712.6 132.8 L711.9 133.1 L711.1 133.4 L710.1 133.6 L709.2 133.9 L708.1 134.1 L707 134.4 L705.8 134.6 L704.5 134.8 L703.2 135 L701.8 135.2 L700.3 135.4 L698.8 135.5 L697.2 135.7 L695.7 135.8 L694 136 L692.3 136.1 L690.6 136.2 L688.9 136.3 L687.1 136.3 L685.3 136.4 L683.5 136.5 L681.7 136.5 L679.9 136.5 L678.1 136.5 L676.3 136.5 L674.5 136.5 L672.7 136.4 L670.9 136.3 L669.1 136.3 L667.4 136.2 L665.7 136.1 L664 136 L662.3 135.8 L660.7 135.7 L659.2 135.5 L657.7 135.4 L656.2 135.2 L654.8 135 L653.5 134.8 L652.2 134.6 L651 134.4 L649.9 134.1 L648.8 133.9 L647.9 133.6 L646.9 133.4 L646.1 133.1 L645.4 132.8 L644.7 132.6 L644.1 132.3 L643.6 132 L643.2 131.7 L642.9 131.4 L642.7 131.1 L642.5 130.8 L642.5 130.5" data-name="Indexer" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></path>
-  <text x="679" y="125" style="fill: #fbb363;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Indexer">Indexer</text>
-  <path d="M747.5 99.5 L827.5 99.5 L835.5 115 L827.5 130.5 L747.5 130.5 L755.5 115 Z" data-name="DPS API" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></path>
-  <text x="795.5" y="121" style="fill: #fbb363;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="DPS API">DPS API</text>
-  <text x="433.5" y="50" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Root Tree">Root Tree</text>
-  <text x="433.5" y="192" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Trie Updates">Trie Updates</text>
-  <text x="434" y="121" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Block Data">Block Data</text>
+  <rect x="0" y="0" height="458" width="590.5" style="stroke:none; fill:#262626;"></rect>
+  <path d="M100.5 59.5 L100.5 79.5 L100.5 92.8 L100.5 92.8 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M95.2 86.2 L100.5 92.8 L105.8 86.2 L100.5 99.5 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M100.5 130.5 L100.5 150.5 L100.5 170.5 L100.5 170.5 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M100.5 201.5 L100.5 221.5 L269.4 249.8 L269.4 249.8 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M262 253.9 L269.4 249.8 L263.7 243.4 L276 250.9 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M312.5 59.5 L312.5 79.5 L312.5 92.8 L312.5 92.8 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M307.2 86.2 L312.5 92.8 L317.8 86.2 L312.5 99.5 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M312.5 130.5 L312.5 150.5 L312.5 170.5 L312.5 170.5 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M312.5 201.5 L312.5 221.5 L312.5 234.8 L312.5 234.8 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M307.2 228.2 L312.5 234.8 L317.8 228.2 L312.5 241.5 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M507 59.5 L507 79.5 L507 92.8 L507 92.8 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M501.7 86.2 L507 92.8 L512.3 86.2 L507 99.5 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M507 130.5 L507 150.5 L507 170.5 L507 170.5 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M507 201.5 L507 221.5 L355.6 249.1 L355.6 249.1 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M361.2 242.7 L355.6 249.1 L363.1 253.2 L349 250.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M312.5 272.5 L312.5 292.5 L312.5 305.8 L312.5 305.8 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M307.2 299.2 L312.5 305.8 L317.8 299.2 L312.5 312.5 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M312.5 359.5 L312.5 379.5 L312.5 392.8 L312.5 392.8 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M307.2 386.2 L312.5 392.8 L317.8 386.2 L312.5 399.5 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <rect x="28.5" y="28.5" height="31" width="144" data-name="Root Checkpoint" style="stroke:#fff;fill:#888;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="100.5" y="50" style="fill: #fff;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Root Checkpoint">Root Checkpoint</text>
+  <rect x="66.5" y="99.5" rx="15.5" ry="15.5" height="31" width="69" data-name="Loader" style="stroke:#fff;fill:#888;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="101" y="121" style="fill: #fff;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Loader">Loader</text>
+  <rect x="282.5" y="99.5" rx="15.5" ry="15.5" height="31" width="60" data-name="Chain" style="stroke:#e53e65;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="312.5" y="121" style="fill: #e53e65;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Chain">Chain</text>
+  <rect x="212.5" y="28.5" height="31" width="200" data-name="Protocol State Database" style="stroke:#e53e65;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="312.5" y="50" style="fill: #e53e65;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Protocol State Database">Protocol State Database</text>
+  <rect x="452.5" y="28.5" height="31" width="109" data-name="Ledger WAL" style="stroke:#55de51;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="507" y="50" style="fill: #55de51;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Ledger WAL">Ledger WAL</text>
+  <rect x="473.5" y="99.5" rx="15.5" ry="15.5" height="31" width="68" data-name="Feeder" style="stroke:#55de51;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="507.5" y="121" style="fill: #55de51;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Feeder">Feeder</text>
+  <rect x="276.5" y="241.5" rx="15.5" ry="15.5" height="31" width="73" data-name="Mapper" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="313" y="263" style="fill: #fbb363;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Mapper">Mapper</text>
+  <rect x="283.5" y="320.5" height="35" width="58" data-name="Index" style="stroke:none; fill:#262626;"></rect>
+  <path d="M283.5 320.5 L283.5 351.5" data-name="Index" style="stroke:#fbb363;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M341.5 320.5 L341.5 351.5" data-name="Index" style="stroke:#fbb363;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <ellipse cx="312.5" cy="320.5" rx="29" ry="6" data-name="Index" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></ellipse>
+  <path d="M341.5 351.5 L341.5 351.8 L341.4 352.1 L341.2 352.4 L340.9 352.7 L340.6 353 L340.2 353.3 L339.8 353.6 L339.2 353.8 L338.6 354.1 L338 354.4 L337.2 354.6 L336.5 354.9 L335.6 355.1 L334.7 355.4 L333.8 355.6 L332.7 355.8 L331.7 356 L330.6 356.2 L329.4 356.4 L328.2 356.5 L327 356.7 L325.7 356.8 L324.4 357 L323.1 357.1 L321.7 357.2 L320.4 357.3 L319 357.3 L317.5 357.4 L316.1 357.5 L314.7 357.5 L313.2 357.5 L311.8 357.5 L310.3 357.5 L308.9 357.5 L307.5 357.4 L306 357.3 L304.6 357.3 L303.3 357.2 L301.9 357.1 L300.6 357 L299.3 356.8 L298 356.7 L296.8 356.5 L295.6 356.4 L294.4 356.2 L293.3 356 L292.3 355.8 L291.2 355.6 L290.3 355.4 L289.4 355.1 L288.5 354.9 L287.8 354.6 L287 354.4 L286.4 354.1 L285.8 353.8 L285.2 353.6 L284.8 353.3 L284.4 353 L284.1 352.7 L283.8 352.4 L283.6 352.1 L283.5 351.8 L283.5 351.5" data-name="Index" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></path>
+  <text x="312.5" y="346" style="fill: #fbb363;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Index">Index</text>
+  <path d="M264.5 399.5 L344.5 399.5 L352.5 415 L344.5 430.5 L264.5 430.5 L272.5 415 Z" data-name="DPS API" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></path>
+  <text x="312.5" y="421" style="fill: #fbb363;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="DPS API">DPS API</text>
+  <text x="101" y="192" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Root Trie">Root Trie</text>
+  <text x="507.5" y="192" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Trie Updates">Trie Updates</text>
+  <text x="312.5" y="192" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Chain Data">Chain Data</text>
 </svg>

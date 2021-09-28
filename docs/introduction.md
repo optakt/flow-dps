@@ -5,7 +5,9 @@ This document is aimed at introducing developers to the Flow Data Provisioning S
 **Table of Contents**
 
 1. [Getting Started](#getting-started)
-   1. [](#)
+   1. [Indexing Past Sporks](#indexing-past-sporks)
+   2. [Indexing Live Sporks](#indexing-live-sporks)
+   3. [Serving Other APIs](#serving-other-apis)
 2. [Developer Guide](#developer-guide)
    1. [Installation](#installation)
       1. [Dependencies](#dependencies)
@@ -15,11 +17,11 @@ This document is aimed at introducing developers to the Flow Data Provisioning S
 
 ## Getting Started
 
-The Flow Data Provisioning Service (DPS) is a web service that maintains and provides access to the history of the Flow execution state.
+The Flow Data Provisioning Service (DPS) is a service that maintains and provides access to the history of the Flow execution state.
 
 The reason for this need is that the in-memory execution state is pruned after 300 chunks, which makes it impossible to access the state history.
 Also, script execution is currently proxied from the access nodes to execution nodes, which is not scalable.
-The DPS makes access to the execution state _available_ (at any block height) and _scalable_ (so it does not infer load on the network nodes).
+The DPS makes access to the execution state _available_ (at any block height) and _scalable_ (so it does not increase load on the core network).
 
 Flow is often upgraded with breaking changes that require a network restart. The new network with the updated version is started from a snapshot of the previous execution state.
 The final version of the previous execution state remains available through a legacy access node that connects to a legacy execution node, but once again this is limited to the last 300 chunks.
@@ -28,9 +30,9 @@ The final version of the previous execution state remains available through a le
 
 In order to index past sporks using Flow DPS, three elements are needed from the spork to be indexed:
 
-* Its root checkpoint
-* The protocol state database from one of its consensus nodes
-* The write-ahead log from one of its execution nodes
+* Its root checkpoint;
+* The protocol state database from one of its execution nodes; and
+* The write-ahead log from one of its execution nodes.
 
 You can then run the `flow-dps-indexer` binary, giving it access to those elements like such:
 
@@ -38,7 +40,7 @@ You can then run the `flow-dps-indexer` binary, giving it access to those elemen
 $ ./flow-dps-indexer -a -l debug -d /var/flow/data/protocol -t /var/flow/data/execution -c /var/flow/bootstrap/root.checkpoint -i /var/flow/data/index
 ```
 
-This can take a very long time to process, and require large amounts of available storage space for the new index to be created.
+Creating the index database can take a very long time and requires large amounts of available storage space and memory.
 Once the indexing process is over, you can use the created DPS index to serve the DPS API, by running `flow-dps-server` and giving it access to the index.
 
 ```console
@@ -46,12 +48,12 @@ $ ./flow-dps-server -i /var/flow/data/index -a localhost:5005
 ```
 
 You should now have the DPS API available at `localhost:5005`.
-It can be used in conjunction with the DPS Rosetta Server and the DPS Access API, which both need the address to your DPS API in order to function.
+It can be used in conjunction with the [Flow Rosetta API](https://github.com/optakt/flow-dps-rosetta) and the [Flow Access API](https://github.com/optakt/flow-dps-access), which both need the address to your DPS API in order to function.
 
 ### Indexing Live Sporks
 
 The DPS Live binary handles both indexing and serving the DPS API for its index.
-This is because it is impossible for one process to write on the index while another reads from it without causing concurrency issues.
+This is because it is impossible for one process to write to the index while another reads from it without causing concurrency issues.
 
 It needs to connect to the Flow network by acting as an unstaked consensus follower, and needs the following information:
 
@@ -61,9 +63,37 @@ It needs to connect to the Flow network by acting as an unstaked consensus follo
 * The address of the seed node to follow unstaked consensus
 * The hex-encoded public network key of the seed node to follow unstaked consensus
 
+The Live Indexer configures the unstaked consensus follower to create its protocol state database at the given location (specified using the `-d` option), and also reads from it to retrieve protocol state data.
+
 ```console
 $ ./flow-dps-live -u flow-block-data -i /var/flow/index -d /var/flow/data -c /var/flow/bootstrap/root.checkpoint -b /var/flow/bootstrap/public --seed-address access.canary.nodes.onflow.org:9000 --seed-key cfce845fa9b0fb38402640f997233546b10fec3f910bf866c43a0db58ab6a1e4
 ```
+
+### Serving Other APIs
+
+When using the Live Indexer, the DPS API is already exposed parallel to the indexing. When using the `flow-dps-indexer` however, the indexing needs to be completed before the index can be used to start the DPS API using the `flow-dps-server` binary:
+
+```console
+$ ./flow-dps-server -i /var/flow/data/index -a 172.17.0.1:5005
+```
+
+Once the API is running, it can be used to serve other APIs as well.
+
+See the documentation of the [Flow Rosetta API](https://github.com/optakt/flow-dps-rosetta) in order to build its binary, and then run the following command:
+
+```console
+$ ./flow-rosetta-server -a "172.17.0.1:5005" -p 8080
+```
+
+The `-a` argument is used to specify the address of the DPS API, and the `-p` sets the port on which the Rosetta API listens.
+
+Similarly, the [Flow Access API](https://github.com/optakt/flow-dps-access) can be run like such:
+
+```console
+$ ./dps-access-api -a "172.17.0.1:5005" -p 5006
+```
+
+Just like with the Rosetta API, the `-a` argument is used to specify the address of the DPS API, and the `-p` sets the port on which the Access API listens.
 
 ## Developer Guide
 
@@ -129,8 +159,6 @@ You can then copy part of this data folder to be used in DPS:
 * `data/consensus/NodeID/checkpoint.00000001` can be given as `root.checkpoint`
 
 You can then run the `flow-dps-indexer`, which should properly build its index based on the given information.
-Be careful, there should never be multiple indexers running in parallel sharing the same `index` folder as they might end up corrupting the contents of the database.
-It is however safe to run the indexer and any command that uses the database in read-only mode with the same `index` folder.
 
 ## More Resources
 
