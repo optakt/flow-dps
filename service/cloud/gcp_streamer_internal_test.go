@@ -37,8 +37,14 @@ func TestNewGCPStreamer(t *testing.T) {
 	log := zerolog.Nop()
 	bucket := &storage.BucketHandle{}
 	limit := uint(42)
+	blockIDs := mocks.GenericBlockIDs(4)
 
-	streamer := NewGCPStreamer(log, bucket, WithBufferSize(limit))
+	streamer := NewGCPStreamer(
+		log,
+		bucket,
+		WithBufferSize(limit),
+		WithCatchupBlocks(blockIDs),
+	)
 
 	require.NotNil(t, streamer)
 	assert.NotZero(t, streamer.log)
@@ -46,6 +52,10 @@ func TestNewGCPStreamer(t *testing.T) {
 	assert.Equal(t, limit, streamer.limit)
 	assert.NotNil(t, streamer.queue)
 	assert.NotNil(t, streamer.buffer)
+
+	for streamer.queue.Len() > 0 {
+		assert.Contains(t, blockIDs, streamer.queue.PopFront())
+	}
 }
 
 func TestGCPStreamer_OnBlockFinalized(t *testing.T) {

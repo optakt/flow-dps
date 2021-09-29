@@ -305,7 +305,7 @@ func (t *Transitions) IndexChain(s *State) error {
 		return fmt.Errorf("could not index events: %w", err)
 	}
 
-	// At this point, we need to forward the the `last` state commitment to
+	// At this point, we need to forward the `last` state commitment to
 	// `next`, so we know what the state commitment was at the last finalized
 	// block we processed. This will allow us to know when to stop when
 	// walking back through the forest to collect trie updates.

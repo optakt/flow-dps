@@ -24,8 +24,8 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/models/dps"
 
+	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -851,7 +851,344 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 	})
 }
 
-func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
+func TestTransitions_InitializeMapper(t *testing.T) {
+	t.Run("switches state to BootstrapState if configured to do so", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusInitialize)
+
+		tr.cfg.BootstrapState = true
+
+		err := tr.InitializeMapper(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusBootstrap, st.status)
+	})
+
+	t.Run("switches state to StatusResume if no bootstrapping configured", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusInitialize)
+
+		tr.cfg.BootstrapState = false
+
+		err := tr.InitializeMapper(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusResume, st.status)
+	})
+
+	t.Run("handles invalid status", func(t *testing.T) {
+		t.Parallel()
+
+		tr, st := baselineFSM(t, StatusForward)
+
+		err := tr.InitializeMapper(st)
+
+		require.Error(t, err)
+	})
+}
+
+func TestTransitions_ResumeIndexing(t *testing.T) {
+	header := mocks.GenericHeader
+	tree := mocks.GenericTrie
+	commit := flow.StateCommitment(tree.RootHash())
+	differentCommit := mocks.GenericCommit(0)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.RootFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+
+		writer := mocks.BaselineWriter(t)
+		writer.FirstFunc = func(height uint64) error {
+			assert.Equal(t, header.Height, height)
+
+			return nil
+		}
+
+		loader := mocks.BaselineLoader(t)
+		loader.TrieFunc = func() (*trie.MTrie, error) {
+			return tree, nil
+		}
+
+		reader := mocks.BaselineReader(t)
+		reader.LastFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+		reader.CommitFunc = func(height uint64) (flow.StateCommitment, error) {
+			assert.Equal(t, header.Height, height)
+
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(
+			t,
+			StatusResume,
+			withReader(reader),
+			withWriter(writer),
+			withLoader(loader),
+			withChain(chain),
+		)
+
+		err := tr.ResumeIndexing(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusIndex, st.status)
+		assert.Equal(t, header.Height+1, st.height)
+		assert.Equal(t, flow.DummyStateCommitment, st.last)
+		assert.Equal(t, commit, st.next)
+	})
+
+	t.Run("handles chain failure on Root", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.RootFunc = func() (uint64, error) {
+			return 0, mocks.GenericError
+		}
+
+		loader := mocks.BaselineLoader(t)
+		loader.TrieFunc = func() (*trie.MTrie, error) {
+			return tree, nil
+		}
+
+		reader := mocks.BaselineReader(t)
+		reader.LastFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(
+			t,
+			StatusResume,
+			withReader(reader),
+			withLoader(loader),
+			withChain(chain),
+		)
+
+		err := tr.ResumeIndexing(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles writer failure on First", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.RootFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+
+		writer := mocks.BaselineWriter(t)
+		writer.FirstFunc = func(uint64) error {
+			return mocks.GenericError
+		}
+
+		loader := mocks.BaselineLoader(t)
+		loader.TrieFunc = func() (*trie.MTrie, error) {
+			return tree, nil
+		}
+
+		reader := mocks.BaselineReader(t)
+		reader.LastFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(
+			t,
+			StatusResume,
+			withWriter(writer),
+			withReader(reader),
+			withLoader(loader),
+			withChain(chain),
+		)
+
+		err := tr.ResumeIndexing(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles reader failure on Last", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.RootFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+
+		loader := mocks.BaselineLoader(t)
+		loader.TrieFunc = func() (*trie.MTrie, error) {
+			return tree, nil
+		}
+
+		reader := mocks.BaselineReader(t)
+		reader.LastFunc = func() (uint64, error) {
+			return 0, mocks.GenericError
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(
+			t,
+			StatusResume,
+			withReader(reader),
+			withLoader(loader),
+			withChain(chain),
+		)
+
+		err := tr.ResumeIndexing(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles reader failure on Commit", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.RootFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+
+		loader := mocks.BaselineLoader(t)
+		loader.TrieFunc = func() (*trie.MTrie, error) {
+			return tree, nil
+		}
+
+		reader := mocks.BaselineReader(t)
+		reader.LastFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			return flow.DummyStateCommitment, mocks.GenericError
+		}
+
+		tr, st := baselineFSM(
+			t,
+			StatusResume,
+			withReader(reader),
+			withLoader(loader),
+			withChain(chain),
+		)
+
+		err := tr.ResumeIndexing(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles loader failure on Trie", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.RootFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+
+		loader := mocks.BaselineLoader(t)
+		loader.TrieFunc = func() (*trie.MTrie, error) {
+			return nil, mocks.GenericError
+		}
+
+		reader := mocks.BaselineReader(t)
+		reader.LastFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(
+			t,
+			StatusResume,
+			withReader(reader),
+			withLoader(loader),
+			withChain(chain),
+		)
+
+		err := tr.ResumeIndexing(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles mismatch between tree root hash and indexed commit", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.RootFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+
+		loader := mocks.BaselineLoader(t)
+		loader.TrieFunc = func() (*trie.MTrie, error) {
+			return tree, nil
+		}
+
+		reader := mocks.BaselineReader(t)
+		reader.LastFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			return differentCommit, nil
+		}
+
+		tr, st := baselineFSM(
+			t,
+			StatusResume,
+			withReader(reader),
+			withLoader(loader),
+			withChain(chain),
+		)
+
+		err := tr.ResumeIndexing(st)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles invalid status", func(t *testing.T) {
+		t.Parallel()
+
+		chain := mocks.BaselineChain(t)
+		chain.RootFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+
+		loader := mocks.BaselineLoader(t)
+		loader.TrieFunc = func() (*trie.MTrie, error) {
+			return tree, nil
+		}
+
+		reader := mocks.BaselineReader(t)
+		reader.LastFunc = func() (uint64, error) {
+			return header.Height, nil
+		}
+		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
+			return commit, nil
+		}
+
+		tr, st := baselineFSM(
+			t,
+			StatusForward,
+			withReader(reader),
+			withLoader(loader),
+			withChain(chain),
+		)
+
+		err := tr.ResumeIndexing(st)
+
+		assert.Error(t, err)
+	})
+}
+
+func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*Transitions, *State) {
 	t.Helper()
 
 	load := mocks.BaselineLoader(t)
@@ -864,7 +1201,7 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 	once := &sync.Once{}
 	doneCh := make(chan struct{})
 
-	tr := &Transitions{
+	tr := Transitions{
 		cfg: Config{
 			BootstrapState: false,
 			SkipRegisters:  false,
@@ -879,7 +1216,11 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 		once:  once,
 	}
 
-	st := &State{
+	for _, opt := range opts {
+		opt(&tr)
+	}
+
+	st := State{
 		forest:    forest,
 		status:    status,
 		height:    mocks.GenericHeight,
@@ -889,5 +1230,35 @@ func baselineFSM(t *testing.T, status Status) (*Transitions, *State) {
 		done:      doneCh,
 	}
 
-	return tr, st
+	return &tr, &st
+}
+
+func withLoader(load Loader) func(*Transitions) {
+	return func(tr *Transitions) {
+		tr.load = load
+	}
+}
+
+func withChain(chain dps.Chain) func(*Transitions) {
+	return func(tr *Transitions) {
+		tr.chain = chain
+	}
+}
+
+func withFeeder(feed Feeder) func(*Transitions) {
+	return func(tr *Transitions) {
+		tr.feed = feed
+	}
+}
+
+func withReader(read dps.Reader) func(*Transitions) {
+	return func(tr *Transitions) {
+		tr.read = read
+	}
+}
+
+func withWriter(write dps.Writer) func(*Transitions) {
+	return func(tr *Transitions) {
+		tr.write = write
+	}
 }
