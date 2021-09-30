@@ -71,8 +71,14 @@ func NewWriter(db *badger.DB, lib dps.WriteLibrary, options ...func(*Config)) *W
 		wg:    &sync.WaitGroup{},
 	}
 
-	w.wg.Add(1)
-	go w.flush()
+	// No flush interval means that flushing is disabled, and we only commit
+	// badger transactions that are full. This optimizes throughput of writing
+	// to the database, but creates latency if transactions don't fill up fast
+	// enough to be committed at maximum size.
+	if cfg.FlushInterval > 0 {
+		w.wg.Add(1)
+		go w.flush()
+	}
 
 	return &w
 }
@@ -334,28 +340,23 @@ func (w *Writer) Close() error {
 func (w *Writer) flush() {
 	defer w.wg.Done()
 
+	ticker := time.NewTicker(w.cfg.FlushInterval)
+
+FlushLoop:
 	for {
 		select {
 
-		// If this case is triggered, it means there was no new operation added
-		// to the transaction for flush interval. We thus want to flush the
-		// transaction.
-		case <-time.After(w.cfg.FlushInterval):
+		case <-ticker.C:
 			w.mutex.Lock()
 			_ = w.sema.Acquire(context.Background(), 1)
 			w.tx.CommitWith(w.committed)
 			w.tx = w.db.NewTransaction(true)
 			w.mutex.Unlock()
 
-		// If this case is triggered, an operation was added to the transaction
-		// and we reset the trigger to commit the transaction for flushing.
-		case <-w.tick:
-			// resets the `time.After`
-
-		// If this case is triggered, we are done adding operations for good and
-		// we can shut down.
 		case <-w.done:
-			return
+			break FlushLoop
 		}
 	}
+
+	ticker.Stop()
 }

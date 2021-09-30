@@ -144,14 +144,17 @@ func run() int {
 	feed := feeder.FromWAL(wal.NewReader(segments))
 
 	// Writer is responsible for writing the index data to the index database.
-	index := index.NewWriter(indexDB, storage)
+	// We explicitly disable flushing at regular intervals to improve throughput
+	// of badger transactions when indexing from static on-disk data.
+	write := index.NewWriter(indexDB, storage,
+		index.WithFlushInterval(0),
+	)
 	defer func() {
-		err := index.Close()
+		err := write.Close()
 		if err != nil {
 			log.Error().Err(err).Msg("could not close index")
 		}
 	}()
-	write := dps.Writer(index)
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	var load mapper.Loader
