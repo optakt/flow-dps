@@ -42,7 +42,6 @@ type Writer struct {
 	sema *semaphore.Weighted
 	err  chan error
 
-	tick  chan struct{}   // signals when an operation is added to the transaction
 	done  chan struct{}   // signals when no more new operations will be added
 	mutex *sync.Mutex     // guards the current transaction against concurrent access
 	wg    *sync.WaitGroup // keeps track of when the flush goroutine should exit
@@ -65,7 +64,6 @@ func NewWriter(db *badger.DB, lib dps.WriteLibrary, options ...func(*Config)) *W
 		sema: semaphore.NewWeighted(int64(cfg.ConcurrentTransactions)),
 		err:  make(chan error, cfg.ConcurrentTransactions),
 
-		tick:  make(chan struct{}, 1),
 		done:  make(chan struct{}),
 		mutex: &sync.Mutex{},
 		wg:    &sync.WaitGroup{},
@@ -261,11 +259,6 @@ func (w *Writer) apply(op func(*badger.Txn) error) error {
 		// skip
 	}
 
-	// We should also reset the timer for committing at regular intervals. Any
-	// period of inactivity for the configured amount will lead us to commit
-	// the currently building Badger transaction.
-	w.tick <- struct{}{}
-
 	// If we had no error in a previous transaction, we try applying the
 	// operation to the current transaction. If the transaction is already too
 	// big, we simply commit it with our callback and start a new transaction.
@@ -308,9 +301,6 @@ func (w *Writer) Close() error {
 	// without new operations, then drain the tick channel.
 	close(w.done)
 	w.wg.Wait()
-	close(w.tick)
-	for range w.tick {
-	}
 
 	// The first transaction we created did not claim a slot on the semaphore.
 	// This makes sense, because we only want to limit in-flight (committing)
