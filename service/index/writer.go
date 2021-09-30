@@ -307,7 +307,7 @@ func (w *Writer) Close() error {
 	// transactions. The currently building transaction is not in-progress.
 	// However, we still need to make sure that the currently building
 	// transaction is properly committed. We assume that we are no longer
-	// appyling new operations when we call `Close`, so we can explicitly do so
+	// applying new operations when we call `Close`, so we can explicitly do so
 	// here, without using the callback.
 	err := w.tx.Commit()
 	if err != nil {
