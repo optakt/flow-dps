@@ -39,7 +39,8 @@ func WithConcurrentTransactions(concurrent uint) func(*Config) {
 }
 
 // WithFlushInterval sets a custom interval after which we will flush Badger
-// transactions if no new operations are added.
+// transactions, to avoid long waits for DB updates in cases where there is not
+// enough data to quickly fill them.
 func WithFlushInterval(interval time.Duration) func(*Config) {
 	return func(cfg *Config) {
 		cfg.FlushInterval = interval

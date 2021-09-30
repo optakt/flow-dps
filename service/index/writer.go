@@ -42,7 +42,6 @@ type Writer struct {
 	sema *semaphore.Weighted
 	err  chan error
 
-	tick  chan struct{}   // signals when an operation is added to the transaction
 	done  chan struct{}   // signals when no more new operations will be added
 	mutex *sync.Mutex     // guards the current transaction against concurrent access
 	wg    *sync.WaitGroup // keeps track of when the flush goroutine should exit
@@ -65,14 +64,19 @@ func NewWriter(db *badger.DB, lib dps.WriteLibrary, options ...func(*Config)) *W
 		sema: semaphore.NewWeighted(int64(cfg.ConcurrentTransactions)),
 		err:  make(chan error, cfg.ConcurrentTransactions),
 
-		tick:  make(chan struct{}, 1),
 		done:  make(chan struct{}),
 		mutex: &sync.Mutex{},
 		wg:    &sync.WaitGroup{},
 	}
 
-	w.wg.Add(1)
-	go w.flush()
+	// No flush interval means that flushing is disabled, and we only commit
+	// badger transactions that are full. This optimizes throughput of writing
+	// to the database, but creates latency if transactions don't fill up fast
+	// enough to be committed at maximum size.
+	if cfg.FlushInterval > 0 {
+		w.wg.Add(1)
+		go w.flush()
+	}
 
 	return &w
 }
@@ -255,11 +259,6 @@ func (w *Writer) apply(op func(*badger.Txn) error) error {
 		// skip
 	}
 
-	// We should also reset the timer for committing at regular intervals. Any
-	// period of inactivity for the configured amount will lead us to commit
-	// the currently building Badger transaction.
-	w.tick <- struct{}{}
-
 	// If we had no error in a previous transaction, we try applying the
 	// operation to the current transaction. If the transaction is already too
 	// big, we simply commit it with our callback and start a new transaction.
@@ -302,16 +301,13 @@ func (w *Writer) Close() error {
 	// without new operations, then drain the tick channel.
 	close(w.done)
 	w.wg.Wait()
-	close(w.tick)
-	for range w.tick {
-	}
 
 	// The first transaction we created did not claim a slot on the semaphore.
 	// This makes sense, because we only want to limit in-flight (committing)
 	// transactions. The currently building transaction is not in-progress.
 	// However, we still need to make sure that the currently building
 	// transaction is properly committed. We assume that we are no longer
-	// appyling new operations when we call `Close`, so we can explicitly do so
+	// applying new operations when we call `Close`, so we can explicitly do so
 	// here, without using the callback.
 	err := w.tx.Commit()
 	if err != nil {
@@ -334,26 +330,19 @@ func (w *Writer) Close() error {
 func (w *Writer) flush() {
 	defer w.wg.Done()
 
+	ticker := time.NewTicker(w.cfg.FlushInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
 
-		// If this case is triggered, it means there was no new operation added
-		// to the transaction for flush interval. We thus want to flush the
-		// transaction.
-		case <-time.After(w.cfg.FlushInterval):
+		case <-ticker.C:
 			w.mutex.Lock()
 			_ = w.sema.Acquire(context.Background(), 1)
 			w.tx.CommitWith(w.committed)
 			w.tx = w.db.NewTransaction(true)
 			w.mutex.Unlock()
 
-		// If this case is triggered, an operation was added to the transaction
-		// and we reset the trigger to commit the transaction for flushing.
-		case <-w.tick:
-			// resets the `time.After`
-
-		// If this case is triggered, we are done adding operations for good and
-		// we can shut down.
 		case <-w.done:
 			return
 		}

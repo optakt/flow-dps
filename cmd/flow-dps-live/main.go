@@ -98,7 +98,7 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
-	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "idle time before flushing badger transactions")
+	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
 
@@ -167,6 +167,12 @@ func run() int {
 		log.Error().Msg("index already exists, please force bootstrapping (-f, --force) to overwrite with given checkpoint")
 		return failure
 	}
+
+	// We initialize the writer with a flush interval, which will make sure that
+	// Badger transactions are committed to the database, even if they don't
+	// fill up fast enough. This avoids having latency between when we add data
+	// to the transaction and when it becomes available on-disk for serving the
+	// DPS API.
 	write := index.NewWriter(indexDB, storage,
 		index.WithFlushInterval(flagFlushInterval),
 	)
