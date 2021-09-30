@@ -341,8 +341,8 @@ func (w *Writer) flush() {
 	defer w.wg.Done()
 
 	ticker := time.NewTicker(w.cfg.FlushInterval)
+	defer ticker.Stop()
 
-FlushLoop:
 	for {
 		select {
 
@@ -354,9 +354,7 @@ FlushLoop:
 			w.mutex.Unlock()
 
 		case <-w.done:
-			break FlushLoop
+			return
 		}
 	}
-
-	ticker.Stop()
 }
