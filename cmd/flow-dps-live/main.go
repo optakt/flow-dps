@@ -79,7 +79,6 @@ func run() int {
 		flagBucket     string
 		flagCheckpoint string
 		flagData       string
-		flagForce      bool
 		flagIndex      string
 		flagLevel      string
 		flagMetrics    string
@@ -95,7 +94,6 @@ func run() int {
 	pflag.StringVarP(&flagBucket, "bucket", "u", "", "Google Cloude Storage bucket with block data records")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to root checkpoint file for execution state trie")
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
-	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
@@ -157,17 +155,14 @@ func run() int {
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
 	read := index.NewReader(indexDB, storage)
-	_, err = read.First()
+	first, err := read.First()
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		log.Error().Err(err).Msg("could not get first height from index reader")
 		return failure
 	}
-	if errors.Is(err, badger.ErrKeyNotFound) && flagCheckpoint == "" {
-		log.Error().Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
-		return failure
-	}
-	if err == nil && flagCheckpoint != "" && !flagForce {
-		log.Error().Msg("index already exists, please force bootstrapping (-f, --force) to overwrite with given checkpoint")
+	empty := errors.Is(err, badger.ErrKeyNotFound)
+	if empty && flagCheckpoint == "" {
+		log.Error().Msg("index database is empty, please provide root checkpoint (-c, --checkpoint) to bootstrap")
 		return failure
 	}
 
@@ -314,13 +309,11 @@ func run() int {
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
-	// At this point, we can initialize the core business logic of the indexer,
-	// with the mapper's finite state machine and transitions. We also want to
-	// load and inject the root checkpoint if it is given as a parameter.
+	// If we have an empty database, we want a loader to bootstrap from the
+	// checkpoint; if we don't, we can optionally use the root checkpoint to
+	// speed up the restart/restoration.
 	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
-	bootstrap := (flagCheckpoint != "")
-	if bootstrap {
+	if empty {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
 			log.Error().Err(err).Msg("could not open checkpoint file")
@@ -328,9 +321,27 @@ func run() int {
 		}
 		defer file.Close()
 		load = loader.FromCheckpoint(file)
+	} else if flagCheckpoint != "" {
+		file, err := os.Open(flagCheckpoint)
+		if err != nil {
+			log.Error().Err(err).Msg("could not open checkpoint file")
+			return failure
+		}
+		defer file.Close()
+		load = loader.FromCheckpoint(file)
+		load = loader.FromIndex(log, storage, indexDB,
+			loader.WithInitializer(load),
+			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
+		)
+	} else {
+		load = loader.FromIndex(log, storage, indexDB)
 	}
+
+	// At this point, we can initialize the core business logic of the indexer,
+	// with the mapper's finite state machine and transitions. We also want to
+	// load and inject the root checkpoint if it is given as a parameter.
 	transitions := mapper.NewTransitions(log, load, consensus, execution, read, write,
-		mapper.WithBootstrapState(bootstrap),
+		mapper.WithBootstrapState(empty),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()

@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
@@ -1277,7 +1278,7 @@ func TestLibrary_IterateLedger(t *testing.T) {
 		}
 
 		got := make(map[ledger.Path]*ledger.Payload)
-		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
+		op := l.IterateLedger(loader.ExcludeNone(), func(path ledger.Path, payload *ledger.Payload) error {
 			got[path] = payload
 
 			return nil
@@ -1309,7 +1310,7 @@ func TestLibrary_IterateLedger(t *testing.T) {
 		}
 
 		got := make(map[ledger.Path]*ledger.Payload)
-		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
+		op := l.IterateLedger(loader.ExcludeNone(), func(path ledger.Path, payload *ledger.Payload) error {
 			got[path] = payload
 
 			return nil
@@ -1341,7 +1342,7 @@ func TestLibrary_IterateLedger(t *testing.T) {
 		}
 
 		got := make(map[ledger.Path]*ledger.Payload)
-		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
+		op := l.IterateLedger(loader.ExcludeNone(), func(path ledger.Path, payload *ledger.Payload) error {
 			got[path] = payload
 
 			return nil
@@ -1367,7 +1368,7 @@ func TestLibrary_IterateLedger(t *testing.T) {
 			require.NoError(t, db.Update(l.SavePayload(height, paths[i], payloads[i])))
 		}
 
-		op := l.IterateLedger(func(path ledger.Path, payload *ledger.Payload) error {
+		op := l.IterateLedger(loader.ExcludeNone(), func(path ledger.Path, payload *ledger.Payload) error {
 			return mocks.GenericError
 		})
 
