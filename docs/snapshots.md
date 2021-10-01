@@ -1,14 +1,12 @@
 # Index Snapshots
 
-This document describes index snapshots, what they are and how they can be created or updated.
+This document describes index snapshots, what they are and how they can be created and restored.
 
 **Table of Contents**
 
 - [What Are Index Snapshots](#what-are-index-snapshots)
 - [Creating a Snapshot](#creating-a-snapshot)
-- [Updating a Snapshot](#updating-a-snapshot)
-    1. [New Index](#new-index)
-    2. [New Snapshot](#new-snapshot)
+- [Restoring a Snapshot](#restoring-a-snapshot)
 
 ## What Are Index Snapshots
 
@@ -23,32 +21,22 @@ Technical documentation can be found [here](https://pkg.go.dev/github.com/dgraph
 
 Index snapshots are created using the CLI tool found at `cmd/create-index-snapshot`.
 Usage for the tool is described in more detail [here](https://github.com/optakt/flow-dps/blob/master/cmd/create-index-snapshot/README.md).
-By default, the snapshot is hex-encoded.
+By default, the snapshot is not encoded and output contains raw (binary) data.
 
 ```console
-$ create-index-snapshot -i <index_dir> > output.hex
+$ create-index-snapshot -i <index_dir> > output.bin
 ```
 
-When an index snapshot is created, it is compressed using a specific compression dictionary.
-When restoring the index, the snapshot needs to be decompressed using the same dictionary or decompression will fail.
+When an index snapshot is created, it can be compressed with a specific compression algorithm (zstd or gzip).
+When restoring the index, the snapshot needs to be decompressed using the same algorithm or snapshot restore will fail.
 
-## Updating a Snapshot
+## Restoring a Snapshot
 
-It is sometimes necessary to regenerate the snapshot, for example when an index was added or changed, or because the internal format of the index changed (like when a compression dictionary is changed).
+To restore a snapshot, use the CLI tool found at `cmd/restore-index-snapshot`.
+Usage for the tool is described in more detail [here](https://github.com/optakt/flow-dps/blob/master/cmd/restore-index-snapshot/README.md).
+To successfully restore the snapshot, you must specify the same compression and encoding options as used when creating it.
 
-### New Index
-
-The following command creates a new index.
-Be careful to always use the same inputs as for the original index, if the goal is to continue building on the existing state.
-
+Example of restoring a gzip compressed snapshot:
 ```console
-$ flow-dps-indexer -t <trie_dir> -d <data_dir> -i <index_dir> -a
-```
-
-### New Snapshot
-
-Creating the new snapshot is the same as described in the [Creating a snapshot](#creating-a-snapshot) section, while referencing the new index.
-
-```console
-$ create-index-snapshot -i <new_index_dir> > output.hex
+$ restore-index-snapshot -i /var/dps/index -c gzip < dps-index-snapshot.gz
 ```
