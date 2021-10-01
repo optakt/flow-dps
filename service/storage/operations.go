@@ -288,7 +288,7 @@ func (l *Library) IterateLedger(exclude func(height uint64) bool, process func(p
 		defer it.Close()
 
 		sentinel := encodeKey(prefixPayload, highest, uint64(math.MaxUint64))
-		for it.Seek(sentinel); it.ValidForPrefix(prefix); it.Next() {
+		for it.Seek(sentinel); it.ValidForPrefix(prefix); {
 
 			// First, we extract the height from the item's key, and check if
 			// we should just skip past this entry.
@@ -296,6 +296,7 @@ func (l *Library) IterateLedger(exclude func(height uint64) bool, process func(p
 			key := item.Key()
 			height := binary.BigEndian.Uint64(key[33:41])
 			if exclude(height) {
+				it.Next()
 				continue
 			}
 
