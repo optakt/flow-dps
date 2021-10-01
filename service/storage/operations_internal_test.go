@@ -1324,6 +1324,34 @@ func TestLibrary_IterateLedger(t *testing.T) {
 		assert.Equal(t, payloads[entries-1], got[path])
 	})
 
+	t.Run("handles exclusion of payloads below specified height", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := zbor.NewCodec()
+		l := &Library{codec}
+
+		for i := 0; i < entries; i++ {
+			height := mocks.GenericHeight + uint64(i)
+			require.NoError(t, db.Update(l.SavePayload(height, paths[i], payloads[i])))
+		}
+
+		got := make(map[ledger.Path]*ledger.Payload)
+		limit := mocks.GenericHeight + uint64(entries)
+		op := l.IterateLedger(loader.ExcludeAtOrBelow(limit), func(path ledger.Path, payload *ledger.Payload) error {
+			got[path] = payload
+
+			return nil
+		})
+
+		err := db.View(op)
+
+		assert.NoError(t, err)
+		assert.Len(t, got, 0)
+	})
+
 	t.Run("handles codec failure", func(t *testing.T) {
 		t.Parallel()
 
