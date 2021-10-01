@@ -99,17 +99,20 @@ func run() int {
 			log.Error().Err(err).Msg("could not close index database")
 		}
 	}()
-	protocolDB, err := badger.Open(dps.DefaultOptions(flagData))
+
+	// Open Protocol State database from which to read.
+	chainData, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
 		log.Error().Err(err).Msg("could not open protocol state database")
 		return failure
 	}
 	defer func() {
-		err := protocolDB.Close()
+		err := chainData.Close()
 		if err != nil {
 			log.Error().Err(err).Msg("could not close protocol state database")
 		}
 	}()
+
 	// The storage library is initialized with a codec and provides functions to
 	// interact with a Badger database while encoding and compressing
 	// transparently.
@@ -133,7 +136,7 @@ func run() int {
 	}
 
 	// The chain is responsible for reading blockchain data from the protocol state.
-	disk := chain.FromDisk(protocolDB)
+	disk := chain.FromDisk(chainData)
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
 	segments, err := wal.NewSegmentsReader(flagTrie)

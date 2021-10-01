@@ -20,11 +20,12 @@ import (
 	"math"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Disk is a component used to access chain data from a badger database.
@@ -60,16 +61,19 @@ func (d *Disk) Root() (uint64, error) {
 // Commit retrieves the state commitment at the given height.
 func (d *Disk) Commit(height uint64) (flow.StateCommitment, error) {
 
+	fmt.Printf(">>> Reading from chain data at height %d\n", height)
 	blockID, err := d.block(height)
 	if err != nil {
 		return flow.DummyStateCommitment, fmt.Errorf("could not get block for height: %w", err)
 	}
+	fmt.Printf(">>> Got blockID %x at height %d\n", blockID[:], height)
 
 	var commit flow.StateCommitment
 	err = d.db.View(operation.LookupStateCommitment(blockID, &commit))
 	if err != nil {
 		return flow.DummyStateCommitment, fmt.Errorf("could not look up commit: %w", err)
 	}
+	fmt.Printf(">>> Got commit %x for blockID %x at height %d\n", commit[:], blockID[:], height)
 
 	return commit, nil
 }

@@ -39,19 +39,19 @@ func FromCheckpoint(file io.Reader) *Checkpoint {
 // Trie loads the execution state trie from the LedgerWAL root checkpoint.
 func (c *Checkpoint) Trie() (*trie.MTrie, error) {
 
-	checkpoint, err := wal.ReadCheckpoint(c.file)
-	if err != nil {
-		return nil, fmt.Errorf("could not read checkpoint: %w", err)
-	}
+	//checkpoint, err := wal.ReadCheckpoint(c.file)
+	//if err != nil {
+	//	return nil, fmt.Errorf("could not read checkpoint: %w", err)
+	//}
+	//
+	//trees, err := flattener.RebuildTries(checkpoint)
+	//if err != nil {
+	//	return nil, fmt.Errorf("could not rebuild tries: %w", err)
+	//}
+	//
+	//if len(trees) != 1 {
+	//	return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
+	//}
 
-	trees, err := flattener.RebuildTries(checkpoint)
-	if err != nil {
-		return nil, fmt.Errorf("could not rebuild tries: %w", err)
-	}
-
-	if len(trees) != 1 {
-		return nil, fmt.Errorf("should only have one trie in root checkpoint (tries: %d)", len(trees))
-	}
-
-	return trees[0], nil
+	return trie.NewEmptyMTrie(), nil
 }
