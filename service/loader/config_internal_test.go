@@ -32,6 +32,9 @@ func TestWithTrieInitializer(t *testing.T) {
 }
 
 func TestWithExclude(t *testing.T) {
+	// In Go, the only valid comparison for functions is with nil.
+	// Thus we will set ExcludeHeight to nil so we can later verify
+	// that it was correctly initialized.
 	c := Config{
 		ExcludeHeight: nil,
 	}
