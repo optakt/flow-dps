@@ -28,7 +28,7 @@ var DefaultConfig = Config{
 // Config contains the configuration options for the index loader.
 type Config struct {
 	TrieInitializer mapper.Loader
-	ExcludeHeight   func(uint64) bool
+	ExcludeHeight   Exclude
 }
 
 // Option is a configuration option for the index loader. It can be passed to
