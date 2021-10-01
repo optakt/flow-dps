@@ -18,6 +18,7 @@ import (
 	"errors"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -87,14 +88,39 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// Open the needed databases.
-	indexDB, err := badger.Open(dps.DefaultOptions(flagIndex))
+	// Open the index databases in which to write.
+	protocolPath := filepath.Join(flagIndex, index.PathProtocolDatabase)
+	protocolDB, err := badger.Open(dps.DefaultOptions(protocolPath))
 	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index database")
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open protocol index database")
 		return failure
 	}
 	defer func() {
-		err := indexDB.Close()
+		err := protocolDB.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close index database")
+		}
+	}()
+	ledgerPath := filepath.Join(flagIndex, index.PathLedgerDatabase)
+	ledgerDB, err := badger.Open(dps.DefaultOptions(ledgerPath))
+	if err != nil {
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open ledger index database")
+		return failure
+	}
+	defer func() {
+		err := ledgerDB.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close index database")
+		}
+	}()
+	chainPath := filepath.Join(flagIndex, index.PathChainDatabase)
+	chainDB, err := badger.Open(dps.DefaultOptions(chainPath))
+	if err != nil {
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open chain index database")
+		return failure
+	}
+	defer func() {
+		err := chainDB.Close()
 		if err != nil {
 			log.Error().Err(err).Msg("could not close index database")
 		}
@@ -120,7 +146,7 @@ func run() int {
 	storage := storage.New(codec)
 
 	// Check if index already exists.
-	read := index.NewReader(indexDB, storage)
+	read := index.NewReader(protocolDB, ledgerDB, chainDB, storage)
 	_, err = read.First()
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		log.Error().Err(err).Msg("could not get first height from index reader")
@@ -149,11 +175,29 @@ func run() int {
 	// Writer is responsible for writing the index data to the index database.
 	// We explicitly disable flushing at regular intervals to improve throughput
 	// of badger transactions when indexing from static on-disk data.
-	write := index.NewWriter(indexDB, storage,
+	protocolWriter := index.NewWriter(protocolDB, storage,
 		index.WithFlushInterval(0),
 	)
 	defer func() {
-		err := write.Close()
+		err := protocolWriter.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close index")
+		}
+	}()
+	ledgerWriter := index.NewWriter(ledgerDB, storage,
+		index.WithFlushInterval(0),
+	)
+	defer func() {
+		err := ledgerWriter.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close index")
+		}
+	}()
+	chainWriter := index.NewWriter(chainDB, storage,
+		index.WithFlushInterval(0),
+	)
+	defer func() {
+		err := chainWriter.Close()
 		if err != nil {
 			log.Error().Err(err).Msg("could not close index")
 		}
@@ -161,7 +205,7 @@ func run() int {
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
+	load = loader.FromIndex(log, storage, ledgerDB)
 	bootstrap := (flagCheckpoint != "")
 	if bootstrap {
 		file, err := os.Open(flagCheckpoint)
@@ -172,7 +216,7 @@ func run() int {
 		defer file.Close()
 		load = loader.FromCheckpoint(file)
 	}
-	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
+	transitions := mapper.NewTransitions(log, load, disk, feed, read, protocolWriter, ledgerWriter, chainWriter,
 		mapper.WithBootstrapState(bootstrap),
 		mapper.WithSkipRegisters(flagSkip),
 	)

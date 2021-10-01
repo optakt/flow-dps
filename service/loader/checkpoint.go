@@ -15,12 +15,9 @@
 package loader
 
 import (
-	"fmt"
 	"io"
 
-	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
 type Checkpoint struct {
