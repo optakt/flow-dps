@@ -13,7 +13,7 @@ The restoration will fail if an DPS index database already exists at the given p
 ## Usage
 
 ```sh
-Usage of ./restore-index-snapshot:
+Usage of restore-index-snapshot:
   -c, --compression string   compression algorithm ("none", "zstd" or "gzip") (default "zstd")
   -e, --encoding string      output encoding ("none", "hex" or "base64") (default "none")
   -i, --index string         database directory for state index (default "index")

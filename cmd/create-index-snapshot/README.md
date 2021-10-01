@@ -12,7 +12,7 @@ The index database can later be restored using the `restore-index-snapshot` tool
 ## Usage
 
 ```sh
-Usage of ./create-index-snapshot:
+Usage of create-index-snapshot:
   -c, --compression string   compression algorithm ("none", "zstd" or "gzip") (default "zstd")
   -e, --encoding string      output encoding ("none", "hex" or "base64") (default "none")
   -i, --index string         database directory for state index (default "index")
@@ -33,7 +33,6 @@ Back up an existing index database to a Gzip compressed file without encoding:
 ```console
 $ create-index-snapshot -i /var/dps/index -c gzip > dps-index-snapshot.gz
 ```
-
 
 ### Go Program Restoring the Index
 
