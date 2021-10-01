@@ -15,7 +15,7 @@
 package index
 
 const (
-	PathProtocolDatabase = "protocol"
-	PathLedgerDatabase   = "updates"
-	PathChainDatabase    = "chain"
+	PathConsensusDatabase = "consensus"
+	PathExecutionDatabase = "execution"
+	PathLedgerDatabase    = "updates"
 )

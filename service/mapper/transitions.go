@@ -45,13 +45,13 @@ type Transitions struct {
 
 	// FIXME: Use a single writer which does the writes on the proper DB
 	// 	      depending on what we're writing.
-	protocolDB dps.Writer
-	ledgerDB   dps.Writer
-	chainDB    dps.Writer
+	consDB   dps.Writer
+	execDB   dps.Writer
+	ledgerDB dps.Writer
 }
 
 // NewTransitions returns a Transitions component using the given dependencies and using the given options
-func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feeder, read dps.Reader, protocolDB dps.Writer, ledgerDB dps.Writer, chainDB dps.Writer, options ...Option) *Transitions {
+func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feeder, read dps.Reader, consDB dps.Writer, execDB dps.Writer, ledgerDB dps.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -67,9 +67,9 @@ func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feede
 		read:  read,
 		once:  &sync.Once{},
 
-		protocolDB: protocolDB,
-		ledgerDB:   ledgerDB,
-		chainDB:    chainDB,
+		consDB:   consDB,
+		execDB:   execDB,
+		ledgerDB: ledgerDB,
 	}
 
 	return &t
@@ -159,7 +159,7 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 	if err != nil {
 		return fmt.Errorf("could not get root height: %w", err)
 	}
-	t.once.Do(func() { err = t.protocolDB.First(first) })
+	t.once.Do(func() { err = t.consDB.First(first) })
 	if err != nil {
 		return fmt.Errorf("could not write first: %w", err)
 	}
@@ -241,27 +241,6 @@ func (t *Transitions) IndexChain(s *State) error {
 		return fmt.Errorf("could not get seals: %w", err)
 	}
 
-	// We can also proceed to already indexing the data related to the consensus
-	// state, before dealing with anything related to execution data, which
-	// might go into the wait state.
-	blockID := header.ID()
-	err = t.protocolDB.Height(blockID, s.height)
-	if err != nil {
-		return fmt.Errorf("could not index height: %w", err)
-	}
-	err = t.protocolDB.Header(s.height, header)
-	if err != nil {
-		return fmt.Errorf("could not index header: %w", err)
-	}
-	err = t.protocolDB.Guarantees(s.height, guarantees)
-	if err != nil {
-		return fmt.Errorf("could not index guarantees: %w", err)
-	}
-	err = t.chainDB.Seals(s.height, seals)
-	if err != nil {
-		return fmt.Errorf("could not index seals: %w", err)
-	}
-
 	// Next, we try to retrieve the next commit until it becomes available,
 	// at which point all the data coming from the execution data should be
 	// available.
@@ -291,28 +270,73 @@ func (t *Transitions) IndexChain(s *State) error {
 		return fmt.Errorf("could not get events: %w", err)
 	}
 
-	// Next, all we need to do is index the remaining data and we have fully
-	// processed indexing for this block height.
-	err = t.protocolDB.Commit(s.height, commit)
-	if err != nil {
-		return fmt.Errorf("could not index commit: %w", err)
-	}
-	err = t.protocolDB.Collections(s.height, collections)
-	if err != nil {
-		return fmt.Errorf("could not index collections: %w", err)
-	}
-	err = t.protocolDB.Transactions(s.height, transactions)
-	if err != nil {
-		return fmt.Errorf("could not index transactions: %w", err)
-	}
-	err = t.chainDB.Results(results)
-	if err != nil {
-		return fmt.Errorf("could not index transaction results: %w", err)
-	}
-	err = t.chainDB.Events(s.height, events)
-	if err != nil {
-		return fmt.Errorf("could not index events: %w", err)
-	}
+	blockID := header.ID()
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		start := time.Now()
+
+		err = t.consDB.Height(blockID, s.height)
+		if err != nil {
+			panic(err)
+			//return fmt.Errorf("could not index height: %w", err)
+		}
+		err = t.consDB.Header(s.height, header)
+		if err != nil {
+			panic(err)
+			//return fmt.Errorf("could not index header: %w", err)
+		}
+		err = t.consDB.Guarantees(s.height, guarantees)
+		if err != nil {
+			panic(err)
+			//return fmt.Errorf("could not index guarantees: %w", err)
+		}
+
+		err = t.consDB.Commit(s.height, commit)
+		if err != nil {
+			panic(err)
+			//return fmt.Errorf("could not index commit: %w", err)
+		}
+		err = t.consDB.Collections(s.height, collections)
+		if err != nil {
+			panic(err)
+			//return fmt.Errorf("could not index collections: %w", err)
+		}
+		err = t.consDB.Transactions(s.height, transactions)
+		if err != nil {
+			panic(err)
+			//return fmt.Errorf("could not index transactions: %w", err)
+		}
+
+		t.log.Info().Dur("duration", time.Since(start)).Str("db", "consensus").Msg("Finished indexing goroutine")
+	}()
+
+	go func() {
+		defer wg.Done()
+		start := time.Now()
+
+		err = t.execDB.Seals(s.height, seals)
+		if err != nil {
+			panic(err)
+			//return fmt.Errorf("could not index seals: %w", err)
+		}
+		err = t.execDB.Results(results)
+		if err != nil {
+			panic(err)
+			//return fmt.Errorf("could not index transaction results: %w", err)
+		}
+		err = t.execDB.Events(s.height, events)
+		if err != nil {
+			panic(err)
+			//return fmt.Errorf("could not index events: %w", err)
+		}
+
+		t.log.Info().Dur("duration", time.Since(start)).Str("db", "execution").Msg("Finished indexing goroutine")
+	}()
+
+	wg.Wait()
 
 	// At this point, we need to forward the `last` state commitment to
 	// `next`, so we know what the state commitment was at the last finalized
@@ -509,11 +533,11 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	// skipping it, we should document the last indexed height. On the first
 	// pass, we will also index the first indexed height here.
 	var err error
-	t.once.Do(func() { err = t.protocolDB.First(s.height) })
+	t.once.Do(func() { err = t.consDB.First(s.height) })
 	if err != nil {
 		return fmt.Errorf("could not index first height: %w", err)
 	}
-	err = t.protocolDB.Last(s.height)
+	err = t.consDB.Last(s.height)
 	if err != nil {
 		return fmt.Errorf("could not index last height: %w", err)
 	}

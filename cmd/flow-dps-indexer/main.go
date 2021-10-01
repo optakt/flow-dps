@@ -89,16 +89,28 @@ func run() int {
 	log = log.Level(level)
 
 	// Open the index databases in which to write.
-	protocolPath := filepath.Join(flagIndex, index.PathProtocolDatabase)
-	protocolDB, err := badger.Open(dps.DefaultOptions(protocolPath))
+	condPath := filepath.Join(flagIndex, index.PathConsensusDatabase)
+	consDB, err := badger.Open(dps.DefaultOptions(condPath))
 	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open protocol index database")
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open consensus index database")
 		return failure
 	}
 	defer func() {
-		err := protocolDB.Close()
+		err := consDB.Close()
 		if err != nil {
-			log.Error().Err(err).Msg("could not close index database")
+			log.Error().Err(err).Msg("could not close consensus index database")
+		}
+	}()
+	execPath := filepath.Join(flagIndex, index.PathExecutionDatabase)
+	execDB, err := badger.Open(dps.DefaultOptions(execPath))
+	if err != nil {
+		log.Error().Str("index", flagIndex).Err(err).Msg("could not open execution index database")
+		return failure
+	}
+	defer func() {
+		err := execDB.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close execution index database")
 		}
 	}()
 	ledgerPath := filepath.Join(flagIndex, index.PathLedgerDatabase)
@@ -110,30 +122,18 @@ func run() int {
 	defer func() {
 		err := ledgerDB.Close()
 		if err != nil {
-			log.Error().Err(err).Msg("could not close index database")
-		}
-	}()
-	chainPath := filepath.Join(flagIndex, index.PathChainDatabase)
-	chainDB, err := badger.Open(dps.DefaultOptions(chainPath))
-	if err != nil {
-		log.Error().Str("index", flagIndex).Err(err).Msg("could not open chain index database")
-		return failure
-	}
-	defer func() {
-		err := chainDB.Close()
-		if err != nil {
-			log.Error().Err(err).Msg("could not close index database")
+			log.Error().Err(err).Msg("could not close ledger index database")
 		}
 	}()
 
 	// Open Protocol State database from which to read.
-	chainData, err := badger.Open(dps.DefaultOptions(flagData))
+	protocolDB, err := badger.Open(dps.DefaultOptions(flagData))
 	if err != nil {
 		log.Error().Err(err).Msg("could not open protocol state database")
 		return failure
 	}
 	defer func() {
-		err := chainData.Close()
+		err := protocolDB.Close()
 		if err != nil {
 			log.Error().Err(err).Msg("could not close protocol state database")
 		}
@@ -146,7 +146,7 @@ func run() int {
 	storage := storage.New(codec)
 
 	// Check if index already exists.
-	read := index.NewReader(protocolDB, ledgerDB, chainDB, storage)
+	read := index.NewReader(consDB, execDB, ledgerDB, storage)
 	_, err = read.First()
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		log.Error().Err(err).Msg("could not get first height from index reader")
@@ -162,7 +162,7 @@ func run() int {
 	}
 
 	// The chain is responsible for reading blockchain data from the protocol state.
-	disk := chain.FromDisk(chainData)
+	disk := chain.FromDisk(protocolDB)
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
 	segments, err := wal.NewSegmentsReader(flagTrie)
@@ -175,7 +175,7 @@ func run() int {
 	// Writer is responsible for writing the index data to the index database.
 	// We explicitly disable flushing at regular intervals to improve throughput
 	// of badger transactions when indexing from static on-disk data.
-	protocolWriter := index.NewWriter(protocolDB, storage,
+	protocolWriter := index.NewWriter(consDB, storage,
 		index.WithFlushInterval(0),
 	)
 	defer func() {
@@ -193,7 +193,7 @@ func run() int {
 			log.Error().Err(err).Msg("could not close index")
 		}
 	}()
-	chainWriter := index.NewWriter(chainDB, storage,
+	chainWriter := index.NewWriter(execDB, storage,
 		index.WithFlushInterval(0),
 	)
 	defer func() {
@@ -216,7 +216,7 @@ func run() int {
 		defer file.Close()
 		load = loader.FromCheckpoint(file)
 	}
-	transitions := mapper.NewTransitions(log, load, disk, feed, read, protocolWriter, ledgerWriter, chainWriter,
+	transitions := mapper.NewTransitions(log, load, disk, feed, read, protocolWriter, chainWriter, ledgerWriter,
 		mapper.WithBootstrapState(bootstrap),
 		mapper.WithSkipRegisters(flagSkip),
 	)
