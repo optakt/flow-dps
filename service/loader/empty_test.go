@@ -23,7 +23,7 @@ import (
 	"github.com/optakt/flow-dps/service/loader"
 )
 
-func TestFromScratch(t *testing.T) {
+func TestLoader_FromScratch(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 

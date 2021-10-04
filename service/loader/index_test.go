@@ -29,7 +29,7 @@ import (
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
-func TestFromIndex_Trie(t *testing.T) {
+func TestLoader_FromIndex(t *testing.T) {
 	entries := 5
 	paths := mocks.GenericLedgerPaths(entries)
 	payloads := mocks.GenericLedgerPayloads(entries)

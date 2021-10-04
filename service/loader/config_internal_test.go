@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWithTrieInitializer(t *testing.T) {
+func TestLoader_WithTrieInitializer(t *testing.T) {
 	c := Config{
 		TrieInitializer: FromCheckpoint(os.Stdin),
 	}
@@ -31,7 +31,7 @@ func TestWithTrieInitializer(t *testing.T) {
 	assert.Equal(t, trieInitializer, c.TrieInitializer)
 }
 
-func TestWithExclude(t *testing.T) {
+func TestLoader_WithExclude(t *testing.T) {
 	// In Go, the only valid comparison for functions is with nil.
 	// Thus we will set ExcludeHeight to nil so we can later verify
 	// that it was correctly initialized.
