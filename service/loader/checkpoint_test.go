@@ -20,14 +20,45 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/flow-go/ledger/complete/mtrie"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
+	"github.com/onflow/flow-go/module/metrics"
 
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestLoader_FromCheckpoint(t *testing.T) {
+
+	t.Run("nominal case", func(t *testing.T) {
+
+		forest, err := mtrie.NewForest(1, &metrics.NoopCollector{}, func(tree *trie.MTrie) error { return nil })
+		require.NoError(t, err)
+
+		trie := mocks.GenericTrie
+
+		err = forest.AddTrie(trie)
+		require.NoError(t, err)
+
+		flattened, err := flattener.FlattenForest(forest)
+		require.NoError(t, err)
+
+		buffer := bytes.Buffer{}
+		err = wal.StoreCheckpoint(flattened, &buffer)
+		require.NoError(t, err)
+
+		checkpoint := bytes.NewReader(buffer.Bytes())
+
+		load := loader.FromCheckpoint(checkpoint)
+
+		loadedTrie, err := load.Trie()
+		require.NoError(t, err)
+
+		eq := loadedTrie.Equals(trie)
+		require.True(t, eq)
+	})
 
 	t.Run("handles failure to read checkpoint", func(t *testing.T) {
 
