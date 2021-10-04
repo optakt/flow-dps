@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	cloud.google.com/go/storage v1.16.1
+	github.com/DataDog/zstd v1.4.1
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/dgraph-io/ristretto v0.1.0

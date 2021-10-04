@@ -10,6 +10,7 @@
 /flow-go/
 /index/
 /trie/
+/samples/
 *.cdc
 *.checkpoint
 *.log

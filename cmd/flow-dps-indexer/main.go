@@ -163,7 +163,7 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		load = loader.FromCheckpoint(file)
+		load = loader.FromScratch(file)
 	} else if bootstrap {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {

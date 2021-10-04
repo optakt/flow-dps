@@ -15,26 +15,26 @@
 package storage
 
 const (
-	prefixFirst = 1
-	prefixLast  = 2
+	PrefixFirst = 1
+	PrefixLast  = 2
 
-	prefixHeightForBlock       = 7
-	prefixHeightForTransaction = 16
+	PrefixHeightForBlock       = 7
+	PrefixHeightForTransaction = 16
 
-	prefixCommit  = 4
-	prefixHeader  = 3
-	prefixEvents  = 5
-	prefixPayload = 6
+	PrefixCommit  = 4
+	PrefixHeader  = 3
+	PrefixEvents  = 5
+	PrefixPayload = 6
 
-	prefixTransaction = 8
-	prefixCollection  = 10
-	prefixGuarantee   = 17
+	PrefixTransaction = 8
+	PrefixCollection  = 10
+	PrefixGuarantee   = 17
 
-	prefixTransactionsForHeight     = 9
-	prefixTransactionsForCollection = 12
-	prefixCollectionsForHeight      = 11
-	prefixResults                   = 13
+	PrefixTransactionsForHeight     = 9
+	PrefixTransactionsForCollection = 12
+	PrefixCollectionsForHeight      = 11
+	PrefixResults                   = 13
 
-	prefixSeal           = 14
-	prefixSealsForHeight = 15
+	PrefixSeal           = 14
+	PrefixSealsForHeight = 15
 )
