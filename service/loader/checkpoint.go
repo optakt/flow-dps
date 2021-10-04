@@ -23,10 +23,13 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
+// Checkpoint is a loader that loads a trie from a LedgerWAL checkpoint file.
 type Checkpoint struct {
 	file io.Reader
 }
 
+// FromCheckpoint creates a loader which loads the trie from the provided
+// reader, which should represent a LedgerWAL checkpoint file.
 func FromCheckpoint(file io.Reader) *Checkpoint {
 
 	c := Checkpoint{

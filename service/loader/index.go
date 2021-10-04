@@ -32,17 +32,24 @@ type Index struct {
 	log zerolog.Logger
 	lib dps.ReadLibrary
 	db  *badger.DB
+	cfg Config
 }
 
 // FromIndex creates a new index loader, which can restore the execution state
 // from the given index database, using the given library for decoding ledger
 // paths and payloads.
-func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB) *Index {
+func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, options ...Option) *Index {
+
+	cfg := DefaultConfig
+	for _, option := range options {
+		option(&cfg)
+	}
 
 	i := Index{
 		log: log.With().Str("component", "index_loader").Logger(),
 		lib: lib,
 		db:  db,
+		cfg: cfg,
 	}
 
 	return &i
@@ -52,9 +59,14 @@ func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB) *Index {
 // when indexing was stopped.
 func (i *Index) Trie() (*trie.MTrie, error) {
 
+	// Load the starting trie.
+	tree, err := i.cfg.TrieInitializer.Trie()
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize trie: %w", err)
+	}
+
 	processed := 0
-	tree := trie.NewEmptyMTrie()
-	callback := func(path ledger.Path, payload *ledger.Payload) error {
+	process := func(path ledger.Path, payload *ledger.Payload) error {
 		var err error
 		tree, err = trie.NewTrieWithUpdatedRegisters(tree, []ledger.Path{path}, []ledger.Payload{*payload})
 		if err != nil {
@@ -67,7 +79,7 @@ func (i *Index) Trie() (*trie.MTrie, error) {
 		return nil
 	}
 
-	err := i.db.View(i.lib.IterateLedger(callback))
+	err = i.db.View(i.lib.IterateLedger(i.cfg.ExcludeHeight, process))
 	if err != nil {
 		return nil, fmt.Errorf("could not iterate ledger: %w", err)
 	}
