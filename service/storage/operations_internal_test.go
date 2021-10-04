@@ -1348,8 +1348,8 @@ func TestLibrary_IterateLedger(t *testing.T) {
 
 		err := db.View(op)
 
-		assert.NoError(t, err)
-		assert.Len(t, got, 0)
+		require.NoError(t, err)
+		assert.Empty(t, got)
 	})
 
 	t.Run("handles codec failure", func(t *testing.T) {

@@ -24,13 +24,11 @@ import (
 )
 
 func TestLoader_FromScratch(t *testing.T) {
-	t.Run("nominal case", func(t *testing.T) {
-		t.Parallel()
+	t.Parallel()
 
-		empty := loader.FromScratch()
+	empty := loader.FromScratch()
 
-		trie, err := empty.Trie()
-		require.NoError(t, err)
-		assert.True(t, trie.IsEmpty())
-	})
+	trie, err := empty.Trie()
+	require.NoError(t, err)
+	assert.True(t, trie.IsEmpty())
 }
