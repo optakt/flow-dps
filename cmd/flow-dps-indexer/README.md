@@ -15,7 +15,7 @@ Usage of flow-dps-indexer:
   -f, --force               force indexing to bootstrap from root checkpoint and overwrite existing index
   -i, --index string        path to database directory for state index (default "index")
   -l, --level string        log output level (default "info")
-  -m, --metrics string      URL on which to expose metrics (no metrics are exposed when left empty)
+  -m, --metrics string      address on which to expose metrics (no metrics are exposed when left empty)
   -s, --skip                skip indexing of execution state ledger registers
   -t, --trie string         path to data directory for execution state ledger
 ```

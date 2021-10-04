@@ -98,7 +98,7 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "URL on which to expose metrics (no metrics are exposed when left empty)")
+	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
@@ -409,17 +409,17 @@ func run() int {
 		}
 
 		start := time.Now()
-		log.Info().Time("start", start).Msg("Metrics server starting")
+		log.Info().Time("start", start).Msg("metrics server starting")
 		err := http.ListenAndServe(flagMetrics, nil)
 		if err != nil {
-			log.Warn().Err(err).Msg("Metrics server failed")
+			log.Warn().Err(err).Msg("metrics server failed")
 			close(failed)
 		} else {
 			close(done)
 		}
 		finish := time.Now()
 		duration := finish.Sub(start)
-		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Metrics server stopped")
+		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("metrics server stopped")
 	}()
 
 	// Here, we are waiting for a signal, or for one of the components to fail

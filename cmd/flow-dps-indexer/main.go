@@ -71,7 +71,7 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "URL on which to expose metrics (no metrics are exposed when left empty)")
+	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "path to data directory for execution state ledger")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
