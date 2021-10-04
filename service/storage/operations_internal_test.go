@@ -239,9 +239,6 @@ func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
 	t.Run("save multiple events under different types", func(t *testing.T) {
 		t.Parallel()
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		testEvents1 := []flow.Event{
 			{Type: mocks.GenericEventType(0)},
 			{Type: mocks.GenericEventType(0)},
@@ -262,6 +259,9 @@ func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.SaveEvents(mocks.GenericHeight, mocks.GenericEventType(0), testEvents1))
 		assert.NoError(t, err)
@@ -430,9 +430,6 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 	t.Run("save two different payloads for same path at different heights", func(t *testing.T) {
 		t.Parallel()
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &ledger.Payload{}, v)
@@ -442,6 +439,9 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0)))
 		assert.NoError(t, err)
@@ -689,9 +689,6 @@ func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 	t.Run("save height of block", func(t *testing.T) {
 		t.Parallel()
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, uint64(0), v)
@@ -701,6 +698,9 @@ func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.IndexHeightForBlock(blockID, mocks.GenericHeight))
 
@@ -747,9 +747,6 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 	t.Run("save transaction", func(t *testing.T) {
 		t.Parallel()
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &flow.TransactionBody{}, v)
@@ -759,6 +756,9 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.SaveTransaction(tx))
 
@@ -805,9 +805,6 @@ func TestLibrary_IndexAndLookupHeightForTransaction(t *testing.T) {
 	t.Run("save height of transaction", func(t *testing.T) {
 		t.Parallel()
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, uint64(0), v)
@@ -817,6 +814,9 @@ func TestLibrary_IndexAndLookupHeightForTransaction(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.IndexHeightForTransaction(txID, mocks.GenericHeight))
 
@@ -862,9 +862,6 @@ func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
 	t.Run("save transactions", func(t *testing.T) {
 		t.Parallel()
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, []flow.Identifier{}, v)
@@ -874,6 +871,9 @@ func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.IndexTransactionsForHeight(mocks.GenericHeight, mocks.GenericTransactionIDs(5)))
 
@@ -919,10 +919,6 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 
 	t.Run("save collection", func(t *testing.T) {
 		t.Parallel()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &flow.LightCollection{}, v)
@@ -932,6 +928,9 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.SaveCollection(collection))
 
@@ -977,10 +976,6 @@ func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 
 	t.Run("save guarantee", func(t *testing.T) {
 		t.Parallel()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &flow.CollectionGuarantee{}, v)
@@ -990,6 +985,9 @@ func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.SaveGuarantee(guarantee))
 
@@ -1035,10 +1033,6 @@ func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 
 	t.Run("save collections", func(t *testing.T) {
 		t.Parallel()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, []flow.Identifier{}, v)
@@ -1048,6 +1042,9 @@ func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.IndexCollectionsForHeight(mocks.GenericHeight, collIDs))
 
@@ -1092,10 +1089,6 @@ func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
 
 	t.Run("save transaction result", func(t *testing.T) {
 		t.Parallel()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &flow.TransactionResult{}, v)
@@ -1105,6 +1098,9 @@ func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.SaveResult(mocks.GenericResult(0)))
 
@@ -1150,10 +1146,6 @@ func TestSaveAndRetrieve_Seal(t *testing.T) {
 
 	t.Run("save seal", func(t *testing.T) {
 		t.Parallel()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &flow.Seal{}, v)
@@ -1163,6 +1155,9 @@ func TestSaveAndRetrieve_Seal(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.SaveSeal(seal))
 
@@ -1208,9 +1203,6 @@ func TestIndexAndLookup_Seals(t *testing.T) {
 	t.Run("save seals", func(t *testing.T) {
 		t.Parallel()
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, []flow.Identifier{}, v)
@@ -1220,6 +1212,9 @@ func TestIndexAndLookup_Seals(t *testing.T) {
 		l := &Library{
 			codec: codec,
 		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		err := db.Update(l.IndexSealsForHeight(mocks.GenericHeight, mocks.GenericSealIDs(5)))
 		assert.NoError(t, err)
@@ -1266,11 +1261,13 @@ func TestLibrary_IterateLedger(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
+		codec := zbor.NewCodec()
+		l := &Library{
+			codec: codec,
+		}
+
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
-
-		codec := zbor.NewCodec()
-		l := &Library{codec}
 
 		for i := 0; i < entries; i++ {
 			height := mocks.GenericHeight + uint64(i)
@@ -1296,11 +1293,13 @@ func TestLibrary_IterateLedger(t *testing.T) {
 	t.Run("handles multiple payloads with the same path", func(t *testing.T) {
 		t.Parallel()
 
+		codec := zbor.NewCodec()
+		l := &Library{
+			codec: codec,
+		}
+
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
-
-		codec := zbor.NewCodec()
-		l := &Library{codec}
 
 		// Always use paths[0] for every payload.
 		path := paths[0]
@@ -1327,11 +1326,13 @@ func TestLibrary_IterateLedger(t *testing.T) {
 	t.Run("handles exclusion of payloads below specified height", func(t *testing.T) {
 		t.Parallel()
 
+		codec := zbor.NewCodec()
+		l := &Library{
+			codec: codec,
+		}
+
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
-
-		codec := zbor.NewCodec()
-		l := &Library{codec}
 
 		for i := 0; i < entries; i++ {
 			height := mocks.GenericHeight + uint64(i)
@@ -1355,14 +1356,16 @@ func TestLibrary_IterateLedger(t *testing.T) {
 	t.Run("handles codec failure", func(t *testing.T) {
 		t.Parallel()
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func([]byte, interface{}) error {
 			return mocks.GenericError
 		}
-		l := &Library{codec}
+		l := &Library{
+			codec: codec,
+		}
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
 
 		for i := 0; i < entries; i++ {
 			height := mocks.GenericHeight + uint64(i)
@@ -1385,11 +1388,13 @@ func TestLibrary_IterateLedger(t *testing.T) {
 	t.Run("handles callback error", func(t *testing.T) {
 		t.Parallel()
 
+		codec := zbor.NewCodec()
+		l := &Library{
+			codec: codec,
+		}
+
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
-
-		codec := zbor.NewCodec()
-		l := &Library{codec}
 
 		for i := 0; i < entries; i++ {
 			height := mocks.GenericHeight + uint64(i)
