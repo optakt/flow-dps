@@ -919,6 +919,7 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 
 	t.Run("save collection", func(t *testing.T) {
 		t.Parallel()
+
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &flow.LightCollection{}, v)
@@ -976,6 +977,7 @@ func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 
 	t.Run("save guarantee", func(t *testing.T) {
 		t.Parallel()
+
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &flow.CollectionGuarantee{}, v)
@@ -1033,6 +1035,7 @@ func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 
 	t.Run("save collections", func(t *testing.T) {
 		t.Parallel()
+
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, []flow.Identifier{}, v)
@@ -1089,6 +1092,7 @@ func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
 
 	t.Run("save transaction result", func(t *testing.T) {
 		t.Parallel()
+
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &flow.TransactionResult{}, v)
@@ -1146,6 +1150,7 @@ func TestSaveAndRetrieve_Seal(t *testing.T) {
 
 	t.Run("save seal", func(t *testing.T) {
 		t.Parallel()
+
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, &flow.Seal{}, v)
