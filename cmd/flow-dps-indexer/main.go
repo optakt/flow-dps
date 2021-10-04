@@ -16,14 +16,12 @@ package main
 
 import (
 	"errors"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
-	_ "github.com/dgraph-io/badger/v2/y"
 	"github.com/prometheus/tsdb/wal"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
@@ -61,7 +59,6 @@ func run() int {
 		flagForce      bool
 		flagIndex      string
 		flagLevel      string
-		flagMetrics    string
 		flagTrie       string
 		flagSkip       bool
 	)
@@ -71,7 +68,6 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "path to data directory for execution state ledger")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
@@ -209,26 +205,6 @@ func run() int {
 		finish := time.Now()
 		duration := finish.Sub(start)
 		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
-	}()
-
-	// Expose badgerDB and go metrics.
-	go func() {
-		if flagMetrics == "" {
-			return
-		}
-
-		start := time.Now()
-		log.Info().Time("start", start).Msg("Metrics server starting")
-		err := http.ListenAndServe(":8080", nil)
-		if err != nil {
-			log.Warn().Err(err).Msg("Metrics server failed")
-			close(failed)
-		} else {
-			close(done)
-		}
-		finish := time.Now()
-		duration := finish.Sub(start)
-		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Metrics server stopped")
 	}()
 
 	select {
