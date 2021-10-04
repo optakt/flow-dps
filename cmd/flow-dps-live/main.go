@@ -82,7 +82,7 @@ func run() int {
 		flagForce      bool
 		flagIndex      string
 		flagLevel      string
-		flagMetrics      string
+		flagMetrics    string
 		flagSkip       bool
 
 		flagFlushInterval time.Duration

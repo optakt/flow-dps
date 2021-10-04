@@ -61,7 +61,7 @@ func run() int {
 		flagForce      bool
 		flagIndex      string
 		flagLevel      string
-		flagMetrics      string
+		flagMetrics    string
 		flagTrie       string
 		flagSkip       bool
 	)
