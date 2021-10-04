@@ -62,6 +62,7 @@ func TestLoader_FromCheckpoint(t *testing.T) {
 
 	t.Run("handles failure to read checkpoint", func(t *testing.T) {
 
+		// Create a reader for a malformed checkpoint.
 		reader := bytes.NewReader(mocks.GenericBytes)
 		load := loader.FromCheckpoint(reader)
 
@@ -91,4 +92,31 @@ func TestLoader_FromCheckpoint(t *testing.T) {
 		_, err = load.Trie()
 		require.Error(t, err)
 	})
+
+	t.Run("handles failure with multiple tries in root checkpoint", func(t *testing.T) {
+
+		// Create a forest with capacity for two tries.
+		// This will trigger an error since the root checkpoint should have only one.
+		forest, err := mtrie.NewForest(2, &metrics.NoopCollector{}, func(tree *trie.MTrie) error { return nil })
+		require.NoError(t, err)
+
+		trie := mocks.GenericTrie
+
+		err = forest.AddTrie(trie)
+		require.NoError(t, err)
+
+		flattened, err := flattener.FlattenForest(forest)
+		require.NoError(t, err)
+
+		buffer := bytes.Buffer{}
+		err = wal.StoreCheckpoint(flattened, &buffer)
+		require.NoError(t, err)
+
+		checkpoint := bytes.NewReader(buffer.Bytes())
+		load := loader.FromCheckpoint(checkpoint)
+
+		_, err = load.Trie()
+		require.Error(t, err)
+	})
+
 }
