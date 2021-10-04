@@ -29,6 +29,7 @@ import (
 
 	gcloud "cloud.google.com/go/storage"
 	"github.com/dgraph-io/badger/v2"
+	_ "github.com/dgraph-io/badger/v2/y"
 	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
@@ -81,6 +82,7 @@ func run() int {
 		flagForce      bool
 		flagIndex      string
 		flagLevel      string
+		flagMetrics    string
 		flagSkip       bool
 
 		flagFlushInterval time.Duration
@@ -96,6 +98,7 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
@@ -397,6 +400,26 @@ func run() int {
 			log.Warn().Err(err).Msg("Flow DPS Server failed")
 		}
 		log.Info().Msg("Flow DPS Live Server stopped")
+	}()
+
+	// Expose badgerDB and go metrics.
+	go func() {
+		if flagMetrics == "" {
+			return
+		}
+
+		start := time.Now()
+		log.Info().Time("start", start).Msg("metrics server starting")
+		err := http.ListenAndServe(flagMetrics, nil)
+		if err != nil {
+			log.Warn().Err(err).Msg("metrics server failed")
+			close(failed)
+		} else {
+			close(done)
+		}
+		finish := time.Now()
+		duration := finish.Sub(start)
+		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("metrics server stopped")
 	}()
 
 	// Here, we are waiting for a signal, or for one of the components to fail

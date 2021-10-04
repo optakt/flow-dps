@@ -110,6 +110,7 @@ func run() int {
 			log.Error().Err(err).Msg("could not close protocol state database")
 		}
 	}()
+
 	// The storage library is initialized with a codec and provides functions to
 	// interact with a Badger database while encoding and compressing
 	// transparently.
