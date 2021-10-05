@@ -34,6 +34,7 @@ type Writer struct {
 	ResultsFunc      func(results []*flow.TransactionResult) error
 	EventsFunc       func(height uint64, events []flow.Event) error
 	SealsFunc        func(height uint64, seals []*flow.Seal) error
+	CloseFunc        func() error
 }
 
 func BaselineWriter(t *testing.T) *Writer {
@@ -74,6 +75,9 @@ func BaselineWriter(t *testing.T) *Writer {
 			return nil
 		},
 		SealsFunc: func(height uint64, seals []*flow.Seal) error {
+			return nil
+		},
+		CloseFunc: func() error {
 			return nil
 		},
 	}
@@ -127,4 +131,8 @@ func (w *Writer) Events(height uint64, events []flow.Event) error {
 
 func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
 	return w.SealsFunc(height, seals)
+}
+
+func (w *Writer) Close() error {
+	return w.Close()
 }
