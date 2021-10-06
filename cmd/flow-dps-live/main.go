@@ -29,7 +29,6 @@ import (
 
 	gcloud "cloud.google.com/go/storage"
 	"github.com/dgraph-io/badger/v2"
-	_ "github.com/dgraph-io/badger/v2/y"
 	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
@@ -53,6 +52,7 @@ import (
 	"github.com/optakt/flow-dps/service/initializer"
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
+	"github.com/optakt/flow-dps/service/metrics"
 	"github.com/optakt/flow-dps/service/storage"
 	"github.com/optakt/flow-dps/service/tracker"
 )
@@ -171,9 +171,13 @@ func run() int {
 	// fill up fast enough. This avoids having latency between when we add data
 	// to the transaction and when it becomes available on-disk for serving the
 	// DPS API.
-	write := index.NewWriter(indexDB, storage,
+	metricsEnabled := flagMetrics != ""
+	write := index.NewWriter(
+		indexDB,
+		storage,
 		index.WithFlushInterval(flagFlushInterval),
 	)
+
 	defer func() {
 		err := write.Close()
 		if err != nil {
@@ -337,10 +341,17 @@ func run() int {
 		load = loader.FromIndex(log, storage, indexDB)
 	}
 
+	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
+	// use the regular one.
+	writer := dps.Writer(write)
+	if metricsEnabled {
+		writer = index.NewMetricsWriter(write)
+	}
+
 	// At this point, we can initialize the core business logic of the indexer,
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
-	transitions := mapper.NewTransitions(log, load, consensus, execution, read, write,
+	transitions := mapper.NewTransitions(log, load, consensus, execution, read, writer,
 		mapper.WithBootstrapState(empty),
 		mapper.WithSkipRegisters(flagSkip),
 	)
@@ -412,25 +423,18 @@ func run() int {
 		}
 		log.Info().Msg("Flow DPS Live Server stopped")
 	}()
-
-	// Expose badgerDB and go metrics.
 	go func() {
-		if flagMetrics == "" {
+		if !metricsEnabled {
 			return
 		}
 
-		start := time.Now()
-		log.Info().Time("start", start).Msg("metrics server starting")
-		err := http.ListenAndServe(flagMetrics, nil)
+		log.Info().Msg("metrics server starting")
+		server := metrics.NewServer(log, flagAddress)
+		err := server.Start()
 		if err != nil {
 			log.Warn().Err(err).Msg("metrics server failed")
-			close(failed)
-		} else {
-			close(done)
 		}
-		finish := time.Now()
-		duration := finish.Sub(start)
-		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("metrics server stopped")
+		log.Info().Msg("metrics server stopped")
 	}()
 
 	// Here, we are waiting for a signal, or for one of the components to fail
