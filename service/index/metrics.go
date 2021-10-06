@@ -118,25 +118,25 @@ func (w *MetricsWriter) Seals(height uint64, seals []*flow.Seal) error {
 }
 
 func (w *MetricsWriter) First(height uint64) error {
-	return w.First(height)
+	return w.write.First(height)
 }
 
 func (w *MetricsWriter) Last(height uint64) error {
-	return w.Last(height)
+	return w.write.Last(height)
 }
 
 func (w *MetricsWriter) Height(blockID flow.Identifier, height uint64) error {
-	return w.Height(blockID, height)
+	return w.write.Height(blockID, height)
 }
 
 func (w *MetricsWriter) Commit(height uint64, commit flow.StateCommitment) error {
-	return w.Commit(height, commit)
+	return w.write.Commit(height, commit)
 }
 
 func (w *MetricsWriter) Guarantees(height uint64, guarantees []*flow.CollectionGuarantee) error {
-	return w.Guarantees(height, guarantees)
+	return w.write.Guarantees(height, guarantees)
 }
 
 func (w *MetricsWriter) Results(results []*flow.TransactionResult) error {
-	return w.Results(results)
+	return w.write.Results(results)
 }
