@@ -25,6 +25,8 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
@@ -1253,5 +1255,125 @@ func TestIndexAndLookup_Seals(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, 1, decodeCallCount)
+	})
+}
+
+func TestLibrary_IterateLedger(t *testing.T) {
+	entries := 5
+	paths := mocks.GenericLedgerPaths(entries)
+	payloads := mocks.GenericLedgerPayloads(entries)
+
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := zbor.NewCodec()
+		l := &Library{codec}
+
+		for i := 0; i < entries; i++ {
+			height := mocks.GenericHeight + uint64(i)
+			require.NoError(t, db.Update(l.SavePayload(height, paths[i], payloads[i])))
+		}
+
+		got := make(map[ledger.Path]*ledger.Payload)
+		op := l.IterateLedger(loader.ExcludeNone(), func(path ledger.Path, payload *ledger.Payload) error {
+			got[path] = payload
+
+			return nil
+		})
+
+		err := db.View(op)
+
+		assert.NoError(t, err)
+		assert.Len(t, got, entries)
+		for i := 0; i < entries; i++ {
+			assert.Equal(t, payloads[i], got[paths[i]])
+		}
+	})
+
+	t.Run("handles multiple payloads with the same path", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := zbor.NewCodec()
+		l := &Library{codec}
+
+		// Always use paths[0] for every payload.
+		path := paths[0]
+		for i := 0; i < entries; i++ {
+			height := mocks.GenericHeight + uint64(i)
+			require.NoError(t, db.Update(l.SavePayload(height, path, payloads[i])))
+		}
+
+		got := make(map[ledger.Path]*ledger.Payload)
+		op := l.IterateLedger(loader.ExcludeNone(), func(path ledger.Path, payload *ledger.Payload) error {
+			got[path] = payload
+
+			return nil
+		})
+
+		err := db.View(op)
+
+		require.NoError(t, err)
+		// Verify that only the payload with the greatest height was used in the callback.
+		assert.Len(t, got, 1)
+		assert.Equal(t, payloads[entries-1], got[path])
+	})
+
+	t.Run("handles codec failure", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := mocks.BaselineCodec(t)
+		codec.UnmarshalFunc = func([]byte, interface{}) error {
+			return mocks.GenericError
+		}
+		l := &Library{codec}
+
+		for i := 0; i < entries; i++ {
+			height := mocks.GenericHeight + uint64(i)
+			require.NoError(t, db.Update(l.SavePayload(height, paths[i], payloads[i])))
+		}
+
+		got := make(map[ledger.Path]*ledger.Payload)
+		op := l.IterateLedger(loader.ExcludeNone(), func(path ledger.Path, payload *ledger.Payload) error {
+			got[path] = payload
+
+			return nil
+		})
+
+		err := db.View(op)
+
+		assert.Error(t, err)
+		assert.Len(t, got, 0)
+	})
+
+	t.Run("handles callback error", func(t *testing.T) {
+		t.Parallel()
+
+		db := helpers.InMemoryDB(t)
+		defer db.Close()
+
+		codec := zbor.NewCodec()
+		l := &Library{codec}
+
+		for i := 0; i < entries; i++ {
+			height := mocks.GenericHeight + uint64(i)
+			require.NoError(t, db.Update(l.SavePayload(height, paths[i], payloads[i])))
+		}
+
+		op := l.IterateLedger(loader.ExcludeNone(), func(path ledger.Path, payload *ledger.Payload) error {
+			return mocks.GenericError
+		})
+
+		err := db.View(op)
+
+		assert.Error(t, err)
 	})
 }

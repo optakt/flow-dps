@@ -84,20 +84,6 @@ func run() int {
 	writer = os.Stdout
 	defer os.Stdout.Close()
 
-	// Create the writer(s) for the output format.
-	switch flagEncoding {
-	case encodingNone:
-		// nothing to do
-	case encodingHex:
-		writer = hex.NewEncoder(writer)
-	case encodingBase64:
-		encoder := base64.NewEncoder(base64.StdEncoding, writer)
-		defer encoder.Close()
-		writer = encoder
-	default:
-		log.Error().Str("encoding", flagEncoding).Msg("invalid encoding format specified")
-	}
-
 	// Wrap the output writer in a compressing writer of the given algorithm.
 	switch flagCompression {
 	case compressionNone:
@@ -112,6 +98,20 @@ func run() int {
 		writer = compressor
 	default:
 		log.Error().Str("compression", flagCompression).Msg("invalid compression algorithm specified")
+	}
+
+	// Create the writer(s) for the output format.
+	switch flagEncoding {
+	case encodingNone:
+		// nothing to do
+	case encodingHex:
+		writer = hex.NewEncoder(writer)
+	case encodingBase64:
+		encoder := base64.NewEncoder(base64.StdEncoding, writer)
+		defer encoder.Close()
+		writer = encoder
+	default:
+		log.Error().Str("encoding", flagEncoding).Msg("invalid encoding format specified")
 	}
 
 	// Run the DB backup mechanism on top of the writer to create the snapshot.

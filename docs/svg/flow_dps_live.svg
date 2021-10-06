@@ -1,0 +1,101 @@
+<svg version="1.1" baseProfile="full" width="568" height="765.75" viewbox="0 0 568 765.75" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:ev="http://www.w3.org/2001/xml-events" style="font:bold  12pt Helvetica, Helvetica, sans-serif;;stroke-linejoin:round;stroke-linecap:round">
+  <title >flow_dps_live</title>
+  <desc >#title: flow_dps_live
+#direction: bottom
+#background: #262626
+#stroke: #fff
+#fill: #eee
+
+[&lt;flow&gt; Flow Network]
+[&lt;gcp&gt; Google Cloud Bucket]
+[&lt;indexer&gt; Index]
+[&lt;exec&gt; GCP Streamer]
+[&lt;exec&gt; Execution Tracker]
+[&lt;cons&gt; Consensus Follower]
+[&lt;cons&gt; Consensus Tracker]
+[&lt;mapper&gt; Mapper]
+[&lt;api&gt; DPS API]
+
+[&lt;label&gt; Block Execution Records]
+[&lt;label&gt; Block Execution Data]
+[&lt;label&gt; Chain Data]
+[&lt;label&gt; Trie Updates]
+
+[Flow Network]-&gt;[Google Cloud Bucket]
+[Google Cloud Bucket]-[Block Execution Records]
+[Block Execution Records]-&gt;[GCP Streamer]
+[GCP Streamer]-&gt;[Execution Tracker]
+[Execution Tracker]-[Block Execution Data]
+[Block Execution Data]-&gt;[Consensus Tracker]
+[Execution Tracker]-[Trie Updates]
+[Trie Updates]-&gt;[Mapper]
+[Flow Network]-[Chain Data]
+[Chain Data]-&gt;[Consensus Follower]
+[Consensus Follower]-&gt;[Consensus Tracker]
+[Consensus Tracker]-&gt;[Mapper]
+[Mapper]-&gt;[Index]
+[Index]-&gt;[DPS API]
+
+#.flow: fill=#262626 stroke=#00bff3 visual=ellipse dashed title=bold
+#.gcp: fill=#262626 stroke=#55de51 visual=database title=bold
+#.exec: fill=#262626 stroke=#55de51 title=bold visual=roundrect
+#.cons: fill=#262626 stroke=#e53e65 title=bold visual=roundrect
+#.mapper: fill=#262626 stroke=#fbb363 title=bold visual=roundrect
+#.indexer: fill=#262626 stroke=#fbb363 visual=database title=bold
+#.api: fill=#262626 stroke=#fbb363 title=bold visual=transceiver</desc>
+  <rect x="0" y="0" height="765.75" width="568" style="stroke:none; fill:#262626;"></rect>
+  <path d="M204.4 67.3 L149.5 87.3 L149.5 100.6 L149.5 100.6 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M144.2 93.9 L149.5 100.6 L154.8 93.9 L149.5 107.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M149.5 154.3 L149.5 174.3 L149.5 194.3 L149.5 194.3 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M149.5 225.3 L149.5 245.3 L149.5 258.6 L149.5 258.6 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M144.2 251.9 L149.5 258.6 L154.8 251.9 L149.5 265.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M149.5 296.3 L149.5 316.3 L149.5 329.6 L149.5 329.6 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M144.2 322.9 L149.5 329.6 L154.8 322.9 L149.5 336.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M188.4 367.3 L238.5 387.3 L238.5 407.3 L238.5 407.3 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M238.5 438.3 L238.5 458.3 L293 476.2 L293 476.2 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M285 479.2 L293 476.2 L288.3 469 L299.3 478.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M121.1 367.3 L84.5 387.3 L84.5 422.8 L84.5 422.8 L84.5 458.3 L84.5 458.3 L84.5 478.3 L84.5 478.3 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M84.5 509.3 L84.5 529.3 L214.5 555.9 L214.5 555.9 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M206.9 559.8 L214.5 555.9 L209 549.4 L221 557.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M332.5 62.9 L454.5 87.3 L454.5 130.8 L454.5 130.8 L454.5 174.3 L454.5 174.3 L454.5 209.8 L454.5 209.8 L454.5 245.3 L454.5 245.3 L454.5 280.8 L454.5 280.8 L454.5 316.3 L454.5 316.3 L454.5 336.3 L454.5 336.3 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M454.5 367.3 L454.5 387.3 L454.5 400.6 L454.5 400.6 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M449.2 393.9 L454.5 400.6 L459.8 393.9 L454.5 407.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M454.5 438.3 L454.5 458.3 L400 476.2 L400 476.2 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M404.7 469 L400 476.2 L408 479.2 L393.7 478.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M346.5 509.3 L346.5 529.3 L300.2 547.7 L300.2 547.7 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M304.4 540.3 L300.2 547.7 L308.4 550.2 L294 550.2 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M257.5 580.3 L257.5 600.3 L257.5 613.6 L257.5 613.6 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M252.2 606.9 L257.5 613.6 L262.8 606.9 L257.5 620.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M257.5 667.3 L257.5 687.3 L257.5 700.6 L257.5 700.6 " style="stroke:#fff;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M252.2 693.9 L257.5 700.6 L262.8 693.9 L257.5 707.3 Z" style="stroke:#fff;fill:#fff;stroke-dasharray:none;stroke-width:3;"></path>
+  <ellipse cx="257.5" cy="47.9" rx="75" ry="19.375" data-name="Flow Network" style="stroke:#00bff3;fill:#262626;stroke-dasharray:6 6;stroke-width:3;"></ellipse>
+  <text x="257.5" y="53.9" style="fill: #00bff3;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Flow Network">Flow Network</text>
+  <rect x="60.5" y="115.5" height="35" width="179" data-name="Google Cloud Bucket" style="stroke:none; fill:#262626;"></rect>
+  <path d="M60.5 115.5 L60.5 146.5" data-name="Google Cloud Bucket" style="stroke:#55de51;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M239.5 115.5 L239.5 146.5" data-name="Google Cloud Bucket" style="stroke:#55de51;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <ellipse cx="149.5" cy="115.5" rx="89.5" ry="6" data-name="Google Cloud Bucket" style="stroke:#55de51;fill:#262626;stroke-dasharray:none;stroke-width:3;"></ellipse>
+  <path d="M239 146.5 L238.9 146.8 L238.6 147.1 L238 147.4 L237.2 147.7 L236.2 148 L235 148.3 L233.6 148.6 L232 148.8 L230.1 149.1 L228.1 149.4 L225.9 149.6 L223.4 149.9 L220.8 150.1 L218.1 150.4 L215.1 150.6 L212 150.8 L208.7 151 L205.3 151.2 L201.7 151.4 L198.1 151.5 L194.2 151.7 L190.3 151.8 L186.3 152 L182.2 152.1 L178 152.2 L173.7 152.3 L169.4 152.3 L165 152.4 L160.6 152.5 L156.2 152.5 L151.7 152.5 L147.3 152.5 L142.8 152.5 L138.4 152.5 L134 152.4 L129.6 152.3 L125.3 152.3 L121 152.2 L116.8 152.1 L112.7 152 L108.7 151.8 L104.7 151.7 L100.9 151.5 L97.3 151.4 L93.7 151.2 L90.3 151 L87 150.8 L83.9 150.6 L80.9 150.4 L78.2 150.1 L75.6 149.9 L73.1 149.6 L70.9 149.4 L68.9 149.1 L67 148.8 L65.4 148.6 L64 148.3 L62.8 148 L61.8 147.7 L61 147.4 L60.4 147.1 L60.1 146.8 L60 146.5" data-name="Google Cloud Bucket" style="stroke:#55de51;fill:#262626;stroke-dasharray:none;stroke-width:3;"></path>
+  <text x="150" y="141" style="fill: #55de51;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Google Cloud Bucket">Google Cloud Bucket</text>
+  <rect x="228.5" y="628.5" height="35" width="58" data-name="Index" style="stroke:none; fill:#262626;"></rect>
+  <path d="M228.5 628.5 L228.5 659.5" data-name="Index" style="stroke:#fbb363;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <path d="M286.5 628.5 L286.5 659.5" data-name="Index" style="stroke:#fbb363;fill:none;stroke-dasharray:none;stroke-width:3;"></path>
+  <ellipse cx="257.5" cy="628.5" rx="29" ry="6" data-name="Index" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></ellipse>
+  <path d="M286.5 659.5 L286.5 659.8 L286.4 660.1 L286.2 660.4 L285.9 660.7 L285.6 661 L285.2 661.3 L284.8 661.6 L284.2 661.8 L283.6 662.1 L283 662.4 L282.2 662.6 L281.5 662.9 L280.6 663.1 L279.7 663.4 L278.8 663.6 L277.7 663.8 L276.7 664 L275.6 664.2 L274.4 664.4 L273.2 664.5 L272 664.7 L270.7 664.8 L269.4 665 L268.1 665.1 L266.7 665.2 L265.4 665.3 L264 665.3 L262.5 665.4 L261.1 665.5 L259.7 665.5 L258.2 665.5 L256.8 665.5 L255.3 665.5 L253.9 665.5 L252.5 665.4 L251 665.3 L249.6 665.3 L248.3 665.2 L246.9 665.1 L245.6 665 L244.3 664.8 L243 664.7 L241.8 664.5 L240.6 664.4 L239.4 664.2 L238.3 664 L237.3 663.8 L236.2 663.6 L235.3 663.4 L234.4 663.1 L233.5 662.9 L232.8 662.6 L232 662.4 L231.4 662.1 L230.8 661.8 L230.2 661.6 L229.8 661.3 L229.4 661 L229.1 660.7 L228.8 660.4 L228.6 660.1 L228.5 659.8 L228.5 659.5" data-name="Index" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></path>
+  <text x="257.5" y="654" style="fill: #fbb363;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Index">Index</text>
+  <rect x="87.5" y="265.5" rx="15.5" ry="15.5" height="31" width="124" data-name="GCP Streamer" style="stroke:#55de51;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="149.5" y="287" style="fill: #55de51;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="GCP Streamer">GCP Streamer</text>
+  <rect x="72.5" y="336.5" rx="15.5" ry="15.5" height="31" width="154" data-name="Execution Tracker" style="stroke:#55de51;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="149.5" y="358" style="fill: #55de51;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Execution Tracker">Execution Tracker</text>
+  <rect x="368.5" y="407.5" rx="15.5" ry="15.5" height="31" width="172" data-name="Consensus Follower" style="stroke:#e53e65;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="454.5" y="429" style="fill: #e53e65;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Consensus Follower">Consensus Follower</text>
+  <rect x="264.5" y="478.5" rx="15.5" ry="15.5" height="31" width="164" data-name="Consensus Tracker" style="stroke:#e53e65;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="346.5" y="500" style="fill: #e53e65;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Consensus Tracker">Consensus Tracker</text>
+  <rect x="221.5" y="549.5" rx="15.5" ry="15.5" height="31" width="73" data-name="Mapper" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></rect>
+  <text x="258" y="571" style="fill: #fbb363;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Mapper">Mapper</text>
+  <path d="M209.5 707.5 L289.5 707.5 L297.5 723 L289.5 738.5 L209.5 738.5 L217.5 723 Z" data-name="DPS API" style="stroke:#fbb363;fill:#262626;stroke-dasharray:none;stroke-width:3;"></path>
+  <text x="257.5" y="729" style="fill: #fbb363;font:bold  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="DPS API">DPS API</text>
+  <text x="150" y="216" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Block Execution Records">Block Execution Records</text>
+  <text x="238.5" y="429" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Block Execution Data">Block Execution Data</text>
+  <text x="454.5" y="358" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Chain Data">Chain Data</text>
+  <text x="84.5" y="500" style="fill: #fff;font:normal  12pt Helvetica, Helvetica, sans-serif;text-anchor: middle;" data-name="Trie Updates">Trie Updates</text>
+</svg>

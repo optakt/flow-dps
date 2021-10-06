@@ -264,7 +264,7 @@ func (l *Library) RetrieveResult(txID flow.Identifier, result *flow.TransactionR
 
 // IterateLedger steps through the entire ledger for ledger keys and payloads
 // and call the given callback for each of them.
-func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.Payload) error) func(*badger.Txn) error {
+func (l *Library) IterateLedger(exclude func(height uint64) bool, process func(path ledger.Path, payload *ledger.Payload) error) func(*badger.Txn) error {
 
 	prefix := encodeKey(prefixPayload)
 	opts := badger.IteratorOptions{
@@ -287,17 +287,24 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 		it := tx.NewIterator(opts)
 		defer it.Close()
 
-		next := encodeKey(prefixPayload, highest, uint64(math.MaxUint64))
-		for it.Seek(next); it.ValidForPrefix(prefix); it.Seek(next) {
+		sentinel := encodeKey(prefixPayload, highest, uint64(math.MaxUint64))
+		for it.Seek(sentinel); it.ValidForPrefix(prefix); {
 
-			// First, we extract the path from the key.
-			var path ledger.Path
+			// First, we extract the height from the item's key, and check if
+			// we should just skip past this entry.
 			item := it.Item()
 			key := item.Key()
-			copy(path[:], key[1:33])
+			height := binary.BigEndian.Uint64(key[33:41])
+			if exclude(height) {
+				it.Next()
+				continue
+			}
 
-			// Then we extract the payload from the value.
+			// Next, we can get the path from the key and the payload from the
+			// value.
+			var path ledger.Path
 			var payload ledger.Payload
+			copy(path[:], key[1:33])
 			err := item.Value(func(val []byte) error {
 				err := l.codec.Unmarshal(val, &payload)
 				if err != nil {
@@ -309,8 +316,8 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 				return fmt.Errorf("could not decode value (path: %x): %w", path, err)
 			}
 
-			// Process the ledger path and payload with the callback.
-			err = callback(path, &payload)
+			// Then, we process the ledger path and payload with the callback.
+			err = process(path, &payload)
 			if err != nil {
 				return fmt.Errorf("could not process register (path: %x): %w", path, err)
 			}
@@ -331,7 +338,8 @@ func (l *Library) IterateLedger(callback func(path ledger.Path, payload *ledger.
 					break
 				}
 			}
-			next = encodeKey(prefixPayload, path, uint64(math.MaxUint64))
+			sentinel = encodeKey(prefixPayload, path, uint64(math.MaxUint64))
+			it.Seek(sentinel)
 		}
 
 		return nil

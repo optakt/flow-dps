@@ -42,7 +42,6 @@ type Writer struct {
 	sema *semaphore.Weighted
 	err  chan error
 
-	tick  chan struct{}   // signals when an operation is added to the transaction
 	done  chan struct{}   // signals when no more new operations will be added
 	mutex *sync.Mutex     // guards the current transaction against concurrent access
 	wg    *sync.WaitGroup // keeps track of when the flush goroutine should exit
@@ -65,14 +64,19 @@ func NewWriter(db *badger.DB, lib dps.WriteLibrary, options ...func(*Config)) *W
 		sema: semaphore.NewWeighted(int64(cfg.ConcurrentTransactions)),
 		err:  make(chan error, cfg.ConcurrentTransactions),
 
-		tick:  make(chan struct{}, 1),
 		done:  make(chan struct{}),
 		mutex: &sync.Mutex{},
 		wg:    &sync.WaitGroup{},
 	}
 
-	w.wg.Add(1)
-	go w.flush()
+	// No flush interval means that flushing is disabled, and we only commit
+	// badger transactions that are full. This optimizes throughput of writing
+	// to the database, but creates latency if transactions don't fill up fast
+	// enough to be committed at maximum size.
+	if cfg.FlushInterval > 0 {
+		w.wg.Add(1)
+		go w.flush()
+	}
 
 	return &w
 }
@@ -107,143 +111,117 @@ func (w *Writer) Header(height uint64, header *flow.Header) error {
 // of the execution state contained within the finalized block at the given
 // height.
 func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
+
 	if len(paths) != len(payloads) {
 		return fmt.Errorf("mismatch between paths and payloads counts")
 	}
-	return w.apply(func(tx *badger.Txn) error {
-		for i, path := range paths {
-			payload := payloads[i]
-			err := w.lib.SavePayload(height, path, payload)(tx)
-			if err != nil {
-				return fmt.Errorf("could not save payload (path: %x): %w", path, err)
-			}
-		}
-		return nil
-	})
+
+	ops := make([]func(*badger.Txn) error, 0, len(payloads))
+
+	for i, path := range paths {
+		payload := payloads[i]
+		ops = append(ops, w.lib.SavePayload(height, path, payload))
+	}
+
+	return w.apply(ops...)
 }
 
 // Collections indexes the collections at the given height.
 func (w *Writer) Collections(height uint64, collections []*flow.LightCollection) error {
-	var collIDs []flow.Identifier
-	return w.apply(func(tx *badger.Txn) error {
-		for _, collection := range collections {
-			err := w.lib.SaveCollection(collection)(tx)
-			if err != nil {
-				return fmt.Errorf("could not store collection (coll: %x): %w", collection.ID(), err)
-			}
-			collID := collection.ID()
-			err = w.lib.IndexTransactionsForCollection(collID, collection.Transactions)(tx)
-			if err != nil {
-				return fmt.Errorf("could not index transactions for collection (coll: %x): %w", collID, err)
-			}
-			collIDs = append(collIDs, collID)
-		}
-		err := w.lib.IndexCollectionsForHeight(height, collIDs)(tx)
-		if err != nil {
-			return fmt.Errorf("could not index collections for height: %w", err)
-		}
-		return nil
-	})
+
+	ops := make([]func(*badger.Txn) error, 0, 2*len(collections)+1)
+
+	collIDs := make([]flow.Identifier, 0, len(collections))
+	for _, collection := range collections {
+		collID := collection.ID()
+		collIDs = append(collIDs, collID)
+		ops = append(ops, w.lib.SaveCollection(collection))
+		ops = append(ops, w.lib.IndexTransactionsForCollection(collID, collection.Transactions))
+	}
+
+	ops = append(ops, w.lib.IndexCollectionsForHeight(height, collIDs))
+
+	return w.apply(ops...)
 }
 
 // Guarantees indexes the guarantees at the given height.
 func (w *Writer) Guarantees(_ uint64, guarantees []*flow.CollectionGuarantee) error {
-	return w.apply(func(tx *badger.Txn) error {
-		for _, guarantee := range guarantees {
-			err := w.lib.SaveGuarantee(guarantee)(tx)
-			if err != nil {
-				return fmt.Errorf("could not store guarantee (tx: %x): %w", guarantee.ID(), err)
-			}
-		}
-		return nil
-	})
+
+	ops := make([]func(*badger.Txn) error, 0, len(guarantees))
+	for _, guarantee := range guarantees {
+		ops = append(ops, w.lib.SaveGuarantee(guarantee))
+	}
+
+	return w.apply(ops...)
 }
 
 // Transactions indexes the transactions at the given height.
 func (w *Writer) Transactions(height uint64, transactions []*flow.TransactionBody) error {
-	var txIDs []flow.Identifier
-	return w.apply(func(tx *badger.Txn) error {
-		for _, transaction := range transactions {
-			txID := transaction.ID()
-			err := w.lib.SaveTransaction(transaction)(tx)
-			if err != nil {
-				return fmt.Errorf("could not save transaction (tx: %x): %w", txID, err)
-			}
-			err = w.lib.IndexHeightForTransaction(txID, height)(tx)
-			if err != nil {
-				return fmt.Errorf("could not save transaction height (tx: %x): %w", txID, err)
-			}
-			txIDs = append(txIDs, txID)
-		}
 
-		err := w.lib.IndexTransactionsForHeight(height, txIDs)(tx)
-		if err != nil {
-			return fmt.Errorf("could not index transactions for height: %w", err)
-		}
+	ops := make([]func(*badger.Txn) error, 0, 2*len(transactions)+1)
 
-		return nil
-	})
+	txIDs := make([]flow.Identifier, 0, len(transactions))
+	for _, transaction := range transactions {
+		txID := transaction.ID()
+		txIDs = append(txIDs, txID)
+		ops = append(ops, w.lib.SaveTransaction(transaction))
+		ops = append(ops, w.lib.IndexHeightForTransaction(txID, height))
+	}
+
+	ops = append(ops, w.lib.IndexTransactionsForHeight(height, txIDs))
+
+	return w.apply(ops...)
 }
 
 // Results indexes the transaction results at the given height.
 func (w *Writer) Results(results []*flow.TransactionResult) error {
-	return w.apply(func(tx *badger.Txn) error {
-		for _, result := range results {
-			err := w.lib.SaveResult(result)(tx)
-			if err != nil {
-				return fmt.Errorf("could not index transaction result (tx: %x): %w", result.TransactionID, err)
-			}
-		}
-		return nil
-	})
+
+	ops := make([]func(*badger.Txn) error, 0, len(results))
+
+	for _, result := range results {
+		ops = append(ops, w.lib.SaveResult(result))
+	}
+
+	return w.apply(ops...)
 }
 
 // Events indexes the events, which should represent all events of the finalized
 // block at the given height.
 func (w *Writer) Events(height uint64, events []flow.Event) error {
+
 	buckets := make(map[flow.EventType][]flow.Event)
 	for _, event := range events {
 		buckets[event.Type] = append(buckets[event.Type], event)
 	}
-	err := w.apply(func(tx *badger.Txn) error {
-		for typ, evts := range buckets {
-			err := w.lib.SaveEvents(height, typ, evts)(tx)
-			if err != nil {
-				return fmt.Errorf("could not persist events bucket (type: %s): %w", typ, err)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not index events: %w", err)
+
+	ops := make([]func(*badger.Txn) error, 0, len(buckets))
+
+	for typ, set := range buckets {
+		ops = append(ops, w.lib.SaveEvents(height, typ, set))
 	}
-	return nil
+
+	return w.apply(ops...)
 }
 
 // Seals indexes the seals, which should represent all seals in the finalized
 // block at the given height.
 func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
+
+	ops := make([]func(*badger.Txn) error, 0, len(seals)+1)
+
 	sealIDs := make([]flow.Identifier, 0, len(seals))
-	return w.apply(func(tx *badger.Txn) error {
-		for _, seal := range seals {
-			err := w.lib.SaveSeal(seal)(tx)
-			if err != nil {
-				return fmt.Errorf("could not save seal (seal: %x): %w", seal.ID(), err)
-			}
+	for _, seal := range seals {
+		sealID := seal.ID()
+		sealIDs = append(sealIDs, sealID)
+		ops = append(ops, w.lib.SaveSeal(seal))
+	}
 
-			sealIDs = append(sealIDs, seal.ID())
-		}
+	ops = append(ops, w.lib.IndexSealsForHeight(height, sealIDs))
 
-		err := w.lib.IndexSealsForHeight(height, sealIDs)(tx)
-		if err != nil {
-			return fmt.Errorf("could not index seals for height: %w", err)
-		}
-
-		return nil
-	})
+	return w.apply(ops...)
 }
 
-func (w *Writer) apply(op func(*badger.Txn) error) error {
+func (w *Writer) apply(ops ...func(*badger.Txn) error) error {
 
 	// Before applying an additional operation to the transaction we are
 	// currently building, we want to see if there was an error committing any
@@ -255,27 +233,24 @@ func (w *Writer) apply(op func(*badger.Txn) error) error {
 		// skip
 	}
 
-	// We should also reset the timer for committing at regular intervals. Any
-	// period of inactivity for the configured amount will lead us to commit
-	// the currently building Badger transaction.
-	w.tick <- struct{}{}
-
 	// If we had no error in a previous transaction, we try applying the
 	// operation to the current transaction. If the transaction is already too
 	// big, we simply commit it with our callback and start a new transaction.
 	// Transaction creation is guarded by a semaphore that limits it to the
 	// configured number of inflight transactions.
-	w.mutex.Lock()
-	err := op(w.tx)
-	if errors.Is(err, badger.ErrTxnTooBig) {
-		_ = w.sema.Acquire(context.Background(), 1)
-		w.tx.CommitWith(w.committed)
-		w.tx = w.db.NewTransaction(true)
-		err = op(w.tx)
-	}
-	w.mutex.Unlock()
-	if err != nil {
-		return fmt.Errorf("could not apply operation: %w", err)
+	for _, op := range ops {
+		w.mutex.Lock()
+		err := op(w.tx)
+		if errors.Is(err, badger.ErrTxnTooBig) {
+			_ = w.sema.Acquire(context.Background(), 1)
+			w.tx.CommitWith(w.committed)
+			w.tx = w.db.NewTransaction(true)
+			err = op(w.tx)
+		}
+		w.mutex.Unlock()
+		if err != nil {
+			return fmt.Errorf("could not apply operation: %w", err)
+		}
 	}
 
 	return nil
@@ -302,16 +277,13 @@ func (w *Writer) Close() error {
 	// without new operations, then drain the tick channel.
 	close(w.done)
 	w.wg.Wait()
-	close(w.tick)
-	for range w.tick {
-	}
 
 	// The first transaction we created did not claim a slot on the semaphore.
 	// This makes sense, because we only want to limit in-flight (committing)
 	// transactions. The currently building transaction is not in-progress.
 	// However, we still need to make sure that the currently building
 	// transaction is properly committed. We assume that we are no longer
-	// appyling new operations when we call `Close`, so we can explicitly do so
+	// applying new operations when we call `Close`, so we can explicitly do so
 	// here, without using the callback.
 	err := w.tx.Commit()
 	if err != nil {
@@ -334,26 +306,19 @@ func (w *Writer) Close() error {
 func (w *Writer) flush() {
 	defer w.wg.Done()
 
+	ticker := time.NewTicker(w.cfg.FlushInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
 
-		// If this case is triggered, it means there was no new operation added
-		// to the transaction for flush interval. We thus want to flush the
-		// transaction.
-		case <-time.After(w.cfg.FlushInterval):
+		case <-ticker.C:
 			w.mutex.Lock()
 			_ = w.sema.Acquire(context.Background(), 1)
 			w.tx.CommitWith(w.committed)
 			w.tx = w.db.NewTransaction(true)
 			w.mutex.Unlock()
 
-		// If this case is triggered, an operation was added to the transaction
-		// and we reset the trigger to commit the transaction for flushing.
-		case <-w.tick:
-			// resets the `time.After`
-
-		// If this case is triggered, we are done adding operations for good and
-		// we can shut down.
 		case <-w.done:
 			return
 		}

@@ -29,6 +29,7 @@ import (
 
 	gcloud "cloud.google.com/go/storage"
 	"github.com/dgraph-io/badger/v2"
+	_ "github.com/dgraph-io/badger/v2/y"
 	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
@@ -81,6 +82,7 @@ func run() int {
 		flagForce      bool
 		flagIndex      string
 		flagLevel      string
+		flagMetrics    string
 		flagSkip       bool
 
 		flagFlushInterval time.Duration
@@ -96,9 +98,10 @@ func run() int {
 	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
-	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "idle time before flushing badger transactions")
+	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
 
@@ -154,20 +157,22 @@ func run() int {
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
 	read := index.NewReader(indexDB, storage)
-	_, err = read.First()
-
+	first, err := read.First()
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		log.Error().Err(err).Msg("could not get first height from index reader")
 		return failure
 	}
-
-	indexExists := err == nil
-
-	if !indexExists && flagCheckpoint == "" {
-		log.Error().Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
+	empty := errors.Is(err, badger.ErrKeyNotFound)
+	if empty && flagCheckpoint == "" {
+		log.Error().Msg("index database is empty, please provide root checkpoint (-c, --checkpoint) to bootstrap")
 		return failure
 	}
 
+	// We initialize the writer with a flush interval, which will make sure that
+	// Badger transactions are committed to the database, even if they don't
+	// fill up fast enough. This avoids having latency between when we add data
+	// to the transaction and when it becomes available on-disk for serving the
+	// DPS API.
 	write := index.NewWriter(indexDB, storage,
 		index.WithFlushInterval(flagFlushInterval),
 	)
@@ -306,13 +311,11 @@ func run() int {
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
-	// At this point, we can initialize the core business logic of the indexer,
-	// with the mapper's finite state machine and transitions. We also want to
-	// load and inject the root checkpoint if it is given as a parameter.
+	// If we have an empty database, we want a loader to bootstrap from the
+	// checkpoint; if we don't, we can optionally use the root checkpoint to
+	// speed up the restart/restoration.
 	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
-	bootstrap := !indexExists || (indexExists && flagForce)
-	if bootstrap {
+	if empty {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
 			log.Error().Err(err).Msg("could not open checkpoint file")
@@ -320,9 +323,27 @@ func run() int {
 		}
 		defer file.Close()
 		load = loader.FromCheckpoint(file)
+	} else if flagCheckpoint != "" && flagForce {
+		file, err := os.Open(flagCheckpoint)
+		if err != nil {
+			log.Error().Err(err).Msg("could not open checkpoint file")
+			return failure
+		}
+		defer file.Close()
+		load = loader.FromCheckpoint(file)
+		load = loader.FromIndex(log, storage, indexDB,
+			loader.WithInitializer(load),
+			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
+		)
+	} else {
+		load = loader.FromIndex(log, storage, indexDB)
 	}
+
+	// At this point, we can initialize the core business logic of the indexer,
+	// with the mapper's finite state machine and transitions. We also want to
+	// load and inject the root checkpoint if it is given as a parameter.
 	transitions := mapper.NewTransitions(log, load, consensus, execution, read, write,
-		mapper.WithBootstrapState(bootstrap),
+		mapper.WithBootstrapState(empty),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
@@ -392,6 +413,26 @@ func run() int {
 			log.Warn().Err(err).Msg("Flow DPS Server failed")
 		}
 		log.Info().Msg("Flow DPS Live Server stopped")
+	}()
+
+	// Expose badgerDB and go metrics.
+	go func() {
+		if flagMetrics == "" {
+			return
+		}
+
+		start := time.Now()
+		log.Info().Time("start", start).Msg("metrics server starting")
+		err := http.ListenAndServe(flagMetrics, nil)
+		if err != nil {
+			log.Warn().Err(err).Msg("metrics server failed")
+			close(failed)
+		} else {
+			close(done)
+		}
+		finish := time.Now()
+		duration := finish.Sub(start)
+		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("metrics server stopped")
 	}()
 
 	// Here, we are waiting for a signal, or for one of the components to fail

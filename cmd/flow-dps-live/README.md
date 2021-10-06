@@ -18,8 +18,9 @@ Usage of flow-dps-live:
   -f, --force                     force indexing to bootstrap from root checkpoint and overwrite existing index
   -i, --index string              path to database directory for state index (default "index")
   -l, --level string              log output level (default "info")
+  -m, --metrics string            address on which to expose metrics (no metrics are exposed when left empty)
   -s, --skip                      skip indexing of execution state ledger registers
-      --flush-interval duration   idle time before flushing badger transactions (default 1s)
+      --flush-interval duration   interval for flushing badger transactions (0s for disabled)
       --seed-address string       host address of seed node to follow consensus
       --seed-key string           hex-encoded public network key of seed node to follow consensus
 
