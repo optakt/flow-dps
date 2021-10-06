@@ -172,12 +172,11 @@ func run() int {
 	// to the transaction and when it becomes available on-disk for serving the
 	// DPS API.
 	metricsEnabled := flagMetrics != ""
-	var write dps.Writer
-	if metricsEnabled {
-		write = index.NewMetricsWriter(index.NewWriter(indexDB, storage, index.WithFlushInterval(flagFlushInterval)))
-	} else {
-		write = index.NewWriter(indexDB, storage, index.WithFlushInterval(flagFlushInterval))
-	}
+	write := index.NewWriter(
+		indexDB,
+		storage,
+		index.WithFlushInterval(flagFlushInterval),
+	)
 
 	defer func() {
 		err := write.Close()
@@ -342,10 +341,17 @@ func run() int {
 		load = loader.FromIndex(log, storage, indexDB)
 	}
 
+	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
+	// use the regular one.
+	writer := dps.Writer(write)
+	if metricsEnabled {
+		writer = index.NewMetricsWriter(write)
+	}
+
 	// At this point, we can initialize the core business logic of the indexer,
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
-	transitions := mapper.NewTransitions(log, load, consensus, execution, read, write,
+	transitions := mapper.NewTransitions(log, load, consensus, execution, read, writer,
 		mapper.WithBootstrapState(empty),
 		mapper.WithSkipRegisters(flagSkip),
 	)

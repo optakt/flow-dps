@@ -36,6 +36,4 @@ type Writer interface {
 	Transactions(height uint64, transactions []*flow.TransactionBody) error
 	Results(results []*flow.TransactionResult) error
 	Seals(height uint64, seals []*flow.Seal) error
-
-	Close() error
 }
