@@ -22,6 +22,9 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
+// benchmarkDictionary selects a dataset of samples to compress using the given dictionary,
+// and calculates its compression rate and the time it took to compress the given samples.
+// It then sets that information directly into the given dictionary pointer.
 func (g *Generator) benchmarkDictionary(dict *dictionary) error {
 	compressor, err := zstd.NewWriter(nil, zstd.WithEncoderDict(dict.raw))
 	if err != nil {

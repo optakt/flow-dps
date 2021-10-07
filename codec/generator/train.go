@@ -22,6 +22,8 @@ import (
 	"path/filepath"
 )
 
+// trainDictionary runs the zstd command to train a dictionary of the given kind and size,
+// and returns it as a dictionary structure.
 func (g *Generator) trainDictionary(kind DictionaryKind, size int) (*dictionary, error) {
 
 	// List all samples within the sample path, to be given to the training command.

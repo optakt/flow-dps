@@ -88,10 +88,7 @@ func run() int {
 
 	codec := zbor.NewCodec()
 
-	generate := generator.New(
-		log,
-		db,
-		codec,
+	generate := generator.New(log, db, codec,
 		generator.WithDictionaryPath(flagDictionaryPath),
 		generator.WithSamplePath(flagSamplePath),
 		generator.WithBenchmarkSampleSize(flagSampleSize),

@@ -53,8 +53,10 @@ type templateData struct {
 	Bytes []byte
 }
 
+// compile takes a raw dictionary and uses a template to compile it into a Go file.
 func (g *Generator) compile(dict *dictionary) error {
 
+	// Create dictionary file.
 	filename := string(dict.kind) + ".go"
 	path := filepath.Join(g.cfg.dictionaryPath, filename)
 	file, err := os.Create(path)
@@ -62,6 +64,7 @@ func (g *Generator) compile(dict *dictionary) error {
 		return fmt.Errorf("could not open dictionary file: %w", err)
 	}
 
+	// Execute template using the dictionary file as the writer.
 	funcMap := template.FuncMap{
 		"lower": strings.ToLower,
 	}

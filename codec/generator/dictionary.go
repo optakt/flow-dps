@@ -18,8 +18,10 @@ import (
 	"time"
 )
 
+// DictionaryKind represents the resources that the dictionary is trained to compress efficiently.
 type DictionaryKind string
 
+// Supported dictionary kinds.
 const (
 	KindPayloads     DictionaryKind = "payloads"
 	KindEvents       DictionaryKind = "events"
