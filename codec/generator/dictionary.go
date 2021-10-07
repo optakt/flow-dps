@@ -1,6 +1,3 @@
-package main
-
-const dictionaryTemplate = `
 // Copyright 2021 Optakt Labs OÜ
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -15,14 +12,25 @@ const dictionaryTemplate = `
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package zbor
+package generator
 
-// {{ .Name }}Dictionary is a byte slice that contains the result of running the Zstandard training mode
-// on the {{ .Name | lower }} of the DPS index. This allows zstandard to achieve a better compression ratio, specifically for
-// small data.
-// See http://facebook.github.io/zstd/#small-data
-// See https://github.com/facebook/zstd/blob/master/doc/zstd_compression_format.md#dictionary-format
-var {{ .Name }}Dictionary = []byte{
-	{{ range .Bytes }}{{ . }}, {{ end }}
+import (
+	"time"
+)
+
+type DictionaryKind string
+
+const (
+	KindPayloads     DictionaryKind = "payloads"
+	KindEvents       DictionaryKind = "events"
+	KindTransactions DictionaryKind = "transactions"
+)
+
+type dictionary struct {
+	kind DictionaryKind
+	raw  []byte
+	size int
+
+	ratio float64
+	speed time.Duration
 }
-`

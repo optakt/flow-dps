@@ -24,20 +24,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
+	"github.com/optakt/flow-dps/codec/generator"
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
 const (
 	success = 0
 	failure = 1
-
-	updatesSamplePath      = "./samples/updates/"
-	eventsSamplePath       = "./samples/events/"
-	transactionsSamplePath = "./samples/transactions/"
-
-	updatesDictionaryPath      = "./codec/zbor/updates"
-	eventsDictionaryPath       = "./codec/zbor/events"
-	transactionsDictionaryPath = "./codec/zbor/transactions"
 )
 
 func main() {
@@ -51,12 +45,22 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagIndex string
-		flagLevel string
+		flagDictionaryPath string
+		flagIndex          string
+		flagLevel          string
+		flagSamplePath     string
+		flagSampleSize     int
+		flagStartSize      int
+		flagTolerance      float64
 	)
 
+	pflag.StringVar(&flagDictionaryPath, "dictionary-path", "./codec/zbor", "path to the package in which to write dictionaries")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.StringVar(&flagSamplePath, "sample-path", "./samples", "path to the directory in which to create temporary samples for dictionary training")
+	pflag.IntVar(&flagSampleSize, "sample-size", 16*1024, "size of the sample dataset used for benchmarking (higher values increase accuracy at the expense of speed)")
+	pflag.IntVar(&flagStartSize, "start-size", 512, "minimum dictionary size to generate (will be doubled on each iteration)")
+	pflag.Float64Var(&flagTolerance, "tolerance", 0.1, "compression ratio increase tolerance (between 0 and 1)")
 
 	pflag.Parse()
 
@@ -74,10 +78,6 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	// FIXME: Use the index database as the sample instead of the ledger WAL entries.
-	//        Generate a random path and use the seek to select the next value after this path,
-	//        and from this path take the last available height.
-
 	// Initialize the index core state and open database in read-only mode.
 	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
 	if err != nil {
@@ -86,55 +86,34 @@ func run() int {
 	}
 	defer db.Close()
 
-	// FIXME: Delete samples before if they already exist.
+	codec := zbor.NewCodec()
 
-	var duration time.Duration
-	currentRatio := float64(0)
-	previousRatio := float64(1)
-	for size := 512; currentRatio < previousRatio*0.90; size = size * 2 {
+	generate := generator.New(
+		log,
+		db,
+		codec,
+		generator.WithDictionaryPath(flagDictionaryPath),
+		generator.WithSamplePath(flagSamplePath),
+		generator.WithBenchmarkSampleSize(flagSampleSize),
+		generator.WithRatioImprovementTolerance(flagTolerance),
+		generator.WithStartSize(flagStartSize),
+	)
 
-		// Set previous ratio, except on first loop. FIXME: do this cleaner.
-		if currentRatio != 0 {
-			previousRatio = currentRatio
-		}
-		log.Info().Int("size", size).Float64("previous_ratio", previousRatio).Msg("generating payload dictionary")
-
-		err = generatePayloadSamples(db, size*100)
-		if err != nil {
-			log.Error().Int("size", size).Err(err).Msg("could not generate payload samples")
-			return failure
-		}
-
-		err = trainPayloadDictionary(size)
-		if err != nil {
-			log.Error().Err(err).Msg("could not generate raw dictionary for payloads")
-			return failure
-		}
-
-		currentRatio, duration, err = benchmarkPayloadDictionary(db)
-		if err != nil {
-			log.Error().Err(err).Msg("could not benchmark dictionary for payloads")
-			return failure
-		}
-
-		log.Info().
-			Int("size", size).
-			Float64("compression_ratio", currentRatio).
-			Dur("compression_speed", duration).
-			Msg("generated payload dictionary")
-	}
-	log.Info().
-		Float64("previous_ratio", previousRatio).
-		Float64("ratio", currentRatio).
-		Dur("compression_speed", duration).
-		Msg("done, stopped because ratio is good enough")
-
-	// FIXME: For events select one type at a height and the sample is a list of events not one single event.
-
-	// Open generated dictionary and transform it into codec package file.
-	err = generatePayloadDictionary()
+	err = generate.Dictionary(generator.KindPayloads)
 	if err != nil {
 		log.Error().Err(err).Msg("could not generate payload dictionary")
+		return failure
+	}
+
+	err = generate.Dictionary(generator.KindTransactions)
+	if err != nil {
+		log.Error().Err(err).Msg("could not generate transactions dictionary")
+		return failure
+	}
+
+	err = generate.Dictionary(generator.KindEvents)
+	if err != nil {
+		log.Error().Err(err).Msg("could not generate events dictionary")
 		return failure
 	}
 
