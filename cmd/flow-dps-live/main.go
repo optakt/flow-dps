@@ -171,7 +171,6 @@ func run() int {
 	// fill up fast enough. This avoids having latency between when we add data
 	// to the transaction and when it becomes available on-disk for serving the
 	// DPS API.
-	metricsEnabled := flagMetrics != ""
 	write := index.NewWriter(
 		indexDB,
 		storage,
@@ -344,6 +343,7 @@ func run() int {
 	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
 	// use the regular one.
 	writer := dps.Writer(write)
+	metricsEnabled := flagMetrics != ""
 	if metricsEnabled {
 		writer = index.NewMetricsWriter(write)
 	}
@@ -429,7 +429,7 @@ func run() int {
 		}
 
 		log.Info().Msg("metrics server starting")
-		server := metrics.NewServer(log, flagAddress)
+		server := metrics.NewServer(log, flagMetrics)
 		err := server.Start()
 		if err != nil {
 			log.Warn().Err(err).Msg("metrics server failed")
