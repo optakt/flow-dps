@@ -15,6 +15,7 @@
 package metrics
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -48,12 +49,12 @@ func NewServer(log zerolog.Logger, address string) *Server {
 func (s *Server) Start() error {
 	err := RegisterBadgerMetrics()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not register badger metrics: %w", err)
 	}
 
 	err = s.server.ListenAndServe()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not listen and serve: %w", err)
 	}
 
 	return nil
