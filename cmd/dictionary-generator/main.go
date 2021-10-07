@@ -107,7 +107,7 @@ func run() int {
 
 		err = trainPayloadDictionary(size)
 		if err != nil {
-			log.Error().Err(err).Msg("could not generate dictionary for payloads")
+			log.Error().Err(err).Msg("could not generate raw dictionary for payloads")
 			return failure
 		}
 
@@ -131,19 +131,12 @@ func run() int {
 
 	// FIXME: For events select one type at a height and the sample is a list of events not one single event.
 
-	//train = exec.Command("zstd", "--train", eventsSamplePath, "-o", eventsDictionaryPath)
-	//err = train.Run()
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//train = exec.Command("zstd", "--train", transactionsSamplePath, "-o", transactionsDictionaryPath)
-	//err = train.Run()
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	// FIXME: Use go templates to transform the dictionaries into proper Go files.
+	// Open generated dictionary and transform it into codec package file.
+	err = generatePayloadDictionary()
+	if err != nil {
+		log.Error().Err(err).Msg("could not generate payload dictionary")
+		return failure
+	}
 
 	return success
 }
