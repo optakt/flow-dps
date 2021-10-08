@@ -58,7 +58,7 @@ func run() int {
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVar(&flagSamplePath, "sample-path", "./samples", "path to the directory in which to create temporary samples for dictionary training")
-	pflag.IntVar(&flagSampleSize, "sample-size", 16*1024, "size of the sample dataset used for benchmarking (higher values increase accuracy at the expense of speed)")
+	pflag.IntVar(&flagSampleSize, "sample-size", 1024*1024, "size of the sample dataset used for benchmarking (higher values increase accuracy at the expense of speed)")
 	pflag.IntVar(&flagStartSize, "start-size", 512, "minimum dictionary size to generate (will be doubled on each iteration)")
 	pflag.Float64Var(&flagTolerance, "tolerance", 0.1, "compression ratio increase tolerance (between 0 and 1)")
 

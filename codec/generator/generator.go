@@ -64,6 +64,18 @@ func (g *Generator) Dictionary(kind DictionaryKind) error {
 		return fmt.Errorf("could not clean up sample folder: %w", err)
 	}
 
+	// Compute baseline benchmark when not using a dictionary.
+	baseline := dictionary{kind: kind}
+	err = g.benchmarkDictionary(&baseline)
+	if err != nil {
+		return fmt.Errorf("could not benchmark baseline performance: %w", err)
+	}
+
+	logger.Info().
+		Float64("compression_ratio", baseline.ratio).
+		Dur("compression_duration", baseline.duration).
+		Msg("benchmarked baseline compression")
+
 	// As long as the increase in compression ratio is considered tolerable, this loop
 	// generates increasingly bigger dictionaries, multiplying their size by a factor of
 	// two at each iteration. In each loop, dictionaries are generated and benchmarked.
@@ -77,27 +89,29 @@ func (g *Generator) Dictionary(kind DictionaryKind) error {
 		}
 
 		// Generate samples equal in size to 100 times the desired dictionary size.
-		err = g.generateSamples(KindPayloads, size*100)
+		err = g.generateSamples(kind, size*100)
 		if err != nil {
-			return fmt.Errorf("could not generate payload samples: %w", err)
+			return fmt.Errorf("could not generate samples: %w", err)
 		}
 
 		// Train a dictionary using those samples.
-		dict, err := g.trainDictionary(KindPayloads, size)
+		dict, err := g.trainDictionary(kind, size)
 		if err != nil {
 			return fmt.Errorf("could not generate raw dictionary: %w", err)
 		}
 
-		// Benchmark the dictionary's compression ratio and speed.
+		// Benchmark the dictionary's compression ratio and duration.
 		err = g.benchmarkDictionary(dict)
 		if err != nil {
 			return fmt.Errorf("could not benchmark dictionary: %w", err)
 		}
 
+		current = dict
+
 		logger.Info().
-			Float64("compression_ratio", dict.ratio).
-			Dur("compression_duration", dict.speed).
-			Msg("generated payload dictionary")
+			Float64("compression_ratio", current.ratio).
+			Dur("compression_duration", current.duration).
+			Msg("generated dictionary")
 	}
 
 	// Since the loop stopped, this means that the last generated dictionary was
@@ -107,7 +121,7 @@ func (g *Generator) Dictionary(kind DictionaryKind) error {
 	g.log.Info().
 		Int("best_size", best.size).
 		Float64("best_ratio", best.ratio).
-		Dur("best_duration", best.speed).
+		Dur("best_duration", best.duration).
 		Msg("found most optimized dictionary")
 
 	// Compile the dictionary into a proper Go file.
@@ -132,7 +146,10 @@ func (g *Generator) tolerateImprovement(current, previous *dictionary) bool {
 		return true
 	}
 
-	return current.ratio > previous.ratio*(1+g.cfg.ratioImprovementTolerance)
+	betterCompressionRatio := current.ratio < previous.ratio*(1-g.cfg.ratioImprovementTolerance)
+	betterSpeed := current.ratio < previous.ratio && current.duration < previous.duration
+
+	return betterCompressionRatio || betterSpeed
 }
 
 // generateSamples generates the right amount of samples to match the given size.
@@ -140,7 +157,7 @@ func (g *Generator) generateSamples(kind DictionaryKind, size int) error {
 
 	// Create a directory in which to store the samples.
 	dirPath := filepath.Join(g.cfg.samplePath, string(kind))
-	err := os.MkdirAll(dirPath, 0644)
+	err := os.MkdirAll(dirPath, 0777)
 	if err != nil {
 		return fmt.Errorf("could not create sample path: %w", err)
 	}
@@ -175,9 +192,6 @@ func (g *Generator) generateSamples(kind DictionaryKind, size int) error {
 func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) {
 
 	// Create an iterator prefix based on the kind of sample we want.
-	// FIXME: Instead of using EncodeKey, do it manually.
-	// FIXME: Do we want to keep the prefixes internal in the storage package and to manually write the matching numbers
-	//        in this package? This might mean that we'd break this tool if we were to update/reorder the prefixes.
 	var prefix []byte
 	switch kind {
 	case KindPayloads:
@@ -205,7 +219,7 @@ func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) 
 
 			// If we're out of entries to read from, reset the iterator.
 			// This will result in duplicate entries in the samples, but should not be a big deal.
-			if key[0] != storage.PrefixPayload {
+			if key[0] != prefix[0] {
 				g.log.Info().Msg("reached end of entries in index database, rewinding")
 
 				it.Rewind()

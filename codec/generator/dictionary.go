@@ -33,6 +33,6 @@ type dictionary struct {
 	raw  []byte
 	size int
 
-	ratio float64
-	speed time.Duration
+	ratio    float64
+	duration time.Duration
 }

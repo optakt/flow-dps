@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 )
 
@@ -39,7 +38,7 @@ const dictionaryTemplate = `// Copyright 2021 Optakt Labs OÜ
 package zbor
 
 // {{ .Name }}Dictionary is a byte slice that contains the result of running the Zstandard training mode
-// on the {{ .Name | lower }} of the DPS index. This allows zstandard to achieve a better compression ratio, specifically for
+// on the {{ .Name }} of the DPS index. This allows zstandard to achieve a better compression ratio, specifically for
 // small data.
 // See http://facebook.github.io/zstd/#small-data
 // See https://github.com/facebook/zstd/blob/master/doc/zstd_compression_format.md#dictionary-format
@@ -65,10 +64,7 @@ func (g *Generator) compile(dict *dictionary) error {
 	}
 
 	// Execute template using the dictionary file as the writer.
-	funcMap := template.FuncMap{
-		"lower": strings.ToLower,
-	}
-	t := template.Must(template.New("").Funcs(funcMap).Parse(dictionaryTemplate))
+	t := template.Must(template.New("").Parse(dictionaryTemplate))
 	err = t.Execute(file, templateData{Name: string(dict.kind), Bytes: dict.raw})
 	if err != nil {
 		return fmt.Errorf("could not execute dictionary template: %w", err)

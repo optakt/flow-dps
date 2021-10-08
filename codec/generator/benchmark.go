@@ -26,20 +26,31 @@ import (
 // and calculates its compression rate and the time it took to compress the given samples.
 // It then sets that information directly into the given dictionary pointer.
 func (g *Generator) benchmarkDictionary(dict *dictionary) error {
-	compressor, err := zstd.NewWriter(nil, zstd.WithEncoderDict(dict.raw))
-	if err != nil {
-		return fmt.Errorf("could not create zstd writer: %w", err)
-	}
 
 	samples, err := g.getSamples(dict.kind, g.cfg.benchmarkSampleSize)
 	if err != nil {
 		return fmt.Errorf("could not retrieve samples: %w", err)
 	}
 
+	// When given an empty dictionary, we're testing the baseline compressing, so we don't want to
+	// use a dictionary. Otherwise, use the given dictionary.
+	var compressor *zstd.Encoder
+	if len(dict.raw) == 0 {
+		compressor, err = zstd.NewWriter(nil)
+		if err != nil {
+			return fmt.Errorf("could not create baseline zstd writer: %w", err)
+		}
+	} else {
+		compressor, err = zstd.NewWriter(nil, zstd.WithEncoderDict(dict.raw))
+		if err != nil {
+			return fmt.Errorf("could not create zstd writer with dictionary: %w", err)
+		}
+	}
+
 	start := time.Now()
 
-	var uncompressed, compressed int
-	for i := 0; i < g.cfg.benchmarkSampleSize; i++ {
+	var compressed, uncompressed int
+	for uncompressed < g.cfg.benchmarkSampleSize {
 		// Pick a random sample.
 		sample := samples[rand.Int()%len(samples)]
 
@@ -48,13 +59,13 @@ func (g *Generator) benchmarkDictionary(dict *dictionary) error {
 	}
 
 	dict.ratio = float64(compressed) / float64(uncompressed)
-	dict.speed = time.Since(start)
+	dict.duration = time.Since(start)
 
 	g.log.Debug().
 		Int("uncompressed_total", uncompressed).
 		Int("compressed_total", compressed).
 		Float64("compression_ratio", dict.ratio).
-		Dur("compression_duration", dict.speed).
+		Dur("compression_duration", dict.duration).
 		Msg("benchmark successful")
 
 	return nil

@@ -16,8 +16,8 @@ package generator
 
 // DefaultConfig is the default configuration for the Mapper.
 var DefaultConfig = config{
-	startSize:                 512,       // 512kB
-	benchmarkSampleSize:       16 * 1024, // 16kB
+	startSize:                 512,         // 512kB
+	benchmarkSampleSize:       1024 * 1024, // 1MB
 	ratioImprovementTolerance: 0.9,
 	samplePath:                "./samples",
 	dictionaryPath:            "./codec/zbor/",
