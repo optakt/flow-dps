@@ -16,8 +16,7 @@ package generator
 
 // DefaultConfig is the default configuration for the Mapper.
 var DefaultConfig = config{
-	startSize:                 512,         // 512kB
-	benchmarkSampleSize:       1024 * 1024, // 1MB
+	startSize:                 512, // 512kB
 	ratioImprovementTolerance: 0.9,
 	samplePath:                "./samples",
 	dictionaryPath:            "./codec/zbor/",
@@ -27,11 +26,6 @@ type config struct {
 	// The dictionary size in kB to start with when generating dictionaries.
 	// Gets multiplied by 2 at each loop.
 	startSize int
-
-	// The total size of the samples used for benchmarking. Using high values will result in a
-	// more accurate calculation of the compression ratio at the expense of making benchmarks
-	// longer.
-	benchmarkSampleSize int
 
 	// The tolerance for the improvement of compression ratio between each loop. Should be between 0 and 1.
 	// For example, a value of 0.1 means that as long as a dictionary is at least 10% more performant than the
@@ -56,14 +50,6 @@ type Option func(*config)
 func WithStartSize(size int) Option {
 	return func(cfg *config) {
 		cfg.startSize = size
-	}
-}
-
-// WithBenchmarkSampleSize sets the total size in bytes of samples to use for benchmarking. Using high values will
-// result in a more precise calculation of the compression ratio at the expense of making benchmarks longer.
-func WithBenchmarkSampleSize(sampleSize int) Option {
-	return func(cfg *config) {
-		cfg.benchmarkSampleSize = sampleSize
 	}
 }
 

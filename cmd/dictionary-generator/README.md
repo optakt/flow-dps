@@ -21,7 +21,6 @@ Usage of dictionary-generator:
     -l, --level string         log output level (default "info")
     --dictionary-path string   path to the package in which to write dictionaries (default "./codec/zbor")
     --sample-path string       path to the directory in which to create temporary samples for dictionary training (default "./samples")
-    --sample-size int          size of the sample dataset used for benchmarking (higher values increase accuracy at the expense of speed) (default 1024*1024)
     --start-size int           minimum dictionary size to generate (will be doubled on each iteration) (default 512)
     --tolerance float          compression ratio increase tolerance (between 0 and 1) (default 0.1)
 ```

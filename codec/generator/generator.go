@@ -81,8 +81,6 @@ func (g *Generator) Dictionary(kind DictionaryKind) error {
 	// two at each iteration. In each loop, dictionaries are generated and benchmarked.
 	var current, previous *dictionary
 	for size := g.cfg.startSize; g.tolerateImprovement(current, previous); size = size * 2 {
-		logger := logger.With().Int("size", size).Logger()
-
 		// Set previous dictionary, except on first iteration.
 		if current != nil {
 			previous = current
@@ -108,10 +106,10 @@ func (g *Generator) Dictionary(kind DictionaryKind) error {
 
 		current = dict
 
-		logger.Info().
-			Float64("compression_ratio", current.ratio).
-			Dur("compression_duration", current.duration).
-			Msg("generated dictionary")
+		//logger.Info().
+		//	Float64("compression_ratio", current.ratio).
+		//	Dur("compression_duration", current.duration).
+		//	Msg("generated dictionary")
 	}
 
 	// Since the loop stopped, this means that the last generated dictionary was
@@ -188,7 +186,7 @@ func (g *Generator) generateSamples(kind DictionaryKind, size int) error {
 	return nil
 }
 
-// getSamples retrieves the requested total size of samples from the index database.
+// getSamples retrieves the requested total size of samples in bytes from the index database.
 func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) {
 
 	// Create an iterator prefix based on the kind of sample we want.

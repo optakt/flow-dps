@@ -27,7 +27,7 @@ import (
 // It then sets that information directly into the given dictionary pointer.
 func (g *Generator) benchmarkDictionary(dict *dictionary) error {
 
-	samples, err := g.getSamples(dict.kind, g.cfg.benchmarkSampleSize)
+	samples, err := g.getSamples(dict.kind, 10000)
 	if err != nil {
 		return fmt.Errorf("could not retrieve samples: %w", err)
 	}
@@ -50,7 +50,7 @@ func (g *Generator) benchmarkDictionary(dict *dictionary) error {
 	start := time.Now()
 
 	var compressed, uncompressed int
-	for uncompressed < g.cfg.benchmarkSampleSize {
+	for i := 0; i < 50000; i++ {
 		// Pick a random sample.
 		sample := samples[rand.Int()%len(samples)]
 
