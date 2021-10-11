@@ -16,6 +16,7 @@ package generator
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 
@@ -29,7 +30,7 @@ import (
 // Generator generates optimized Zstandard dictionaries and turns them into Go files
 // to be used for compression.
 type Generator struct {
-	cfg   config
+	cfg   Config
 	log   zerolog.Logger
 	db    *badger.DB
 	codec dps.Codec
@@ -59,7 +60,7 @@ func (g *Generator) Dictionary(kind DictionaryKind) error {
 
 	// Clean up sample folder, in case there are already old samples still present
 	// on the filesystem.
-	err := os.RemoveAll(g.cfg.samplePath)
+	err := os.RemoveAll(g.cfg.SamplePath)
 	if err != nil {
 		return fmt.Errorf("could not clean up sample folder: %w", err)
 	}
@@ -80,7 +81,7 @@ func (g *Generator) Dictionary(kind DictionaryKind) error {
 	// generates increasingly bigger dictionaries, multiplying their size by a factor of
 	// two at each iteration. In each loop, dictionaries are generated and benchmarked.
 	var current, previous *dictionary
-	for size := g.cfg.startSize; g.tolerateImprovement(current, previous); size = size * 2 {
+	for size := g.cfg.StartSize; g.tolerateImprovement(current, previous); size = size * 2 {
 		// Set previous dictionary, except on first iteration.
 		if current != nil {
 			previous = current
@@ -129,7 +130,7 @@ func (g *Generator) Dictionary(kind DictionaryKind) error {
 	}
 
 	// Remove samples from the filesystem.
-	err = os.RemoveAll(g.cfg.samplePath)
+	err = os.RemoveAll(g.cfg.SamplePath)
 	if err != nil {
 		return fmt.Errorf("could not clean up sample folder: %w", err)
 	}
@@ -144,7 +145,7 @@ func (g *Generator) tolerateImprovement(current, previous *dictionary) bool {
 		return true
 	}
 
-	betterCompressionRatio := current.ratio < previous.ratio*(1-g.cfg.ratioImprovementTolerance)
+	betterCompressionRatio := current.ratio < previous.ratio*(1-g.cfg.RatioImprovements)
 	betterSpeed := current.ratio < previous.ratio && current.duration < previous.duration
 
 	return betterCompressionRatio || betterSpeed
@@ -154,7 +155,7 @@ func (g *Generator) tolerateImprovement(current, previous *dictionary) bool {
 func (g *Generator) generateSamples(kind DictionaryKind, size int) error {
 
 	// Create a directory in which to store the samples.
-	dirPath := filepath.Join(g.cfg.samplePath, string(kind))
+	dirPath := filepath.Join(g.cfg.SamplePath, string(kind))
 	err := os.MkdirAll(dirPath, 0777)
 	if err != nil {
 		return fmt.Errorf("could not create sample path: %w", err)
@@ -201,6 +202,8 @@ func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) 
 		prefix = storage.EncodeKey(storage.PrefixEvents)
 	}
 
+	key := generateRandomKey(prefix)
+
 	// Go through the entries of the index database until enough samples have been collected.
 	samples := make([][]byte, 0, size)
 	err := g.db.View(func(tx *badger.Txn) error {
@@ -209,7 +212,7 @@ func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) 
 		})
 		defer it.Close()
 
-		it.Seek(prefix)
+		it.Seek(key)
 
 		var totalBytes int
 		for totalBytes <= size {
@@ -261,4 +264,16 @@ func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) 
 	}
 
 	return samples, nil
+}
+
+func generateRandomKey(prefix []byte) []byte {
+	key := make([]byte, 0, 64)
+
+	// Fill key with random bytes.
+	_, _ = rand.Read(key)
+
+	// Replace beginning of key with wanted prefix.
+	copy(key, prefix)
+
+	return key
 }

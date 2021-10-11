@@ -57,7 +57,7 @@ func (g *Generator) compile(dict *dictionary) error {
 
 	// Create dictionary file.
 	filename := string(dict.kind) + ".go"
-	path := filepath.Join(g.cfg.dictionaryPath, filename)
+	path := filepath.Join(g.cfg.DictionaryPath, filename)
 	file, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("could not open dictionary file: %w", err)

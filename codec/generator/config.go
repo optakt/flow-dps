@@ -15,62 +15,62 @@
 package generator
 
 // DefaultConfig is the default configuration for the Mapper.
-var DefaultConfig = config{
-	startSize:                 512, // 512kB
-	ratioImprovementTolerance: 0.9,
-	samplePath:                "./samples",
-	dictionaryPath:            "./codec/zbor/",
+var DefaultConfig = Config{
+	StartSize:         512, // 512B
+	RatioImprovements: 0.1, // 10% improvement per iteration
+	SamplePath:        "./samples",
+	DictionaryPath:    "./codec/zbor/",
 }
 
-type config struct {
+type Config struct {
 	// The dictionary size in kB to start with when generating dictionaries.
 	// Gets multiplied by 2 at each loop.
-	startSize int
+	StartSize int
 
 	// The tolerance for the improvement of compression ratio between each loop. Should be between 0 and 1.
 	// For example, a value of 0.1 means that as long as a dictionary is at least 10% more performant than the
 	// previously generated one, its size increase is tolerated and the generation loop continues. Only when a
 	// dictionary is generated which is not at least 10% more performant than the previous one does the loop
 	// stop, and the previous dictionary is selected as the most optimized one.
-	ratioImprovementTolerance float64
+	RatioImprovements float64
 
 	// The path in which to store samples that are generated temporarily to be used for training dictionaries.
-	samplePath string
+	SamplePath string
 	// The path in which to store compiled Go dictionaries. Should point to the package in which they should be used.
-	dictionaryPath string
+	DictionaryPath string
 }
 
 // Option is an option that can be given to the generator to configure optional
 // parameters on initialization.
-type Option func(*config)
+type Option func(*Config)
 
 // WithStartSize sets the dictionary size in kB to start with when generating dictionaries.
-// This value cannot be below 512kB or it will trigger errors in the Zstandard training algorithm.
+// This value cannot be below 512B, or it will trigger errors in the Zstandard training algorithm.
 // See https://github.com/facebook/zstd/issues/2815
 func WithStartSize(size int) Option {
-	return func(cfg *config) {
-		cfg.startSize = size
+	return func(cfg *Config) {
+		cfg.StartSize = size
 	}
 }
 
 // WithRatioImprovementTolerance sets the total size in bytes of samples to use for benchmarking. Using high values will
 // result in a more accurate calculation of the compression ratio at the expense of making benchmarks longer.
 func WithRatioImprovementTolerance(tolerance float64) Option {
-	return func(cfg *config) {
-		cfg.ratioImprovementTolerance = tolerance
+	return func(cfg *Config) {
+		cfg.RatioImprovements = tolerance
 	}
 }
 
 // WithSamplePath sets path in which to temporarily store generated data samples.
 func WithSamplePath(path string) Option {
-	return func(cfg *config) {
-		cfg.samplePath = path
+	return func(cfg *Config) {
+		cfg.SamplePath = path
 	}
 }
 
 // WithDictionaryPath sets path in which to store compiled dictionaries.
 func WithDictionaryPath(path string) Option {
-	return func(cfg *config) {
-		cfg.dictionaryPath = path
+	return func(cfg *Config) {
+		cfg.DictionaryPath = path
 	}
 }

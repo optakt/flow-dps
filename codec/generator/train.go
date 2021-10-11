@@ -27,14 +27,14 @@ import (
 func (g *Generator) trainDictionary(kind DictionaryKind, size int) (*dictionary, error) {
 
 	// List all samples within the sample path, to be given to the training command.
-	path := filepath.Join(g.cfg.samplePath, string(kind), "*")
+	path := filepath.Join(g.cfg.SamplePath, string(kind), "*")
 	samples, err := filepath.Glob(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not find any samples in path %s: %w", path, err)
 	}
 
 	// Build the training command.
-	rawDictPath := filepath.Join(g.cfg.dictionaryPath, string(kind))
+	rawDictPath := filepath.Join(g.cfg.DictionaryPath, string(kind))
 	command := []string{"zstd", "--train", "--maxdict", fmt.Sprint(size), "-o", rawDictPath}
 	command = append(command, samples...)
 
