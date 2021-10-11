@@ -56,7 +56,6 @@ func run() int {
 	var (
 		flagCheckpoint string
 		flagData       string
-		flagForce      bool
 		flagIndex      string
 		flagLevel      string
 		flagTrie       string
@@ -65,7 +64,6 @@ func run() int {
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to root checkpoint file for execution state trie")
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
-	pflag.BoolVarP(&flagForce, "force", "f", false, "force indexing to bootstrap from root checkpoint and overwrite existing index")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "path to data directory for execution state ledger")
@@ -119,17 +117,14 @@ func run() int {
 
 	// Check if index already exists.
 	read := index.NewReader(indexDB, storage)
-	_, err = read.First()
-	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+	first, err := read.First()
+	empty := errors.Is(err, badger.ErrKeyNotFound)
+	if err != nil && !empty {
 		log.Error().Err(err).Msg("could not get first height from index reader")
 		return failure
 	}
-	if errors.Is(err, badger.ErrKeyNotFound) && flagCheckpoint == "" {
+	if empty && flagCheckpoint == "" {
 		log.Error().Msg("index doesn't exist, please provide root checkpoint (-c, --checkpoint) to bootstrap")
-		return failure
-	}
-	if err == nil && flagCheckpoint != "" && !flagForce {
-		log.Error().Msg("index already exists, please force bootstrapping (-f, --force) to overwrite with given checkpoint")
 		return failure
 	}
 
@@ -160,8 +155,8 @@ func run() int {
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	var load mapper.Loader
 	load = loader.FromIndex(log, storage, indexDB)
-	bootstrap := (flagCheckpoint != "")
-	if bootstrap {
+	bootstrap := flagCheckpoint != ""
+	if empty {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
 			log.Error().Err(err).Msg("could not open checkpoint file")
@@ -169,7 +164,20 @@ func run() int {
 		}
 		defer file.Close()
 		load = loader.FromCheckpoint(file)
+	} else if bootstrap {
+		file, err := os.Open(flagCheckpoint)
+		if err != nil {
+			log.Error().Err(err).Msg("could not open checkpoint file")
+			return failure
+		}
+		defer file.Close()
+		initialize := loader.FromCheckpoint(file)
+		load = loader.FromIndex(log, storage, indexDB,
+			loader.WithInitializer(initialize),
+			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
+		)
 	}
+
 	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
 		mapper.WithBootstrapState(bootstrap),
 		mapper.WithSkipRegisters(flagSkip),
