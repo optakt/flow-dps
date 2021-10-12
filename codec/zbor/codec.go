@@ -152,7 +152,7 @@ func (c *Codec) Marshal(value interface{}) ([]byte, error) {
 
 	var compressed []byte
 	switch value.(type) {
-	case ledger.Payload:
+	case *ledger.Payload:
 		compressed = c.payloadCompressor.EncodeAll(data, nil)
 	case []flow.Event:
 		compressed = c.eventCompressor.EncodeAll(data, nil)
@@ -184,14 +184,17 @@ func (c *Codec) Unmarshal(compressed []byte, value interface{}) error {
 	var data []byte
 	var err error
 	switch value.(type) {
-	case ledger.Payload:
-		compressed, err = c.payloadDecompressor.DecodeAll(data, nil)
-	case []flow.Event:
-		compressed, err = c.eventDecompressor.DecodeAll(data, nil)
+	case *ledger.Payload:
+		data, err = c.payloadDecompressor.DecodeAll(compressed, nil)
+	case *[]flow.Event:
+		data, err = c.eventDecompressor.DecodeAll(compressed, nil)
 	case *flow.TransactionBody:
-		compressed, err = c.transactionDecompressor.DecodeAll(data, nil)
+		data, err = c.transactionDecompressor.DecodeAll(compressed, nil)
 	default:
-		compressed, err = c.decompressor.DecodeAll(compressed, nil)
+		data, err = c.decompressor.DecodeAll(compressed, nil)
+	}
+	if err != nil {
+		return fmt.Errorf("could not decompress value: %w", err)
 	}
 
 	err = c.Decode(data, value)
