@@ -12,7 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
+// Generate the api.pb.go and api_grpc.pb.go files.
 //go:generate protoc -I . -I /usr/local/include -I $HOME/.local/include -I $GOPATH/pkg/mod/github.com/srikrsna/protoc-gen-gotag@v0.6.1 --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative  --go-grpc_opt=require_unimplemented_servers=false ./api.proto
+
+// Add struct tags for validation.
 //go:generate protoc -I . -I /usr/local/include -I $HOME/.local/include -I $GOPATH/pkg/mod/github.com/srikrsna/protoc-gen-gotag@v0.6.1 --gotag_out=:. --gotag_opt=paths=source_relative ./api.proto
 
 package dps

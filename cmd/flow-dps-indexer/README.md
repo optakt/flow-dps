@@ -10,24 +10,12 @@ The index is generated in the form of a Badger database that allows random acces
 
 ```sh
 Usage of flow-dps-indexer:
-  -c, --checkpoint string    checkpoint file for state trie
-  -d, --data string          database directory for protocol data
-  -f, --force                overwrite existing index database
-  -i, --index string         database directory for state index (default "index")
-  -a, --index-all            index everything
-      --index-collections    index collections
-      --index-commits        index commits
-      --index-events         index events
-      --index-guarantees     index collection guarantees
-      --index-headers        index headers
-      --index-payloads       index payloads
-      --index-results        index transaction results
-      --index-seals          index seals
-      --index-transactions   index transactions
-  -l, --level string         log output level (default "info")
-  -m, --metrics                     enable metrics collection and output
-      --metrics-interval duration   defines the interval of metrics output to log (default 5m0s)
-  -t, --trie string          data directory for state ledger
+  -c, --checkpoint string   path to root checkpoint file for execution state trie
+  -d, --data string         path to database directory for protocol data (default "data")
+  -i, --index string        path to database directory for state index (default "index")
+  -l, --level string        log output level (default "info")
+  -s, --skip                skip indexing of execution state ledger registers
+  -t, --trie string         path to data directory for execution state ledger
 ```
 
 ## Example

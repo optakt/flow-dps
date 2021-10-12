@@ -18,6 +18,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Chain represents something that has access to chain data.
 type Chain interface {
 	Root() (uint64, error)
 	Header(height uint64) (*flow.Header, error)

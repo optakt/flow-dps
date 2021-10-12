@@ -65,7 +65,7 @@ func TestPathsPayloads(t *testing.T) {
 		t.Parallel()
 
 		// Forge test update with duplicate and unsorted paths.
-		testUpdate := mocks.GenericTrieUpdate
+		testUpdate := mocks.GenericTrieUpdate(0)
 		testPaths := mocks.GenericLedgerPaths(6)
 		testUpdate.Paths = []ledger.Path{
 			testPaths[0],
@@ -76,7 +76,7 @@ func TestPathsPayloads(t *testing.T) {
 			testPaths[4],
 		}
 
-		gotPaths, gotPayloads := pathsPayloads(mocks.GenericTrieUpdate)
+		gotPaths, gotPayloads := pathsPayloads(testUpdate)
 
 		// Expect payloads from deduplicated paths.
 		wantPayloads := []ledger.Payload{

@@ -14,6 +14,7 @@
 
 package dps
 
+// Codec represents something that can encode and decode data, as well as compress and decompress it.
 type Codec interface {
 	Encode(value interface{}) ([]byte, error)
 	Compress(data []byte) ([]byte, error)

@@ -42,16 +42,6 @@ builds:
     flags:
       - -tags=relic
 
-  - id: rosetta-server
-    binary: rosetta-server
-    main: ./cmd/flow-rosetta-server
-    goos:
-      - linux
-    goarch:
-      - amd64
-    flags:
-      - -tags=relic
-
 archives:
   - replacements:
       386: i386

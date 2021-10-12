@@ -23,7 +23,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
@@ -32,15 +31,22 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// GCPStreamer is a component that downloads block data from a Google Cloud bucket.
+// It exposes a callback to be used by the consensus follower to notify the Streamer
+// when a new block has been finalized. The streamer will then add that block to the
+// queue, which is consumed by downloading the block data for the identifiers it
+// contains.
 type GCPStreamer struct {
-	log    zerolog.Logger
-	bucket *storage.BucketHandle
-	queue  *deque.Deque // queue of block identifiers for next downloads
-	buffer *deque.Deque // queue of downloaded execution data records
-	limit  uint         // buffer size limit for downloaded records
-	busy   uint32       // used as a guard to avoid concurrent polling
+	log     zerolog.Logger
+	decoder cbor.DecMode
+	bucket  *storage.BucketHandle
+	queue   *dps.SafeDeque // queue of block identifiers for next downloads
+	buffer  *dps.SafeDeque // queue of downloaded execution data records
+	limit   uint           // buffer size limit for downloaded records
+	busy    uint32         // used as a guard to avoid concurrent polling
 }
 
+// NewGCPStreamer returns a new GCP Streamer using the given bucket and options.
 func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ...Option) *GCPStreamer {
 
 	cfg := DefaultConfig
@@ -48,13 +54,27 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ..
 		option(&cfg)
 	}
 
+	decOptions := cbor.DecOptions{
+		ExtraReturnErrors: cbor.ExtraDecErrorUnknownField,
+	}
+	decoder, err := decOptions.DecMode()
+	if err != nil {
+		panic(err)
+	}
+
 	g := GCPStreamer{
-		log:    log.With().Str("component", "gcp_streamer").Logger(),
-		bucket: bucket,
-		queue:  deque.New(),
-		buffer: deque.New(),
-		limit:  cfg.BufferSize,
-		busy:   0,
+		log:     log.With().Str("component", "gcp_streamer").Logger(),
+		decoder: decoder,
+		bucket:  bucket,
+		queue:   dps.NewDeque(),
+		buffer:  dps.NewDeque(),
+		limit:   cfg.BufferSize,
+		busy:    0,
+	}
+
+	for _, blockID := range cfg.CatchupBlocks {
+		g.queue.PushFront(blockID)
+		g.log.Debug().Hex("block", blockID[:]).Msg("execution record queued for catch-up")
 	}
 
 	return &g
@@ -71,6 +91,8 @@ func (g *GCPStreamer) OnBlockFinalized(blockID flow.Identifier) {
 	g.log.Debug().Hex("block", blockID[:]).Msg("execution record queued for download")
 }
 
+// Next returns the next available block data. It returns an ErrUnavailable if no block
+// data is available at the moment.
 func (g *GCPStreamer) Next() (*uploader.BlockData, error) {
 
 	// If we are not polling already, we want to start polling in the
@@ -182,7 +204,7 @@ func (g *GCPStreamer) pullRecord(name string) (*uploader.BlockData, error) {
 	}
 
 	var record uploader.BlockData
-	err = cbor.Unmarshal(data, &record)
+	err = g.decoder.Unmarshal(data, &record)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode execution record: %w", err)
 	}

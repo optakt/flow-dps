@@ -60,6 +60,7 @@ func (r *Reader) Last() (uint64, error) {
 	return height, err
 }
 
+// HeightForBlock returns the height for the given block identifier.
 func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 	var height uint64
 	err := r.db.View(r.lib.LookupHeightForBlock(blockID, &height))
@@ -144,6 +145,8 @@ func (r *Reader) Transaction(txID flow.Identifier) (*flow.TransactionBody, error
 	return &transaction, err
 }
 
+// HeightForTransaction returns the height of the block within which the given
+// transaction identifier is.
 func (r *Reader) HeightForTransaction(txID flow.Identifier) (uint64, error) {
 	var height uint64
 	err := r.db.View(r.lib.LookupHeightForTransaction(txID, &height))
@@ -154,24 +157,7 @@ func (r *Reader) HeightForTransaction(txID flow.Identifier) (uint64, error) {
 func (r *Reader) TransactionsByHeight(height uint64) ([]flow.Identifier, error) {
 	var txIDs []flow.Identifier
 	err := r.db.View(r.lib.LookupTransactionsForHeight(height, &txIDs))
-	// TODO: There is a bug somewhere between when we read from the protocol
-	// state and when we write to the state index. In rare cases, it introduces
-	// duplicate transaction IDs into the database. Until that bug is identified
-	// and fixed, this is a work-around, see:
-	// => https://github.com/optakt/flow-dps/issues/351
-	// => https://github.com/optakt/flow-dps/issues/352
-	idSet := make([]flow.Identifier, 0, len(txIDs))
-	seen := make(map[flow.Identifier]struct{})
-	for _, txID := range txIDs {
-		_, ok := seen[txID]
-		if ok {
-			continue
-		}
-		idSet = append(idSet, txID)
-		seen[txID] = struct{}{}
-	}
-
-	return idSet, err
+	return txIDs, err
 }
 
 // Result returns the transaction result for the given transaction ID.

@@ -19,6 +19,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Reader represents something that can read from a DPS index.
 type Reader interface {
 	First() (uint64, error)
 	Last() (uint64, error)

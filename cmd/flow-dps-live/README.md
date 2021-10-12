@@ -10,16 +10,19 @@ The index is generated in the form of a Badger database that allows random acces
 
 ```sh
 Usage of flow-dps-live:
-  -a, --address string        address to serve the GRPC DPS API on (default "127.0.0.1:5005")
-  -b, --bootstrap string      path to directory with public bootstrap information for the spork
-  -u, --bucket string         name of the Google Cloud Storage bucket which contains the block data
-  -c, --checkpoint string     checkpoint file for state trie
-  -d, --data string           database directory for protocol data
-  -f, --force                 overwrite existing index database
-  -i, --index string          database directory for state index (default "index")
-  -l, --level string          log output level (default "info")
-      --seed-address string   address of the seed node to follow unstaked consensus
-      --seed-key string       hex-encoded public network key of the seed node to follow unstaked consensus
+  -a, --address string            bind address for serving DPS API (default "127.0.0.1:5005")
+  -b, --bootstrap string          path to directory with bootstrap information for spork (default "bootstrap")
+  -u, --bucket string             Google Cloude Storage bucket with block data records
+  -c, --checkpoint string         path to root checkpoint file for execution state trie
+  -d, --data string               path to database directory for protocol data (default "data")
+  -f, --force                     force indexing to bootstrap from root checkpoint and overwrite existing index
+  -i, --index string              path to database directory for state index (default "index")
+  -l, --level string              log output level (default "info")
+  -m, --metrics string            address on which to expose metrics (no metrics are exposed when left empty)
+  -s, --skip                      skip indexing of execution state ledger registers
+      --flush-interval duration   interval for flushing badger transactions (0s for disabled)
+      --seed-address string       host address of seed node to follow consensus
+      --seed-key string           hex-encoded public network key of seed node to follow consensus
 
 ```
 

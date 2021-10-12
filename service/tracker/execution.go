@@ -71,7 +71,7 @@ func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Ex
 		return nil, fmt.Errorf("could not retrieve root seal: %w", err)
 	}
 
-	s := Execution{
+	e := Execution{
 		log:     log.With().Str("component", "execution_tracker").Logger(),
 		stream:  stream,
 		queue:   deque.New(),
@@ -99,9 +99,9 @@ func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Ex
 		FinalStateCommitment: seal.FinalState,
 	}
 
-	s.records[blockID] = &record
+	e.records[blockID] = &record
 
-	return &s, nil
+	return &e, nil
 }
 
 // Update provides the next trie update from the stream of block records. Trie
@@ -195,6 +195,7 @@ func (e *Execution) processNext() error {
 	return nil
 }
 
+// purge deletes all records that are below the specified height threshold.
 func (e *Execution) purge(threshold uint64) {
 	for blockID, record := range e.records {
 		if record.Block.Header.Height < threshold {

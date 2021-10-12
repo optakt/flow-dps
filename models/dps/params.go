@@ -20,10 +20,12 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Flow constant parameters.
 const (
 	FlowBlockchain = "flow"
 	FlowMainnet    = flow.Mainnet
 	FlowTestnet    = flow.Testnet
+	FlowLocalnet   = flow.Localnet
 	FlowSymbol     = "FLOW"
 	FlowDecimals   = 8
 
@@ -32,8 +34,10 @@ const (
 	OperationTransfer = "TRANSFER"
 )
 
+// FlowParams is a map that contains the parameters for each known Flow chain.
 var FlowParams = make(map[flow.ChainID]Params)
 
+// Params contains the parameters of a Flow chain.
 type Params struct {
 	ChainID          flow.ChainID
 	FungibleToken    flow.Address
@@ -45,15 +49,18 @@ type Params struct {
 	Tokens           map[string]Token
 }
 
+// Symbols returns the sorted symbols of all tokens within the parameters.
 func (p Params) Symbols() []string {
 	symbols := make([]string, 0, len(p.Tokens))
 	for symbol := range p.Tokens {
 		symbols = append(symbols, symbol)
 	}
 	sort.Strings(symbols)
+
 	return symbols
 }
 
+// Token contains the details of a crypto token.
 type Token struct {
 	Symbol   string
 	Address  flow.Address
@@ -92,6 +99,26 @@ func init() {
 		},
 	}
 	FlowParams[testnet.ChainID] = testnet
+
+	// Hard-code localnet network parameters.
+	// At the moment, these are not publicly documented.
+	flowToken.Address = flow.HexToAddress("0ae53cb6e3f42a79")
+	localnet := Params{
+		ChainID:       FlowLocalnet,
+		FungibleToken: flow.HexToAddress("ee82856bf20e2aa6"),
+		FlowFees:      flow.HexToAddress("e5a8b7f23e8b548f"),
+		// StakingTable, LockedTokens and StakingProxy contracts
+		// are deployed to the service account address on localnet.
+		StakingTable: flow.HexToAddress("f8d6e0586b0a20c7"),
+		LockedTokens: flow.HexToAddress("f8d6e0586b0a20c7"),
+		StakingProxy: flow.HexToAddress("f8d6e0586b0a20c7"),
+		// NonFungibleToken contract is not deployed on localnet.
+		NonFungibleToken: flow.EmptyAddress,
+		Tokens: map[string]Token{
+			flowToken.Symbol: flowToken,
+		},
+	}
+	FlowParams[localnet.ChainID] = localnet
 
 	// Hard-code main network parameters from:
 	// https://docs.onflow.org/core-contracts

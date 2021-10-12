@@ -21,11 +21,15 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// Library represents something that produces operations to read/write
+// from/on a DPS index database.
 type Library interface {
 	ReadLibrary
 	WriteLibrary
 }
 
+// ReadLibrary represents something that produces operations to read from
+// a DPS index database.
 type ReadLibrary interface {
 	RetrieveFirst(height *uint64) func(*badger.Txn) error
 	RetrieveLast(height *uint64) func(*badger.Txn) error
@@ -48,8 +52,12 @@ type ReadLibrary interface {
 	RetrieveTransaction(txID flow.Identifier, transaction *flow.TransactionBody) func(*badger.Txn) error
 	RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error
 	RetrieveSeal(sealID flow.Identifier, seal *flow.Seal) func(*badger.Txn) error
+
+	IterateLedger(exclude func(height uint64) bool, process func(path ledger.Path, payload *ledger.Payload) error) func(*badger.Txn) error
 }
 
+// WriteLibrary represents something that produces operations to write on
+// a DPS index database.
 type WriteLibrary interface {
 	SaveFirst(height uint64) func(*badger.Txn) error
 	SaveLast(height uint64) func(*badger.Txn) error

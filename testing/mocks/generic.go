@@ -27,15 +27,17 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/flow-go/crypto"
+	chash "github.com/onflow/flow-go/crypto/hash"
+	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/module/mempool/entity"
 
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/rosetta/identifier"
-	"github.com/optakt/flow-dps/rosetta/object"
 )
 
 // Offsets used to ensure different flow identifiers that do not overlap.
@@ -70,19 +72,6 @@ var (
 		ledger.NewKeyPart(1, []byte(`controller`)),
 		ledger.NewKeyPart(2, []byte(`key`)),
 	})
-
-	GenericTrieUpdate = &ledger.TrieUpdate{
-		RootHash: ledger.RootHash{
-			// To be a valid RootHash it needs to start with 0x00 0x20, which is a 16 bit uint
-			// with a value of 32, which represents its length.
-			0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		},
-		Paths:    GenericLedgerPaths(6),
-		Payloads: GenericLedgerPayloads(6),
-	}
 
 	// GenericRootNode Visual Representation:
 	//           6 (root)
@@ -121,21 +110,18 @@ var (
 
 	GenericTrie, _ = trie.NewMTrie(GenericRootNode)
 
-	GenericCurrency = identifier.Currency{
-		Symbol:   dps.FlowSymbol,
-		Decimals: dps.FlowDecimals,
-	}
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),
 		Balance: 84,
+		Keys: []flow.AccountPublicKey{
+			{
+				Index:     0,
+				SeqNumber: 42,
+				HashAlgo:  chash.SHA2_256,
+				PublicKey: crypto.NeutralBLSPublicKey(),
+			},
+		},
 	}
-
-	GenericRosBlockID = identifier.Block{
-		Index: &GenericHeight,
-		Hash:  GenericHeader.ID().String(),
-	}
-
-	GenericParams = dps.Params{ChainID: dps.FlowTestnet}
 )
 
 func GenericBlockIDs(number int) []flow.Identifier {
@@ -162,6 +148,34 @@ func GenericCommits(number int) []flow.StateCommitment {
 
 func GenericCommit(index int) flow.StateCommitment {
 	return GenericCommits(index + 1)[index]
+}
+
+func GenericTrieUpdates(number int) []*ledger.TrieUpdate {
+	// Ensure consistent deterministic results.
+	seed := rand.NewSource(1)
+	random := rand.New(seed)
+
+	var updates []*ledger.TrieUpdate
+	for i := 0; i < number; i++ {
+		update := ledger.TrieUpdate{
+			Paths:    GenericLedgerPaths(6),
+			Payloads: GenericLedgerPayloads(6),
+		}
+
+		_, _ = random.Read(update.RootHash[:])
+		// To be a valid RootHash it needs to start with 0x00 0x20, which is a 16 bit uint
+		// with a value of 32, which represents its length.
+		update.RootHash[0] = 0x00
+		update.RootHash[1] = 0x20
+
+		updates = append(updates, &update)
+	}
+
+	return updates
+}
+
+func GenericTrieUpdate(index int) *ledger.TrieUpdate {
+	return GenericTrieUpdates(index + 1)[index]
 }
 
 func GenericLedgerPaths(number int) []ledger.Path {
@@ -310,10 +324,6 @@ func GenericAddress(index int) flow.Address {
 	return GenericAddresses(index + 1)[index]
 }
 
-func GenericAccountID(index int) identifier.Account {
-	return identifier.Account{Address: GenericAddress(index).String()}
-}
-
 func GenericCadenceEvents(number int) []cadence.Event {
 	// Ensure consistent deterministic results.
 	random := rand.New(rand.NewSource(6))
@@ -370,44 +380,6 @@ func GenericEvents(number int, types ...flow.EventType) []flow.Event {
 
 func GenericEvent(index int) flow.Event {
 	return GenericEvents(index + 1)[index]
-}
-
-func GenericTransactionQualifier(index int) identifier.Transaction {
-	txID := GenericTransaction(index).ID()
-	return identifier.Transaction{Hash: txID.String()}
-}
-
-func GenericOperations(number int) []object.Operation {
-	var operations []object.Operation
-	for i := 0; i < number; i++ {
-		// We want only two accounts to simulate transactions between them.
-		account := GenericAccountID(i % 2)
-
-		// Simulate that every second operation is the withdrawal.
-		value := GenericAmount(i).String()
-		if i%2 == 1 {
-			value = "-" + value
-		}
-
-		operation := object.Operation{
-			ID:        identifier.Operation{Index: uint(i)},
-			Type:      dps.OperationTransfer,
-			Status:    dps.StatusCompleted,
-			AccountID: account,
-			Amount: object.Amount{
-				Value:    value,
-				Currency: GenericCurrency,
-			},
-		}
-
-		operations = append(operations, operation)
-	}
-
-	return operations
-}
-
-func GenericOperation(index int) object.Operation {
-	return GenericOperations(index + 1)[index]
 }
 
 func GenericCollections(number int) []*flow.LightCollection {
@@ -512,6 +484,38 @@ func GenericSealIDs(number int) []flow.Identifier {
 
 func GenericSeal(index int) *flow.Seal {
 	return GenericSeals(index + 1)[index]
+}
+
+func GenericRecord() *uploader.BlockData {
+	var collections []*entity.CompleteCollection
+	for _, guarantee := range GenericGuarantees(4) {
+		collections = append(collections, &entity.CompleteCollection{
+			Guarantee:    guarantee,
+			Transactions: GenericTransactions(2),
+		})
+	}
+
+	var events []*flow.Event
+	for _, event := range GenericEvents(4) {
+		events = append(events, &event)
+	}
+
+	data := uploader.BlockData{
+		Block: &flow.Block{
+			Header: GenericHeader,
+			Payload: &flow.Payload{
+				Guarantees: GenericGuarantees(4),
+				Seals:      GenericSeals(4),
+			},
+		},
+		Collections:          collections,
+		TxResults:            GenericResults(4),
+		Events:               events,
+		TrieUpdates:          GenericTrieUpdates(4),
+		FinalStateCommitment: GenericCommit(0),
+	}
+
+	return &data
 }
 
 func ByteSlice(v interface{}) []byte {
