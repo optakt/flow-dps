@@ -28,6 +28,10 @@ const (
 	KindTransactions DictionaryKind = "transactions"
 )
 
+func (k DictionaryKind) String() string {
+	return string(k)
+}
+
 type dictionary struct {
 	kind DictionaryKind
 	raw  []byte

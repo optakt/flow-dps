@@ -27,8 +27,8 @@ Usage of dictionary-generator:
 
 ## Example
 
-The below command line generates dictionaries in the path `./package/test/` and benchmarks the dictionaries with 100kB of samples.
+The below command line generates dictionaries in the path `./package/test/` and starts with a dictionary of size 256 kB.
 
 ```sh
-./dictionary-generator --dictionary-path ./package/test --sample-size 100000
+./dictionary-generator --dictionary-path ./package/test --start-size 256000
 ```

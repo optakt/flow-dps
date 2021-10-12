@@ -18,7 +18,7 @@ package generator
 var DefaultConfig = Config{
 	StartSize:         512, // 512B
 	RatioImprovements: 0.1, // 10% improvement per iteration
-	SamplePath:        "./samples",
+	SamplePath:        "",
 	DictionaryPath:    "./codec/zbor/",
 }
 
@@ -44,7 +44,7 @@ type Config struct {
 // parameters on initialization.
 type Option func(*Config)
 
-// WithStartSize sets the dictionary size in kB to start with when generating dictionaries.
+// WithStartSize sets the dictionary size in Bytes to start with when generating dictionaries.
 // This value cannot be below 512B, or it will trigger errors in the Zstandard training algorithm.
 // See https://github.com/facebook/zstd/issues/2815
 func WithStartSize(size int) Option {
@@ -64,7 +64,9 @@ func WithRatioImprovementTolerance(tolerance float64) Option {
 // WithSamplePath sets path in which to temporarily store generated data samples.
 func WithSamplePath(path string) Option {
 	return func(cfg *Config) {
-		cfg.SamplePath = path
+		if path != "" {
+			cfg.SamplePath = path
+		}
 	}
 }
 

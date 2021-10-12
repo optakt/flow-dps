@@ -56,8 +56,8 @@ func run() int {
 	pflag.StringVar(&flagDictionaryPath, "dictionary-path", "./codec/zbor", "path to the package in which to write dictionaries")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVar(&flagSamplePath, "sample-path", "./samples", "path to the directory in which to create temporary samples for dictionary training")
-	pflag.IntVar(&flagStartSize, "start-size", 512, "minimum dictionary size to generate (will be doubled on each iteration)")
+	pflag.StringVar(&flagSamplePath, "sample-path", "", "path to the directory in which to store samples for dictionary training (temporary folder when left empty)")
+	pflag.IntVar(&flagStartSize, "start-size", 512, "minimum dictionary size in bytes to generate (will be doubled on each iteration)")
 	pflag.Float64Var(&flagTolerance, "tolerance", 0.1, "compression ratio increase tolerance (between 0 and 1)")
 
 	pflag.Parse()
@@ -86,9 +86,18 @@ func run() int {
 
 	codec := zbor.NewCodec()
 
+	samplePath := flagSamplePath
+	if flagSamplePath == "" {
+		samplePath, err = os.MkdirTemp("", "samples")
+		if err != nil {
+			log.Error().Str("sample_path", flagSamplePath).Err(err).Msg("could not create temporary directory")
+			return failure
+		}
+	}
+
 	generate := generator.New(log, db, codec,
 		generator.WithDictionaryPath(flagDictionaryPath),
-		generator.WithSamplePath(flagSamplePath),
+		generator.WithSamplePath(samplePath),
 		generator.WithRatioImprovementTolerance(flagTolerance),
 		generator.WithStartSize(flagStartSize),
 	)

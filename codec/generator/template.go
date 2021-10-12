@@ -56,16 +56,17 @@ type templateData struct {
 func (g *Generator) compile(dict *dictionary) error {
 
 	// Create dictionary file.
-	filename := string(dict.kind) + ".go"
+	filename := dict.kind.String() + ".go"
 	path := filepath.Join(g.cfg.DictionaryPath, filename)
 	file, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("could not open dictionary file: %w", err)
 	}
+	defer file.Close()
 
 	// Execute template using the dictionary file as the writer.
 	t := template.Must(template.New("").Parse(dictionaryTemplate))
-	err = t.Execute(file, templateData{Name: string(dict.kind), Bytes: dict.raw})
+	err = t.Execute(file, templateData{Name: dict.kind.String(), Bytes: dict.raw})
 	if err != nil {
 		return fmt.Errorf("could not execute dictionary template: %w", err)
 	}

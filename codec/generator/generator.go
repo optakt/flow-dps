@@ -106,11 +106,6 @@ func (g *Generator) Dictionary(kind DictionaryKind) error {
 		}
 
 		current = dict
-
-		//logger.Info().
-		//	Float64("compression_ratio", current.ratio).
-		//	Dur("compression_duration", current.duration).
-		//	Msg("generated dictionary")
 	}
 
 	// Since the loop stopped, this means that the last generated dictionary was
@@ -170,18 +165,10 @@ func (g *Generator) generateSamples(kind DictionaryKind, size int) error {
 	// Write each sample in a file.
 	for i, sample := range samples {
 		filename := filepath.Join(dirPath, fmt.Sprint(i))
-		file, err := os.Create(filename)
+		err := os.WriteFile(filename, sample, 0644)
 		if err != nil {
-			return fmt.Errorf("could not create sample file: %w", err)
-		}
-
-		_, err = file.Write(sample)
-		if err != nil {
-			_ = file.Close()
 			return fmt.Errorf("could not write sample file: %w", err)
 		}
-
-		_ = file.Close()
 	}
 
 	return nil
@@ -220,7 +207,7 @@ func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) 
 
 			// If we're out of entries to read from, reset the iterator.
 			// This will result in duplicate entries in the samples, but should not be a big deal.
-			if key[0] != prefix[0] {
+			if !it.ValidForPrefix(prefix) {
 				g.log.Info().Msg("reached end of entries in index database, rewinding")
 
 				it.Rewind()
