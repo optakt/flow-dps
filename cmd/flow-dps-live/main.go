@@ -316,6 +316,7 @@ func run() int {
 	// checkpoint; if we don't, we can optionally use the root checkpoint to
 	// speed up the restart/restoration.
 	var load mapper.Loader
+	load = loader.FromIndex(log, storage, indexDB)
 	if empty {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -331,13 +332,11 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		load = loader.FromCheckpoint(file)
+		initialize := loader.FromCheckpoint(file)
 		load = loader.FromIndex(log, storage, indexDB,
-			loader.WithInitializer(load),
+			loader.WithInitializer(initialize),
 			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
 		)
-	} else {
-		load = loader.FromIndex(log, storage, indexDB)
 	}
 
 	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
