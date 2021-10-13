@@ -185,7 +185,7 @@ func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) 
 	case KindTransactions:
 		prefix = storage.EncodeKey(storage.PrefixTransaction)
 	case KindEvents:
-		// FIXME: Select an event type in the prefix.
+		// TODO: Select an event type in the prefix. See https://github.com/optakt/flow-dps/issues/501
 		prefix = storage.EncodeKey(storage.PrefixEvents)
 	}
 
