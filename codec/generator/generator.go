@@ -196,7 +196,7 @@ func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) 
 
 		var totalBytes int
 		for totalBytes <= size {
-			key := it.Item().Key()
+			sampleKey := it.Item().Key()
 
 			// If we're out of entries to read from, reset the iterator.
 			// This will result in duplicate entries in the samples, but should not be a big deal.
@@ -204,19 +204,19 @@ func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) 
 				g.log.Info().Msg("reached end of entries in index database, rewinding")
 
 				it.Rewind()
-				it.Next()
+				it.Seek(key)
 			}
 
 			// Retrieve the value of the sample.
-			val, err := tx.Get(key)
+			val, err := tx.Get(sampleKey)
 			if err != nil {
-				return fmt.Errorf("could not get value from key %x: %w", key, err)
+				return fmt.Errorf("could not get value from key %x: %w", sampleKey, err)
 			}
 
 			err = val.Value(func(val []byte) error {
 				value, err := g.codec.Decompress(val)
 				if err != nil {
-					return fmt.Errorf("could not decompress value from key %x: %w", key, err)
+					return fmt.Errorf("could not decompress value from key %x: %w", sampleKey, err)
 				}
 
 				// If for some reason, an empty value is stored at that key,
@@ -231,7 +231,7 @@ func (g *Generator) getSamples(kind DictionaryKind, size int) ([][]byte, error) 
 				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("could not read value from key %x: %w", key, err)
+				return fmt.Errorf("could not read value from key %x: %w", sampleKey, err)
 			}
 
 			it.Next()
