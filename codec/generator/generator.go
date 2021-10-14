@@ -58,16 +58,9 @@ func New(log zerolog.Logger, db *badger.DB, codec dps.Codec, opts ...Option) *Ge
 func (g *Generator) Dictionary(kind DictionaryKind) error {
 	logger := g.log.With().Str("kind", string(kind)).Logger()
 
-	// Clean up sample folder, in case there are already old samples still present
-	// on the filesystem.
-	err := os.RemoveAll(g.cfg.SamplePath)
-	if err != nil {
-		return fmt.Errorf("could not clean up sample folder: %w", err)
-	}
-
 	// Compute baseline benchmark when not using a dictionary.
 	baseline := dictionary{kind: kind}
-	err = g.benchmarkDictionary(&baseline)
+	err := g.benchmarkDictionary(&baseline)
 	if err != nil {
 		return fmt.Errorf("could not benchmark baseline performance: %w", err)
 	}

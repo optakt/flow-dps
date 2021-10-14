@@ -20,9 +20,9 @@ Usage of dictionary-generator:
     -i, --index string         path to database directory for state index (default "index")
     -l, --level string         log output level (default "info")
     --dictionary-path string   path to the package in which to write dictionaries (default "./codec/zbor")
-    --sample-path string       path to the directory in which to create temporary samples for dictionary training (default "./samples")
-    --start-size int           minimum dictionary size to generate (will be doubled on each iteration) (default 512)
-    --tolerance float          compression ratio increase tolerance (between 0 and 1) (default 0.1)
+    --sample-path string       path to the directory in which to store samples for dictionary training (temporary folder when left empty) (default "./samples")
+    --start-size int           minimum dictionary size in bytes to generate (will be doubled on each iteration) (default 512)
+    --tolerance float          compression ratio increase tolerance, between 0 and 1 (default 0.1)
 ```
 
 ## Example

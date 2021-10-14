@@ -14,10 +14,12 @@
 
 package generator
 
+const minDictionarySize = 512
+
 // DefaultConfig is the default configuration for the Mapper.
 var DefaultConfig = Config{
-	StartSize:         512, // 512B
-	RatioImprovements: 0.1, // 10% improvement per iteration
+	StartSize:         minDictionarySize, // 512B
+	RatioImprovements: 0.1,               // 10% improvement per iteration
 	SamplePath:        "",
 	DictionaryPath:    "./codec/zbor/",
 }
@@ -49,7 +51,11 @@ type Option func(*Config)
 // See https://github.com/facebook/zstd/issues/2815
 func WithStartSize(size int) Option {
 	return func(cfg *Config) {
-		cfg.StartSize = size
+		if size > minDictionarySize {
+			cfg.StartSize = size
+		} else {
+			cfg.StartSize = minDictionarySize
+		}
 	}
 }
 

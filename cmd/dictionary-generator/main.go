@@ -58,7 +58,7 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVar(&flagSamplePath, "sample-path", "", "path to the directory in which to store samples for dictionary training (temporary folder when left empty)")
 	pflag.IntVar(&flagStartSize, "start-size", 512, "minimum dictionary size in bytes to generate (will be doubled on each iteration)")
-	pflag.Float64Var(&flagTolerance, "tolerance", 0.1, "compression ratio increase tolerance (between 0 and 1)")
+	pflag.Float64Var(&flagTolerance, "tolerance", 0.1, "compression ratio increase tolerance, between 0 and 1")
 
 	pflag.Parse()
 
@@ -94,6 +94,7 @@ func run() int {
 			return failure
 		}
 	}
+	defer os.RemoveAll(samplePath)
 
 	generate := generator.New(log, db, codec,
 		generator.WithDictionaryPath(flagDictionaryPath),
