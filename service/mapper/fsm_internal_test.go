@@ -139,7 +139,5 @@ func TestFSM_Stop(t *testing.T) {
 		wg: &sync.WaitGroup{},
 	}
 
-	err := f.Stop()
-
-	assert.NoError(t, err)
+	f.Stop()
 }

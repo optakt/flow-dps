@@ -19,7 +19,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -42,9 +41,9 @@ import (
 	"github.com/onflow/flow-go/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/bootstrap"
-
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/component"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/cloud"
 	"github.com/optakt/flow-dps/service/forest"
@@ -176,7 +175,6 @@ func run() int {
 		storage,
 		index.WithFlushInterval(flagFlushInterval),
 	)
-
 	defer func() {
 		err := write.Close()
 		if err != nil {
@@ -393,48 +391,65 @@ func run() int {
 		log.Error().Str("address", flagAddress).Err(err).Msg("could not create listener")
 		return failure
 	}
-	done := make(chan struct{})
-	failed := make(chan struct{})
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		follow.Run(ctx)
-	}()
-	go func() {
-		start := time.Now()
-		log.Info().Time("start", start).Msg("Flow DPS Live Indexer starting")
-		err := fsm.Run()
-		if err != nil {
-			log.Warn().Err(err).Msg("Flow DPS Live Indexer failed")
-			close(failed)
-		} else {
-			close(done)
-		}
-		finish := time.Now()
-		duration := finish.Sub(start)
-		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
-	}()
-	go func() {
-		log.Info().Msg("Flow DPS Live Server starting")
-		api.RegisterAPIServer(gsvr, server)
-		err = gsvr.Serve(listener)
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Warn().Err(err).Msg("Flow DPS Server failed")
-		}
-		log.Info().Msg("Flow DPS Live Server stopped")
-	}()
-	go func() {
-		if !metricsEnabled {
-			return
-		}
 
-		log.Info().Msg("metrics server starting")
-		server := metrics.NewServer(log, flagMetrics)
-		err := server.Start()
-		if err != nil {
-			log.Warn().Err(err).Msg("metrics server failed")
-		}
-		log.Info().Msg("metrics server stopped")
-	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	follower := component.New(
+		log.With().Str("component", "consensus_follower").Logger(),
+		func() error {
+			follow.Run(ctx)
+			return nil
+		},
+		func() {
+			// Cancel the context given to the consensus follower.
+			cancel()
+			// Wait for it to have stopped gracefully.
+			<-follow.NodeBuilder.Done()
+		},
+	)
+
+	mapper := component.New(
+		log.With().Str("component", "mapper").Logger(),
+		func() error {
+			return fsm.Run()
+		},
+		func() {
+			fsm.Stop()
+		},
+	)
+
+	apiServer := component.New(
+		log.With().Str("component", "api").Logger(),
+		func() error {
+			api.RegisterAPIServer(gsvr, server)
+			// FIXME: Check whether it makes sense to check for the ErrServerClosed.
+			return gsvr.Serve(listener)
+		},
+		func() {
+			gsvr.GracefulStop()
+		},
+	)
+
+	metricsSrv := metrics.NewServer(log, flagMetrics)
+	metricsServer := component.New(
+		log.With().Str("component", "metrics").Logger(),
+		func() error {
+			if !metricsEnabled {
+				return nil
+			}
+			return metricsSrv.Start()
+		},
+		func() {
+			metricsSrv.Stop()
+		},
+	)
+
+	done := make(chan struct{}, 4)
+	failed := make(chan struct{}, 4)
+
+	go follower.Run(done, failed)
+	go mapper.Run(done, failed)
+	go apiServer.Run(done, failed)
+	go metricsServer.Run(done, failed)
 
 	// Here, we are waiting for a signal, or for one of the components to fail
 	// or finish. In both cases, we proceed to shut down everything, while also
@@ -456,15 +471,13 @@ func run() int {
 
 	// We first stop serving the DPS API by shutting down the GRPC server. Next,
 	// we shut down the consensus follower, so that there is no indexing to be
-	// done anymore. Lastly, we stop the mapper logic itself.
-	gsvr.GracefulStop()
-	cancel()
-	<-follow.NodeBuilder.Done()
-	err = fsm.Stop()
-	if err != nil {
-		log.Error().Err(err).Msg("could not stop indexer")
-		return failure
-	}
+	// done anymore, which then allows us to stop the mapper logic itself. The
+	// metrics are the last to be stopped since we want to be able to track
+	// metrics as far as possible.
+	apiServer.Stop()
+	follower.Stop()
+	mapper.Stop()
+	metricsServer.Stop()
 
 	return success
 }
