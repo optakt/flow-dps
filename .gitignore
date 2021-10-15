@@ -1,5 +1,6 @@
 /cmd/check-duplicate-transactions/check-duplicate-transactions
 /cmd/create-index-snapshot/create-index-snapshot
+/cmd/dictionary-generator/dictionary-generator
 /cmd/flow-dps-client/flow-dps-client
 /cmd/flow-dps-indexer/flow-dps-indexer
 /cmd/flow-dps-live/flow-dps-live
@@ -10,6 +11,7 @@
 /flow-go/
 /index/
 /trie/
+/samples/
 *.cdc
 *.checkpoint
 *.log

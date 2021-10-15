@@ -35,7 +35,7 @@ func TestLibrary_SaveAndRetrieveFirst(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	testKey := encodeKey(prefixFirst)
+	testKey := EncodeKey(PrefixFirst)
 
 	t.Run("save first height", func(t *testing.T) {
 
@@ -85,7 +85,7 @@ func TestLibrary_SaveAndRetrieveLast(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	testKey := encodeKey(prefixLast)
+	testKey := EncodeKey(PrefixLast)
 
 	t.Run("save last height", func(t *testing.T) {
 
@@ -135,7 +135,7 @@ func TestLibrary_SaveAndRetrieveCommit(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	testKey := encodeKey(prefixCommit, mocks.GenericHeight)
+	testKey := EncodeKey(PrefixCommit, mocks.GenericHeight)
 
 	t.Run("save commit", func(t *testing.T) {
 
@@ -185,7 +185,7 @@ func TestLibrary_SaveAndRetrieveHeader(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
 
-	testKey := encodeKey(prefixHeader, mocks.GenericHeight)
+	testKey := EncodeKey(PrefixHeader, mocks.GenericHeight)
 
 	t.Run("save header", func(t *testing.T) {
 
@@ -233,8 +233,8 @@ func TestLibrary_SaveAndRetrieveHeader(t *testing.T) {
 }
 
 func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
-	testKey1 := encodeKey(prefixEvents, mocks.GenericHeight, xxhash.ChecksumString64(string(mocks.GenericEventType(0))))
-	testKey2 := encodeKey(prefixEvents, mocks.GenericHeight, xxhash.ChecksumString64(string(mocks.GenericEventType(1))))
+	testKey1 := EncodeKey(PrefixEvents, mocks.GenericHeight, xxhash.ChecksumString64(string(mocks.GenericEventType(0))))
+	testKey2 := EncodeKey(PrefixEvents, mocks.GenericHeight, xxhash.ChecksumString64(string(mocks.GenericEventType(1))))
 
 	t.Run("save multiple events under different types", func(t *testing.T) {
 		t.Parallel()
@@ -424,8 +424,8 @@ func TestLibrary_SaveAndRetrieveEvents(t *testing.T) {
 }
 
 func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
-	testKey1 := encodeKey(prefixPayload, mocks.GenericLedgerPath(0), mocks.GenericHeight)
-	testKey2 := encodeKey(prefixPayload, mocks.GenericLedgerPath(0), mocks.GenericHeight*2)
+	testKey1 := EncodeKey(PrefixPayload, mocks.GenericLedgerPath(0), mocks.GenericHeight)
+	testKey2 := EncodeKey(PrefixPayload, mocks.GenericLedgerPath(0), mocks.GenericHeight*2)
 
 	t.Run("save two different payloads for same path at different heights", func(t *testing.T) {
 		t.Parallel()
@@ -684,7 +684,7 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 
 func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 	blockID := mocks.GenericHeader.ID()
-	testKey := encodeKey(prefixHeightForBlock, blockID)
+	testKey := EncodeKey(PrefixHeightForBlock, blockID)
 
 	t.Run("save height of block", func(t *testing.T) {
 		t.Parallel()
@@ -742,7 +742,7 @@ func TestLibrary_IndexAndLookupHeightForBlock(t *testing.T) {
 
 func TestSaveAndRetrieve_Transaction(t *testing.T) {
 	tx := mocks.GenericTransaction(0)
-	testKey := encodeKey(prefixTransaction, tx.ID())
+	testKey := EncodeKey(PrefixTransaction, tx.ID())
 
 	t.Run("save transaction", func(t *testing.T) {
 		t.Parallel()
@@ -800,7 +800,7 @@ func TestSaveAndRetrieve_Transaction(t *testing.T) {
 
 func TestLibrary_IndexAndLookupHeightForTransaction(t *testing.T) {
 	txID := mocks.GenericHeader.ID()
-	testKey := encodeKey(prefixHeightForTransaction, txID)
+	testKey := EncodeKey(PrefixHeightForTransaction, txID)
 
 	t.Run("save height of transaction", func(t *testing.T) {
 		t.Parallel()
@@ -857,7 +857,7 @@ func TestLibrary_IndexAndLookupHeightForTransaction(t *testing.T) {
 }
 
 func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
-	testKey := encodeKey(prefixTransactionsForHeight, mocks.GenericHeight)
+	testKey := EncodeKey(PrefixTransactionsForHeight, mocks.GenericHeight)
 
 	t.Run("save transactions", func(t *testing.T) {
 		t.Parallel()
@@ -915,7 +915,7 @@ func TestIndexAndLookup_TransactionsForHeight(t *testing.T) {
 
 func TestSaveAndRetrieve_Collection(t *testing.T) {
 	collection := mocks.GenericCollection(0)
-	testKey := encodeKey(prefixCollection, collection.ID())
+	testKey := EncodeKey(PrefixCollection, collection.ID())
 
 	t.Run("save collection", func(t *testing.T) {
 		t.Parallel()
@@ -973,7 +973,7 @@ func TestSaveAndRetrieve_Collection(t *testing.T) {
 
 func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 	guarantee := mocks.GenericGuarantee(0)
-	testKey := encodeKey(prefixGuarantee, guarantee.ID())
+	testKey := EncodeKey(PrefixGuarantee, guarantee.ID())
 
 	t.Run("save guarantee", func(t *testing.T) {
 		t.Parallel()
@@ -1031,7 +1031,7 @@ func TestSaveAndRetrieve_Guarantee(t *testing.T) {
 
 func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 	collIDs := mocks.GenericCollectionIDs(5)
-	testKey := encodeKey(prefixCollectionsForHeight, mocks.GenericHeight)
+	testKey := EncodeKey(PrefixCollectionsForHeight, mocks.GenericHeight)
 
 	t.Run("save collections", func(t *testing.T) {
 		t.Parallel()
@@ -1088,7 +1088,7 @@ func TestIndexAndLookup_CollectionsForHeight(t *testing.T) {
 }
 
 func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
-	testKey := encodeKey(prefixResults, mocks.GenericResult(0).TransactionID)
+	testKey := EncodeKey(PrefixResults, mocks.GenericResult(0).TransactionID)
 
 	t.Run("save transaction result", func(t *testing.T) {
 		t.Parallel()
@@ -1146,7 +1146,7 @@ func TestSaveAndRetrieve_TransactionResults(t *testing.T) {
 
 func TestSaveAndRetrieve_Seal(t *testing.T) {
 	seal := mocks.GenericSeal(0)
-	testKey := encodeKey(prefixSeal, seal.ID())
+	testKey := EncodeKey(PrefixSeal, seal.ID())
 
 	t.Run("save seal", func(t *testing.T) {
 		t.Parallel()
@@ -1203,7 +1203,7 @@ func TestSaveAndRetrieve_Seal(t *testing.T) {
 }
 
 func TestIndexAndLookup_Seals(t *testing.T) {
-	testKey := encodeKey(prefixSealsForHeight, mocks.GenericHeight)
+	testKey := EncodeKey(PrefixSealsForHeight, mocks.GenericHeight)
 
 	t.Run("save seals", func(t *testing.T) {
 		t.Parallel()
