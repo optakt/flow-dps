@@ -58,11 +58,13 @@ func run() int {
 		flagCompression string
 		flagEncoding    string
 		flagIndex       string
+		flagReadonly    bool
 	)
 
 	pflag.StringVarP(&flagCompression, "compression", "c", compressionZstd, "compression algorithm (\"none\", \"zstd\" or \"gzip\")")
 	pflag.StringVarP(&flagEncoding, "encoding", "e", encodingNone, "output encoding (\"none\", \"hex\" or \"base64\")")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+	pflag.BoolVarP(&flagReadonly, "readonly", "r", true, "open database as read-only")
 
 	pflag.Parse()
 
@@ -71,7 +73,7 @@ func run() int {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 
 	// Open the index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
+	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(flagReadonly))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open badger db")
 		return failure
