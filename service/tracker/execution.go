@@ -72,7 +72,7 @@ func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Ex
 	}
 
 	e := Execution{
-		log:     log.With().Str("component", "execution_tracker").Logger(),
+		log:     log.With().Str("engine", "execution_tracker").Logger(),
 		stream:  stream,
 		queue:   deque.New(),
 		records: make(map[flow.Identifier]*uploader.BlockData),

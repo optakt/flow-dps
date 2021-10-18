@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/component"
+	"github.com/optakt/flow-dps/engine"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
@@ -173,43 +173,17 @@ func run() int {
 		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
 	)
 
-	// This section launches the main executing components in their own
-	// goroutine, so they can run concurrently. Afterwards, we wait for an
-	// interrupt signal in order to proceed with the next section.
-	mapper := component.New(
-		log.With().Str("component", "mapper").Logger(),
-		func() error {
-			return fsm.Run()
-		},
-		func() {
-			fsm.Stop()
-		},
-	)
-
-	done := make(chan struct{})
-	failed := make(chan struct{})
-	go mapper.Run(done, failed)
-
-	select {
-	case <-sig:
-		log.Info().Msg("Flow DPS Indexer stopping")
-	case <-done:
-		log.Info().Msg("Flow DPS Indexer done")
-	case <-failed:
-		log.Warn().Msg("Flow DPS Indexer aborted")
-		return failure
-	}
-	go func() {
-		<-sig
-		log.Warn().Msg("forcing exit")
-		os.Exit(1)
-	}()
-
-	// The following code starts a shut down with a certain timeout and makes
-	// sure that the main executing components are shutting down within the
-	// allocated shutdown time. Otherwise, we will force the shutdown and log
-	// an error. We then wait for shutdown on each component to complete.
-	mapper.Stop()
+	engine.New(log, "Flow DPS Indexer", sig).
+		Component(
+			"mapper",
+			func() error {
+				return fsm.Run()
+			},
+			func() {
+				fsm.Stop()
+			},
+		).
+		Run()
 
 	return success
 }

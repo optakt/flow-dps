@@ -228,7 +228,12 @@ func (w *Writer) apply(ops ...func(*badger.Txn) error) error {
 	// previous transaction.
 	select {
 	case err := <-w.err:
-		return fmt.Errorf("could not commit transaction: %w", err)
+		// Only return an error if the error channel received an error, not if it
+		// closed unexpectedly.
+		if err != nil {
+			return fmt.Errorf("could not commit transaction: %w", err)
+		}
+		return nil
 	default:
 		// skip
 	}

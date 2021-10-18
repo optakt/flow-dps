@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package component
+package engine
 
 import (
 	"time"
@@ -25,16 +25,6 @@ type Component struct {
 	log  zerolog.Logger
 	run  func() error
 	stop func()
-}
-
-func New(log zerolog.Logger, run func() error, stop func()) *Component {
-	c := Component{
-		log:  log,
-		run:  run,
-		stop: stop,
-	}
-
-	return &c
 }
 
 func (c *Component) Run(success, failure chan struct{}) {

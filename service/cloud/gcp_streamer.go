@@ -31,7 +31,7 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-// GCPStreamer is a component that downloads block data from a Google Cloud bucket.
+// GCPStreamer is a engine that downloads block data from a Google Cloud bucket.
 // It exposes a callback to be used by the consensus follower to notify the Streamer
 // when a new block has been finalized. The streamer will then add that block to the
 // queue, which is consumed by downloading the block data for the identifiers it
@@ -63,7 +63,7 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ..
 	}
 
 	g := GCPStreamer{
-		log:     log.With().Str("component", "gcp_streamer").Logger(),
+		log:     log.With().Str("engine", "gcp_streamer").Logger(),
 		decoder: decoder,
 		bucket:  bucket,
 		queue:   dps.NewDeque(),

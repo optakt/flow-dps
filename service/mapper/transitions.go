@@ -45,7 +45,7 @@ type Transitions struct {
 	once  *sync.Once
 }
 
-// NewTransitions returns a Transitions component using the given dependencies and using the given options
+// NewTransitions returns a Transitions engine using the given dependencies and using the given options
 func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feeder, read dps.Reader, write dps.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
@@ -54,7 +54,7 @@ func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feede
 	}
 
 	t := Transitions{
-		log:   log.With().Str("component", "mapper_transitions").Logger(),
+		log:   log.With().Str("engine", "mapper_transitions").Logger(),
 		cfg:   cfg,
 		load:  load,
 		chain: chain,

@@ -46,7 +46,7 @@ func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, options .
 	}
 
 	i := Index{
-		log: log.With().Str("component", "index_loader").Logger(),
+		log: log.With().Str("engine", "index_loader").Logger(),
 		lib: lib,
 		db:  db,
 		cfg: cfg,

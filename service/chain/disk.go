@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/flow-go/storage/badger/operation"
 )
 
-// Disk is a component used to access chain data from a badger database.
+// Disk is a engine used to access chain data from a badger database.
 type Disk struct {
 	db      *badger.DB
 	height  uint64
