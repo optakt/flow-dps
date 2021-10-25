@@ -110,14 +110,16 @@ func run() int {
 
 	// Decode the arguments
 	var args []cadence.Value
-	params := strings.Split(flagParams, ",")
-	for _, param := range params {
-		arg, err := convert.ParseCadenceArgument(param)
-		if err != nil {
-			log.Error().Err(err).Msg("invalid Cadence value")
-			return failure
+	if flagParams != "" {
+		params := strings.Split(flagParams, ",")
+		for _, param := range params {
+			arg, err := convert.ParseCadenceArgument(param)
+			if err != nil {
+				log.Error().Err(err).Msg("invalid Cadence value")
+				return failure
+			}
+			args = append(args, arg)
 		}
-		args = append(args, arg)
 	}
 
 	// Initialize codec.
