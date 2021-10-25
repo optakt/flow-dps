@@ -182,9 +182,14 @@ func (r *Reader) Events(height uint64, types ...flow.EventType) ([]flow.Event, e
 	if height < first || height > last {
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
+
 	var events []flow.Event
 	err = r.db.View(r.lib.RetrieveEvents(height, types, &events))
-	return events, err
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve events: %w", err)
+	}
+
+	return events, nil
 }
 
 // Seal returns the seal with the given ID.

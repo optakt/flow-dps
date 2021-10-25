@@ -82,14 +82,14 @@ func TestEncodeKey(t *testing.T) {
 
 			if test.wantPanic {
 				assert.Panics(t, func() {
-					encodeKey(1, test.segments...)
+					EncodeKey(1, test.segments...)
 				})
 				return
 			}
 
 			var got []byte
 			assert.NotPanics(t, func() {
-				got = encodeKey(1, test.segments...)
+				got = EncodeKey(1, test.segments...)
 			})
 
 			assert.Equal(t, test.wantKey, got)

@@ -12,29 +12,31 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package storage
+package generator
 
-const (
-	PrefixFirst = 1
-	PrefixLast  = 2
-
-	PrefixHeightForBlock       = 7
-	PrefixHeightForTransaction = 16
-
-	PrefixCommit  = 4
-	PrefixHeader  = 3
-	PrefixEvents  = 5
-	PrefixPayload = 6
-
-	PrefixTransaction = 8
-	PrefixCollection  = 10
-	PrefixGuarantee   = 17
-
-	PrefixTransactionsForHeight     = 9
-	PrefixTransactionsForCollection = 12
-	PrefixCollectionsForHeight      = 11
-	PrefixResults                   = 13
-
-	PrefixSeal           = 14
-	PrefixSealsForHeight = 15
+import (
+	"time"
 )
+
+// DictionaryKind represents the resources that the dictionary is trained to compress efficiently.
+type DictionaryKind string
+
+// Supported dictionary kinds.
+const (
+	KindPayloads     DictionaryKind = "payloads"
+	KindEvents       DictionaryKind = "events"
+	KindTransactions DictionaryKind = "transactions"
+)
+
+func (k DictionaryKind) String() string {
+	return string(k)
+}
+
+type dictionary struct {
+	kind DictionaryKind
+	raw  []byte
+	size int
+
+	ratio    float64
+	duration time.Duration
+}
