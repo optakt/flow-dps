@@ -10,12 +10,13 @@ It uses the Flow DPS Server's GRPC API as the backend to query the required data
 
 ```sh
 Usage of flow-dps-client:
-  -a, --api string      host for GRPC API server
-  -e, --cache uint      maximum cache size for register reads in bytes (default 1000000000)
-  -h, --height uint     block height to execute the script at
-  -l, --level string    log output level (default "info")
-  -p, --params string   comma-separated list of Cadence parameters
-  -s, --script string   path to file with Cadence script (default "script.cdc")
+  -a, --api string       host for GRPC API server
+  -e, --cache uint       maximum cache size for register reads in bytes (default 1000000000)
+  -g, --gas-limit uint   gas limit for script execution (default 18446744073709551615)
+  -h, --height uint      block height to execute the script at
+  -l, --level string     log output level (default "info")
+  -p, --params string    comma-separated list of Cadence parameters
+  -s, --script string    path to file with Cadence script (default "script.cdc")
 ```
 
 Cadence parameters can be provided as a list of comma-separated `Type(Value)` pairs.
