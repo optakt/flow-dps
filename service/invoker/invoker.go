@@ -16,6 +16,7 @@ package invoker
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/rs/zerolog"
@@ -33,9 +34,10 @@ import (
 // Invoker retrieves account information from and executes Cadence scripts against
 // the Flow virtual machine.
 type Invoker struct {
-	index dps.Reader
-	vm    VirtualMachine
-	cache Cache
+	index    dps.Reader
+	vm       VirtualMachine
+	cache    Cache
+	gasLimit uint64
 }
 
 // New returns a new Invoker with the given configuration.
@@ -44,6 +46,7 @@ func New(index dps.Reader, options ...func(*Config)) (*Invoker, error) {
 	// Initialize the invoker configuration with conservative default values.
 	cfg := Config{
 		CacheSize: uint64(100_000_000), // ~100 MB default size
+		GasLimit:  math.MaxUint64,      // as much as possible
 	}
 
 	// Apply the option parameters provided by consumer.
@@ -68,9 +71,10 @@ func New(index dps.Reader, options ...func(*Config)) (*Invoker, error) {
 	}
 
 	i := Invoker{
-		index: index,
-		vm:    vm,
-		cache: cache,
+		index:    index,
+		vm:       vm,
+		cache:    cache,
+		gasLimit: cfg.GasLimit,
 	}
 
 	return &i, nil
@@ -153,7 +157,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 
 	// Initialize the virtual machine context with the given block header so
 	// that parameters related to the block are available from within the script.
-	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
+	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header), fvm.WithGasLimit(i.gasLimit))
 
 	// Initialize the read function. We use a shared cache between all heights
 	// here. It's a smart cache, which means that items that are accessed often

@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"strings"
@@ -51,12 +52,13 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAPI    string
-		flagCache  uint64
-		flagHeight uint64
-		flagLevel  string
-		flagParams string
-		flagScript string
+		flagAPI      string
+		flagCache    uint64
+		flagHeight   uint64
+		flagLevel    string
+		flagParams   string
+		flagScript   string
+		flagGasLimit uint64
 	)
 
 	pflag.StringVarP(&flagAPI, "api", "a", "", "host for GRPC API server")
@@ -65,6 +67,7 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagParams, "params", "p", "", "comma-separated list of Cadence parameters")
 	pflag.StringVarP(&flagScript, "script", "s", "script.cdc", "path to file with Cadence script")
+	pflag.Uint64VarP(&flagGasLimit, "gas-limit", "g", math.MaxUint64, "gas limit for script execution")
 
 	pflag.Parse()
 
@@ -127,7 +130,7 @@ func run() int {
 
 	// Execute the script using remote lookup and read.
 	client := dps.NewAPIClient(conn)
-	invoke, err := invoker.New(dps.IndexFromAPI(client, codec), invoker.WithCacheSize(flagCache))
+	invoke, err := invoker.New(dps.IndexFromAPI(client, codec), invoker.WithCacheSize(flagCache), invoker.WithGasLimit(flagGasLimit))
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize invoker")
 		return failure
