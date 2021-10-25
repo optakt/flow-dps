@@ -16,6 +16,7 @@ Usage of create-index-snapshot:
   -c, --compression string   compression algorithm ("none", "zstd" or "gzip") (default "zstd")
   -e, --encoding string      output encoding ("none", "hex" or "base64") (default "none")
   -i, --index string         database directory for state index (default "index")
+      --readonly             open database as read-only (default true)
 ```
 
 ## Examples

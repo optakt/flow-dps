@@ -55,14 +55,16 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAddress string
-		flagLevel   string
-		flagIndex   string
+		flagAddress  string
+		flagLevel    string
+		flagIndex    string
+		flagReadonly bool
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.BoolVar(&flagReadonly, "readonly", true, "open database as read-only")
 
 	pflag.Parse()
 
@@ -77,7 +79,7 @@ func run() int {
 	log = log.Level(level)
 
 	// Initialize the index core state and open database in read-only mode.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(true))
+	db, err := badger.Open(dps.DefaultOptions(flagIndex).WithReadOnly(flagReadonly))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open index DB")
 		return failure

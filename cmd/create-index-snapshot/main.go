@@ -64,7 +64,7 @@ func run() int {
 	pflag.StringVarP(&flagCompression, "compression", "c", compressionZstd, "compression algorithm (\"none\", \"zstd\" or \"gzip\")")
 	pflag.StringVarP(&flagEncoding, "encoding", "e", encodingNone, "output encoding (\"none\", \"hex\" or \"base64\")")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
-	pflag.BoolVarP(&flagReadonly, "readonly", "r", true, "open database as read-only")
+	pflag.BoolVar(&flagReadonly, "readonly", true, "open database as read-only")
 
 	pflag.Parse()
 
