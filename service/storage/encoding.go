@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-func encodeKey(prefix uint8, segments ...interface{}) []byte {
+func EncodeKey(prefix uint8, segments ...interface{}) []byte {
 	key := []byte{prefix}
 	var val []byte
 	for _, segment := range segments {
