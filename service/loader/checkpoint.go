@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-	"github.com/onflow/flow-go/ledger/complete/wal"
+	"github.com/dgraph-io/badger/v2"
+
+	"github.com/optakt/flow-dps/ledger/forest/flattener"
+	"github.com/optakt/flow-dps/ledger/forest/trie"
+	"github.com/optakt/flow-dps/ledger/wal"
 )
 
 // Checkpoint is a loader that loads a trie from a LedgerWAL checkpoint file.
@@ -40,14 +42,14 @@ func FromCheckpoint(file io.Reader) *Checkpoint {
 }
 
 // Trie loads the execution state trie from the LedgerWAL root checkpoint.
-func (c *Checkpoint) Trie() (*trie.MTrie, error) {
+func (c *Checkpoint) Trie(db *badger.DB) (*trie.MTrie, error) {
 
 	checkpoint, err := wal.ReadCheckpoint(c.file)
 	if err != nil {
 		return nil, fmt.Errorf("could not read checkpoint: %w", err)
 	}
 
-	trees, err := flattener.RebuildTries(checkpoint)
+	trees, err := flattener.RebuildTries(db, checkpoint)
 	if err != nil {
 		return nil, fmt.Errorf("could not rebuild tries: %w", err)
 	}

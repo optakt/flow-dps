@@ -21,8 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	"github.com/optakt/flow-dps/ledger/forest/node"
+	"github.com/optakt/flow-dps/ledger/forest/trie"
 
 	"github.com/optakt/flow-dps/testing/mocks"
 )

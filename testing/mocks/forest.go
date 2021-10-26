@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	"github.com/optakt/flow-dps/ledger/forest/trie"
 	"github.com/onflow/flow-go/model/flow"
 )
 

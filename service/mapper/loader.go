@@ -15,10 +15,12 @@
 package mapper
 
 import (
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	"github.com/dgraph-io/badger/v2"
+
+	"github.com/optakt/flow-dps/ledger/forest/trie"
 )
 
 // Loader represents something that loads its checkpoint and builds it into a trie.
 type Loader interface {
-	Trie() (*trie.MTrie, error)
+	Trie(db *badger.DB) (*trie.MTrie, error)
 }

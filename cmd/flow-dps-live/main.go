@@ -42,12 +42,12 @@ import (
 	"github.com/onflow/flow-go/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/bootstrap"
+	"github.com/optakt/flow-dps/ledger/forest"
 
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/cloud"
-	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/initializer"
 	"github.com/optakt/flow-dps/service/loader"
@@ -347,6 +347,13 @@ func run() int {
 		writer = index.NewMetricsWriter(write)
 	}
 
+	payloadsDBOpt := badger.DefaultOptions("./payloads")
+	payloadsDB, err := badger.Open(payloadsDBOpt)
+	if err != nil { // FIXME
+		log.Error().Err(err).Msg("could not open payloads DB")
+		return failure
+	}
+
 	// At this point, we can initialize the core business logic of the indexer,
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
@@ -355,7 +362,7 @@ func run() int {
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
-	state := mapper.EmptyState(forest)
+	state := mapper.EmptyState(payloadsDB, forest)
 	fsm := mapper.NewFSM(state,
 		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),

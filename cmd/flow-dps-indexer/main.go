@@ -27,10 +27,10 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
-	"github.com/optakt/flow-dps/service/forest"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
 	"github.com/optakt/flow-dps/service/mapper"
@@ -178,12 +178,19 @@ func run() int {
 		)
 	}
 
+	payloadsDBOpt := badger.DefaultOptions("./payloads")
+	payloadsDB, err := badger.Open(payloadsDBOpt)
+	if err != nil { // FIXME
+		log.Error().Err(err).Msg("could not open payloads DB")
+		return failure
+	}
+
 	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
 		mapper.WithBootstrapState(bootstrap),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
-	state := mapper.EmptyState(forest)
+	state := mapper.EmptyState(payloadsDB, forest)
 	fsm := mapper.NewFSM(state,
 		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),

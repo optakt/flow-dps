@@ -32,11 +32,11 @@ import (
 	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/mempool/entity"
 
+	"github.com/optakt/flow-dps/ledger/forest/node"
+	"github.com/optakt/flow-dps/ledger/forest/trie"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -86,7 +86,6 @@ var (
 			node.NewLeaf(GenericLedgerPath(0), GenericLedgerPayload(0), 42),
 			node.NewLeaf(GenericLedgerPath(1), GenericLedgerPayload(1), 42),
 			GenericLedgerPath(2),
-			GenericLedgerPayload(2),
 			hash.DummyHash,
 			64,
 			64,
@@ -96,13 +95,11 @@ var (
 			node.NewLeaf(GenericLedgerPath(3), GenericLedgerPayload(3), 42),
 			nil,
 			GenericLedgerPath(4),
-			GenericLedgerPayload(4),
 			hash.DummyHash,
 			64,
 			64,
 		),
 		GenericLedgerPath(5),
-		GenericLedgerPayload(5),
 		hash.DummyHash,
 		64,
 		64,

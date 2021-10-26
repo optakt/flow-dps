@@ -16,48 +16,58 @@ package forest
 
 import (
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/ledger/forest/trie"
 )
 
 type step struct {
 	tree   *trie.MTrie
-	paths  []ledger.Path
 	parent flow.StateCommitment
 }
 
 // Forest is a representation of multiple tries mapped by their state commitment hash.
-type Forest struct {
+type OtherForest struct {
+	values map[ledger.Path]*ledger.Payload
 	steps map[flow.StateCommitment]step
 }
 
 // New returns a new empty forest.
-func New() *Forest {
-	f := Forest{
+func New() *OtherForest {
+	f := OtherForest{
 		steps: make(map[flow.StateCommitment]step),
+		values: make(map[ledger.Path]*ledger.Payload),
 	}
 	return &f
 }
 
 // Save adds a tree to the forest.
-func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
+func (f *OtherForest) Save(tree *trie.MTrie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment) {
 	commit := flow.StateCommitment(tree.RootHash())
+
+	for i := range paths {
+		if payloads == nil {
+			f.values[paths[i]] = nil
+		} else {
+			f.values[paths[i]] = payloads[i]
+		}
+	}
+
 	s := step{
 		tree:   tree,
-		paths:  paths,
 		parent: parent,
 	}
 	f.steps[commit] = s
 }
 
 // Has returns whether a state commitment matches one of the trees within the forest.
-func (f *Forest) Has(commit flow.StateCommitment) bool {
+func (f *OtherForest) Has(commit flow.StateCommitment) bool {
 	_, ok := f.steps[commit]
 	return ok
 }
 
 // Tree returns the matching tree for the given state commitment.
-func (f *Forest) Tree(commit flow.StateCommitment) (*trie.MTrie, bool) {
+func (f *OtherForest) Tree(commit flow.StateCommitment) (*trie.MTrie, bool) {
 	s, ok := f.steps[commit]
 	if !ok {
 		return nil, false
@@ -65,17 +75,13 @@ func (f *Forest) Tree(commit flow.StateCommitment) (*trie.MTrie, bool) {
 	return s.tree, true
 }
 
-// Paths returns the matching tree's paths for the given state commitment.
-func (f *Forest) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
-	s, ok := f.steps[commit]
-	if !ok {
-		return nil, false
-	}
-	return s.paths, true
+// Values returns the matching tree's paths for the given state commitment.
+func (f *OtherForest) Values() map[ledger.Path]*ledger.Payload {
+	return f.values
 }
 
 // Parent returns the parent of the given state commitment.
-func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool) {
+func (f *OtherForest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool) {
 	s, ok := f.steps[commit]
 	if !ok {
 		return flow.DummyStateCommitment, false
@@ -84,10 +90,13 @@ func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool
 }
 
 // Reset deletes all tries that do not match the given state commitment.
-func (f *Forest) Reset(finalized flow.StateCommitment) {
+func (f *OtherForest) Reset(finalized flow.StateCommitment) {
 	for commit := range f.steps {
 		if commit != finalized {
 			delete(f.steps, commit)
 		}
 	}
+
+	// Reset values.
+	f.values = make(map[ledger.Path]*ledger.Payload)
 }

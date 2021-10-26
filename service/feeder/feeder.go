@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/wal"
+	"github.com/optakt/flow-dps/ledger/wal"
 
 	"github.com/optakt/flow-dps/models/dps"
 )

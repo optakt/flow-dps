@@ -17,7 +17,7 @@ package mocks
 import (
 	"testing"
 
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	"github.com/optakt/flow-dps/ledger/forest/trie"
 )
 
 type Loader struct {

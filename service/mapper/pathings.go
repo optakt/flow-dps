@@ -21,8 +21,8 @@ import (
 	"github.com/gammazero/deque"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	"github.com/optakt/flow-dps/ledger/forest/node"
+	"github.com/optakt/flow-dps/ledger/forest/trie"
 )
 
 func allPaths(tree *trie.MTrie) []ledger.Path {
@@ -52,7 +52,7 @@ func allPaths(tree *trie.MTrie) []ledger.Path {
 	return paths
 }
 
-func pathsPayloads(update *ledger.TrieUpdate) ([]ledger.Path, []ledger.Payload) {
+func pathsPayloads(update *ledger.TrieUpdate) ([]ledger.Path, []*ledger.Payload) {
 	paths := make([]ledger.Path, 0, len(update.Paths))
 	lookup := make(map[ledger.Path]*ledger.Payload)
 	for i, path := range update.Paths {
@@ -65,9 +65,9 @@ func pathsPayloads(update *ledger.TrieUpdate) ([]ledger.Path, []ledger.Payload) 
 	sort.Slice(paths, func(i, j int) bool {
 		return bytes.Compare(paths[i][:], paths[j][:]) < 0
 	})
-	payloads := make([]ledger.Payload, 0, len(paths))
+	payloads := make([]*ledger.Payload, 0, len(paths))
 	for _, path := range paths {
-		payloads = append(payloads, *lookup[path])
+		payloads = append(payloads, lookup[path])
 	}
 	return paths, payloads
 }

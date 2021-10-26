@@ -13,7 +13,9 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2 v2.0.0-rc.2
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.2
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/klauspost/compress v1.13.5
+	github.com/m4ksio/wal v1.0.0
 	github.com/onflow/cadence v0.19.1
 	github.com/onflow/flow-go v0.21.4
 	github.com/onflow/flow-go-sdk v0.21.0
@@ -28,6 +30,7 @@ require (
 	google.golang.org/api v0.56.0
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1
+	gotest.tools v2.2.0+incompatible
 )
 
 require (
@@ -63,7 +66,6 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/improbable-eng/grpc-web v0.12.0 // indirect
@@ -123,7 +125,6 @@ require (
 	github.com/libp2p/go-ws-transport v0.4.0 // indirect
 	github.com/libp2p/go-yamux/v2 v2.2.0 // indirect
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381 // indirect
-	github.com/m4ksio/wal v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect

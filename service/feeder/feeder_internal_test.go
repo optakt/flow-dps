@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger/common/encoding"
-	"github.com/onflow/flow-go/ledger/complete/wal"
+	"github.com/optakt/flow-dps/ledger/wal"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
