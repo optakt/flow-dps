@@ -102,7 +102,10 @@ func NewCodec() *Codec {
 		panic(err)
 	}
 	eventDecompressor, err := zstd.NewReader(nil,
-		zstd.WithDecoderDicts(eventsDictionary),
+		zstd.WithDecoderDicts(
+			eventsDictionary,
+			legacyEventDictionary,
+		),
 	)
 	if err != nil {
 		panic(err)
