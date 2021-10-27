@@ -79,15 +79,15 @@ func NewCodec() *Codec {
 
 	payloadCompressor, err := zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
-		zstd.WithEncoderDict(payloadsDictionary),
+		zstd.WithEncoderDict(payloadDictionary),
 	)
 	if err != nil {
 		panic(err)
 	}
 	payloadDecompressor, err := zstd.NewReader(nil,
 		zstd.WithDecoderDicts(
-			payloadsDictionary,
-			legacyPayloadsDictionary,
+			payloadDictionary,
+			legacyPayloadDictionary,
 		),
 	)
 	if err != nil {
@@ -96,14 +96,14 @@ func NewCodec() *Codec {
 
 	eventCompressor, err := zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
-		zstd.WithEncoderDict(eventsDictionary),
+		zstd.WithEncoderDict(eventDictionary),
 	)
 	if err != nil {
 		panic(err)
 	}
 	eventDecompressor, err := zstd.NewReader(nil,
 		zstd.WithDecoderDicts(
-			eventsDictionary,
+			eventDictionary,
 			legacyEventDictionary,
 		),
 	)
