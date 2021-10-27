@@ -67,7 +67,11 @@ func NewCodec() *Codec {
 		panic(err)
 	}
 	decompressor, err := zstd.NewReader(nil,
-		zstd.WithDecoderDicts(genericDictionary),
+		zstd.WithDecoderDicts(
+			genericDictionary,
+			legacyGenericDictionary,
+			legacyHeaderDictionary,
+		),
 	)
 	if err != nil {
 		panic(err)
@@ -75,13 +79,16 @@ func NewCodec() *Codec {
 
 	payloadCompressor, err := zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
-		zstd.WithEncoderDict(payloadsDictionary),
+		zstd.WithEncoderDict(payloadDictionary),
 	)
 	if err != nil {
 		panic(err)
 	}
 	payloadDecompressor, err := zstd.NewReader(nil,
-		zstd.WithDecoderDicts(payloadsDictionary),
+		zstd.WithDecoderDicts(
+			payloadDictionary,
+			legacyPayloadDictionary,
+		),
 	)
 	if err != nil {
 		panic(err)
@@ -89,13 +96,16 @@ func NewCodec() *Codec {
 
 	eventCompressor, err := zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
-		zstd.WithEncoderDict(eventsDictionary),
+		zstd.WithEncoderDict(eventDictionary),
 	)
 	if err != nil {
 		panic(err)
 	}
 	eventDecompressor, err := zstd.NewReader(nil,
-		zstd.WithDecoderDicts(eventsDictionary),
+		zstd.WithDecoderDicts(
+			eventDictionary,
+			legacyEventDictionary,
+		),
 	)
 	if err != nil {
 		panic(err)
@@ -103,13 +113,13 @@ func NewCodec() *Codec {
 
 	transactionCompressor, err := zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
-		zstd.WithEncoderDict(transactionsDictionary),
+		zstd.WithEncoderDict(transactionDictionary),
 	)
 	if err != nil {
 		panic(err)
 	}
 	transactionDecompressor, err := zstd.NewReader(nil,
-		zstd.WithDecoderDicts(transactionsDictionary),
+		zstd.WithDecoderDicts(transactionDictionary),
 	)
 	if err != nil {
 		panic(err)
