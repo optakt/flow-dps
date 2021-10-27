@@ -113,13 +113,13 @@ func NewCodec() *Codec {
 
 	transactionCompressor, err := zstd.NewWriter(nil,
 		zstd.WithEncoderLevel(zstd.SpeedDefault),
-		zstd.WithEncoderDict(transactionsDictionary),
+		zstd.WithEncoderDict(transactionDictionary),
 	)
 	if err != nil {
 		panic(err)
 	}
 	transactionDecompressor, err := zstd.NewReader(nil,
-		zstd.WithDecoderDicts(transactionsDictionary),
+		zstd.WithDecoderDicts(transactionDictionary),
 	)
 	if err != nil {
 		panic(err)
