@@ -67,7 +67,11 @@ func NewCodec() *Codec {
 		panic(err)
 	}
 	decompressor, err := zstd.NewReader(nil,
-		zstd.WithDecoderDicts(genericDictionary),
+		zstd.WithDecoderDicts(
+			genericDictionary,
+			legacyGenericDictionary,
+			legacyHeaderDictionary,
+		),
 	)
 	if err != nil {
 		panic(err)
@@ -81,7 +85,10 @@ func NewCodec() *Codec {
 		panic(err)
 	}
 	payloadDecompressor, err := zstd.NewReader(nil,
-		zstd.WithDecoderDicts(payloadsDictionary),
+		zstd.WithDecoderDicts(
+			payloadsDictionary,
+			legacyPayloadsDictionary,
+		),
 	)
 	if err != nil {
 		panic(err)
