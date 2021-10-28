@@ -89,6 +89,7 @@ func NewCodec() *Codec {
 			payloadDictionary,
 			legacyPayloadDictionary,
 			genericDictionary,
+			legacyGenericDictionary,
 		),
 	)
 	if err != nil {
@@ -107,6 +108,7 @@ func NewCodec() *Codec {
 			eventDictionary,
 			legacyEventDictionary,
 			genericDictionary,
+			legacyGenericDictionary,
 		),
 	)
 	if err != nil {
@@ -124,6 +126,7 @@ func NewCodec() *Codec {
 		zstd.WithDecoderDicts(
 			transactionDictionary,
 			genericDictionary,
+			legacyGenericDictionary,
 		),
 	)
 	if err != nil {
