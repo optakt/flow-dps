@@ -18,8 +18,9 @@ import (
 	"testing"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/optakt/flow-dps/ledger/forest/trie"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/ledger/forest/trie"
 )
 
 type Forest struct {
