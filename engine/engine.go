@@ -55,7 +55,7 @@ func (e *Engine) Component(name string, run func() error, stop func()) *Engine {
 
 // Run launches the engine components and waits for them to either finish successfully,
 // fail, or for an external signal to shut the engine down.
-func (e *Engine) Run() {
+func (e *Engine) Run() error {
 	e.notify = make(chan error, len(e.components))
 	for _, component := range e.components {
 		go component.Run(e.notify)
@@ -72,7 +72,7 @@ func (e *Engine) Run() {
 		if err != nil {
 			e.log.Error().Err(err).Msg("engine failed")
 			e.Stop()
-			os.Exit(1)
+			return err
 		}
 		e.log.Info().Msg("engine done")
 	}
@@ -81,6 +81,8 @@ func (e *Engine) Run() {
 		e.log.Warn().Msg("forcing exit")
 		os.Exit(1)
 	}()
+
+	return nil
 }
 
 // Stop stops each of the engine's components one by one, in the order in which they were

@@ -173,7 +173,7 @@ func run() int {
 		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
 	)
 
-	engine.New(log, "Flow DPS Indexer", sig).
+	err = engine.New(log, "Flow DPS Indexer", sig).
 		Component(
 			"mapper",
 			func() error {
@@ -184,6 +184,10 @@ func run() int {
 			},
 		).
 		Run()
+	if err != nil {
+		log.Error().Err(err).Msg("failed")
+		return failure
+	}
 
 	return success
 }

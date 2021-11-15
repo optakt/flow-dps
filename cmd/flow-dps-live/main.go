@@ -41,6 +41,7 @@ import (
 	"github.com/onflow/flow-go/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/bootstrap"
+
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/engine"
@@ -395,7 +396,7 @@ func run() int {
 	ctx, cancel := context.WithCancel(context.Background())
 	metricsSrv := metrics.NewServer(log, flagMetrics)
 
-	engine.New(log, "Flow DPS Live", sig).
+	err = engine.New(log, "Flow DPS Live", sig).
 		Component(
 			"api",
 			func() error {
@@ -442,6 +443,10 @@ func run() int {
 			},
 		).
 		Run()
+	if err != nil {
+		log.Error().Err(err).Msg("failed")
+		return failure
+	}
 
 	return success
 }
