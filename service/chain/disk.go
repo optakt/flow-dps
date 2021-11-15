@@ -20,14 +20,15 @@ import (
 	"math"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
-// Disk is a engine used to access chain data from a badger database.
+// Disk is a component used to access chain data from a badger database.
 type Disk struct {
 	db      *badger.DB
 	height  uint64

@@ -20,20 +20,20 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Engine is an engine that is composed of multiple components.
 type Engine struct {
 	log        zerolog.Logger
-	components []*Component
+	components []*component
 
-	sig    chan os.Signal
-	done   chan struct{}
-	failed chan struct{}
+	stop   chan os.Signal
+	notify chan error
 }
 
 // New creates a new engine.
-func New(log zerolog.Logger, name string, sig chan os.Signal) *Engine {
+func New(log zerolog.Logger, name string, stop chan os.Signal) *Engine {
 	e := Engine{
-		log: log.With().Str("engine", name).Logger(),
-		sig: sig,
+		log:  log.With().Str("engine", name).Logger(),
+		stop: stop,
 	}
 
 	return &e
@@ -42,7 +42,7 @@ func New(log zerolog.Logger, name string, sig chan os.Signal) *Engine {
 // Component registers a new component for the engine. Components will be shut down
 // in the same order as the one in which they were registered.
 func (e *Engine) Component(name string, run func() error, stop func()) *Engine {
-	c := Component{
+	c := component{
 		log:  e.log.With().Str("component", name).Logger(),
 		run:  run,
 		stop: stop,
@@ -55,12 +55,10 @@ func (e *Engine) Component(name string, run func() error, stop func()) *Engine {
 
 // Run launches the engine components and waits for them to either finish successfully,
 // fail, or for an external signal to shut the engine down.
-func (e *Engine) Run() *Engine {
-	e.done = make(chan struct{}, len(e.components))
-	e.failed = make(chan struct{}, len(e.components))
-
+func (e *Engine) Run() {
+	e.notify = make(chan error, len(e.components))
 	for _, component := range e.components {
-		go component.Run(e.done, e.failed)
+		go component.Run(e.notify)
 	}
 
 	// Here, we are waiting for a signal, or for one of the components to fail
@@ -68,27 +66,28 @@ func (e *Engine) Run() *Engine {
 	// entering a goroutine that allows us to force shut down by sending
 	// another signal.
 	select {
-	case <-e.sig:
+	case <-e.stop:
 		e.log.Info().Msg("engine stopping")
-	case <-e.done:
+	case err := <-e.notify:
+		if err != nil {
+			e.log.Error().Err(err).Msg("engine failed")
+			e.Stop()
+			os.Exit(1)
+		}
 		e.log.Info().Msg("engine done")
-	case <-e.failed:
-		e.log.Warn().Msg("engine aborted")
 	}
 	go func() {
-		<-e.sig
+		<-e.stop
 		e.log.Warn().Msg("forcing exit")
 		os.Exit(1)
 	}()
-
-	return e
 }
 
 // Stop stops each of the engine's components one by one, in the order in which they were
 // registered.
 func (e *Engine) Stop() {
-	// Components are stopped in the order in which they were registered.
-	for _, component := range e.components {
-		component.Stop()
+	// Components are stopped in the reverse order in which they were registered.
+	for i := len(e.components) - 1; i >= 0; i-- {
+		e.components[i].Stop()
 	}
 }

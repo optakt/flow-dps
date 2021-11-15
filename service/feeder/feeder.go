@@ -23,7 +23,7 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-// Feeder is a engine that retrieves trie updates and feeds them to its consumer.
+// Feeder is a component that retrieves trie updates and feeds them to its consumer.
 type Feeder struct {
 	reader WALReader
 }

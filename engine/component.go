@@ -20,25 +20,26 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Component wraps any component that can be started and stopped.
-type Component struct {
+// Component wraps any engine unit that can be started and stopped.
+type component struct {
 	log  zerolog.Logger
 	run  func() error
 	stop func()
 }
 
-func (c *Component) Run(success, failure chan struct{}) {
+// Run launches the component.
+func (c *component) Run(notify chan error) {
 	start := time.Now()
 
 	c.log.Info().Msg("component starting")
 	err := c.run()
 	if err != nil {
 		c.log.Error().Err(err).Msg("component failed")
-		failure <- struct{}{}
+		notify <- err
 		return
 	}
 
-	success <- struct{}{}
+	notify <- nil
 
 	duration := time.Now().Sub(start)
 	c.log.Info().
@@ -46,7 +47,8 @@ func (c *Component) Run(success, failure chan struct{}) {
 		Msg("component done")
 }
 
-func (c *Component) Stop() {
+// Stop stops the component.
+func (c *component) Stop() {
 	c.stop()
 	c.log.Info().Msg("component stopped")
 }
