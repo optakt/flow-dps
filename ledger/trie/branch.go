@@ -17,31 +17,37 @@ type Branch struct {
 }
 
 func NewBranch(height int) *Branch {
-	n := Branch{
+	b := Branch{
 		height: height,
 	}
 
-	return &n
+	return &b
 }
 
-func (b Branch) Hash() hash.Hash {
+func (b *Branch) ComputeHash() hash.Hash {
 	var lHash, rHash hash.Hash
 	if b.lChild != nil {
-		lHash = b.lChild.Hash()
+		lHash = b.lChild.ComputeHash()
 	} else {
 		lHash = ledger.GetDefaultHashForHeight(b.height - 1)
 	}
 
 	if b.rChild != nil {
-		rHash = b.rChild.Hash()
+		rHash = b.rChild.ComputeHash()
 	} else {
 		rHash = ledger.GetDefaultHashForHeight(b.height - 1)
 	}
 
-	return hash.HashInterNode(lHash, rHash)
+	b.hash = hash.HashInterNode(lHash, rHash)
+
+	return b.hash
 }
 
-func (b Branch) Dump(w io.Writer) {
+func (b *Branch) Hash() hash.Hash {
+	return b.hash
+}
+
+func (b *Branch) Dump(w io.Writer) {
 	_, err := w.Write([]byte(fmt.Sprintf("%d:\tBRANCH\t%x\n", b.height, b.Hash())))
 	if err != nil {
 		panic(err)
@@ -53,4 +59,9 @@ func (b Branch) Dump(w io.Writer) {
 	if b.rChild != nil {
 		b.rChild.Dump(w)
 	}
+}
+
+func (b *Branch) SetChildren(lChild, rChild Node) {
+	b.lChild = lChild
+	b.rChild = rChild
 }

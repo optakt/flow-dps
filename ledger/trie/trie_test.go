@@ -9,11 +9,12 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/utils"
+	theirs "github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/optakt/flow-dps/testing/helpers"
 )
 
 func Test_TrieWithLeftRegister(t *testing.T) {
-	trie := &trie{root: nil}
+	trie := &Trie{root: nil}
 
 	path := utils.PathByUint16LeftPadded(0)
 	payload := utils.LightPayload(11, 12345)
@@ -29,7 +30,7 @@ func Test_TrieWithLeftRegister(t *testing.T) {
 }
 
 func Test_TrieWithRightRegister(t *testing.T) {
-	trie := &trie{root: nil}
+	trie := &Trie{root: nil}
 
 	var path ledger.Path
 	for i := 0; i < len(path); i++ {
@@ -48,7 +49,7 @@ func Test_TrieWithRightRegister(t *testing.T) {
 }
 
 func Test_TrieWithMiddleRegister(t *testing.T) {
-	trie := &trie{root: nil}
+	trie := &Trie{root: nil}
 
 	path := utils.PathByUint16LeftPadded(56809)
 	payload := utils.LightPayload(12346, 59656)
@@ -64,7 +65,7 @@ func Test_TrieWithMiddleRegister(t *testing.T) {
 }
 
 func Test_TrieWithManyRegisters(t *testing.T) {
-	trie := &trie{root: nil}
+	trie := &Trie{root: nil}
 
 	rng := &LinearCongruentialGenerator{seed: 0}
 	paths, payloads := deduplicateWrites(sampleRandomRegisterWrites(rng, 12001))
@@ -73,20 +74,40 @@ func Test_TrieWithManyRegisters(t *testing.T) {
 	defer db.Close()
 	for i := range paths {
 		trie.Insert(db, paths[i], &payloads[i])
-		//fmt.Printf("%d: %x\n", i, trie.root.Hash())
 	}
 
-	expectedRootHashHex := "74f748dbe563bb5819d6c09a34362a048531fd9647b4b2ea0b6ff43f200198aa"
+	got := trie.root.ComputeHash()
 
-	file, err := os.Create("/tmp/new.log")
-	if err != nil {
-		panic(err)
-	}
+	file, _ := os.Create("/tmp/new.log")
 	defer file.Close()
 	trie.Dump(file)
 
-	got := trie.root.Hash()
+	expectedRootHashHex := "74f748dbe563bb5819d6c09a34362a048531fd9647b4b2ea0b6ff43f200198aa"
+
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
+}
+
+func Benchmark_TrieRootHash(b *testing.B) {
+	trie := &Trie{root: nil}
+	ref := theirs.NewEmptyMTrie()
+
+	rng := &LinearCongruentialGenerator{seed: 0}
+	paths, payloads := deduplicateWrites(sampleRandomRegisterWrites(rng, 30_000_000))
+
+	db := helpers.InMemoryDB(&testing.T{})
+	defer db.Close()
+
+	b.Run("insert element (ours)", func(b *testing.B) {
+		for i := range paths {
+			trie.Insert(db, paths[i], &payloads[i])
+		}
+		_ = trie.root.ComputeHash()
+	})
+
+	b.Run("insert element (theirs)", func(b *testing.B) {
+		ref, _ = theirs.NewTrieWithUpdatedRegisters(ref, paths, payloads)
+		_ = ref.RootHash()
+	})
 }
 
 // deduplicateWrites retains only the last register write

@@ -24,6 +24,10 @@ func NewLeaf(path ledger.Path, payload *ledger.Payload, height int) *Leaf {
 	return &n
 }
 
+func (l Leaf) ComputeHash() hash.Hash {
+	return l.Hash()
+}
+
 func (l Leaf) Hash() hash.Hash {
 	return l.hash
 }
