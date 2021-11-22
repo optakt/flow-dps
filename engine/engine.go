@@ -25,15 +25,15 @@ type Engine struct {
 	log        zerolog.Logger
 	components []*component
 
-	stop   chan os.Signal
-	notify chan error
+	interrupt chan os.Signal
+	notify    chan error
 }
 
 // New creates a new engine.
-func New(log zerolog.Logger, name string, stop chan os.Signal) *Engine {
+func New(log zerolog.Logger, name string, interrupt chan os.Signal) *Engine {
 	e := Engine{
-		log:  log.With().Str("engine", name).Logger(),
-		stop: stop,
+		log:       log.With().Str("engine", name).Logger(),
+		interrupt: interrupt,
 	}
 
 	return &e
@@ -66,18 +66,19 @@ func (e *Engine) Run() error {
 	// entering a goroutine that allows us to force shut down by sending
 	// another signal.
 	select {
-	case <-e.stop:
+	case <-e.interrupt:
 		e.log.Info().Msg("engine stopping")
+		e.stop()
 	case err := <-e.notify:
 		if err != nil {
 			e.log.Error().Err(err).Msg("engine failed")
-			e.Stop()
+			e.stop()
 			return err
 		}
 		e.log.Info().Msg("engine done")
 	}
 	go func() {
-		<-e.stop
+		<-e.interrupt
 		e.log.Warn().Msg("forcing exit")
 		os.Exit(1)
 	}()
@@ -85,9 +86,9 @@ func (e *Engine) Run() error {
 	return nil
 }
 
-// Stop stops each of the engine's components one by one, in the order in which they were
-// registered.
-func (e *Engine) Stop() {
+// stop each of the engine's components one by one, in the reverse order in which
+// they were registered.
+func (e *Engine) stop() {
 	// Components are stopped in the reverse order in which they were registered.
 	for i := len(e.components) - 1; i >= 0; i-- {
 		e.components[i].Stop()

@@ -63,7 +63,7 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ..
 	}
 
 	g := GCPStreamer{
-		log:     log.With().Str("engine", "gcp_streamer").Logger(),
+		log:     log.With().Str("component", "gcp_streamer").Logger(),
 		decoder: decoder,
 		bucket:  bucket,
 		queue:   dps.NewDeque(),
