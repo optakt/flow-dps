@@ -21,8 +21,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/optakt/flow-dps/ledger/forest/trie"
 
+	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -57,7 +57,7 @@ func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, options .
 
 // Trie restores the execution state trie from the DPS index database, as it was
 // when indexing was stopped.
-func (i *Index) Trie(db *badger.DB) (*trie.MTrie, error) {
+func (i *Index) Trie(db *badger.DB) (*trie.Trie, error) {
 
 	// Load the starting trie.
 	tree, err := i.cfg.TrieInitializer.Trie(db)
@@ -65,13 +65,10 @@ func (i *Index) Trie(db *badger.DB) (*trie.MTrie, error) {
 		return nil, fmt.Errorf("could not initialize trie: %w", err)
 	}
 
+	trie := trie.NewEmptyTrie(db)
 	processed := 0
 	process := func(path ledger.Path, payload *ledger.Payload) error {
-		var err error
-		tree, err = trie.NewTrieWithUpdatedRegisters(db, tree, []ledger.Path{path}, []*ledger.Payload{payload})
-		if err != nil {
-			return fmt.Errorf("could not update trie: %w", err)
-		}
+		trie.Insert(path, payload)
 		processed++
 		if processed%10000 == 0 {
 			i.log.Debug().Int("processed", processed).Msg("processing registers for trie restoration")

@@ -18,12 +18,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/optakt/flow-dps/ledger/forest/trie"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/ledger/trie"
 
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
@@ -81,15 +82,16 @@ func TestTransitions_BootstrapState(t *testing.T) {
 		// tests running in parallel.
 		var saveCalled bool
 		forest := mocks.BaselineForest(t, true)
-		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
+		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment) {
 			if !saveCalled {
-				assert.True(t, tree.IsEmpty())
+				assert.Nil(t, tree.RootNode())
 				assert.Nil(t, paths)
+				assert.Nil(t, payloads)
 				assert.Zero(t, parent)
 				saveCalled = true
 				return
 			}
-			assert.False(t, tree.IsEmpty())
+			assert.NotNil(t, tree.RootNode())
 			// FIXME:
 			//assert.Len(t, tree.AllPayloads(), len(paths))
 			assert.Len(t, paths, 3) // Expect the three paths from leaves.
@@ -498,13 +500,14 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		tr, st := baselineFSM(t, StatusUpdate)
 
 		forest := mocks.BaselineForest(t, false)
-		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
+		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment) {
 			// Parent is RootHash of the mocks.GenericTrie.
 			assert.Equal(t, update.RootHash[:], parent[:])
 			assert.ElementsMatch(t, paths, update.Paths)
+			assert.ElementsMatch(t, payloads, update.Payloads)
 			assert.NotZero(t, tree)
 		}
-		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.MTrie, bool) {
+		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.Trie, bool) {
 			assert.Equal(t, update.RootHash[:], commit[:])
 			return tree, true
 		}
@@ -596,7 +599,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		t.Parallel()
 
 		forest := mocks.BaselineForest(t, false)
-		forest.TreeFunc = func(_ flow.StateCommitment) (*trie.MTrie, bool) {
+		forest.TreeFunc = func(_ flow.StateCommitment) (*trie.Trie, bool) {
 			return nil, false
 		}
 
@@ -912,7 +915,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -953,7 +956,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -992,7 +995,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1027,7 +1030,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1061,7 +1064,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1095,7 +1098,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1129,7 +1132,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1163,7 +1166,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
 			return tree, nil
 		}
 

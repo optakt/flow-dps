@@ -17,15 +17,16 @@ package mapper
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/ledger/forest/trie"
+
+	"github.com/optakt/flow-dps/ledger/trie"
 )
 
 // Forest represents a multitude of trees which are mapped by their state commitment hash.
 type Forest interface {
-	Save(tree *trie.MTrie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment)
+	Add(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment)
 	Has(commit flow.StateCommitment) bool
-	Tree(commit flow.StateCommitment) (*trie.MTrie, bool)
-	Values() map[ledger.Path]*ledger.Payload
+	Tree(commit flow.StateCommitment) (*trie.Trie, bool)
 	Parent(commit flow.StateCommitment) (flow.StateCommitment, bool)
+	Values() map[ledger.Path]*ledger.Payload
 	Reset(finalized flow.StateCommitment)
 }

@@ -24,7 +24,8 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/ledger/forest/trie"
+
+	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -93,8 +94,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// stopping point when indexing the payloads since the last finalized
 	// block. We thus introduce an empty tree, with no paths and an
 	// irrelevant previous commit.
-	empty := trie.NewEmptyMTrie()
-	s.forest.Save(empty, nil, nil, flow.DummyStateCommitment)
+	empty := trie.NewEmptyTrie(s.db)
+	s.forest.Add(empty, nil, nil, flow.DummyStateCommitment)
 
 	// The chain indexing will forward last to next and next to current height,
 	// which will be the one for the checkpoint.
@@ -114,14 +115,14 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 	// When bootstrapping, the loader injected into the mapper loads the root
 	// checkpoint.
-	tree, err := t.load.Trie(s.db)
+	tr, err := t.load.Trie(s.db)
 	if err != nil {
 		return fmt.Errorf("could not load root trie: %w", err)
 	}
-	paths := allPaths(tree)
-	s.forest.Save(tree, paths, nil, first)
+	paths := allPaths(tr)
+	s.forest.Add(tr, paths, nil, first)
 
-	second := tree.RootHash()
+	second := tr.RootHash()
 	t.log.Info().Uint64("height", s.height).Hex("commit", second[:]).Int("registers", len(paths)).Msg("added checkpoint tree to forest")
 
 	// We have successfully bootstrapped. However, no chain data for the root
@@ -185,7 +186,7 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 	// state commitment or the paths, as they should not be used.
 	s.last = flow.DummyStateCommitment
 	s.next = commit
-	s.forest.Save(tree, nil, nil, flow.DummyStateCommitment)
+	s.forest.Add(tree, nil, nil, flow.DummyStateCommitment)
 
 	// Lastly, we just need to point to the next height. The chain indexing will
 	// then proceed with the first non-indexed block and forward the state
@@ -373,12 +374,11 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// forest, and save the updated tree in the forest. If the tree is not new,
 	// we should error, as that should not happen.
 	paths, payloads := pathsPayloads(update)
-	tree, err = trie.NewTrieWithUpdatedRegisters(s.db, tree, paths, payloads)
-	if err != nil {
-		return fmt.Errorf("could not update tree: %w", err)
+	for i := range paths {
+		tree.Insert(paths[i], payloads[i])
 	}
 
-	s.forest.Save(tree, paths, payloads, parent)
+	s.forest.Add(tree, paths, payloads, parent)
 
 	hash := tree.RootHash()
 	log.Info().Hex("commit", hash[:]).Int("paths", len(paths)).Int("payloads", len(payloads)).Msg(">>> SAVE FOREST")

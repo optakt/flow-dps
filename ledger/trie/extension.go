@@ -13,66 +13,90 @@ type Extension struct {
 	lChild Node
 	rChild Node
 
-	skip   int // Height at which the extension points to.
-	path   ledger.Path // FIXME: Store only skipped part of the path rather than whole path.
+	height uint16
+	// skip is the height up to which the extension skips to.
+	skip   uint16
+	// path is the path that the extension skips through.
+	// FIXME: Store only skipped part of the path rather than whole path.
+	path   ledger.Path
 	hash   hash.Hash
-	height int
+
+	// dirty marks whether the current hash value of the branch is valid.
+	// If this is set to false, the hash needs to be recomputed.
+	dirty  bool
 }
 
-func NewExtension(height int, skip int, path ledger.Path) *Extension {
+func NewExtension(height, skip uint16, path ledger.Path, lChild, rChild Node) *Extension {
 	e := Extension{
+		lChild: lChild,
+		rChild: rChild,
+
+		height: height,
 		skip:   skip,
 		path:   path,
-		height: height,
+		dirty:  true,
 	}
-
-	//fmt.Printf("Creating extension that goes from height %d to %d for path %x\n", height, skip, path[:])
 
 	return &e
 }
 
-func (e *Extension) ComputeHash() hash.Hash {
+func (e *Extension) computeHash() {
 	var computed hash.Hash
 
 	var lHash, rHash hash.Hash
 	if e.lChild != nil {
-		lHash = e.lChild.ComputeHash()
+		lHash = e.lChild.Hash()
 	} else {
-		lHash = ledger.GetDefaultHashForHeight(e.skip-1)
+		lHash = ledger.GetDefaultHashForHeight(int(e.skip) - 1)
 	}
 
 	if e.rChild != nil {
-		rHash = e.rChild.ComputeHash()
+		rHash = e.rChild.Hash()
 	} else {
-		rHash = ledger.GetDefaultHashForHeight(e.skip-1)
+		rHash = ledger.GetDefaultHashForHeight(int(e.skip) - 1)
 	}
 	computed = hash.HashInterNode(lHash, rHash)
-	//fmt.Printf("Computing hash for extension at path")
-	//for _, p1 := range e.path[:] {
-	//	fmt.Printf("%08b", p1)
-	//}
-	//fmt.Println()
-	//fmt.Printf("GOT H%d %x + %x = %x\n", e.skip-1, lHash[:], rHash[:], computed[:])
 
 	for i := e.skip; i < e.height; i++ {
-		if bitutils.Bit(e.path[:], nodeHeight(i+1)) == 0 {
+		if bitutils.Bit(e.path[:], int(nodeHeight(i+1))) == 0 {
 			lHash = computed
-			rHash = ledger.GetDefaultHashForHeight(i)
+			rHash = ledger.GetDefaultHashForHeight(int(i))
 		} else {
-			lHash = ledger.GetDefaultHashForHeight(i)
+			lHash = ledger.GetDefaultHashForHeight(int(i))
 			rHash = computed
 		}
 		computed = hash.HashInterNode(lHash, rHash)
-		//fmt.Printf("GOT H%d %x + %x = %x\n", i, lHash[:], rHash[:], computed[:])
 	}
 
 	e.hash = computed
-
-	return e.hash
+	e.dirty = false
 }
 
 func (e *Extension) Hash() hash.Hash {
-	return e.ComputeHash()
+	if e.dirty {
+		e.computeHash()
+	}
+	return e.hash
+}
+
+func (e *Extension) FlagDirty() {
+	e.dirty = true
+}
+
+func (e *Extension) Height() uint16 {
+	return e.height
+}
+
+func (e *Extension) LeftChild() Node {
+	return e.lChild
+}
+
+func (e *Extension) RightChild() Node {
+	return e.rChild
+}
+
+func (e *Extension) Path() ledger.Path {
+	return ledger.DummyPath
 }
 
 func (e *Extension) Dump(w io.Writer) {
@@ -87,9 +111,4 @@ func (e *Extension) Dump(w io.Writer) {
 	if e.rChild != nil {
 		e.rChild.Dump(w)
 	}
-}
-
-func (e *Extension) SetChildren(lChild, rChild Node) {
-	e.lChild = lChild
-	e.rChild = rChild
 }

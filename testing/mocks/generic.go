@@ -31,12 +31,10 @@ import (
 	chash "github.com/onflow/flow-go/crypto/hash"
 	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/mempool/entity"
 
-	"github.com/optakt/flow-dps/ledger/forest/node"
-	"github.com/optakt/flow-dps/ledger/forest/trie"
+	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -79,33 +77,21 @@ var (
 	//         3   5
 	//        / \   \
 	//       1   2   4
-	GenericRootNode = node.NewNode(
+	GenericRootNode = trie.NewBranch(
 		256,
-		node.NewNode(
-			256,
-			node.NewLeaf(GenericLedgerPath(0), GenericLedgerPayload(0), 42),
-			node.NewLeaf(GenericLedgerPath(1), GenericLedgerPayload(1), 42),
-			GenericLedgerPath(2),
-			hash.DummyHash,
-			64,
-			64,
+		trie.NewBranch(
+			255,
+			trie.NewLeaf(GenericLedgerPath(0), GenericLedgerPayload(0), 254),
+			trie.NewLeaf(GenericLedgerPath(1), GenericLedgerPayload(1), 254),
 		),
-		node.NewNode(
-			256,
-			node.NewLeaf(GenericLedgerPath(3), GenericLedgerPayload(3), 42),
-			nil,
-			GenericLedgerPath(4),
-			hash.DummyHash,
-			64,
-			64,
+		trie.NewBranch(
+			255,
+			trie.NewLeaf( GenericLedgerPath(0), GenericLedgerPayload(0), 254),
+			trie.NewLeaf( GenericLedgerPath(1), GenericLedgerPayload(1), 254),
 		),
-		GenericLedgerPath(5),
-		hash.DummyHash,
-		64,
-		64,
 	)
 
-	GenericTrie, _ = trie.NewMTrie(GenericRootNode)
+	GenericTrie = trie.NewTrie(GenericRootNode, nil)
 
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),

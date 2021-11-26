@@ -18,11 +18,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/optakt/flow-dps/ledger/forest/node"
-	"github.com/optakt/flow-dps/ledger/forest/trie"
+	"github.com/optakt/flow-dps/ledger/trie"
 
 	"github.com/optakt/flow-dps/testing/mocks"
 )
@@ -31,9 +29,8 @@ func TestAllPaths(t *testing.T) {
 	t.Run("nominal case with single path", func(t *testing.T) {
 		t.Parallel()
 
-		testNode := node.NewLeaf(mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0), 256)
-		testTrie, err := trie.NewMTrie(testNode)
-		require.NoError(t, err)
+		testNode := trie.NewLeaf(mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0), 256)
+		testTrie := trie.NewTrie(testNode, nil)
 
 		got := allPaths(testTrie)
 
@@ -54,7 +51,7 @@ func TestAllPaths(t *testing.T) {
 	t.Run("empty trie", func(t *testing.T) {
 		t.Parallel()
 
-		got := allPaths(trie.NewEmptyMTrie())
+		got := allPaths(trie.NewEmptyTrie(nil))
 
 		assert.Empty(t, got)
 	})

@@ -21,7 +21,7 @@ import (
 	"github.com/dgraph-io/badger/v2"
 
 	"github.com/optakt/flow-dps/ledger/forest/flattener"
-	"github.com/optakt/flow-dps/ledger/forest/trie"
+	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/ledger/wal"
 )
 
@@ -42,7 +42,7 @@ func FromCheckpoint(file io.Reader) *Checkpoint {
 }
 
 // Trie loads the execution state trie from the LedgerWAL root checkpoint.
-func (c *Checkpoint) Trie(db *badger.DB) (*trie.MTrie, error) {
+func (c *Checkpoint) Trie(db *badger.DB) (*trie.Trie, error) {
 
 	checkpoint, err := wal.ReadCheckpoint(c.file)
 	if err != nil {

@@ -12,39 +12,69 @@ type Branch struct {
 	lChild Node
 	rChild Node
 
+	height uint16
 	hash   hash.Hash
-	height int
+
+	// dirty marks whether the current hash value of the branch is valid.
+	// If this is set to false, the hash needs to be recomputed.
+	dirty bool
 }
 
-func NewBranch(height int) *Branch {
+func NewBranch(height uint16, lChild, rChild Node) *Branch {
 	b := Branch{
+		lChild: lChild,
+		rChild: rChild,
+
 		height: height,
+		dirty:  true,
 	}
 
 	return &b
 }
 
-func (b *Branch) ComputeHash() hash.Hash {
+func (b *Branch) computeHash() {
 	var lHash, rHash hash.Hash
 	if b.lChild != nil {
-		lHash = b.lChild.ComputeHash()
+		lHash = b.lChild.Hash()
 	} else {
-		lHash = ledger.GetDefaultHashForHeight(b.height - 1)
+		lHash = ledger.GetDefaultHashForHeight(int(b.height) - 1)
 	}
 
 	if b.rChild != nil {
-		rHash = b.rChild.ComputeHash()
+		rHash = b.rChild.Hash()
 	} else {
-		rHash = ledger.GetDefaultHashForHeight(b.height - 1)
+		rHash = ledger.GetDefaultHashForHeight(int(b.height) - 1)
 	}
 
 	b.hash = hash.HashInterNode(lHash, rHash)
-
-	return b.hash
+	b.dirty = false
 }
 
 func (b *Branch) Hash() hash.Hash {
+	if b.dirty {
+		b.computeHash()
+	}
 	return b.hash
+}
+
+func (b *Branch) FlagDirty() {
+	b.dirty = true
+}
+
+func (b *Branch) Height() uint16 {
+	return b.height
+}
+
+func (b *Branch) Path() ledger.Path {
+	return ledger.DummyPath
+}
+
+func (b *Branch) LeftChild() Node {
+	return b.lChild
+}
+
+func (b *Branch) RightChild() Node {
+	return b.rChild
 }
 
 func (b *Branch) Dump(w io.Writer) {
@@ -59,9 +89,4 @@ func (b *Branch) Dump(w io.Writer) {
 	if b.rChild != nil {
 		b.rChild.Dump(w)
 	}
-}
-
-func (b *Branch) SetChildren(lChild, rChild Node) {
-	b.lChild = lChild
-	b.rChild = rChild
 }

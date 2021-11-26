@@ -17,18 +17,20 @@ package mocks
 import (
 	"testing"
 
-	"github.com/optakt/flow-dps/ledger/forest/trie"
+	"github.com/dgraph-io/badger/v2"
+
+	"github.com/optakt/flow-dps/ledger/trie"
 )
 
 type Loader struct {
-	TrieFunc func() (*trie.MTrie, error)
+	TrieFunc func(db *badger.DB) (*trie.Trie, error)
 }
 
 func BaselineLoader(t *testing.T) *Loader {
 	t.Helper()
 
 	l := Loader{
-		TrieFunc: func() (*trie.MTrie, error) {
+		TrieFunc: func(*badger.DB) (*trie.Trie, error) {
 			return GenericTrie, nil
 		},
 	}
@@ -36,6 +38,6 @@ func BaselineLoader(t *testing.T) *Loader {
 	return &l
 }
 
-func (l *Loader) Trie() (*trie.MTrie, error) {
-	return l.TrieFunc()
+func (l *Loader) Trie(db *badger.DB) (*trie.Trie, error) {
+	return l.TrieFunc(db)
 }

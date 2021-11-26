@@ -20,15 +20,16 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/ledger/forest/trie"
+	"github.com/optakt/flow-dps/ledger/trie"
 )
 
 type Forest struct {
-	SaveFunc   func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment)
+	AddFunc    func(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment)
 	HasFunc    func(commit flow.StateCommitment) bool
-	TreeFunc   func(commit flow.StateCommitment) (*trie.MTrie, bool)
+	TreeFunc   func(commit flow.StateCommitment) (*trie.Trie, bool)
 	PathsFunc  func(commit flow.StateCommitment) ([]ledger.Path, bool)
 	ParentFunc func(commit flow.StateCommitment) (flow.StateCommitment, bool)
+	ValuesFunc func() map[ledger.Path]*ledger.Payload
 	ResetFunc  func(finalized flow.StateCommitment)
 	SizeFunc   func() uint
 }
@@ -37,11 +38,11 @@ func BaselineForest(t *testing.T, hasCommit bool) *Forest {
 	t.Helper()
 
 	f := Forest{
-		SaveFunc: func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {},
+		AddFunc: func(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment) {},
 		HasFunc: func(commit flow.StateCommitment) bool {
 			return hasCommit
 		},
-		TreeFunc: func(commit flow.StateCommitment) (*trie.MTrie, bool) {
+		TreeFunc: func(commit flow.StateCommitment) (*trie.Trie, bool) {
 			return GenericTrie, true
 		},
 		PathsFunc: func(commit flow.StateCommitment) ([]ledger.Path, bool) {
@@ -59,15 +60,15 @@ func BaselineForest(t *testing.T, hasCommit bool) *Forest {
 	return &f
 }
 
-func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
-	f.SaveFunc(tree, paths, parent)
+func (f *Forest) Add(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment) {
+	f.AddFunc(tree, paths, payloads, parent)
 }
 
 func (f *Forest) Has(commit flow.StateCommitment) bool {
 	return f.HasFunc(commit)
 }
 
-func (f *Forest) Tree(commit flow.StateCommitment) (*trie.MTrie, bool) {
+func (f *Forest) Tree(commit flow.StateCommitment) (*trie.Trie, bool) {
 	return f.TreeFunc(commit)
 }
 
@@ -77,6 +78,10 @@ func (f *Forest) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
 
 func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool) {
 	return f.ParentFunc(commit)
+}
+
+func (f *Forest) Values() map[ledger.Path]*ledger.Payload {
+	return f.ValuesFunc()
 }
 
 func (f *Forest) Reset(finalized flow.StateCommitment) {

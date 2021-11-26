@@ -21,11 +21,10 @@ import (
 	"github.com/gammazero/deque"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/optakt/flow-dps/ledger/forest/node"
-	"github.com/optakt/flow-dps/ledger/forest/trie"
+	"github.com/optakt/flow-dps/ledger/trie"
 )
 
-func allPaths(tree *trie.MTrie) []ledger.Path {
+func allPaths(tree *trie.Trie) []ledger.Path {
 
 	var paths []ledger.Path
 
@@ -35,10 +34,10 @@ func allPaths(tree *trie.MTrie) []ledger.Path {
 		queue.PushBack(root)
 	}
 	for queue.Len() > 0 {
-		node := queue.PopBack().(*node.Node)
-		if node.IsLeaf() {
+		node := queue.PopBack().(trie.Node)
+		if node.Path() != ledger.DummyPath {
 			path := node.Path()
-			paths = append(paths, *path)
+			paths = append(paths, path)
 			continue
 		}
 		if node.LeftChild() != nil {

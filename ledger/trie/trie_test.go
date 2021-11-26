@@ -2,26 +2,26 @@ package trie
 
 import (
 	"encoding/hex"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/utils"
-	theirs "github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	reference "github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/optakt/flow-dps/testing/helpers"
 )
 
 func Test_TrieWithLeftRegister(t *testing.T) {
-	trie := &Trie{root: nil}
+	db := helpers.InMemoryDB(t)
+	defer db.Close()
+
+	trie := &Trie{db: db}
 
 	path := utils.PathByUint16LeftPadded(0)
 	payload := utils.LightPayload(11, 12345)
 
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-	trie.Insert(db, path, payload)
+	trie.Insert(path, payload)
 
 	expectedRootHashHex := "b30c99cc3e027a6ff463876c638041b1c55316ed935f1b3699e52a2c3e3eaaab"
 
@@ -30,7 +30,10 @@ func Test_TrieWithLeftRegister(t *testing.T) {
 }
 
 func Test_TrieWithRightRegister(t *testing.T) {
-	trie := &Trie{root: nil}
+	db := helpers.InMemoryDB(t)
+	defer db.Close()
+
+	trie := &Trie{db: db}
 
 	var path ledger.Path
 	for i := 0; i < len(path); i++ {
@@ -38,9 +41,7 @@ func Test_TrieWithRightRegister(t *testing.T) {
 	}
 	payload := utils.LightPayload(12346, 54321)
 
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-	trie.Insert(db, path, payload)
+	trie.Insert(path, payload)
 
 	expectedRootHashHex := "4313d22bcabbf21b1cfb833d38f1921f06a91e7198a6672bc68fa24eaaa1a961"
 
@@ -49,14 +50,15 @@ func Test_TrieWithRightRegister(t *testing.T) {
 }
 
 func Test_TrieWithMiddleRegister(t *testing.T) {
-	trie := &Trie{root: nil}
+	db := helpers.InMemoryDB(t)
+	defer db.Close()
+
+	trie := &Trie{db: db}
 
 	path := utils.PathByUint16LeftPadded(56809)
 	payload := utils.LightPayload(12346, 59656)
 
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-	trie.Insert(db, path, payload)
+	trie.Insert(path, payload)
 
 	expectedRootHashHex := "4a29dad0b7ae091a1f035955e0c9aab0692b412f60ae83290b6290d4bf3eb296"
 
@@ -65,22 +67,19 @@ func Test_TrieWithMiddleRegister(t *testing.T) {
 }
 
 func Test_TrieWithManyRegisters(t *testing.T) {
-	trie := &Trie{root: nil}
+	db := helpers.InMemoryDB(t)
+	defer db.Close()
+
+	trie := &Trie{db: db}
 
 	rng := &LinearCongruentialGenerator{seed: 0}
 	paths, payloads := deduplicateWrites(sampleRandomRegisterWrites(rng, 12001))
 
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
 	for i := range paths {
-		trie.Insert(db, paths[i], &payloads[i])
+		trie.Insert(paths[i], &payloads[i])
 	}
 
-	got := trie.root.ComputeHash()
-
-	file, _ := os.Create("/tmp/new.log")
-	defer file.Close()
-	trie.Dump(file)
+	got := trie.RootHash()
 
 	expectedRootHashHex := "74f748dbe563bb5819d6c09a34362a048531fd9647b4b2ea0b6ff43f200198aa"
 
@@ -88,25 +87,26 @@ func Test_TrieWithManyRegisters(t *testing.T) {
 }
 
 func Benchmark_TrieRootHash(b *testing.B) {
-	trie := &Trie{root: nil}
-	ref := theirs.NewEmptyMTrie()
-
-	rng := &LinearCongruentialGenerator{seed: 0}
-	paths, payloads := deduplicateWrites(sampleRandomRegisterWrites(rng, 30_000_000))
 
 	db := helpers.InMemoryDB(&testing.T{})
 	defer db.Close()
 
-	b.Run("insert element (ours)", func(b *testing.B) {
-		for i := range paths {
-			trie.Insert(db, paths[i], &payloads[i])
-		}
-		_ = trie.root.ComputeHash()
+	rng := &LinearCongruentialGenerator{seed: 0}
+	paths, payloads := deduplicateWrites(sampleRandomRegisterWrites(rng, 12001))
+
+	//var wantHash, gotHash ledger.RootHash
+	b.Run("insert elements (reference)", func(b *testing.B) {
+		ref := reference.NewEmptyMTrie()
+		ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
+		_ = ref.RootHash()
 	})
 
-	b.Run("insert element (theirs)", func(b *testing.B) {
-		ref, _ = theirs.NewTrieWithUpdatedRegisters(ref, paths, payloads)
-		_ = ref.RootHash()
+	b.Run("insert elements (new)", func(b *testing.B) {
+		trie := &Trie{db: db}
+		for i := range paths {
+			trie.Insert(paths[i], &payloads[i])
+		}
+		_ = trie.RootHash()
 	})
 }
 
@@ -150,4 +150,10 @@ func sampleRandomRegisterWrites(rng *LinearCongruentialGenerator, number int) ([
 		payloads = append(payloads, *payload)
 	}
 	return paths, payloads
+}
+
+func LightPayload(key uint16, value uint16) *ledger.Payload {
+	k := ledger.Key{KeyParts: []ledger.KeyPart{{Type: 0, Value: utils.Uint16ToBinary(key)}}}
+	v := ledger.Value(utils.Uint16ToBinary(value))
+	return &ledger.Payload{Key: k, Value: v}
 }

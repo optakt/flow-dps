@@ -17,10 +17,10 @@ package mapper
 import (
 	"github.com/dgraph-io/badger/v2"
 
-	"github.com/optakt/flow-dps/ledger/forest/trie"
+	"github.com/optakt/flow-dps/ledger/trie"
 )
 
 // Loader represents something that loads its checkpoint and builds it into a trie.
 type Loader interface {
-	Trie(db *badger.DB) (*trie.MTrie, error)
+	Trie(db *badger.DB) (*trie.Trie, error)
 }
