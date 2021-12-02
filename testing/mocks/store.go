@@ -12,28 +12,32 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package trie
+package mocks
 
 import (
-	"io"
-
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
-// FIXME: Look into arena allocation for node paths to improve both memory usage and performance.
-// FIXME: Look into using a sync Pool to reduce allocations at the expense of some performance.
+type Store struct {
+	SaveFunc     func(path ledger.Path, payload *ledger.Payload)
+	RetrieveFunc func(path ledger.Path) (*ledger.Payload, error)
+}
 
-// Node represents a trie node.
-type Node interface {
-	Height() uint16
-	Path() ledger.Path
-	Hash() hash.Hash
+func BaselineStore() *Store {
+	s := Store{
+		SaveFunc: func(path ledger.Path, payload *ledger.Payload) {},
+		RetrieveFunc: func(path ledger.Path) (*ledger.Payload, error) {
+			return GenericLedgerPayload(0), nil
+		},
+	}
 
-	// TODO: The following can be removed if the logic to flatten forests is available through this package rather than done externally. Same goes for listing all paths within a trie from the mapper.
+	return &s
+}
 
-	LeftChild() Node
-	RightChild() Node
+func (s *Store) Save(path ledger.Path, payload *ledger.Payload) {
+	s.SaveFunc(path, payload)
+}
 
-	Dump(io.Writer)
+func (s *Store) Retrieve(path ledger.Path) (*ledger.Payload, error) {
+	return s.RetrieveFunc(path)
 }

@@ -31,14 +31,19 @@ import (
 type Index struct {
 	log zerolog.Logger
 	lib dps.ReadLibrary
-	db  *badger.DB
 	cfg Config
+
+	// db is the database that contains the index.
+	db *badger.DB
+
+	// store is the payload storage to use for the trie that is generated from the index.
+	store dps.Store
 }
 
 // FromIndex creates a new index loader, which can restore the execution state
 // from the given index database, using the given library for decoding ledger
 // paths and payloads.
-func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, options ...Option) *Index {
+func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, store dps.Store, options ...Option) *Index {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -46,10 +51,11 @@ func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, options .
 	}
 
 	i := Index{
-		log: log.With().Str("component", "index_loader").Logger(),
-		lib: lib,
-		db:  db,
-		cfg: cfg,
+		log:   log.With().Str("component", "index_loader").Logger(),
+		lib:   lib,
+		db:    db,
+		store: store,
+		cfg:   cfg,
 	}
 
 	return &i
@@ -57,15 +63,15 @@ func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, options .
 
 // Trie restores the execution state trie from the DPS index database, as it was
 // when indexing was stopped.
-func (i *Index) Trie(db *badger.DB) (*trie.Trie, error) {
+func (i *Index) Trie() (*trie.Trie, error) {
 
 	// Load the starting trie.
-	tree, err := i.cfg.TrieInitializer.Trie(db)
+	tree, err := i.cfg.TrieInitializer.Trie()
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize trie: %w", err)
 	}
 
-	trie := trie.NewEmptyTrie(db)
+	trie := trie.NewEmptyTrie(i.store)
 	processed := 0
 	process := func(path ledger.Path, payload *ledger.Payload) error {
 		trie.Insert(path, payload)

@@ -94,7 +94,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// stopping point when indexing the payloads since the last finalized
 	// block. We thus introduce an empty tree, with no paths and an
 	// irrelevant previous commit.
-	empty := trie.NewEmptyTrie(s.db)
+	empty := trie.NewEmptyTrie(nil)
 	s.forest.Add(empty, nil, nil, flow.DummyStateCommitment)
 
 	// The chain indexing will forward last to next and next to current height,
@@ -115,7 +115,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 	// When bootstrapping, the loader injected into the mapper loads the root
 	// checkpoint.
-	tr, err := t.load.Trie(s.db)
+	tr, err := t.load.Trie()
 	if err != nil {
 		return fmt.Errorf("could not load root trie: %w", err)
 	}
@@ -165,7 +165,7 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 
 	// When resuming, the loader injected into the mapper rebuilds the trie from
 	// the paths and payloads stored in the index database.
-	tree, err := t.load.Trie(s.db)
+	tree, err := t.load.Trie()
 	if err != nil {
 		return fmt.Errorf("could not restore index trie: %w", err)
 	}

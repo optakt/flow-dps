@@ -5,10 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/dgraph-io/badger/v2"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/optakt/flow-dps/ledger/forest"
+	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/optakt/flow-dps/ledger/trie"
 )
@@ -101,12 +100,12 @@ func toStorableNode(node trie.Node, indexForNode node2indexMap) (*StorableNode, 
 		path = nodePath[:]
 	}
 	storableNode := &StorableNode{
-		LIndex:     leftIndex,
-		RIndex:     rightIndex,
-		Height:     node.Height(),
-		Path:       path,
+		LIndex: leftIndex,
+		RIndex: rightIndex,
+		Height: node.Height(),
+		Path:   path,
 		//EncPayload: encoding.EncodePayload(node.Payload()),
-		HashValue:  hash[:],
+		HashValue: hash[:],
 	}
 	return storableNode, nil
 }
@@ -127,7 +126,7 @@ func toStorableTrie(trie *trie.Trie, indexForNode node2indexMap) (*StorableTrie,
 }
 
 // RebuildTries construct a forest from a storable FlattenedForest
-func RebuildTries(db *badger.DB, flatForest *FlattenedForest) ([]*trie.Trie, error) {
+func RebuildTries(store dps.Store, flatForest *FlattenedForest) ([]*trie.Trie, error) {
 	tries := make([]*trie.Trie, 0, len(flatForest.Tries))
 	nodes, err := RebuildNodes(flatForest.Nodes)
 	if err != nil {
@@ -136,7 +135,7 @@ func RebuildTries(db *badger.DB, flatForest *FlattenedForest) ([]*trie.Trie, err
 
 	//restore tries
 	for _, storableTrie := range flatForest.Tries {
-		trie := trie.NewTrie(nodes[storableTrie.RootIndex], db)
+		trie := trie.NewTrie(nodes[storableTrie.RootIndex], store)
 		rootHash := trie.RootHash()
 		if !bytes.Equal(storableTrie.RootHash, rootHash[:]) {
 			return nil, fmt.Errorf("restoring trie failed: roothash doesn't match")
@@ -175,7 +174,7 @@ func RebuildNodes(storableNodes []*StorableNode) ([]trie.Node, error) {
 			//if err != nil {
 			//	return nil, fmt.Errorf("failed to decode a hash of a storableNode %w", err)
 			//}
-			node := trie.NewLeaf(path, nil, snode.Height)//int(snode.Height), nodes[snode.LIndex], nodes[snode.RIndex], path, payload, nodeHash, snode.MaxDepth, snode.RegCount)
+			node := trie.NewLeaf(path, nil, snode.Height) //int(snode.Height), nodes[snode.LIndex], nodes[snode.RIndex], path, payload, nodeHash, snode.MaxDepth, snode.RegCount)
 			nodes = append(nodes, node)
 			continue
 		}
@@ -183,7 +182,7 @@ func RebuildNodes(storableNodes []*StorableNode) ([]trie.Node, error) {
 		//if err != nil {
 		//	return nil, fmt.Errorf("failed to decode a hash of a storableNode %w", err)
 		//}
-		node := trie.NewBranch(snode.Height, nil, nil)//(int(snode.Height), nodes[snode.LIndex], nodes[snode.RIndex], ledger.DummyPath, nil, nodeHash, snode.MaxDepth, snode.RegCount)
+		node := trie.NewBranch(snode.Height, nil, nil) //(int(snode.Height), nodes[snode.LIndex], nodes[snode.RIndex], ledger.DummyPath, nil, nodeHash, snode.MaxDepth, snode.RegCount)
 		nodes = append(nodes, node)
 	}
 	return nodes, nil

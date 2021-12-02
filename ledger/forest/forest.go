@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dgraph-io/badger/v2"
 	lru "github.com/hashicorp/golang-lru"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/optakt/flow-dps/ledger/trie"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Forest holds several in-memory tries. As Forest is a storage-abstraction layer,
@@ -39,7 +39,7 @@ type Forest struct {
 // THIS IS A ROUGH HEURISTIC as it might evict tries that are still needed.
 // Make sure you chose a sufficiently large forestCapacity, such that, when reaching the capacity, the
 // Least Recently Used trie will never be needed again.
-func NewForest(db *badger.DB, forestCapacity int, onTreeEvicted func(tree *trie.Trie) error) (*Forest, error) {
+func NewForest(store dps.Store, forestCapacity int, onTreeEvicted func(tree *trie.Trie) error) (*Forest, error) {
 	// init LRU cache as a SHORTCUT for a usage-related storage eviction policy
 	var cache *lru.Cache
 	var err error
@@ -66,7 +66,7 @@ func NewForest(db *badger.DB, forestCapacity int, onTreeEvicted func(tree *trie.
 	}
 
 	// add trie with no allocated registers
-	emptyTrie := trie.NewEmptyTrie(db)
+	emptyTrie := trie.NewEmptyTrie(store)
 	err = forest.AddTrie(emptyTrie)
 	if err != nil {
 		return nil, fmt.Errorf("adding empty trie to forest failed: %w", err)

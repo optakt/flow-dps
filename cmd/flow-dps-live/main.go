@@ -42,10 +42,11 @@ import (
 	"github.com/onflow/flow-go/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/bootstrap"
-	"github.com/optakt/flow-dps/ledger/forest"
 
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/ledger/forest"
+	"github.com/optakt/flow-dps/ledger/store"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/cloud"
 	"github.com/optakt/flow-dps/service/index"
@@ -84,9 +85,11 @@ func run() int {
 		flagMetrics    string
 		flagSkip       bool
 
-		flagFlushInterval time.Duration
-		flagSeedAddress   string
-		flagSeedKey       string
+		flagCacheSize      int
+		flagFlushInterval  time.Duration
+		flagPayloadStorage string
+		flagSeedAddress    string
+		flagSeedKey        string
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
@@ -99,7 +102,9 @@ func run() int {
 	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
+	pflag.IntVar(&flagCacheSize, "cache-size", 4*1000*1000*1000, "size of the in-memory cache for ledger payloads")
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
+	pflag.StringVar(&flagPayloadStorage, "payload-storage", "./payloads", "path at which to store ledger payloads")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
 
@@ -312,11 +317,17 @@ func run() int {
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
+	payloadStore, err := store.NewStore(log, flagCacheSize, flagPayloadStorage)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize payload storage")
+		return failure
+	}
+
 	// If we have an empty database, we want a loader to bootstrap from the
 	// checkpoint; if we don't, we can optionally use the root checkpoint to
 	// speed up the restart/restoration.
 	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
+	load = loader.FromIndex(log, storage, indexDB, payloadStore)
 	if empty {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -324,7 +335,7 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		load = loader.FromCheckpoint(file)
+		load = loader.FromCheckpoint(file, payloadStore)
 	} else if flagCheckpoint != "" {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -332,8 +343,8 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		initialize := loader.FromCheckpoint(file)
-		load = loader.FromIndex(log, storage, indexDB,
+		initialize := loader.FromCheckpoint(file, payloadStore)
+		load = loader.FromIndex(log, storage, indexDB, payloadStore,
 			loader.WithInitializer(initialize),
 			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
 		)
@@ -347,13 +358,6 @@ func run() int {
 		writer = index.NewMetricsWriter(write)
 	}
 
-	payloadsDBOpt := badger.DefaultOptions("./payloads")
-	payloadsDB, err := badger.Open(payloadsDBOpt)
-	if err != nil { // FIXME
-		log.Error().Err(err).Msg("could not open payloads DB")
-		return failure
-	}
-
 	// At this point, we can initialize the core business logic of the indexer,
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
@@ -362,7 +366,7 @@ func run() int {
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
-	state := mapper.EmptyState(payloadsDB, forest)
+	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
 		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),

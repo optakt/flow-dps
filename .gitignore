@@ -12,6 +12,7 @@
 /index/
 /trie/
 /samples/
+/payloads/
 *.cdc
 *.checkpoint
 *.log

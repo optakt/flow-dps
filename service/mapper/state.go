@@ -17,15 +17,12 @@ package mapper
 import (
 	"math"
 
-	"github.com/dgraph-io/badger/v2"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
 // State is the state machine's state.
 type State struct {
-	db        *badger.DB
 	forest    Forest
 	status    Status
 	height    uint64
@@ -36,10 +33,9 @@ type State struct {
 }
 
 // EmptyState returns a new empty state that uses the given forest.
-func EmptyState(db *badger.DB, forest Forest) *State {
+func EmptyState(forest Forest) *State {
 
 	s := State{
-		db:        db,
 		forest:    forest,
 		status:    StatusInitialize,
 		height:    math.MaxUint64,

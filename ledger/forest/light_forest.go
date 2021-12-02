@@ -8,7 +8,7 @@ import (
 )
 
 type step struct {
-	tree *trie.Trie
+	tree   *trie.Trie
 	parent flow.StateCommitment
 }
 
@@ -18,12 +18,12 @@ type step struct {
 
 type LightForest struct {
 	values map[ledger.Path]*ledger.Payload
-	steps map[flow.StateCommitment]step
+	steps  map[flow.StateCommitment]step
 }
 
 func New() *LightForest {
 	f := LightForest{
-		steps: make(map[flow.StateCommitment]step),
+		steps:  make(map[flow.StateCommitment]step),
 		values: make(map[ledger.Path]*ledger.Payload),
 	}
 

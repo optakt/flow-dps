@@ -12,12 +12,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dgraph-io/badger/v2"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/bootstrap"
 	utilsio "github.com/onflow/flow-go/utils/io"
 	"github.com/optakt/flow-dps/ledger/forest"
+	"github.com/optakt/flow-dps/models/dps"
 
 	"github.com/optakt/flow-dps/ledger/forest/flattener"
 	"github.com/optakt/flow-dps/ledger/trie"
@@ -37,16 +36,16 @@ const VersionV3 uint16 = 0x03
 type Checkpointer struct {
 	dir            string
 	wal            *DiskWAL
-	db             *badger.DB
+	store          dps.Store
 	keyByteSize    int
 	forestCapacity int
 }
 
-func NewCheckpointer(wal *DiskWAL, db *badger.DB, keyByteSize int, forestCapacity int) *Checkpointer {
+func NewCheckpointer(wal *DiskWAL, store dps.Store, keyByteSize int, forestCapacity int) *Checkpointer {
 	return &Checkpointer{
 		dir:            wal.wal.Dir(),
 		wal:            wal,
-		db:             db,
+		store:          store,
 		keyByteSize:    keyByteSize,
 		forestCapacity: forestCapacity,
 	}
@@ -159,7 +158,7 @@ func (c *Checkpointer) Checkpoint(to int, targetWriter func() (io.WriteCloser, e
 		return fmt.Errorf("no segments to checkpoint to %d, latests not checkpointed segment: %d", to, notCheckpointedTo)
 	}
 
-	forest, err := forest.NewForest(c.db, c.forestCapacity, func(evictedTrie *trie.Trie) error {
+	forest, err := forest.NewForest(c.store, c.forestCapacity, func(evictedTrie *trie.Trie) error {
 		return nil
 	})
 	if err != nil {
@@ -168,7 +167,7 @@ func (c *Checkpointer) Checkpoint(to int, targetWriter func() (io.WriteCloser, e
 
 	err = c.wal.replay(0, to,
 		func(forestSequencing *flattener.FlattenedForest) error {
-			tries, err := flattener.RebuildTries(c.db, forestSequencing)
+			tries, err := flattener.RebuildTries(c.store, forestSequencing)
 			if err != nil {
 				return err
 			}

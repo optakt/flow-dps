@@ -9,14 +9,13 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/utils"
 	reference "github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-	"github.com/optakt/flow-dps/testing/helpers"
+
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func Test_TrieWithLeftRegister(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	trie := &Trie{db: db}
+	store := mocks.BaselineStore()
+	trie := &Trie{store: store}
 
 	path := utils.PathByUint16LeftPadded(0)
 	payload := utils.LightPayload(11, 12345)
@@ -30,10 +29,8 @@ func Test_TrieWithLeftRegister(t *testing.T) {
 }
 
 func Test_TrieWithRightRegister(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	trie := &Trie{db: db}
+	store := mocks.BaselineStore()
+	trie := &Trie{store: store}
 
 	var path ledger.Path
 	for i := 0; i < len(path); i++ {
@@ -50,10 +47,8 @@ func Test_TrieWithRightRegister(t *testing.T) {
 }
 
 func Test_TrieWithMiddleRegister(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	trie := &Trie{db: db}
+	store := mocks.BaselineStore()
+	trie := &Trie{store: store}
 
 	path := utils.PathByUint16LeftPadded(56809)
 	payload := utils.LightPayload(12346, 59656)
@@ -67,10 +62,8 @@ func Test_TrieWithMiddleRegister(t *testing.T) {
 }
 
 func Test_TrieWithManyRegisters(t *testing.T) {
-	db := helpers.InMemoryDB(t)
-	defer db.Close()
-
-	trie := &Trie{db: db}
+	store := mocks.BaselineStore()
+	trie := &Trie{store: store}
 
 	rng := &LinearCongruentialGenerator{seed: 0}
 	paths, payloads := deduplicateWrites(sampleRandomRegisterWrites(rng, 12001))
@@ -87,9 +80,7 @@ func Test_TrieWithManyRegisters(t *testing.T) {
 }
 
 func Benchmark_TrieRootHash(b *testing.B) {
-
-	db := helpers.InMemoryDB(&testing.T{})
-	defer db.Close()
+	store := mocks.BaselineStore()
 
 	rng := &LinearCongruentialGenerator{seed: 0}
 	paths, payloads := deduplicateWrites(sampleRandomRegisterWrites(rng, 12001))
@@ -102,13 +93,15 @@ func Benchmark_TrieRootHash(b *testing.B) {
 	})
 
 	b.Run("insert elements (new)", func(b *testing.B) {
-		trie := &Trie{db: db}
+		trie := &Trie{store: store}
 		for i := range paths {
 			trie.Insert(paths[i], &payloads[i])
 		}
 		_ = trie.RootHash()
 	})
 }
+
+// FIXME: Clean up the tests and path/payload generation code.
 
 // deduplicateWrites retains only the last register write
 func deduplicateWrites(paths []ledger.Path, payloads []ledger.Payload) ([]ledger.Path, []ledger.Payload) {

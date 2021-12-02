@@ -1,34 +1,48 @@
+// Copyright 2021 Optakt Labs OÜ
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not
+// use this file except in compliance with the License. You may obtain a copy of
+// the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations under
+// the License.
+
 package trie
 
 import (
 	"fmt"
 	"io"
 
-	"github.com/dgraph-io/badger/v2"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
+
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 type Trie struct {
-	root Node
-	db   *badger.DB // TODO: Make DB store payloads in a cache that periodically commits on disk for performance.
+	root  Node
+	store dps.Store
 }
 
-func NewEmptyTrie(db *badger.DB) *Trie {
+func NewEmptyTrie(store dps.Store) *Trie {
 	t := Trie{
-		root: nil,
-		db:   db,
+		root:  nil,
+		store: store,
 	}
 
 	return &t
 }
 
-func NewTrie(root Node, db *badger.DB) *Trie {
+func NewTrie(root Node, store dps.Store) *Trie {
 	t := Trie{
-		root: root,
-		db:   db,
+		root:  root,
+		store: store,
 	}
 
 	return &t
@@ -82,7 +96,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 				// Create a new leaf to be the new child of the extension, along with the aforementioned branch.
 				newLeaf := NewLeaf(path, payload, nodeHeight(matched+1))
-				t.persist(path, payload)
+				t.store.Save(newLeaf.Hash(), payload)
 
 				var lChild, rChild Node
 				if bitutils.Bit(path[:], int(matched)) == 0 {
@@ -115,7 +129,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 				// Set the children based on whether the new extension is needed on the left or right child.
 				newLeaf := NewLeaf(path, payload, nodeHeight(matched+1))
-				t.persist(path, payload)
+				t.store.Save(newLeaf.Hash(), payload)
 
 				var lChild, rChild Node
 				if bitutils.Bit(path[:], int(matched)) == 0 {
@@ -141,7 +155,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 				// Set the children based on whether the new extension is needed on the left or right child.
 				newLeaf := NewLeaf(path, payload, nodeHeight(matched+1))
-				t.persist(path, payload)
+				t.store.Save(newLeaf.Hash(), payload)
 
 				var lChild, rChild Node
 				if bitutils.Bit(path[:], int(matched)) == 0 {
@@ -181,11 +195,15 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 			// We need to fetch the payload here since the old leaf now resides at a new height and therefore its
 			// hash needs to be recomputed.
-			oldPayload := t.fetch(node.path)
+			oldPayload, err := t.store.Retrieve(node.Hash())
+			if err != nil {
+				panic(err) // FIXME: Handle this gracefully.
+			}
+
 			oldLeaf := NewLeaf(node.path, oldPayload, nodeHeight(matched+1))
 
 			newLeaf := NewLeaf(path, payload, nodeHeight(matched+1))
-			t.persist(path, payload)
+			t.store.Save(newLeaf.Hash(), payload)
 
 			// Compare first different bit between existing leaf and new leaf to know which one is which child for the
 			// newly created branch.
@@ -213,7 +231,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 		case nil:
 			// There is no leaf here yet, create it.
 			*current = NewLeaf(path, payload, nodeHeight(depth))
-			t.persist(path, payload)
+			t.store.Save((*current).Hash(), payload)
 			return
 		}
 	}
@@ -269,44 +287,16 @@ func (t *Trie) read(path ledger.Path) *ledger.Payload {
 				panic(fmt.Sprintf("unsafe read: path %x not found", path[:]))
 			}
 
-			return t.fetch(path)
+			payload, err := t.store.Retrieve(node.Hash())
+			if err != nil {
+				panic(err)
+			}
+			return payload
 
 		case nil:
 			panic(fmt.Sprintf("unsafe read: path %x not found", path[:]))
 		}
 	}
-}
-
-// persist saves a payload at the given path.
-// TODO: Make this use an intermediary cache and commit the payloads to disk periodically.
-func (t *Trie) persist(path ledger.Path, payload *ledger.Payload) {
-	// FIXME: Error handling.
-
-	err := t.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(path[:], payload.Value)
-	})
-	if err != nil {
-		panic(err)
-	}
-}
-
-// persist fetches the payload for the given path.
-// TODO: Make this use an intermediary cache and commit the payloads to disk periodically.
-func (t *Trie) fetch(path ledger.Path) *ledger.Payload {
-	// FIXME: Error handling.
-
-	var payload ledger.Payload
-	_ = t.db.View(func(txn *badger.Txn) error {
-		it, err := txn.Get(path[:])
-		if err != nil {
-			panic(err)
-		}
-
-		payload.Value, _ = it.ValueCopy(nil)
-		return nil
-	})
-
-	return &payload
 }
 
 // Converts depth into Flow Go inverted height (where 256 is root).

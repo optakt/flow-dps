@@ -18,38 +18,39 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/dgraph-io/badger/v2"
-
 	"github.com/optakt/flow-dps/ledger/forest/flattener"
 	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/ledger/wal"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Checkpoint is a loader that loads a trie from a LedgerWAL checkpoint file.
 type Checkpoint struct {
-	file io.Reader
+	file  io.Reader
+	store dps.Store
 }
 
 // FromCheckpoint creates a loader which loads the trie from the provided
 // reader, which should represent a LedgerWAL checkpoint file.
-func FromCheckpoint(file io.Reader) *Checkpoint {
+func FromCheckpoint(file io.Reader, store dps.Store) *Checkpoint {
 
 	c := Checkpoint{
-		file: file,
+		file:  file,
+		store: store,
 	}
 
 	return &c
 }
 
 // Trie loads the execution state trie from the LedgerWAL root checkpoint.
-func (c *Checkpoint) Trie(db *badger.DB) (*trie.Trie, error) {
+func (c *Checkpoint) Trie() (*trie.Trie, error) {
 
 	checkpoint, err := wal.ReadCheckpoint(c.file)
 	if err != nil {
 		return nil, fmt.Errorf("could not read checkpoint: %w", err)
 	}
 
-	trees, err := flattener.RebuildTries(db, checkpoint)
+	trees, err := flattener.RebuildTries(c.store, checkpoint)
 	if err != nil {
 		return nil, fmt.Errorf("could not rebuild tries: %w", err)
 	}

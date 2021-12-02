@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 
@@ -14,13 +13,14 @@ import (
 	"github.com/onflow/flow-go/module"
 	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/forest/flattener"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
 const SegmentSize = 32 * 1024 * 1024
 
 type DiskWAL struct {
 	wal            *prometheusWAL.WAL
-	db             *badger.DB
+	store          dps.Store
 	paused         bool
 	forestCapacity int
 	pathByteSize   int
@@ -28,14 +28,14 @@ type DiskWAL struct {
 	dir            string
 }
 
-func NewDiskWAL(logger zerolog.Logger, db *badger.DB, reg prometheus.Registerer, dir string, forestCapacity int, pathByteSize int, segmentSize int) (*DiskWAL, error) {
+func NewDiskWAL(logger zerolog.Logger, store dps.Store, reg prometheus.Registerer, dir string, forestCapacity int, pathByteSize int, segmentSize int) (*DiskWAL, error) {
 	w, err := prometheusWAL.NewSize(logger, reg, dir, segmentSize, false)
 	if err != nil {
 		return nil, err
 	}
 	return &DiskWAL{
 		wal:            w,
-		db:             db,
+		store:          store,
 		paused:         false,
 		forestCapacity: forestCapacity,
 		pathByteSize:   pathByteSize,
@@ -85,7 +85,7 @@ func (w *DiskWAL) RecordDelete(rootHash ledger.RootHash) error {
 func (w *DiskWAL) ReplayOnForest(forest *forest.Forest) error {
 	return w.Replay(
 		func(forestSequencing *flattener.FlattenedForest) error {
-			rebuiltTries, err := flattener.RebuildTries(w.db, forestSequencing)
+			rebuiltTries, err := flattener.RebuildTries(w.store, forestSequencing)
 			if err != nil {
 				return fmt.Errorf("rebuilding forest from sequenced nodes failed: %w", err)
 			}
@@ -292,7 +292,7 @@ func getPossibleCheckpoints(allCheckpoints []int, from, to int) []int {
 
 // NewCheckpointer returns a Checkpointer for this WAL
 func (w *DiskWAL) NewCheckpointer() (*Checkpointer, error) {
-	return NewCheckpointer(w, w.db, w.pathByteSize, w.forestCapacity), nil
+	return NewCheckpointer(w, w.store, w.pathByteSize, w.forestCapacity), nil
 }
 
 func (w *DiskWAL) Ready() <-chan struct{} {

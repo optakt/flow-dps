@@ -28,6 +28,7 @@ import (
 
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/ledger/forest"
+	"github.com/optakt/flow-dps/ledger/store"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
@@ -59,7 +60,10 @@ func run() int {
 		flagIndex      string
 		flagLevel      string
 		flagTrie       string
-		flagSkip       bool
+
+		flagCacheSize      int
+		flagPayloadStorage string
+		flagSkip           bool
 	)
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to root checkpoint file for execution state trie")
@@ -67,6 +71,9 @@ func run() int {
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "path to data directory for execution state ledger")
+
+	pflag.IntVar(&flagCacheSize, "cache-size", 4*1000*1000*1000, "size of the in-memory cache for ledger payloads")
+	pflag.StringVar(&flagPayloadStorage, "payload-storage", "./payloads", "path at which to store ledger payloads")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
@@ -152,9 +159,15 @@ func run() int {
 		}
 	}()
 
+	payloadStore, err := store.NewStore(log, flagCacheSize, flagPayloadStorage)
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize payload storage")
+		return failure
+	}
+
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
+	load = loader.FromIndex(log, storage, indexDB, payloadStore)
 	bootstrap := flagCheckpoint != ""
 	if empty {
 		file, err := os.Open(flagCheckpoint)
@@ -163,7 +176,7 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		load = loader.FromCheckpoint(file)
+		load = loader.FromCheckpoint(file, payloadStore)
 	} else if bootstrap {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -171,18 +184,11 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		initialize := loader.FromCheckpoint(file)
-		load = loader.FromIndex(log, storage, indexDB,
+		initialize := loader.FromCheckpoint(file, payloadStore)
+		load = loader.FromIndex(log, storage, indexDB, payloadStore,
 			loader.WithInitializer(initialize),
 			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
 		)
-	}
-
-	payloadsDBOpt := badger.DefaultOptions("./payloads")
-	payloadsDB, err := badger.Open(payloadsDBOpt)
-	if err != nil { // FIXME
-		log.Error().Err(err).Msg("could not open payloads DB")
-		return failure
 	}
 
 	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
@@ -190,7 +196,7 @@ func run() int {
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
-	state := mapper.EmptyState(payloadsDB, forest)
+	state := mapper.EmptyState(forest)
 	fsm := mapper.NewFSM(state,
 		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),

@@ -15,8 +15,6 @@
 package loader
 
 import (
-	"github.com/dgraph-io/badger/v2"
-
 	"github.com/optakt/flow-dps/ledger/trie"
 )
 
@@ -33,9 +31,9 @@ func FromScratch() *Empty {
 }
 
 // Trie returns a freshly initialized empty execution state trie.
-func (e *Empty) Trie(db *badger.DB) (*trie.Trie, error) {
+func (e *Empty) Trie() (*trie.Trie, error) {
 
-	tree := trie.NewEmptyTrie(db)
+	tree := trie.NewEmptyTrie(nil)
 
 	return tree, nil
 }

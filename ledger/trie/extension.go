@@ -1,3 +1,17 @@
+// Copyright 2021 Optakt Labs OÜ
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not
+// use this file except in compliance with the License. You may obtain a copy of
+// the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations under
+// the License.
+
 package trie
 
 import (
@@ -15,15 +29,15 @@ type Extension struct {
 
 	height uint16
 	// skip is the height up to which the extension skips to.
-	skip   uint16
+	skip uint16
 	// path is the path that the extension skips through.
 	// FIXME: Store only skipped part of the path rather than whole path.
-	path   ledger.Path
-	hash   hash.Hash
+	path ledger.Path
+	hash hash.Hash
 
 	// dirty marks whether the current hash value of the branch is valid.
 	// If this is set to false, the hash needs to be recomputed.
-	dirty  bool
+	dirty bool
 }
 
 func NewExtension(height, skip uint16, path ledger.Path, lChild, rChild Node) *Extension {
