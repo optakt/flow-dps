@@ -81,13 +81,13 @@ var (
 		256,
 		trie.NewBranch(
 			255,
-			trie.NewLeaf(GenericLedgerPath(0), GenericLedgerPayload(0), 254),
-			trie.NewLeaf(GenericLedgerPath(1), GenericLedgerPayload(1), 254),
+			trie.NewLeaf(254, GenericLedgerPath(0), GenericLedgerPayload(0)),
+			trie.NewLeaf(254, GenericLedgerPath(1), GenericLedgerPayload(1)),
 		),
 		trie.NewBranch(
 			255,
-			trie.NewLeaf(GenericLedgerPath(0), GenericLedgerPayload(0), 254),
-			trie.NewLeaf(GenericLedgerPath(1), GenericLedgerPayload(1), 254),
+			trie.NewLeaf(254, GenericLedgerPath(0), GenericLedgerPayload(0)),
+			trie.NewLeaf(254, GenericLedgerPath(1), GenericLedgerPayload(1)),
 		),
 	)
 

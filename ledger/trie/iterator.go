@@ -1,9 +1,7 @@
-package flattener
+package trie
 
 import (
 	"github.com/onflow/flow-go/ledger"
-
-	"github.com/optakt/flow-dps/ledger/trie"
 )
 
 // NodeIterator is an iterator over the nodes in a trie.
@@ -40,7 +38,7 @@ type NodeIterator struct {
 	//     head of the stack.
 	//     - If `p` has only one child, this child is must be `n`.
 	//       Therefore, by recalling `n`, we have recalled all ancestors of `p`.
-	//     - If `n` is the right child, we haven already searched through all of `p`
+	//     - If `n` is the right child, we haven't already searched through all of `p`
 	//       descendents (as the `p.LeftChild` must have been searched before)
 	//       Therefore, by recalling `n`, we have recalled all ancestors of `p`
 	// Hence, it follows that the head of the stack always satisfies the
@@ -51,8 +49,8 @@ type NodeIterator struct {
 	// unprocessedRoot contains the trie's root before the first call of Next().
 	// Thereafter, it is set to nil (which prevents repeated iteration through the trie).
 	// This has the advantage, that we gracefully handle tries whose root node is nil.
-	unprocessedRoot trie.Node
-	stack           []trie.Node
+	unprocessedRoot Node
+	stack           []Node
 }
 
 // NewNodeIterator returns a node NodeIterator, which iterates through all nodes
@@ -65,11 +63,11 @@ type NodeIterator struct {
 // The Descendents-First-Relationship has the following important property:
 // When re-building the Trie from the sequence of nodes, one can build the trie on the fly,
 // as for each node, the children have been previously encountered.
-func NewNodeIterator(tr *trie.Trie) *NodeIterator {
+func NewNodeIterator(tr *Trie) *NodeIterator {
 	// for a Trie with height H (measured by number of edges), the longest possible path contains H+1 vertices
 	stackSize := ledger.NodeMaxHeight + 1
 	i := &NodeIterator{
-		stack: make([]trie.Node, 0, stackSize),
+		stack: make([]Node, 0, stackSize),
 	}
 	i.unprocessedRoot = tr.RootNode()
 	return i
@@ -100,14 +98,14 @@ func (i *NodeIterator) Next() bool {
 	return false // as len(i.stack) == 0, i.e. there are no more elements to recall
 }
 
-func (i *NodeIterator) Value() trie.Node {
+func (i *NodeIterator) Value() Node {
 	if len(i.stack) == 0 {
 		return nil
 	}
 	return i.peek()
 }
 
-func (i *NodeIterator) pop() trie.Node {
+func (i *NodeIterator) pop() Node {
 	if len(i.stack) == 0 {
 		return nil
 	}
@@ -117,11 +115,11 @@ func (i *NodeIterator) pop() trie.Node {
 	return head
 }
 
-func (i *NodeIterator) peek() trie.Node {
+func (i *NodeIterator) peek() Node {
 	return i.stack[len(i.stack)-1]
 }
 
-func (i *NodeIterator) dig(n trie.Node) {
+func (i *NodeIterator) dig(n Node) {
 	if n == nil {
 		return
 	}

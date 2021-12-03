@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/gammazero/deque"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
@@ -53,6 +55,10 @@ func (t *Trie) RootNode() Node {
 }
 
 func (t *Trie) RootHash() ledger.RootHash {
+	if t.root == nil {
+		return ledger.RootHash(hash.DummyHash)
+	}
+
 	return ledger.RootHash(t.root.Hash())
 }
 
@@ -95,7 +101,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				newBranch := NewBranch(nodeHeight(matched+1), node.lChild, node.rChild)
 
 				// Create a new leaf to be the new child of the extension, along with the aforementioned branch.
-				newLeaf := NewLeaf(path, payload, nodeHeight(matched+1))
+				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
 				t.store.Save(newLeaf.Hash(), payload)
 
 				var lChild, rChild Node
@@ -128,7 +134,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				newExt := NewExtension(nodeHeight(matched+1), node.skip, node.path, node.lChild, node.rChild)
 
 				// Set the children based on whether the new extension is needed on the left or right child.
-				newLeaf := NewLeaf(path, payload, nodeHeight(matched+1))
+				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
 				t.store.Save(newLeaf.Hash(), payload)
 
 				var lChild, rChild Node
@@ -154,7 +160,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				newExt := NewExtension(nodeHeight(matched+1), node.skip, node.path, node.lChild, node.rChild)
 
 				// Set the children based on whether the new extension is needed on the left or right child.
-				newLeaf := NewLeaf(path, payload, nodeHeight(matched+1))
+				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
 				t.store.Save(newLeaf.Hash(), payload)
 
 				var lChild, rChild Node
@@ -200,9 +206,9 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				panic(err) // FIXME: Handle this gracefully.
 			}
 
-			oldLeaf := NewLeaf(node.path, oldPayload, nodeHeight(matched+1))
+			oldLeaf := NewLeaf(nodeHeight(matched+1), node.path, oldPayload)
 
-			newLeaf := NewLeaf(path, payload, nodeHeight(matched+1))
+			newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
 			t.store.Save(newLeaf.Hash(), payload)
 
 			// Compare first different bit between existing leaf and new leaf to know which one is which child for the
@@ -230,11 +236,34 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 		case nil:
 			// There is no leaf here yet, create it.
-			*current = NewLeaf(path, payload, nodeHeight(depth))
+			*current = NewLeaf(nodeHeight(depth), path, payload)
 			t.store.Save((*current).Hash(), payload)
 			return
 		}
 	}
+}
+
+func (t *Trie) Leaves() []*Leaf {
+	queue := deque.New()
+
+	root := t.RootNode()
+	if root != nil {
+		queue.PushBack(root)
+	}
+
+	var leaves []*Leaf
+	for queue.Len() > 0 {
+		node := queue.PopBack().(Node)
+		switch n := node.(type) {
+		case *Leaf:
+			leaves = append(leaves, n)
+		case *Branch, *Extension:
+			queue.PushBack(node.LeftChild())
+			queue.PushBack(node.RightChild())
+		}
+	}
+
+	return leaves
 }
 
 // Dump outputs the list of nodes within this trie, from top to bottom, left to right, with one node per line.

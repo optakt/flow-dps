@@ -30,8 +30,6 @@ type Node interface {
 	Path() ledger.Path
 	Hash() hash.Hash
 
-	// TODO: The following can be removed if the logic to flatten forests is available through this package rather than done externally. Same goes for listing all paths within a trie from the mapper.
-
 	LeftChild() Node
 	RightChild() Node
 

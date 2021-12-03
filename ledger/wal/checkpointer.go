@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/optakt/flow-dps/ledger/forest/flattener"
+	"github.com/optakt/flow-dps/ledger/forest"
+	"github.com/optakt/flow-dps/ledger/trie"
 )
 
 // FIXME: Cleanup.
@@ -14,11 +15,11 @@ import (
 const MagicBytes uint16 = 0x2137
 const VersionV1 uint16 = 0x01
 
-// Versions was reset while changing trie format, so now bump it to 3 to avoid conflicts
-// Version 3 contains a file checksum for detecting corrupted checkpoint files.
+// VersionV3 is a file checksum for detecting corrupted checkpoint files.
+// The version was changed while updating trie format, so now it is set to 3 to avoid conflicts.
 const VersionV3 uint16 = 0x03
 
-func ReadCheckpoint(r io.Reader) (*flattener.FlattenedForest, error) {
+func ReadCheckpoint(r io.Reader) (*forest.LightForest, error) {
 
 	var bufReader io.Reader = bufio.NewReader(r)
 	crcReader := NewCRC32Reader(bufReader)
@@ -47,24 +48,30 @@ func ReadCheckpoint(r io.Reader) (*flattener.FlattenedForest, error) {
 		reader = bufReader //switch back to plain reader
 	}
 
-	nodes := make([]*flattener.StorableNode, nodesCount+1) //+1 for 0 index meaning nil
-	tries := make([]*flattener.StorableTrie, triesCount)
+	nodes := make([]*trie.LightNode, nodesCount+1) //+1 for 0 index meaning nil
+	tries := make([]*trie.LightTrie, triesCount)
 
 	for i := uint64(1); i <= nodesCount; i++ {
-		storableNode, err := flattener.ReadStorableNode(reader)
+		lightNode, err := trie.DecodeLightNode(reader)
 		if err != nil {
-			return nil, fmt.Errorf("cannot read storable node %d: %w", i, err)
+			return nil, fmt.Errorf("could read light node %d: %w", i, err)
 		}
-		nodes[i] = storableNode
+		nodes[i] = lightNode
+
+		if i % 5000000 == 0 {
+			fmt.Println("Successfully decoded", i, "light nodes")
+		}
 	}
 
 	// TODO version ?
 	for i := uint16(0); i < triesCount; i++ {
-		storableTrie, err := flattener.ReadStorableTrie(reader)
+		lightTrie, err := trie.DecodeLightTrie(reader)
 		if err != nil {
-			return nil, fmt.Errorf("cannot read storable trie %d: %w", i, err)
+			return nil, fmt.Errorf("could read light trie %d: %w", i, err)
 		}
-		tries[i] = storableTrie
+		tries[i] = lightTrie
+
+		fmt.Println("decoded light trie", i)
 	}
 
 	if version == VersionV3 {
@@ -82,11 +89,12 @@ func ReadCheckpoint(r io.Reader) (*flattener.FlattenedForest, error) {
 		}
 	}
 
-	return &flattener.FlattenedForest{
+	fmt.Println("read checkpoint end")
+
+	return &forest.LightForest{
 		Nodes: nodes,
 		Tries: tries,
 	}, nil
-
 }
 
 func readUint16(buffer []byte, location int) (uint16, int) {

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/optakt/flow-dps/ledger/forest/flattener"
+	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/ledger/wal"
 	"github.com/optakt/flow-dps/models/dps"
@@ -50,7 +50,7 @@ func (c *Checkpoint) Trie() (*trie.Trie, error) {
 		return nil, fmt.Errorf("could not read checkpoint: %w", err)
 	}
 
-	trees, err := flattener.RebuildTries(c.store, checkpoint)
+	trees, err := forest.RebuildTries(c.store, checkpoint)
 	if err != nil {
 		return nil, fmt.Errorf("could not rebuild tries: %w", err)
 	}

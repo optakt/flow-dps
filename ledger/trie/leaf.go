@@ -28,10 +28,20 @@ type Leaf struct {
 	height uint16
 }
 
-func NewLeaf(path ledger.Path, payload *ledger.Payload, height uint16) *Leaf {
+func NewLeaf(height uint16, path ledger.Path, payload *ledger.Payload) *Leaf {
 	n := Leaf{
 		path:   path,
 		hash:   ledger.ComputeCompactValue(hash.Hash(path), payload.Value, int(height)),
+		height: height,
+	}
+
+	return &n
+}
+
+func NewLeafWithHash(height uint16, path ledger.Path, hash hash.Hash) *Leaf {
+	n := Leaf{
+		path:   path,
+		hash:   hash,
 		height: height,
 	}
 

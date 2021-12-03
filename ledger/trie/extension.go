@@ -54,6 +54,22 @@ func NewExtension(height, skip uint16, path ledger.Path, lChild, rChild Node) *E
 	return &e
 }
 
+func NewExtensionWithHash(height, skip uint16, path ledger.Path, hash hash.Hash, lChild, rChild Node) *Extension {
+	e := Extension{
+		lChild: lChild,
+		rChild: rChild,
+
+		height: height,
+		skip:   skip,
+		path:   path,
+
+		hash:  hash,
+		dirty: false,
+	}
+
+	return &e
+}
+
 func (e *Extension) computeHash() {
 	var computed hash.Hash
 

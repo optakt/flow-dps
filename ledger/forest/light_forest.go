@@ -1,85 +1,131 @@
 package forest
 
 import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/model/flow"
+	"bytes"
+	"errors"
+	"fmt"
 
 	"github.com/optakt/flow-dps/ledger/trie"
+	"github.com/optakt/flow-dps/models/dps"
 )
 
-type step struct {
-	tree   *trie.Trie
-	parent flow.StateCommitment
-}
-
-// TODO: Look into replacing the forest with a LightForest where possible, and improve the LightForest
-//  to be more performant overall. It could also make sense however to keep this forest implementation
-//  for our case and keep another one with more features around.
-
 type LightForest struct {
-	values map[ledger.Path]*ledger.Payload
-	steps  map[flow.StateCommitment]step
+	Nodes []*trie.LightNode
+	Tries []*trie.LightTrie
 }
 
-func New() *LightForest {
-	f := LightForest{
-		steps:  make(map[flow.StateCommitment]step),
-		values: make(map[ledger.Path]*ledger.Payload),
-	}
+func FlattenForest(f *Forest) (*LightForest, error) {
+	tries, _ := f.GetTries()
+	lightTries := make([]*trie.LightTrie, len(tries))
+	lightNodes := []*trie.LightNode{nil} // First element needs to be nil.
 
-	return &f
-}
+	index := make(trie.IndexMap)
+	index[nil] = 0
 
-func (f *LightForest) Add(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment) {
-	commit := flow.StateCommitment(tree.RootHash())
+	count := uint64(1)
+	for _, t := range tries {
+		for itr := trie.NewNodeIterator(t); itr.Next(); {
+			node := itr.Value()
 
-	// FIXME: Is this still necessary? IIRC it was a temporary solution because we didn't have access to payloads anymore. Since we can list the paths and have access to the DB, we might do that instead of storing values in there.
-	for i := range paths {
-		if payloads == nil {
-			f.values[paths[i]] = nil
-		} else {
-			f.values[paths[i]] = payloads[i]
+			_, exists := index[node]
+			if exists {
+				continue
+			}
+
+			index[node] = count
+			count++
+
+			lightNode, err := trie.ToLightNode(node, index)
+			if err != nil {
+				return nil, fmt.Errorf("could not build light node: %w", err)
+			}
+			lightNodes = append(lightNodes, lightNode)
 		}
-	}
 
-	s := step{
-		tree:   tree,
-		parent: parent,
-	}
-	f.steps[commit] = s
-}
-
-func (f *LightForest) Has(commit flow.StateCommitment) bool {
-	_, ok := f.steps[commit]
-	return ok
-}
-
-func (f *LightForest) Tree(commit flow.StateCommitment) (*trie.Trie, bool) {
-	s, ok := f.steps[commit]
-	if !ok {
-		return nil, false
-	}
-
-	return s.tree, true
-}
-
-func (f *LightForest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool) {
-	st, ok := f.steps[commit]
-	if !ok {
-		return flow.DummyStateCommitment, false
-	}
-
-	return st.parent, true
-}
-
-func (f *LightForest) Values() map[ledger.Path]*ledger.Payload {
-	return f.values
-}
-
-func (f *LightForest) Reset(finalized flow.StateCommitment) {
-	for commit := range f.steps {
-		if commit != finalized {
-			delete(f.steps, commit)
+		lightTrie, err := trie.ToLightTrie(t, index)
+		if err != nil {
+			return nil, fmt.Errorf("could not build light trie: %w", err)
 		}
+		lightTries = append(lightTries, lightTrie)
 	}
+
+	lightForest := LightForest{
+		Nodes: lightNodes,
+		Tries: lightTries,
+	}
+
+	return &lightForest, nil
+}
+
+func RebuildTries(store dps.Store, lightForest *LightForest) ([]*trie.Trie, error) {
+	tries := make([]*trie.Trie, len(lightForest.Tries))
+
+	// At this call, we give a 150 million + slice of light nodes and expect 150 million + normal nodes as the return value. As long as the `lightForest` is not garbage collected, memory usage remains huge.
+	nodes, err := RebuildNodes(lightForest.Nodes)
+	if err != nil {
+		return nil, fmt.Errorf("could not rebuild nodes from light nodes: %w", err)
+	}
+
+	for i, lt := range lightForest.Tries {
+		tr := trie.NewTrie(nodes[lt.RootIndex], store)
+		rootHash := tr.RootHash()
+		if !bytes.Equal(rootHash[:], lt.RootHash) {
+			return nil, fmt.Errorf("restored trie root hash mismatch: %w", err)
+		}
+
+		// FIXME: We can restore a trie from a checkpoint, but if our store does not contain the
+		//  payloads for this trie, the trie can't be relied upon to add new elements. Because of
+		//  this, we NEED to include the payloads in the light nodes, so that the DB can be rebuilt
+		//  when rebuilding the tries.
+
+		trimmedTrie := trie.NewEmptyTrie(store)
+		for _, leaf := range tr.Leaves() {
+			payload, err := store.Retrieve(leaf.Hash())
+			if err != nil {
+				return nil, fmt.Errorf("restored trie missing payload: %w", err)
+			}
+
+			trimmedTrie.Insert(leaf.Path(), payload)
+		}
+
+		fmt.Println("Successfully rebuilt optimized trie", i)
+	}
+
+	return tries, nil
+}
+
+// RebuildNodes converts the given slice of light nodes into proper nodes.
+// CAUTION: Since realistically, this function is given hundreds of millions of nodes, and returns
+// similar numbers of their equivalent, formatted differently, this function deletes nodes from the
+// original slice as it creates new ones, in order to let Go do garbage collection and effectively
+// halving the RAM required to process a checkpoint.
+// TODO: Ideally in here we'd want to directly restructure the nodes and replace unnecessary branches
+//  with extensions, but that might be tricky.
+func RebuildNodes(lightNodes []*trie.LightNode) ([]trie.Node, error) {
+	nodes := make([]trie.Node, 0, len(lightNodes))
+	for i, lightNode := range lightNodes {
+		if lightNode == nil {
+			nodes = append(nodes, nil)
+			continue
+		}
+
+		if lightNode.LIndex >= uint64(i) || lightNode.RIndex >= uint64(i) {
+			return nil, errors.New("sequence of light nodes does not satisfy descendents first relationship")
+		}
+
+		node, err := trie.FromLightNode(lightNode, nodes)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode light node: %w", err)
+		}
+
+		nodes = append(nodes, node)
+		if i % 500000 == 0 {
+			fmt.Println("Successfully rebuilt node", i)
+		}
+
+		// Remove original light node from slice to preserve memory.
+		lightNodes[i] = nil
+	}
+
+	return nodes, nil
 }

@@ -25,19 +25,21 @@ import (
 )
 
 func allPaths(tree *trie.Trie) []ledger.Path {
-
-	var paths []ledger.Path
+	if tree == nil {
+		return nil
+	}
 
 	queue := deque.New()
 	root := tree.RootNode()
 	if root != nil {
 		queue.PushBack(root)
 	}
+
+	var paths []ledger.Path
 	for queue.Len() > 0 {
 		node := queue.PopBack().(trie.Node)
 		if node.Path() != ledger.DummyPath {
-			path := node.Path()
-			paths = append(paths, path)
+			paths = append(paths, node.Path())
 			continue
 		}
 		if node.LeftChild() != nil {

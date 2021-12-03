@@ -46,6 +46,19 @@ func NewBranch(height uint16, lChild, rChild Node) *Branch {
 	return &b
 }
 
+func NewBranchWithHash(height uint16, hash hash.Hash, lChild, rChild Node) *Branch {
+	b := Branch{
+		lChild: lChild,
+		rChild: rChild,
+
+		height: height,
+		hash:   hash,
+		dirty:  false,
+	}
+
+	return &b
+}
+
 func (b *Branch) computeHash() {
 	var lHash, rHash hash.Hash
 	if b.lChild != nil {
