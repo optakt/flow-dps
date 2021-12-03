@@ -33,24 +33,6 @@ The code here is deliberately simple, for performance.
 
 */
 
-func EncodeUpdate(update *ledger.TrieUpdate) []byte {
-	encUpdate := encoding.EncodeTrieUpdate(update)
-	buf := make([]byte, 0, len(encUpdate)+1)
-	// set WAL type
-	buf = append(buf, byte(WALUpdate))
-	// TODO use 2 bytes for encoding length
-	// the rest is encoded update
-	buf = append(buf, encUpdate...)
-	return buf
-}
-
-func EncodeDelete(rootHash ledger.RootHash) []byte {
-	buf := make([]byte, 0)
-	buf = append(buf, byte(WALDelete))
-	buf = utils.AppendShortData(buf, rootHash[:])
-	return buf
-}
-
 func Decode(data []byte) (operation WALOperation, rootHash ledger.RootHash, update *ledger.TrieUpdate, err error) {
 	if len(data) < 4 { // 1 byte op + 2 size + actual data = 4 minimum
 		err = fmt.Errorf("data corrupted, too short to represent operation - hexencoded data: %x", data)
