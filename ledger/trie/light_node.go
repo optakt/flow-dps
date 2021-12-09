@@ -220,7 +220,9 @@ func decodeLightNode(reader io.Reader, store dps.Store) (*LightNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid hash in light node: %w", err)
 	}
-	store.Save(h, payload)
+	if payload != nil {
+		store.Save(h, payload)
+	}
 
 	return &lightNode, nil
 }
@@ -292,7 +294,9 @@ func decodeLegacyNode(reader io.Reader, store dps.Store) (*LightNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid hash in light node: %w", err)
 	}
-	store.Save(h, payload)
+	if payload != nil {
+		store.Save(h, payload)
+	}
 
 	return &lightNode, nil
 }

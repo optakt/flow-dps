@@ -5,12 +5,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/trie"
+	"github.com/optakt/flow-dps/models/dps"
 )
-
-// FIXME: Cleanup.
 
 const MagicBytes uint16 = 0x2137
 const VersionV1 uint16 = 0x01
@@ -19,7 +19,7 @@ const VersionV1 uint16 = 0x01
 // The version was changed while updating trie format, so now it is set to 3 to avoid conflicts.
 const VersionV3 uint16 = 0x03
 
-func ReadCheckpoint(r io.Reader) (*forest.LightForest, error) {
+func ReadCheckpoint(r io.Reader, store dps.Store) (*forest.LightForest, error) {
 
 	var bufReader io.Reader = bufio.NewReader(r)
 	crcReader := NewCRC32Reader(bufReader)
@@ -52,18 +52,17 @@ func ReadCheckpoint(r io.Reader) (*forest.LightForest, error) {
 	tries := make([]*trie.LightTrie, triesCount)
 
 	for i := uint64(1); i <= nodesCount; i++ {
-		lightNode, err := trie.DecodeLightNode(reader)
+		lightNode, err := trie.DecodeLightNode(reader, store)
 		if err != nil {
 			return nil, fmt.Errorf("could read light node %d: %w", i, err)
 		}
 		nodes[i] = lightNode
 
 		if i % 5000000 == 0 {
-			fmt.Println("Successfully decoded", i, "light nodes")
+			fmt.Println(time.Now().String(), "Successfully decoded", i, "light nodes")
 		}
 	}
 
-	// TODO version ?
 	for i := uint16(0); i < triesCount; i++ {
 		lightTrie, err := trie.DecodeLightTrie(reader)
 		if err != nil {

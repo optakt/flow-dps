@@ -253,5 +253,11 @@ func run() int {
 		return failure
 	}
 
+	err = payloadStore.Close()
+	if err != nil {
+		log.Error().Err(err).Msg("could not stop payload storage")
+		return failure
+	}
+
 	return success
 }

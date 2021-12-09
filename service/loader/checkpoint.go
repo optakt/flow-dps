@@ -45,7 +45,7 @@ func FromCheckpoint(file io.Reader, store dps.Store) *Checkpoint {
 // Trie loads the execution state trie from the LedgerWAL root checkpoint.
 func (c *Checkpoint) Trie() (*trie.Trie, error) {
 
-	checkpoint, err := wal.ReadCheckpoint(c.file)
+	checkpoint, err := wal.ReadCheckpoint(c.file, c.store)
 	if err != nil {
 		return nil, fmt.Errorf("could not read checkpoint: %w", err)
 	}

@@ -16,17 +16,18 @@ package mocks
 
 import (
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
 type Store struct {
-	SaveFunc     func(path ledger.Path, payload *ledger.Payload)
-	RetrieveFunc func(path ledger.Path) (*ledger.Payload, error)
+	SaveFunc     func(hash hash.Hash, payload *ledger.Payload)
+	RetrieveFunc func(hash hash.Hash) (*ledger.Payload, error)
 }
 
 func BaselineStore() *Store {
 	s := Store{
-		SaveFunc: func(path ledger.Path, payload *ledger.Payload) {},
-		RetrieveFunc: func(path ledger.Path) (*ledger.Payload, error) {
+		SaveFunc: func(hash hash.Hash, payload *ledger.Payload) {},
+		RetrieveFunc: func(hash hash.Hash) (*ledger.Payload, error) {
 			return GenericLedgerPayload(0), nil
 		},
 	}
@@ -34,10 +35,10 @@ func BaselineStore() *Store {
 	return &s
 }
 
-func (s *Store) Save(path ledger.Path, payload *ledger.Payload) {
-	s.SaveFunc(path, payload)
+func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) {
+	s.SaveFunc(hash, payload)
 }
 
-func (s *Store) Retrieve(path ledger.Path) (*ledger.Payload, error) {
-	return s.RetrieveFunc(path)
+func (s *Store) Retrieve(hash hash.Hash) (*ledger.Payload, error) {
+	return s.RetrieveFunc(hash)
 }

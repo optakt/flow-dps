@@ -471,9 +471,16 @@ func run() int {
 	gsvr.GracefulStop()
 	cancel()
 	<-follow.NodeBuilder.Done()
+
 	err = fsm.Stop()
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
+		return failure
+	}
+
+	err = payloadStore.Close()
+	if err != nil {
+		log.Error().Err(err).Msg("could not stop payload storage")
 		return failure
 	}
 
