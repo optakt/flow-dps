@@ -29,6 +29,7 @@ type Leaf struct {
 }
 
 func NewLeaf(height uint16, path ledger.Path, payload *ledger.Payload) *Leaf {
+	//fmt.Printf("GOT: Hash for leaf computed using path %x, value %v, height %d\n", path[:], payload.Value, height)
 	n := Leaf{
 		path:   path,
 		hash:   ledger.ComputeCompactValue(hash.Hash(path), payload.Value, int(height)),

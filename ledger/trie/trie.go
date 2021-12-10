@@ -190,6 +190,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 			if node.path == path {
 				// This path conflicts with a leaf, overwrite its hash using the new payload.
 				node.hash = ledger.ComputeCompactValue(hash.Hash(path), payload.Value, int(node.height))
+				t.store.Save(node.hash, payload)
 				return
 			}
 
@@ -207,6 +208,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 			}
 
 			oldLeaf := NewLeaf(nodeHeight(matched+1), node.path, oldPayload)
+			t.store.Save(oldLeaf.Hash(), oldPayload)
 
 			newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
 			t.store.Save(newLeaf.Hash(), payload)
