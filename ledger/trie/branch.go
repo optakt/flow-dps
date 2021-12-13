@@ -60,6 +60,11 @@ func NewBranchWithHash(height uint16, hash hash.Hash, lChild, rChild Node) *Bran
 }
 
 func (b *Branch) computeHash() {
+	if b.lChild == nil && b.rChild == nil {
+		b.hash = ledger.GetDefaultHashForHeight(int(b.height))
+		return
+	}
+
 	var lHash, rHash hash.Hash
 	if b.lChild != nil {
 		lHash = b.lChild.Hash()

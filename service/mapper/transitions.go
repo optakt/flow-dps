@@ -361,7 +361,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	parent := flow.StateCommitment(update.RootHash)
 	tree, ok := s.forest.Tree(parent)
 	if !ok {
-		log.Fatal().Msg("state commitment mismatch, retrieving next trie update")
+		log.Error().Msg("state commitment mismatch, retrieving next trie update")
 		return nil
 	}
 

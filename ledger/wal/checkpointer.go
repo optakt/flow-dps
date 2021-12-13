@@ -58,7 +58,7 @@ func ReadCheckpoint(r io.Reader, store dps.Store) (*forest.LightForest, error) {
 		}
 		nodes[i] = lightNode
 
-		if i % 5000000 == 0 {
+		if i%5000000 == 0 {
 			fmt.Println(time.Now().String(), "Successfully decoded", i, "light nodes")
 		}
 	}

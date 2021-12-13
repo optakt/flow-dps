@@ -16,7 +16,7 @@ type LightForest struct {
 
 func FlattenForest(f *Forest) (*LightForest, error) {
 	tries, _ := f.GetTries()
-	lightTries := make([]*trie.LightTrie, len(tries))
+	lightTries := make([]*trie.LightTrie, 0, len(tries))
 	lightNodes := []*trie.LightNode{nil} // First element needs to be nil.
 
 	index := make(trie.IndexMap)
@@ -58,7 +58,7 @@ func FlattenForest(f *Forest) (*LightForest, error) {
 }
 
 func RebuildTries(store dps.Store, lightForest *LightForest) ([]*trie.Trie, error) {
-	tries := make([]*trie.Trie, len(lightForest.Tries))
+	tries := make([]*trie.Trie, 0, len(lightForest.Tries))
 
 	// At this call, we give a 150 million + slice of light nodes and expect 150 million + normal nodes as the return value. As long as the `lightForest` is not garbage collected, memory usage remains huge.
 	nodes, err := RebuildNodes(lightForest.Nodes)
@@ -66,7 +66,7 @@ func RebuildTries(store dps.Store, lightForest *LightForest) ([]*trie.Trie, erro
 		return nil, fmt.Errorf("could not rebuild nodes from light nodes: %w", err)
 	}
 
-	for i, lt := range lightForest.Tries {
+	for _, lt := range lightForest.Tries {
 		tr := trie.NewTrie(nodes[lt.RootIndex], store)
 		rootHash := tr.RootHash()
 		if !bytes.Equal(rootHash[:], lt.RootHash) {
@@ -88,7 +88,7 @@ func RebuildTries(store dps.Store, lightForest *LightForest) ([]*trie.Trie, erro
 			trimmedTrie.Insert(leaf.Path(), payload)
 		}
 
-		fmt.Println("Successfully rebuilt optimized trie", i)
+		tries = append(tries, trimmedTrie)
 	}
 
 	return tries, nil
@@ -119,7 +119,7 @@ func RebuildNodes(lightNodes []*trie.LightNode) ([]trie.Node, error) {
 		}
 
 		nodes = append(nodes, node)
-		if i % 500000 == 0 {
+		if i%500000 == 0 {
 			fmt.Println("Successfully rebuilt node", i)
 		}
 

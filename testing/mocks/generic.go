@@ -86,8 +86,8 @@ var (
 		),
 		trie.NewBranch(
 			255,
-			trie.NewLeaf(254, GenericLedgerPath(0), GenericLedgerPayload(0)),
-			trie.NewLeaf(254, GenericLedgerPath(1), GenericLedgerPayload(1)),
+			trie.NewLeaf(254, GenericLedgerPath(2), GenericLedgerPayload(2)),
+			trie.NewLeaf(254, GenericLedgerPath(3), GenericLedgerPayload(3)),
 		),
 	)
 

@@ -55,6 +55,11 @@ func BaselineForest(t *testing.T, hasCommit bool) *Forest {
 		SizeFunc: func() uint {
 			return 42
 		},
+		ValuesFunc: func() map[ledger.Path]*ledger.Payload {
+			return map[ledger.Path]*ledger.Payload{
+				GenericLedgerPath(0): GenericLedgerPayload(0),
+			}
+		},
 	}
 
 	return &f

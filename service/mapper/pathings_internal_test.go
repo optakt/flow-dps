@@ -29,7 +29,7 @@ func TestAllPaths(t *testing.T) {
 	t.Run("nominal case with single path", func(t *testing.T) {
 		t.Parallel()
 
-		testNode := trie.NewLeaf(mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0), 256)
+		testNode := trie.NewLeaf(256, mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0))
 		testTrie := trie.NewTrie(testNode, nil)
 
 		got := allPaths(testTrie)
@@ -43,9 +43,8 @@ func TestAllPaths(t *testing.T) {
 
 		got := allPaths(mocks.GenericTrie)
 
-		// Only the paths in nodes 1, 2 and 4 are taken into account since they are the only leaves.
-		assert.Len(t, got, 3)
-		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPath(3), mocks.GenericLedgerPath(1), mocks.GenericLedgerPath(0)}, got)
+		assert.Len(t, got, 4)
+		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPath(3), mocks.GenericLedgerPath(2), mocks.GenericLedgerPath(1), mocks.GenericLedgerPath(0)}, got)
 	})
 
 	t.Run("empty trie", func(t *testing.T) {
@@ -76,12 +75,12 @@ func TestPathsPayloads(t *testing.T) {
 		gotPaths, gotPayloads := pathsPayloads(testUpdate)
 
 		// Expect payloads from deduplicated paths.
-		wantPayloads := []ledger.Payload{
-			*mocks.GenericLedgerPayload(3),
-			*mocks.GenericLedgerPayload(4),
-			*mocks.GenericLedgerPayload(5),
-			*mocks.GenericLedgerPayload(1),
-			*mocks.GenericLedgerPayload(2),
+		wantPayloads := []*ledger.Payload{
+			mocks.GenericLedgerPayload(3),
+			mocks.GenericLedgerPayload(4),
+			mocks.GenericLedgerPayload(5),
+			mocks.GenericLedgerPayload(1),
+			mocks.GenericLedgerPayload(2),
 		}
 		assert.Equal(t, wantPayloads, gotPayloads)
 

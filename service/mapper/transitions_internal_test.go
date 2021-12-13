@@ -18,7 +18,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -492,7 +491,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 func TestTransitions_UpdateTree(t *testing.T) {
 	update := mocks.GenericTrieUpdate(0)
-	tree := mocks.GenericTrie
+	tree := trie.NewTrie(mocks.GenericRootNode, mocks.BaselineStore())
 
 	t.Run("nominal case without match", func(t *testing.T) {
 		t.Parallel()
@@ -621,6 +620,16 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 			assert.Equal(t, mocks.GenericCommit(0), commit)
 
 			return mocks.GenericCommit(1), true
+		}
+		forest.ValuesFunc = func() map[ledger.Path]*ledger.Payload {
+			return map[ledger.Path]*ledger.Payload{
+				mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
+				mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
+				mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
+				mocks.GenericLedgerPath(3): mocks.GenericLedgerPayload(3),
+				mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
+				mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
+			}
 		}
 
 		tr, st := baselineFSM(t, StatusCollect)
@@ -915,7 +924,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -956,7 +965,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -995,7 +1004,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1030,7 +1039,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1064,7 +1073,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1098,7 +1107,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1132,7 +1141,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1166,7 +1175,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		}
 
 		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func(*badger.DB) (*trie.Trie, error) {
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 

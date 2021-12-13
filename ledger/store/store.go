@@ -245,7 +245,6 @@ func (s *Store) write(hash hash.Hash, value ledger.Value) error {
 		return fmt.Errorf("could not apply operation: %w", err)
 	}
 
-
 	return nil
 }
 
