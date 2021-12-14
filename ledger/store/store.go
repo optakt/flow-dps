@@ -62,7 +62,6 @@ func NewStore(log zerolog.Logger, size int, storagePath string) (*Store, error) 
 		db:  db,
 		tx:  db.NewTransaction(true),
 
-		// TODO: Should this be configurable?
 		sema:  semaphore.NewWeighted(16),
 		err:   make(chan error, 16),
 		done:  make(chan struct{}),
@@ -113,8 +112,19 @@ func (s *Store) Retrieve(hash hash.Hash) (*ledger.Payload, error) {
 		return &payload, nil
 	}
 
-	// Otherwise, assume it has been evicted from the cache and persisted on disk.
-	err := s.db.View(func(txn *badger.Txn) error {
+	// Otherwise, check if it has been evicted from the cache and is in the current transaction.
+	// FIXME: Should not be needed to lock the mutex since we're just reading here, right?
+	it, err := s.tx.Get(hash[:])
+	if err != badger.ErrKeyNotFound {
+		_, err = it.ValueCopy(payload.Value)
+		if err != nil {
+			return nil, fmt.Errorf("could not read payload: %w", err)
+		}
+		return &payload, nil
+	}
+
+	// Finally, if it is not in the current transaction or in the cache, assume it has been persisted on disk.
+	err = s.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(hash[:])
 		if err != nil {
 			return fmt.Errorf("could not find payload: %w", err)
@@ -202,19 +212,19 @@ func (s *Store) persist() {
 					s.log.Error().Interface("got", value).Msg("unexpected value format")
 				}
 
+				// Write the value in the persistent storage.
 				err := s.write(hash, value)
 				if err != nil {
 					s.log.Error().Err(err).Msg("could not persist ledger payload")
 				}
+
+				// Remove it from the cache.
+				s.cache.Remove(k)
 			}
 		}
 	}
 }
 
-// FIXME: This produces an edge case: If a value is evicted from the cache and added to the
-//  transaction but not yet committed, it is temporarily no longer available in the store.
-//  Therefore, if a new insertion needs to take place and requires the unavailable payload
-//  value, it will cause a fatal error.
 func (s *Store) write(hash hash.Hash, value ledger.Value) error {
 	// Before applying an additional operation to the transaction we are
 	// currently building, we want to see if there was an error committing any
