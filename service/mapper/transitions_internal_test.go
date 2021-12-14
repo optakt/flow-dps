@@ -15,14 +15,18 @@
 package mapper
 
 import (
+	"io"
+	"os"
 	"sync"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/ledger/store"
 	"github.com/optakt/flow-dps/ledger/trie"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -81,11 +85,10 @@ func TestTransitions_BootstrapState(t *testing.T) {
 		// tests running in parallel.
 		var saveCalled bool
 		forest := mocks.BaselineForest(t, true)
-		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment) {
+		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {
 			if !saveCalled {
 				assert.Nil(t, tree.RootNode())
 				assert.Nil(t, paths)
-				assert.Nil(t, payloads)
 				assert.Zero(t, parent)
 				saveCalled = true
 				return
@@ -499,11 +502,10 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		tr, st := baselineFSM(t, StatusUpdate)
 
 		forest := mocks.BaselineForest(t, false)
-		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment) {
+		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {
 			// Parent is RootHash of the mocks.GenericTrie.
 			assert.Equal(t, update.RootHash[:], parent[:])
 			assert.ElementsMatch(t, paths, update.Paths)
-			assert.ElementsMatch(t, payloads, update.Payloads)
 			assert.NotZero(t, tree)
 		}
 		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.Trie, bool) {
@@ -612,24 +614,30 @@ func TestTransitions_UpdateTree(t *testing.T) {
 }
 
 func TestTransitions_CollectRegisters(t *testing.T) {
+	dir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	store, err := store.NewStore(zerolog.New(io.Discard), 4*1000*1000, dir)
+	require.NoError(t, err)
+
+	tree := trie.NewEmptyTrie(store)
+	paths := mocks.GenericLedgerPaths(6)
+	for i := range paths {
+		tree.Insert(paths[i], mocks.GenericLedgerPayload(i))
+	}
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		forest := mocks.BaselineForest(t, true)
+		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.Trie, bool) {
+			return tree, true
+		}
 		forest.ParentFunc = func(commit flow.StateCommitment) (flow.StateCommitment, bool) {
 			assert.Equal(t, mocks.GenericCommit(0), commit)
 
 			return mocks.GenericCommit(1), true
-		}
-		forest.ValuesFunc = func() map[ledger.Path]*ledger.Payload {
-			return map[ledger.Path]*ledger.Payload{
-				mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
-				mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
-				mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
-				mocks.GenericLedgerPath(3): mocks.GenericLedgerPayload(3),
-				mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
-				mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
-			}
 		}
 
 		tr, st := baselineFSM(t, StatusCollect)
@@ -649,6 +657,12 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 
 		tr, st := baselineFSM(t, StatusCollect)
 		tr.cfg.SkipRegisters = true
+
+		forest := mocks.BaselineForest(t, true)
+		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.Trie, bool) {
+			return tree, true
+		}
+		st.forest = forest
 
 		err := tr.CollectRegisters(st)
 

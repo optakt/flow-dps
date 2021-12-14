@@ -36,7 +36,7 @@ type Store struct {
 	db    *badger.DB
 	sema  *semaphore.Weighted
 	tx    *badger.Txn
-	mutex *sync.Mutex     // guards the current transaction against concurrent access
+	mutex *sync.RWMutex   // guards the current transaction against concurrent access
 	wg    *sync.WaitGroup // keeps track of when the flush goroutine should exit
 	err   chan error
 
@@ -65,7 +65,7 @@ func NewStore(log zerolog.Logger, size int, storagePath string) (*Store, error) 
 		sema:  semaphore.NewWeighted(16),
 		err:   make(chan error, 16),
 		done:  make(chan struct{}),
-		mutex: &sync.Mutex{},
+		mutex: &sync.RWMutex{},
 		wg:    &sync.WaitGroup{},
 	}
 
@@ -112,35 +112,18 @@ func (s *Store) Retrieve(hash hash.Hash) (*ledger.Payload, error) {
 		return &payload, nil
 	}
 
-	// Otherwise, check if it has been evicted from the cache and is in the current transaction.
-	// FIXME: Should not be needed to lock the mutex since we're just reading here, right?
+	// Otherwise, check if it has been evicted from the cache and is in the current transaction or in the DB.
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 	it, err := s.tx.Get(hash[:])
-	if err != badger.ErrKeyNotFound {
-		_, err = it.ValueCopy(payload.Value)
-		if err != nil {
-			return nil, fmt.Errorf("could not read payload: %w", err)
-		}
-		return &payload, nil
-	}
-
-	// Finally, if it is not in the current transaction or in the cache, assume it has been persisted on disk.
-	err = s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(hash[:])
-		if err != nil {
-			return fmt.Errorf("could not find payload: %w", err)
-		}
-
-		_, err = item.ValueCopy(payload.Value)
-		if err != nil {
-			return fmt.Errorf("could not read payload: %w", err)
-		}
-
-		return nil
-	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not read payload %x: %w", hash[:], err)
 	}
 
+	payload.Value, err = it.ValueCopy(nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not read payload %x: %w", hash[:], err)
+	}
 	return &payload, nil
 }
 
@@ -197,29 +180,7 @@ func (s *Store) persist() {
 
 			// If cache is at least half full, persist its oldest entries until it is only half full.
 			for i := 0; i < s.cache.Len()-s.cacheSize/2; i++ {
-				k, v, ok := s.cache.GetOldest()
-				if !ok {
-					s.log.Error().Msg("could not get oldest cached payload")
-				}
-
-				hash, ok := k.(hash.Hash)
-				if !ok {
-					s.log.Error().Interface("got", k).Msg("unexpected key format")
-				}
-
-				value, ok := v.(ledger.Value)
-				if !ok {
-					s.log.Error().Interface("got", value).Msg("unexpected value format")
-				}
-
-				// Write the value in the persistent storage.
-				err := s.write(hash, value)
-				if err != nil {
-					s.log.Error().Err(err).Msg("could not persist ledger payload")
-				}
-
-				// Remove it from the cache.
-				s.cache.Remove(k)
+				s.cache.RemoveOldest()
 			}
 		}
 	}

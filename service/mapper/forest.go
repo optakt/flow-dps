@@ -23,10 +23,10 @@ import (
 
 // Forest represents a multitude of trees which are mapped by their state commitment hash.
 type Forest interface {
-	Add(tree *trie.Trie, paths []ledger.Path, payloads []*ledger.Payload, parent flow.StateCommitment)
+	Add(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment)
 	Has(commit flow.StateCommitment) bool
 	Tree(commit flow.StateCommitment) (*trie.Trie, bool)
+	Paths(commit flow.StateCommitment) ([]ledger.Path, bool)
 	Parent(commit flow.StateCommitment) (flow.StateCommitment, bool)
-	Values() map[ledger.Path]*ledger.Payload
 	Reset(finalized flow.StateCommitment)
 }

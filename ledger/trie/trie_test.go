@@ -103,6 +103,8 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 	assert.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
 }
 
+// FIXME: Make a mock store which can substitute the store and preserve functionality for tests.
+
 func TestTrie_InsertFullTrie(t *testing.T) {
 	dir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)

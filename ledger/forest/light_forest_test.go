@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/flow-go/model/flow"
 	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/store"
 	"github.com/optakt/flow-dps/ledger/trie"
@@ -52,8 +53,8 @@ func TestLightForest(t *testing.T) {
 		trie1.Insert(paths[i], &payloads[i])
 	}
 
-	err = f.AddTries([]*trie.Trie{trie1, trie2})
-	require.NoError(t, err)
+	f.Add(trie1, nil, flow.DummyStateCommitment)
+	f.Add(trie2, nil, flow.DummyStateCommitment)
 
 	lf, err := forest.FlattenForest(f)
 	require.NoError(t, err)

@@ -95,7 +95,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// block. We thus introduce an empty tree, with no paths and an
 	// irrelevant previous commit.
 	empty := trie.NewEmptyTrie(nil)
-	s.forest.Add(empty, nil, nil, flow.DummyStateCommitment)
+	s.forest.Add(empty, nil, flow.DummyStateCommitment)
 
 	// The chain indexing will forward last to next and next to current height,
 	// which will be the one for the checkpoint.
@@ -120,7 +120,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("could not load root trie: %w", err)
 	}
 	paths := allPaths(tr)
-	s.forest.Add(tr, paths, nil, first)
+	s.forest.Add(tr, paths, first)
 
 	second := tr.RootHash()
 	t.log.Info().Uint64("height", s.height).Hex("commit", second[:]).Int("registers", len(paths)).Msg("added checkpoint tree to forest")
@@ -186,7 +186,7 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 	// state commitment or the paths, as they should not be used.
 	s.last = flow.DummyStateCommitment
 	s.next = commit
-	s.forest.Add(tree, nil, nil, flow.DummyStateCommitment)
+	s.forest.Add(tree, nil, flow.DummyStateCommitment)
 
 	// Lastly, we just need to point to the next height. The chain indexing will
 	// then proceed with the first non-indexed block and forward the state
@@ -365,11 +365,6 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return nil
 	}
 
-	//// Enable full logging before computing hashes.
-	//if s.height == 3527 {
-	//	node.Logger = node.Logger.Level(zerolog.InfoLevel)
-	//}
-
 	// We then apply the update to the relevant tree, as retrieved from the
 	// forest, and save the updated tree in the forest. If the tree is not new,
 	// we should error, as that should not happen.
@@ -378,17 +373,10 @@ func (t *Transitions) UpdateTree(s *State) error {
 		tree.Insert(paths[i], payloads[i])
 	}
 
-	s.forest.Add(tree, paths, payloads, parent)
+	s.forest.Add(tree, paths, parent)
 
 	hash := tree.RootHash()
 	log.Info().Hex("commit", hash[:]).Int("paths", len(paths)).Int("payloads", len(payloads)).Msg(">>> SAVE FOREST")
-
-	//// Enable full logging before computing hashes.
-	//if s.height == 3527 {
-	//	node.Logger = node.Logger.Level(zerolog.WarnLevel)
-	//}
-
-	//log.Info().Hex("commit", hash[:]).Int("registers", len(paths)).Msg("updated tree with register payloads")
 
 	return nil
 }
@@ -433,16 +421,19 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		// NOTE: We read from the tree one by one here, as the performance
 		// overhead is minimal compared to the disk i/o for badger, and it
 		// allows us to ignore sorting of paths.
-		values := s.forest.Values()
-		for path, payload := range values {
+		tree, _ := s.forest.Tree(commit)
+		paths, _ := s.forest.Paths(commit)
+		for _, path := range paths {
 			_, ok := s.registers[path]
 			if ok {
 				continue
 			}
-			s.registers[path] = payload
+
+			payloads := tree.UnsafeRead([]ledger.Path{path})
+			s.registers[path] = payloads[0]
 		}
 
-		log.Debug().Int("batch", len(values)).Msg("collected register batch for finalized block")
+		log.Debug().Int("batch", len(paths)).Msg("collected register batch for finalized block")
 
 		// We now step back to the parent of the current state trie.
 		parent, _ := s.forest.Parent(commit)

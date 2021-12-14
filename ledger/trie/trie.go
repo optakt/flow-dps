@@ -125,32 +125,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				return
 			}
 
-			if matched == nodeHeight(node.height) {
-				// The new leaf needs to be inserted precisely at the layer up to which the extension currently skips.
-				// It needs to be transformed into a branch and a new extension needs to be created for the
-				// remaining path that used to be skipped over.
-
-				// Create new extension which starts lower but skips to the original height and path.
-				newExt := NewExtension(nodeHeight(matched+1), node.skip, node.path, node.lChild, node.rChild)
-
-				// Set the children based on whether the new extension is needed on the left or right child.
-				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
-				t.store.Save(newLeaf.Hash(), payload)
-
-				var lChild, rChild Node
-				if bitutils.Bit(path[:], int(matched)) == 0 {
-					lChild = newLeaf
-					rChild = newExt
-				} else {
-					lChild = newExt
-					rChild = newLeaf
-				}
-
-				// Create new branch to replace current node.
-				*current = NewBranch(node.height, lChild, rChild)
-				return
-			}
-
 			if matched < nodeHeight(node.skip) {
 				// The extension node is skipping over a path that is needed by the new leaf.
 				// It needs to be shortened and a new extension node is needed at the intersection
