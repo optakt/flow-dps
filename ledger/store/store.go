@@ -215,6 +215,8 @@ func (s *Store) write(hash hash.Hash, value ledger.Value) error {
 	select {
 	case err := <-s.err:
 		return fmt.Errorf("could not commit transaction: %w", err)
+	case <-s.done:
+		return nil
 	default:
 		// skip
 	}
@@ -234,11 +236,6 @@ func (s *Store) write(hash hash.Hash, value ledger.Value) error {
 		err = s.tx.Set(hash[:], value[:])
 	}
 	s.mutex.Unlock()
-	if errors.Is(err, badger.ErrDiscardedTxn) {
-		// This means the store is shutting down and the current transaction
-		// was committed before we attempted to apply our operation.
-		return nil
-	}
 	if err != nil {
 		return fmt.Errorf("could not apply operation: %w", err)
 	}
