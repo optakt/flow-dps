@@ -1,3 +1,17 @@
+// Copyright 2021 Optakt Labs OÜ
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not
+// use this file except in compliance with the License. You may obtain a copy of
+// the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations under
+// the License.
+
 package store
 
 import (
@@ -24,7 +38,7 @@ import (
 // this solution allows us to store payloads on disk with a negligible impact to insertion performance and a limited
 // impact to memory usage.
 
-// persistInterval is the interval of time at which the store evicts the oldest elements from its LRU cache and stores
+// persistInterval is the time interval at which the store evicts the oldest elements from its LRU cache and stores
 // them persistently in the on-disk database.
 const persistInterval = 100 * time.Millisecond
 
@@ -47,12 +61,17 @@ type Store struct {
 }
 
 // NewStore creates a new store using a cache of the given size and storing payloads on disk at the given path.
-func NewStore(log zerolog.Logger, size int, storagePath string) (*Store, error) {
+func NewStore(log zerolog.Logger, opts ...Option) (*Store, error) {
 	logger := log.With().Str("component", "payload_store").Logger()
 
-	opts := badger.DefaultOptions(storagePath)
-	opts.Logger = nil
-	db, err := badger.Open(opts)
+	config := DefaultConfig
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	badgerOpts := badger.DefaultOptions(config.StoragePath)
+	badgerOpts.Logger = nil
+	db, err := badger.Open(badgerOpts)
 	if err != nil {
 		return nil, fmt.Errorf("could not create persistent storage for ledger payloads: %w", err)
 	}
@@ -69,22 +88,23 @@ func NewStore(log zerolog.Logger, size int, storagePath string) (*Store, error) 
 		wg:    &sync.WaitGroup{},
 	}
 
+	s.wg.Add(1)
 	go s.flush()
 
-	s.cache, err = lru.NewWithEvict(size, func(k interface{}, v interface{}) {
+	s.cache, err = lru.NewWithEvict(config.CacheSize, func(k interface{}, v interface{}) {
 		hash, ok := k.(hash.Hash)
 		if !ok {
-			logger.Error().Interface("got", k).Msg("unexpected key format")
+			logger.Fatal().Interface("got", k).Msg("unexpected key format")
 		}
 
 		value, ok := v.(ledger.Value)
 		if !ok {
-			logger.Error().Interface("got", v).Msg("unexpected value format")
+			logger.Fatal().Interface("got", v).Msg("unexpected value format")
 		}
 
 		err := s.write(hash, value)
 		if err != nil {
-			logger.Error().Err(err).Msg("could not persist ledger payload")
+			logger.Fatal().Err(err).Msg("could not persist ledger payload")
 		}
 	})
 	if err != nil {
@@ -105,7 +125,7 @@ func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) {
 func (s *Store) Retrieve(hash hash.Hash) (*ledger.Payload, error) {
 	var payload ledger.Payload
 
-	// If the value is still in the cache, fetch it there.
+	// If the value is still in the cache, fetch it from there.
 	val, ok := s.cache.Get(hash)
 	if ok {
 		payload.Value = val.(ledger.Value)
@@ -142,7 +162,9 @@ func (s *Store) Close() error {
 	// transaction is properly committed. We assume that we are no longer
 	// applying new operations when we call `Close`, so we can explicitly do so
 	// here, without using the callback.
+	s.mutex.Lock()
 	err := s.tx.Commit()
+	s.mutex.Unlock()
 	if err != nil {
 		return fmt.Errorf("could not commit final transaction: %w", err)
 	}
@@ -212,6 +234,11 @@ func (s *Store) write(hash hash.Hash, value ledger.Value) error {
 		err = s.tx.Set(hash[:], value[:])
 	}
 	s.mutex.Unlock()
+	if errors.Is(err, badger.ErrDiscardedTxn) {
+		// This means the store is shutting down and the current transaction
+		// was committed before we attempted to apply our operation.
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("could not apply operation: %w", err)
 	}

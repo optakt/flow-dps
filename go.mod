@@ -197,5 +197,3 @@ require (
 )
 
 replace github.com/onflow/flow-go/crypto => ./flow-go/crypto
-
-//replace github.com/onflow/flow-go => ./flow-go

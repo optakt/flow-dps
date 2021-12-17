@@ -8,4 +8,5 @@ import (
 type Store interface {
 	Save(hash hash.Hash, payload *ledger.Payload)
 	Retrieve(hash hash.Hash) (*ledger.Payload, error)
+	Close() error
 }

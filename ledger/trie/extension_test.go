@@ -24,6 +24,9 @@ import (
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
+// TestExtension verifies that the hash value of a branch node with
+// both children (left and right) is computed correctly. As it is in our implementation,
+// extensions can never have less than two children, so no further test is necessary.
 func TestExtension(t *testing.T) {
 	testNode := trie.NewLeaf(0, mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0))
 
@@ -35,21 +38,28 @@ func TestExtension(t *testing.T) {
 		wantHash string
 	}{
 		{
-			name:   "skip 242 height",
+			name:   "256->15",
+			height: 256,
+			skip:   15,
+
+			wantHash: "b93af1472956079519a6a3fcee5909aa2e424fe4bb2f83671e04cc79df1431fa",
+		},
+		{
+			name:   "256->14",
 			height: 256,
 			skip:   14,
 
 			wantHash: "b873fbe1c141397e361d434d57690c44ca46ab0fccd010044d681b8149c2e46a",
 		},
 		{
-			name:   "skip 1 height",
+			name:   "15->14",
 			height: 15,
 			skip:   14,
 
 			wantHash: "aa62454a6a763f993f1424efe8235e9e36d718ceafc5d8be73d9e52c6df85b98",
 		},
 		{
-			name:   "skip no height",
+			name:   "15->15",
 			height: 15,
 			skip:   15,
 

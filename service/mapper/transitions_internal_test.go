@@ -15,21 +15,18 @@
 package mapper
 
 import (
-	"io"
-	"os"
 	"sync"
 	"testing"
 
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
-	"github.com/optakt/flow-dps/ledger/store"
-	"github.com/optakt/flow-dps/ledger/trie"
 
+	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
+	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
@@ -494,7 +491,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 func TestTransitions_UpdateTree(t *testing.T) {
 	update := mocks.GenericTrieUpdate(0)
-	tree := trie.NewTrie(mocks.GenericRootNode, mocks.BaselineStore())
+	tree := trie.NewTrie(mocks.NoopLogger, mocks.GenericRootNode, mocks.BaselineStore())
 
 	t.Run("nominal case without match", func(t *testing.T) {
 		t.Parallel()
@@ -614,14 +611,11 @@ func TestTransitions_UpdateTree(t *testing.T) {
 }
 
 func TestTransitions_CollectRegisters(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
 
-	store, err := store.NewStore(zerolog.New(io.Discard), 4*1000*1000, dir)
-	require.NoError(t, err)
+	store, teardown := helpers.InMemoryStore(t)
+	defer teardown()
 
-	tree := trie.NewEmptyTrie(store)
+	tree := trie.NewEmptyTrie(mocks.NoopLogger, store)
 	paths := mocks.GenericLedgerPaths(6)
 	for i := range paths {
 		tree.Insert(paths[i], mocks.GenericLedgerPayload(i))

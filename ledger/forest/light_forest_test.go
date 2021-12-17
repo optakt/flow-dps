@@ -15,33 +15,28 @@
 package forest_test
 
 import (
-	"io"
-	"os"
 	"testing"
 
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/model/flow"
+
 	"github.com/optakt/flow-dps/ledger/forest"
-	"github.com/optakt/flow-dps/ledger/store"
 	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/testing/helpers"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestLightForest(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
 
-	store, err := store.NewStore(zerolog.New(io.Discard), 4*1000*1000, dir)
-	require.NoError(t, err)
+	store, teardown := helpers.InMemoryStore(t)
+	defer teardown()
 
 	f := forest.New()
 
-	trie1 := trie.NewEmptyTrie(store)
-	trie2 := trie.NewEmptyTrie(store)
+	trie1 := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie2 := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 99)
 	for i := range paths {
@@ -59,9 +54,11 @@ func TestLightForest(t *testing.T) {
 	lf, err := forest.FlattenForest(f)
 	require.NoError(t, err)
 
-	rebuiltTries, err := forest.RebuildTries(store, lf)
+	rebuiltTries, err := forest.RebuildTries(mocks.NoopLogger, store, lf)
 	require.NoError(t, err)
 
-	assert.Equal(t, trie1.RootHash(), rebuiltTries[0].RootHash())
-	assert.Equal(t, trie2.RootHash(), rebuiltTries[1].RootHash())
+	for _, rebuiltTrie := range rebuiltTries {
+		got := rebuiltTrie.RootHash()
+		assert.True(t, got == trie1.RootHash() || got == trie2.RootHash())
+	}
 }

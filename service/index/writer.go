@@ -248,6 +248,11 @@ func (w *Writer) apply(ops ...func(*badger.Txn) error) error {
 			err = op(w.tx)
 		}
 		w.mutex.Unlock()
+		if errors.Is(err, badger.ErrDiscardedTxn) {
+			// This means the index writer is shutting down and the current transaction
+			// was committed before we attempted to apply our operation.
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("could not apply operation: %w", err)
 		}
@@ -285,7 +290,9 @@ func (w *Writer) Close() error {
 	// transaction is properly committed. We assume that we are no longer
 	// applying new operations when we call `Close`, so we can explicitly do so
 	// here, without using the callback.
+	w.mutex.Lock()
 	err := w.tx.Commit()
+	w.mutex.Unlock()
 	if err != nil {
 		return fmt.Errorf("could not commit final transaction: %w", err)
 	}

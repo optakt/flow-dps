@@ -21,6 +21,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
+	"github.com/optakt/flow-dps/service/mapper"
 
 	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
@@ -38,12 +39,14 @@ type Index struct {
 
 	// store is the payload storage to use for the trie that is generated from the index.
 	store dps.Store
+
+	initializer mapper.Loader
 }
 
 // FromIndex creates a new index loader, which can restore the execution state
 // from the given index database, using the given library for decoding ledger
 // paths and payloads.
-func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, store dps.Store, options ...Option) *Index {
+func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, store dps.Store, init mapper.Loader, options ...Option) *Index {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -51,11 +54,12 @@ func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, store dps
 	}
 
 	i := Index{
-		log:   log.With().Str("component", "index_loader").Logger(),
-		lib:   lib,
-		db:    db,
-		store: store,
-		cfg:   cfg,
+		log:         log.With().Str("component", "index_loader").Logger(),
+		lib:         lib,
+		db:          db,
+		store:       store,
+		cfg:         cfg,
+		initializer: init,
 	}
 
 	return &i
@@ -66,12 +70,12 @@ func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, store dps
 func (i *Index) Trie() (*trie.Trie, error) {
 
 	// Load the starting trie.
-	tree, err := i.cfg.TrieInitializer.Trie()
+	tree, err := i.initializer.Trie()
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize trie: %w", err)
 	}
 
-	trie := trie.NewEmptyTrie(i.store)
+	trie := trie.NewEmptyTrie(i.log, i.store)
 	processed := 0
 	process := func(path ledger.Path, payload *ledger.Payload) error {
 		trie.Insert(path, payload)

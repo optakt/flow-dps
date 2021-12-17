@@ -72,8 +72,8 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "path to data directory for execution state ledger")
 
-	pflag.IntVar(&flagCacheSize, "cache-size", 4*1000*1000*1000, "size of the in-memory cache for ledger payloads")
-	pflag.StringVar(&flagPayloadStorage, "payload-storage", "./payloads", "path at which to store ledger payloads")
+	pflag.IntVar(&flagCacheSize, "cache-size", store.DefaultCacheSize, "size of the in-memory cache for ledger payloads")
+	pflag.StringVar(&flagPayloadStorage, "payload-storage", store.DefaultStoragePath, "path at which to store ledger payloads")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.Parse()
@@ -159,7 +159,7 @@ func run() int {
 		}
 	}()
 
-	payloadStore, err := store.NewStore(log, flagCacheSize, flagPayloadStorage)
+	payloadStore, err := store.NewStore(log, store.WithCacheSize(flagCacheSize), store.WithStoragePath(flagPayloadStorage))
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize payload storage")
 		return failure
@@ -167,7 +167,8 @@ func run() int {
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB, payloadStore)
+	fromScratch := loader.FromScratch(log, payloadStore)
+	load = loader.FromIndex(log, storage, indexDB, payloadStore, fromScratch)
 	bootstrap := flagCheckpoint != ""
 	if empty {
 		file, err := os.Open(flagCheckpoint)
@@ -176,7 +177,7 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		load = loader.FromCheckpoint(file, payloadStore)
+		load = loader.FromCheckpoint(log, payloadStore, file)
 	} else if bootstrap {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -184,9 +185,8 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		initialize := loader.FromCheckpoint(file, payloadStore)
-		load = loader.FromIndex(log, storage, indexDB, payloadStore,
-			loader.WithInitializer(initialize),
+		initialize := loader.FromCheckpoint(log, payloadStore, file)
+		load = loader.FromIndex(log, storage, indexDB, payloadStore, initialize,
 			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
 		)
 	}

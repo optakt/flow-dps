@@ -15,13 +15,13 @@
 package trie
 
 import (
-	"fmt"
-	"io"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
+// Branch is a node is an intermediary node which has children.
+// It does not need to contain a path, because its children are ordered
+// based on their own path differences.
 type Branch struct {
 	lChild Node
 	rChild Node
@@ -30,10 +30,11 @@ type Branch struct {
 	hash   hash.Hash
 
 	// dirty marks whether the current hash value of the branch is valid.
-	// If this is set to false, the hash needs to be recomputed.
+	// If this is set to true, the hash needs to be recomputed.
 	dirty bool
 }
 
+// NewBranch creates a new branch with the given children at the given height.
 func NewBranch(height uint16, lChild, rChild Node) *Branch {
 	b := Branch{
 		lChild: lChild,
@@ -46,19 +47,7 @@ func NewBranch(height uint16, lChild, rChild Node) *Branch {
 	return &b
 }
 
-func NewBranchWithHash(height uint16, hash hash.Hash, lChild, rChild Node) *Branch {
-	b := Branch{
-		lChild: lChild,
-		rChild: rChild,
-
-		height: height,
-		hash:   hash,
-		dirty:  false,
-	}
-
-	return &b
-}
-
+// computeHash computes the branch hash by hashing its children.
 func (b *Branch) computeHash() {
 	if b.lChild == nil && b.rChild == nil {
 		b.hash = ledger.GetDefaultHashForHeight(int(b.height))
@@ -82,6 +71,7 @@ func (b *Branch) computeHash() {
 	b.dirty = false
 }
 
+// Hash returns the branch hash. If it is currently dirty, it is recomputed first.
 func (b *Branch) Hash() hash.Hash {
 	if b.dirty {
 		b.computeHash()
@@ -89,36 +79,27 @@ func (b *Branch) Hash() hash.Hash {
 	return b.hash
 }
 
+// FlagDirty flags the branch as having a dirty hash.
 func (b *Branch) FlagDirty() {
 	b.dirty = true
 }
 
+// Height returns the branch height.
 func (b *Branch) Height() uint16 {
 	return b.height
 }
 
+// Path returns a dummy path, since branches do not have paths.
 func (b *Branch) Path() ledger.Path {
 	return ledger.DummyPath
 }
 
+// LeftChild returns the left child.
 func (b *Branch) LeftChild() Node {
 	return b.lChild
 }
 
+// RightChild returns the right child.
 func (b *Branch) RightChild() Node {
 	return b.rChild
-}
-
-func (b *Branch) Dump(w io.Writer) {
-	_, err := w.Write([]byte(fmt.Sprintf("%d:\tBRANCH\t%x\n", b.height, b.Hash())))
-	if err != nil {
-		panic(err)
-	}
-
-	if b.lChild != nil {
-		b.lChild.Dump(w)
-	}
-	if b.rChild != nil {
-		b.rChild.Dump(w)
-	}
 }

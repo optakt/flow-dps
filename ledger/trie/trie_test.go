@@ -16,42 +16,62 @@ package trie_test
 
 import (
 	"encoding/hex"
-	"io"
-	"os"
 	"testing"
 
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/common/utils"
 	reference "github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 
-	"github.com/optakt/flow-dps/ledger/store"
 	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
-func TestTrie_InsertLeftRegister(t *testing.T) {
+// TestEmptyTrie tests whether the root hash of an empty trie matches the formal specification.
+func Test_EmptyTrie(t *testing.T) {
+
+	const expectedRootHashHex = "568f4ec740fe3b5de88034cb7b1fbddb41548b068f31aebc8ae9189e429c5749"
+
 	store := mocks.BaselineStore()
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+
+	got := trie.RootHash()
+	require.Equal(t, ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight), hash.Hash(got))
+	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
+}
+
+// TestTrie_InsertLeftRegister tests whether the root hash of trie with only the left-most
+// register populated matches the formal specification.
+// The expected value is coming from a reference implementation in python and is hard-coded here.
+func TestTrie_InsertLeftRegister(t *testing.T) {
+
+	const expectedRootHashHex = "b30c99cc3e027a6ff463876c638041b1c55316ed935f1b3699e52a2c3e3eaaab"
+
+	store := mocks.BaselineStore()
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	path := utils.PathByUint16LeftPadded(0)
 	payload := utils.LightPayload(11, 12345)
 
 	trie.Insert(path, payload)
 
-	expectedRootHashHex := "b30c99cc3e027a6ff463876c638041b1c55316ed935f1b3699e52a2c3e3eaaab"
-
 	got := trie.RootHash()
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
 }
 
+// TestTrie_InsertRightRegister tests whether the root hash of trie with only the right-most
+// register populated matches the formal specification.
+// The expected value is coming from a reference implementation in python and is hard-coded here.
 func TestTrie_InsertRightRegister(t *testing.T) {
+
+	const expectedRootHashHex = "4313d22bcabbf21b1cfb833d38f1921f06a91e7198a6672bc68fa24eaaa1a961"
+
 	store := mocks.BaselineStore()
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	var path ledger.Path
 	for i := 0; i < len(path); i++ {
@@ -61,36 +81,40 @@ func TestTrie_InsertRightRegister(t *testing.T) {
 
 	trie.Insert(path, payload)
 
-	expectedRootHashHex := "4313d22bcabbf21b1cfb833d38f1921f06a91e7198a6672bc68fa24eaaa1a961"
-
 	got := trie.RootHash()
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
 }
 
+// TestTrie_InsertMiddleRegister tests the root hash of trie holding only a single
+// allocated register somewhere in the middle.
+// The expected value is coming from a reference implementation in python and is hard-coded here.
 func TestTrie_InsertMiddleRegister(t *testing.T) {
+
+	const expectedRootHashHex = "4a29dad0b7ae091a1f035955e0c9aab0692b412f60ae83290b6290d4bf3eb296"
+
 	store := mocks.BaselineStore()
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	path := utils.PathByUint16LeftPadded(56809)
 	payload := utils.LightPayload(12346, 59656)
 
 	trie.Insert(path, payload)
 
-	expectedRootHashHex := "4a29dad0b7ae091a1f035955e0c9aab0692b412f60ae83290b6290d4bf3eb296"
-
 	got := trie.RootHash()
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
 }
 
+// TestTrie_InsertManyRegisters tests whether the root hash of a trie storing 12001 randomly selected registers
+// matches the formal specification.
+// The expected value is coming from a reference implementation in python and is hard-coded here.
 func TestTrie_InsertManyRegisters(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
 
-	store, err := store.NewStore(zerolog.New(io.Discard), 4*1000*1000, dir)
-	require.NoError(t, err)
+	const expectedRootHashHex = "74f748dbe563bb5819d6c09a34362a048531fd9647b4b2ea0b6ff43f200198aa"
 
-	trie := trie.NewEmptyTrie(store)
+	store, teardown := helpers.InMemoryStore(t)
+	defer teardown()
+
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
 
@@ -99,27 +123,25 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 	}
 
 	got := trie.RootHash()
-	expectedRootHashHex := "74f748dbe563bb5819d6c09a34362a048531fd9647b4b2ea0b6ff43f200198aa"
 	assert.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
 }
 
-// FIXME: Make a mock store which can substitute the store and preserve functionality for tests.
-
+// TestTrie_InsertFullTrie tests whether the root hash of a trie,
+// whose left-most 65536 registers are populated, matches the formal specification.
+// The expected value is coming from a reference implementation in python and is hard-coded here.
 func TestTrie_InsertFullTrie(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	const expectedRootHashHex = "6b3a48d672744f5586c571c47eae32d7a4a3549c1d4fa51a0acfd7b720471de9"
+	const regCount = 65536
 
-	store, err := store.NewStore(zerolog.New(io.Discard), 4*1000*1000, dir)
-	require.NoError(t, err)
+	store, teardown := helpers.InMemoryStore(t)
+	defer teardown()
 
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
-	numberRegisters := 65536
 	rng := helpers.NewGenerator()
-	paths := make([]ledger.Path, 0, numberRegisters)
-	payloads := make([]*ledger.Payload, 0, numberRegisters)
-	for i := 0; i < numberRegisters; i++ {
+	paths := make([]ledger.Path, 0, regCount)
+	payloads := make([]*ledger.Payload, 0, regCount)
+	for i := 0; i < regCount; i++ {
 		paths = append(paths, utils.PathByUint16LeftPadded(uint16(i)))
 		temp := rng.Next()
 		payload := utils.LightPayload(temp, temp)
@@ -131,12 +153,12 @@ func TestTrie_InsertFullTrie(t *testing.T) {
 	}
 
 	got := trie.RootHash()
-	expectedRootHashHex := "6b3a48d672744f5586c571c47eae32d7a4a3549c1d4fa51a0acfd7b720471de9"
 	assert.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
 }
 
 func TestTrie_InsertManyTimes(t *testing.T) {
-	expectedRootHashes := []string{
+
+	var expectedRootHashes = []string{
 		"08db9aeed2b9fcc66b63204a26a4c28652e44e3035bd87ba0ed632a227b3f6dd",
 		"2f4b0f490fa05e5b3bbd43176e367c3e9b64cdb710e45d4508fff11759d7a08e",
 		"668811792995cd960e7e343540a360682ac375f7ec5533f774c464cd6b34adc9",
@@ -159,14 +181,10 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 		"ce633e9ca6329d6984c37a46e0a479bb1841674c2db00970dacfe035882d4aba",
 	}
 
-	dir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	store, teardown := helpers.InMemoryStore(t)
+	defer teardown()
 
-	store, err := store.NewStore(zerolog.New(io.Discard), 4*1000*1000, dir)
-	require.NoError(t, err)
-
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	rng := helpers.NewGenerator()
 	path := utils.PathByUint16LeftPadded(rng.Next())
@@ -174,9 +192,8 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	payload := utils.LightPayload(temp, temp)
 	trie.Insert(path, payload)
 
-	expectedRootHashHex := "08db9aeed2b9fcc66b63204a26a4c28652e44e3035bd87ba0ed632a227b3f6dd"
 	got := trie.RootHash()
-	assert.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
+	assert.Equal(t, expectedRootHashes[0], hex.EncodeToString(got[:]))
 
 	var paths []ledger.Path
 	var payloads []ledger.Payload
@@ -199,16 +216,15 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 }
 
 func TestTrie_InsertDeallocateRegisters(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
 
-	store, err := store.NewStore(zerolog.New(io.Discard), 4*1000*1000, dir)
-	require.NoError(t, err)
+	const expectedRootHashHex = "d81e27a93f2bef058395f70e00fb5d3c8e426e22b3391d048b34017e1ecb483e"
+
+	store, teardown := helpers.InMemoryStore(t)
+	defer teardown()
 
 	rng := helpers.NewGenerator()
-	testTrie := trie.NewEmptyTrie(store)
-	refTrie := trie.NewEmptyTrie(store)
+	testTrie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	refTrie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	// Draw 99 random key-value pairs that will be first allocated and later deallocated.
 	paths1, payloads1 := helpers.SampleRandomRegisterWrites(rng, 99)
@@ -230,7 +246,6 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 	}
 
 	// this should be identical to the first 99 registers never been written
-	expectedRootHashHex := "d81e27a93f2bef058395f70e00fb5d3c8e426e22b3391d048b34017e1ecb483e"
 	gotRef := refTrie.RootHash()
 	got := testTrie.RootHash()
 
@@ -239,14 +254,11 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 }
 
 func TestTrie_Leaves(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
 
-	store, err := store.NewStore(zerolog.New(io.Discard), 4*1000*1000, dir)
-	require.NoError(t, err)
+	store, teardown := helpers.InMemoryStore(t)
+	defer teardown()
 
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 99)
 	for i := range paths {
@@ -257,11 +269,10 @@ func TestTrie_Leaves(t *testing.T) {
 }
 
 func Benchmark_TrieRootHash(b *testing.B) {
-	store := mocks.BaselineStore()
 
+	store := mocks.BaselineStore()
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
 
-	//var wantHash, gotHash ledger.RootHash
 	b.Run("insert elements (reference)", func(b *testing.B) {
 		ref := reference.NewEmptyMTrie()
 		ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
@@ -269,7 +280,7 @@ func Benchmark_TrieRootHash(b *testing.B) {
 	})
 
 	b.Run("insert elements (new)", func(b *testing.B) {
-		trie := trie.NewEmptyTrie(store)
+		trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 		for i := range paths {
 			trie.Insert(paths[i], &payloads[i])
 		}

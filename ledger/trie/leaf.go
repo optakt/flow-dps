@@ -15,21 +15,25 @@
 package trie
 
 import (
-	"fmt"
-	"io"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
+// Leaf is what contains the values in the trie. This implementation uses nodes that are
+// compacted and do not always reside at the bottom layer of the trie.
+// Instead, they are inserted at the first heights where they do not conflict with others.
+// This allows the trie to keep a relatively small amount of nodes, instead of having
+// many nodes/extensions for each leaf in order to bring it all the way to the bottom
+// of the trie.
 type Leaf struct {
 	path   ledger.Path
 	hash   hash.Hash
 	height uint16
 }
 
+// NewLeaf creates a new leaf at the given height, and computes its hash using the
+// given path and payload.
 func NewLeaf(height uint16, path ledger.Path, payload *ledger.Payload) *Leaf {
-	//fmt.Printf("GOT: Hash for leaf computed using path %x, value %v, height %d\n", path[:], payload.Value, height)
 	n := Leaf{
 		path:   path,
 		hash:   ledger.ComputeCompactValue(hash.Hash(path), payload.Value, int(height)),
@@ -39,39 +43,27 @@ func NewLeaf(height uint16, path ledger.Path, payload *ledger.Payload) *Leaf {
 	return &n
 }
 
-func NewLeafWithHash(height uint16, path ledger.Path, hash hash.Hash) *Leaf {
-	n := Leaf{
-		path:   path,
-		hash:   hash,
-		height: height,
-	}
-
-	return &n
-}
-
+// Hash returns the leaf hash.
 func (l Leaf) Hash() hash.Hash {
 	return l.hash
 }
 
+// Height returns the extension height.
 func (l Leaf) Height() uint16 {
 	return l.height
 }
 
+// Path returns the leaf path.
 func (l Leaf) Path() ledger.Path {
 	return l.path
 }
 
+// LeftChild returns nothing since leaves do not have any children.
 func (l Leaf) LeftChild() Node {
 	return nil
 }
 
+// RightChild returns nothing since leaves do not have any children.
 func (l Leaf) RightChild() Node {
 	return nil
-}
-
-func (l Leaf) Dump(w io.Writer) {
-	_, err := w.Write([]byte(fmt.Sprintf("%d:\tLEAF\t%x\t%x\n", l.height, l.hash, l.path[:])))
-	if err != nil {
-		panic(err)
-	}
 }

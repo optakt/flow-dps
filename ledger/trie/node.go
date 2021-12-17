@@ -15,14 +15,14 @@
 package trie
 
 import (
-	"io"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
-// FIXME: Look into arena allocation for node paths to improve both memory usage and performance.
-// FIXME: Look into using a sync Pool to reduce allocations at the expense of some performance.
+// TODO: Look into arena allocation for node paths to improve both memory usage
+//  and performance. See https://github.com/optakt/flow-dps/issues/518.
+// TODO: Look into using a sync Pool to reduce allocations at the expense of
+//  some performance. See https://github.com/optakt/flow-dps/issues/519.
 
 // Node represents a trie node.
 type Node interface {
@@ -32,6 +32,4 @@ type Node interface {
 
 	LeftChild() Node
 	RightChild() Node
-
-	Dump(io.Writer)
 }

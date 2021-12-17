@@ -30,7 +30,7 @@ func TestAllPaths(t *testing.T) {
 		t.Parallel()
 
 		testNode := trie.NewLeaf(256, mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0))
-		testTrie := trie.NewTrie(testNode, nil)
+		testTrie := trie.NewTrie(mocks.NoopLogger, testNode, nil)
 
 		got := allPaths(testTrie)
 
@@ -50,7 +50,7 @@ func TestAllPaths(t *testing.T) {
 	t.Run("empty trie", func(t *testing.T) {
 		t.Parallel()
 
-		got := allPaths(trie.NewEmptyTrie(nil))
+		got := allPaths(trie.NewEmptyTrie(mocks.NoopLogger, nil))
 
 		assert.Empty(t, got)
 	})

@@ -72,11 +72,11 @@ var (
 	})
 
 	// GenericRootNode Visual Representation:
-	//           6 (root)
-	//          / \
-	//         3   5
-	//        / \   \
-	//       1   2   4
+	//            B (root)
+	//          /   \
+	//         B     B
+	//        / \   / \
+	//       3   2 1   0
 	GenericRootNode = trie.NewBranch(
 		256,
 		trie.NewBranch(
@@ -91,7 +91,7 @@ var (
 		),
 	)
 
-	GenericTrie = trie.NewTrie(GenericRootNode, nil)
+	GenericTrie = trie.NewTrie(NoopLogger, GenericRootNode, nil)
 
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),

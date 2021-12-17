@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/rs/zerolog"
+
 	"github.com/onflow/flow-go/ledger/common/utils"
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -45,8 +47,8 @@ func ToLightTrie(t *Trie, index IndexMap) (*LightTrie, error) {
 	return &lt, nil
 }
 
-func FromLightTrie(lt *LightTrie, nodes []Node, store dps.Store) (*Trie, error) {
-	t := NewTrie(nodes[lt.RootIndex], store)
+func FromLightTrie(log zerolog.Logger, store dps.Store, lt *LightTrie, nodes []Node) (*Trie, error) {
+	t := NewTrie(log, nodes[lt.RootIndex], store)
 	rootHash := t.RootHash()
 	if !bytes.Equal(lt.RootHash, rootHash[:]) {
 		return nil, fmt.Errorf("could not restore trie: roothash does not match")
@@ -69,12 +71,9 @@ func DecodeLightTrie(reader io.Reader) (*LightTrie, error) {
 	var lightTrie LightTrie
 
 	buf := make([]byte, 2)
-	read, err := io.ReadFull(reader, buf)
+	_, err := io.ReadFull(reader, buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not read light trie decoding version: %w", err)
-	}
-	if read != len(buf) {
-		return nil, fmt.Errorf("not enough bytes read (got %d, expected %d)", read, len(buf))
 	}
 
 	version, _, err := utils.ReadUint16(buf)
@@ -88,12 +87,9 @@ func DecodeLightTrie(reader io.Reader) (*LightTrie, error) {
 
 	// read root uint64 RootIndex
 	buf = make([]byte, 8)
-	read, err = io.ReadFull(reader, buf)
+	_, err = io.ReadFull(reader, buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not read fixed-length part of light trie: %w", err)
-	}
-	if read != len(buf) {
-		return nil, fmt.Errorf("not enough bytes read (got %d, expected %d)", read, len(buf))
 	}
 
 	rootIndex, _, err := utils.ReadUint64(buf)

@@ -15,14 +15,14 @@
 package trie
 
 import (
-	"fmt"
-	"io"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
+// Extension acts as a shortcut between many layers of the trie. It replaces a set of branches.
+// The Flow implementation does not use extensions. This is a DPS optimization, which allows saving
+// memory usage by reducing the amount of nodes necessary in the trie.
 type Extension struct {
 	lChild Node
 	rChild Node
@@ -31,7 +31,8 @@ type Extension struct {
 	// skip is the height up to which the extension skips to.
 	skip uint16
 	// path is the path that the extension skips through.
-	// FIXME: Store only skipped part of the path rather than whole path.
+	// TODO: Store only skipped part of the path rather than whole path.
+	// 	https://github.com/optakt/flow-dps/issues/516
 	path ledger.Path
 	hash hash.Hash
 
@@ -40,6 +41,7 @@ type Extension struct {
 	dirty bool
 }
 
+// NewExtension creates a new extension, from the given height to the given skip value.
 func NewExtension(height, skip uint16, path ledger.Path, lChild, rChild Node) *Extension {
 	e := Extension{
 		lChild: lChild,
@@ -54,25 +56,11 @@ func NewExtension(height, skip uint16, path ledger.Path, lChild, rChild Node) *E
 	return &e
 }
 
-func NewExtensionWithHash(height, skip uint16, path ledger.Path, hash hash.Hash, lChild, rChild Node) *Extension {
-	e := Extension{
-		lChild: lChild,
-		rChild: rChild,
-
-		height: height,
-		skip:   skip,
-		path:   path,
-
-		hash:  hash,
-		dirty: false,
-	}
-
-	return &e
-}
-
+// computeHash computes the extension's hash.
 func (e *Extension) computeHash() {
 	var computed hash.Hash
 
+	// Compute the bottom hash.
 	var lHash, rHash hash.Hash
 	if e.lChild != nil {
 		lHash = e.lChild.Hash()
@@ -87,6 +75,8 @@ func (e *Extension) computeHash() {
 	}
 	computed = hash.HashInterNode(lHash, rHash)
 
+	// For each skipped height, combine the previous hash with the default ledger
+	// height of the current layer.
 	for i := e.skip; i < e.height; i++ {
 		if bitutils.Bit(e.path[:], int(nodeHeight(i+1))) == 0 {
 			lHash = computed
@@ -102,6 +92,7 @@ func (e *Extension) computeHash() {
 	e.dirty = false
 }
 
+// Hash returns the extension hash. If it is currently dirty, it is recomputed first.
 func (e *Extension) Hash() hash.Hash {
 	if e.dirty {
 		e.computeHash()
@@ -109,36 +100,27 @@ func (e *Extension) Hash() hash.Hash {
 	return e.hash
 }
 
+// FlagDirty flags the extension as having a dirty hash.
 func (e *Extension) FlagDirty() {
 	e.dirty = true
 }
 
+// Height returns the extension height.
 func (e *Extension) Height() uint16 {
 	return e.height
 }
 
+// Path returns the extension path.
+func (e *Extension) Path() ledger.Path {
+	return e.path
+}
+
+// LeftChild returns the left child.
 func (e *Extension) LeftChild() Node {
 	return e.lChild
 }
 
+// RightChild returns the right child.
 func (e *Extension) RightChild() Node {
 	return e.rChild
-}
-
-func (e *Extension) Path() ledger.Path {
-	return ledger.DummyPath
-}
-
-func (e *Extension) Dump(w io.Writer) {
-	_, err := w.Write([]byte(fmt.Sprintf("%d:\tEXTENS\t%d\t%x\n", e.height, e.skip, e.Hash())))
-	if err != nil {
-		panic(err)
-	}
-
-	if e.lChild != nil {
-		e.lChild.Dump(w)
-	}
-	if e.rChild != nil {
-		e.rChild.Dump(w)
-	}
 }

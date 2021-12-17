@@ -19,15 +19,20 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/rs/zerolog"
+
 	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// LightForest is a flattened version of a forest of tries.
+// It is meant to be easily encoded/decoded into checkpoints.
 type LightForest struct {
 	Nodes []*trie.LightNode
 	Tries []*trie.LightTrie
 }
 
+// FlattenForest flattens the given forest and returns it in the form of a light forest.
 func FlattenForest(f *Forest) (*LightForest, error) {
 	tries := f.Trees()
 	lightTries := make([]*trie.LightTrie, 0, len(tries))
@@ -38,17 +43,21 @@ func FlattenForest(f *Forest) (*LightForest, error) {
 
 	count := uint64(1)
 	for _, t := range tries {
+		// Iterate on the nodes of the trie, from the bottom up.
 		for itr := trie.NewNodeIterator(t); itr.Next(); {
 			node := itr.Value()
 
+			// If the node is already in the index, ignore it.
 			_, exists := index[node]
 			if exists {
 				continue
 			}
 
+			// Store the position of the node in the index.
 			index[node] = count
 			count++
 
+			// Transform the node into a light node and insert it into the slice of light nodes.
 			lightNode, err := trie.ToLightNode(node, index)
 			if err != nil {
 				return nil, fmt.Errorf("could not build light node: %w", err)
@@ -56,6 +65,8 @@ func FlattenForest(f *Forest) (*LightForest, error) {
 			lightNodes = append(lightNodes, lightNode)
 		}
 
+		// Once each of the trie's nodes are indexed and flattened, we can create the light trie by encoding its
+		// root index.
 		lightTrie, err := trie.ToLightTrie(t, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not build light trie: %w", err)
@@ -63,6 +74,7 @@ func FlattenForest(f *Forest) (*LightForest, error) {
 		lightTries = append(lightTries, lightTrie)
 	}
 
+	// Instantiate the light forest and return it.
 	lightForest := LightForest{
 		Nodes: lightNodes,
 		Tries: lightTries,
@@ -71,28 +83,29 @@ func FlattenForest(f *Forest) (*LightForest, error) {
 	return &lightForest, nil
 }
 
-func RebuildTries(store dps.Store, lightForest *LightForest) ([]*trie.Trie, error) {
+// RebuildTries transforms the light tries from a light forest into proper tries, while populating the given store.
+func RebuildTries(log zerolog.Logger, store dps.Store, lightForest *LightForest) ([]*trie.Trie, error) {
 	tries := make([]*trie.Trie, 0, len(lightForest.Tries))
 
-	// At this call, we give a 150 million + slice of light nodes and expect 150 million + normal nodes as the return value. As long as the `lightForest` is not garbage collected, memory usage remains huge.
+	// Convert light nodes into proper nodes.
 	nodes, err := RebuildNodes(lightForest.Nodes)
 	if err != nil {
 		return nil, fmt.Errorf("could not rebuild nodes from light nodes: %w", err)
 	}
 
+	// Iterate on each light trie, recreate it by setting its root from the slice of proper nodes, and trim it to
+	// save memory usage.
 	for _, lt := range lightForest.Tries {
-		tr := trie.NewTrie(nodes[lt.RootIndex], store)
+		// Create proper trie by setting its root using the node slice.
+		tr := trie.NewTrie(log, nodes[lt.RootIndex], store)
 		rootHash := tr.RootHash()
 		if !bytes.Equal(rootHash[:], lt.RootHash) {
 			return nil, fmt.Errorf("restored trie root hash mismatch: %w", err)
 		}
 
-		// FIXME: We can restore a trie from a checkpoint, but if our store does not contain the
-		//  payloads for this trie, the trie can't be relied upon to add new elements. Because of
-		//  this, we NEED to include the payloads in the light nodes, so that the DB can be rebuilt
-		//  when rebuilding the tries.
-
-		trimmedTrie := trie.NewEmptyTrie(store)
+		// Because the checkpoint contains tries that do not use extension nodes, we need to rebuild a new trie
+		// using the original trie's leaves, which is effectively a trimmed version of the original trie.
+		trimmedTrie := trie.NewEmptyTrie(log, store)
 		for _, leaf := range tr.Leaves() {
 			payload, err := store.Retrieve(leaf.Hash())
 			if err != nil {
@@ -102,6 +115,7 @@ func RebuildTries(store dps.Store, lightForest *LightForest) ([]*trie.Trie, erro
 			trimmedTrie.Insert(leaf.Path(), payload)
 		}
 
+		// Append the trimmed trie to the returned slice of tries.
 		tries = append(tries, trimmedTrie)
 	}
 
@@ -113,8 +127,6 @@ func RebuildTries(store dps.Store, lightForest *LightForest) ([]*trie.Trie, erro
 // similar numbers of their equivalent, formatted differently, this function deletes nodes from the
 // original slice as it creates new ones, in order to let Go do garbage collection and effectively
 // halving the RAM required to process a checkpoint.
-// TODO: Ideally in here we'd want to directly restructure the nodes and replace unnecessary branches
-//  with extensions, but that might be tricky.
 func RebuildNodes(lightNodes []*trie.LightNode) ([]trie.Node, error) {
 	nodes := make([]trie.Node, 0, len(lightNodes))
 	for i, lightNode := range lightNodes {
@@ -123,19 +135,18 @@ func RebuildNodes(lightNodes []*trie.LightNode) ([]trie.Node, error) {
 			continue
 		}
 
+		// If the node has children that have a higher index than it, it means the node slice is disordered and
+		// cannot be processed.
 		if lightNode.LIndex >= uint64(i) || lightNode.RIndex >= uint64(i) {
 			return nil, errors.New("sequence of light nodes does not satisfy descendents first relationship")
 		}
 
+		// Convert the lightNode into a proper node and append it to the returned slice of nodes.
 		node, err := trie.FromLightNode(lightNode, nodes)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode light node: %w", err)
 		}
-
 		nodes = append(nodes, node)
-		if i%500000 == 0 {
-			fmt.Println("Successfully rebuilt node", i)
-		}
 
 		// Remove original light node from slice to preserve memory.
 		lightNodes[i] = nil

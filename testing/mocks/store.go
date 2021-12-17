@@ -22,6 +22,7 @@ import (
 type Store struct {
 	SaveFunc     func(hash hash.Hash, payload *ledger.Payload)
 	RetrieveFunc func(hash hash.Hash) (*ledger.Payload, error)
+	CloseFunc    func() error
 }
 
 func BaselineStore() *Store {
@@ -30,6 +31,7 @@ func BaselineStore() *Store {
 		RetrieveFunc: func(hash hash.Hash) (*ledger.Payload, error) {
 			return GenericLedgerPayload(0), nil
 		},
+		CloseFunc: func() error { return nil },
 	}
 
 	return &s
@@ -41,4 +43,8 @@ func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) {
 
 func (s *Store) Retrieve(hash hash.Hash) (*ledger.Payload, error) {
 	return s.RetrieveFunc(hash)
+}
+
+func (s *Store) Close() error {
+	return s.CloseFunc()
 }

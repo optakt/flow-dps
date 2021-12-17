@@ -26,10 +26,20 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+const (
+	legacyVersion   = uint16(0)
+	encodingVersion = uint16(1)
+)
+
+// LightNode is a node that is formatted in a way that it can be easily encoded and written on disk,
+// as part of a checkpoint. Instead of having pointers to its children, it stores
+// that information using the index at which its children are in the light node index.
 type LightNode struct {
+	// Positions of the left and right children in the index.
 	LIndex uint64
 	RIndex uint64
 
+	// Path and hash of the node in the trie.
 	Path      []byte
 	HashValue []byte
 
@@ -39,8 +49,11 @@ type LightNode struct {
 	Skip uint16
 }
 
+// IndexMap is a map used to index light nodes. It keeps track of the position of
+// each node, and is also used to avoid issues with duplicate nodes.
 type IndexMap map[Node]uint64
 
+// ToLightNode converts the given node into a light node and indexes its position in the given index.
 func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 	leftIndex, found := index[node.LeftChild()]
 	if !found {
@@ -53,8 +66,10 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 		return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(hash[:]))
 	}
 
-	// By calling node.Hash we ensure that the node hash is computed and will not be stored dirty.
+	// By calling node.Hash we ensure that the node hash is computed and does not get stored in a dirty state.
 	hash := node.Hash()
+
+	// Set the common node data.
 	lightNode := LightNode{
 		LIndex:    leftIndex,
 		RIndex:    rightIndex,
@@ -62,6 +77,7 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 		HashValue: hash[:],
 	}
 
+	// Add the missing data that is specific to each different node type.
 	switch n := node.(type) {
 	case *Extension:
 		lightNode.Skip = n.skip
@@ -77,6 +93,7 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 	return &lightNode, nil
 }
 
+// FromLightNode transforms a light node into a proper node.
 func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 	hash, err := hash.ToHash(ln.HashValue)
 	if err != nil {
@@ -120,11 +137,7 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 	}, nil
 }
 
-const (
-	legacyVersion   = uint16(0)
-	encodingVersion = uint16(1)
-)
-
+// EncodeLightNode encodes a light node into a slice of bytes.
 func EncodeLightNode(lightNode *LightNode, store dps.Store) []byte {
 
 	var payload *ledger.Payload
@@ -135,6 +148,7 @@ func EncodeLightNode(lightNode *LightNode, store dps.Store) []byte {
 			panic(fmt.Errorf("fatal error: invalid hash in node: %w", err))
 		}
 
+		// Retrieve the payload from the store
 		payload, err = store.Retrieve(h)
 		if err != nil {
 			panic(fmt.Errorf("fatal error: missing payload from store: %w", err))
@@ -142,6 +156,15 @@ func EncodeLightNode(lightNode *LightNode, store dps.Store) []byte {
 	}
 	encPayload := encoding.EncodePayload(payload)
 
+	// Length is calculated using:
+	// 	* encoding version (2 bytes)
+	// 	* LIndex (8 bytes)
+	// 	* RIndex (8 bytes)
+	// 	* Height (2 bytes)
+	// 	* Skip (2 bytes)
+	// 	* Length of path (32 bytes)
+	// 	* Length of hash (32 bytes)
+	//	* Length of encoded payload (variable)
 	length := 2 + 8 + 8 + 2 + 2 + len(lightNode.Path) + len(lightNode.HashValue) + len(encPayload)
 	buf := make([]byte, length)
 
@@ -157,14 +180,16 @@ func EncodeLightNode(lightNode *LightNode, store dps.Store) []byte {
 	return buf
 }
 
+// DecodeLightNode reads encoded light node data and returns a light node.
+// It supports the legacy encoding format from FlowGo as well as the new optimized format.
 func DecodeLightNode(reader io.Reader, store dps.Store) (*LightNode, error) {
+
+	// Length is calculated using:
+	// 	* encoding version (2 bytes)
 	var buf [2]byte
-	read, err := io.ReadFull(reader, buf[:])
+	_, err := io.ReadFull(reader, buf[:])
 	if err != nil {
 		return nil, fmt.Errorf("could not read light node encoding version: %w", err)
-	}
-	if read != len(buf) {
-		return nil, fmt.Errorf("not enough bytes read (got %d, expected %d)", read, len(buf))
 	}
 
 	version, _, err := utils.ReadUint16(buf[:])
@@ -174,23 +199,27 @@ func DecodeLightNode(reader io.Reader, store dps.Store) (*LightNode, error) {
 
 	switch version {
 	case encodingVersion:
-		return decodeLightNode(reader, store)
+		return decodeNewFormat(reader, store)
 	case legacyVersion:
-		return decodeLegacyNode(reader, store)
+		return decodeLegacyFormat(reader, store)
 	default:
-		return nil, fmt.Errorf("unsupported encoding version: expected %d got %d", encodingVersion, version)
+		return nil, fmt.Errorf("unsupported encoding version: %d", version)
 	}
 }
 
-func decodeLightNode(reader io.Reader, store dps.Store) (*LightNode, error) {
+// Decodes a newly-formatted light node.
+func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
+
+	// Length is calculated using:
+	// 	* LIndex (8 bytes)
+	// 	* RIndex (8 bytes)
+	// 	* Height (2 bytes)
+	// 	* Skip (2 bytes)
 	length := 8 + 8 + 2 + 2
 	buf := make([]byte, length)
-	read, err := io.ReadFull(reader, buf)
+	_, err := io.ReadFull(reader, buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not read fixed-length part of light node: %w", err)
-	}
-	if read != len(buf) {
-		return nil, fmt.Errorf("not enough bytes read (got %d, expected %d)", read, len(buf))
 	}
 
 	var lightNode LightNode
@@ -241,24 +270,18 @@ func decodeLightNode(reader io.Reader, store dps.Store) (*LightNode, error) {
 	return &lightNode, nil
 }
 
-// Legacy nodes have the following attributes and sizes:
-// version        - 2B -> already parsed in parent call
-// height         - 2B
-// left index     - 8B
-// right index    - 8B
-// max depth      - 2B -> not used
-// register count - 8B -> not used
-// path           - 2B + Path Length
-// payload        - 4B + Payload Length -> not used
-// hash           - 2B + Hash Length
-func decodeLegacyNode(reader io.Reader, store dps.Store) (*LightNode, error) {
+// Decodes a legacy-formatted light node.
+func decodeNewFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
+	// Length is calculated using:
+	// 	* Height (2 bytes)
+	// 	* LIndex (8 bytes)
+	// 	* RIndex (8 bytes)
+	// 	* MaxDepth (2 bytes) — Ignored
+	// 	* RegisterCount (8 bytes) — Ignored
 	buf := make([]byte, 2+8+8+2+8)
-	read, err := io.ReadFull(reader, buf)
+	_, err := io.ReadFull(reader, buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not read fixed-length part of light node: %w", err)
-	}
-	if read != len(buf) {
-		return nil, fmt.Errorf("not enough bytes read (got %d, expected %d)", read, len(buf))
 	}
 
 	var lightNode LightNode

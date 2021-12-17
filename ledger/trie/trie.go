@@ -15,10 +15,8 @@
 package trie
 
 import (
-	"fmt"
-	"io"
-
 	"github.com/gammazero/deque"
+	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
@@ -27,13 +25,18 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
+// Trie is a modified Patricia-Merkle Trie, which is the storage layer of the Flow ledger.
+// It uses a payload store to retrieve and persist ledger payloads.
 type Trie struct {
+	log   zerolog.Logger
 	root  Node
 	store dps.Store
 }
 
-func NewEmptyTrie(store dps.Store) *Trie {
+// NewEmptyTrie creates a new trie without a root node, with the given payload store.
+func NewEmptyTrie(log zerolog.Logger, store dps.Store) *Trie {
 	t := Trie{
+		log:   log.With().Str("subcomponent", "trie").Logger(),
 		root:  nil,
 		store: store,
 	}
@@ -41,8 +44,10 @@ func NewEmptyTrie(store dps.Store) *Trie {
 	return &t
 }
 
-func NewTrie(root Node, store dps.Store) *Trie {
+// NewTrie creates a new trie using the given root node and payload store.
+func NewTrie(log zerolog.Logger, root Node, store dps.Store) *Trie {
 	t := Trie{
+		log:   log.With().Str("subcomponent", "trie").Logger(),
 		root:  root,
 		store: store,
 	}
@@ -50,20 +55,26 @@ func NewTrie(root Node, store dps.Store) *Trie {
 	return &t
 }
 
+// RootNode returns the root node of the trie.
 func (t *Trie) RootNode() Node {
 	return t.root
 }
 
+// RootHash returns the hash of the trie's root node.
 func (t *Trie) RootHash() ledger.RootHash {
 	if t.root == nil {
-		return ledger.RootHash(hash.DummyHash)
+		return ledger.RootHash(ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight))
 	}
 
 	return ledger.RootHash(t.root.Hash())
 }
 
 // TODO: Add method to add multiple paths and payloads at once and parallelize insertions that do not conflict.
+//  See https://github.com/optakt/flow-dps/issues/517
 
+// Insert adds a new leaf to the trie. While doing so, since the trie is optimized, it might
+// restructure the trie by adding new extensions, branches, or even moving other nodes
+// to different heights along the way.
 func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 	current := &t.root
@@ -178,7 +189,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 			// hash needs to be recomputed.
 			oldPayload, err := t.store.Retrieve(node.Hash())
 			if err != nil {
-				panic(err) // FIXME: Handle this gracefully.
+				t.log.Fatal().Err(err).Hex("path", node.path[:]).Msg("could not retrieve node payload from persistent storage")
 			}
 
 			oldLeaf := NewLeaf(nodeHeight(matched+1), node.path, oldPayload)
@@ -219,6 +230,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 	}
 }
 
+// Leaves iterates through the trie and returns its leaf nodes.
 func (t *Trie) Leaves() []*Leaf {
 	queue := deque.New()
 
@@ -242,12 +254,6 @@ func (t *Trie) Leaves() []*Leaf {
 	return leaves
 }
 
-// Dump outputs the list of nodes within this trie, from top to bottom, left to right, with one node per line.
-// Note: This is for debugging only and should probably not be called on huge trie structures.
-func (t *Trie) Dump(w io.Writer) {
-	t.root.Dump(w)
-}
-
 // UnsafeRead read payloads for the given paths.
 // CAUTION: If a given path is missing from the trie, this function panics.
 func (t *Trie) UnsafeRead(paths []ledger.Path) []*ledger.Payload {
@@ -258,7 +264,6 @@ func (t *Trie) UnsafeRead(paths []ledger.Path) []*ledger.Payload {
 	return payloads
 }
 
-// FIXME: Better error handling for unsafe reads.
 func (t *Trie) read(path ledger.Path) *ledger.Payload {
 	current := &t.root
 	depth := uint16(0)
@@ -276,7 +281,7 @@ func (t *Trie) read(path ledger.Path) *ledger.Payload {
 			matched := commonBits(node.path, path)
 			if matched <= nodeHeight(node.skip) {
 				// The path we are looking for is skipped in this trie, therefore it does not exist.
-				panic(fmt.Sprintf("unsafe read: path %x not found", path[:]))
+				t.log.Fatal().Hex("path", path[:]).Msg("unsafe read: missing path in trie")
 			}
 
 			if bitutils.Bit(path[:], int(nodeHeight(node.skip))) == 0 {
@@ -289,17 +294,17 @@ func (t *Trie) read(path ledger.Path) *ledger.Payload {
 		case *Leaf:
 			if node.path != path {
 				// The path we are looking for is missing from this trie.
-				panic(fmt.Sprintf("unsafe read: path %x not found", path[:]))
+				t.log.Fatal().Hex("path", path[:]).Msg("unsafe read: missing path in trie")
 			}
 
 			payload, err := t.store.Retrieve(node.Hash())
 			if err != nil {
-				panic(err)
+				t.log.Fatal().Hex("path", path[:]).Msg("unsafe read: missing entry in persistent storage")
 			}
 			return payload
 
 		case nil:
-			panic(fmt.Sprintf("unsafe read: path %x not found", path[:]))
+			t.log.Fatal().Hex("path", path[:]).Msg("unsafe read: missing path in trie")
 		}
 	}
 }

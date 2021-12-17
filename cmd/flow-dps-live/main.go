@@ -102,9 +102,9 @@ func run() int {
 	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
-	pflag.IntVar(&flagCacheSize, "cache-size", 4*1000*1000*1000, "size of the in-memory cache for ledger payloads")
+	pflag.IntVar(&flagCacheSize, "cache-size", store.DefaultCacheSize, "size of the in-memory cache for ledger payloads")
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
-	pflag.StringVar(&flagPayloadStorage, "payload-storage", "./payloads", "path at which to store ledger payloads")
+	pflag.StringVar(&flagPayloadStorage, "payload-storage", store.DefaultStoragePath, "path at which to store ledger payloads")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
 
@@ -317,7 +317,7 @@ func run() int {
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
-	payloadStore, err := store.NewStore(log, flagCacheSize, flagPayloadStorage)
+	payloadStore, err := store.NewStore(log, store.WithCacheSize(flagCacheSize), store.WithStoragePath(flagPayloadStorage))
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize payload storage")
 		return failure
@@ -327,7 +327,8 @@ func run() int {
 	// checkpoint; if we don't, we can optionally use the root checkpoint to
 	// speed up the restart/restoration.
 	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB, payloadStore)
+	fromScratch := loader.FromScratch(log, payloadStore)
+	load = loader.FromIndex(log, storage, indexDB, payloadStore, fromScratch)
 	if empty {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -335,7 +336,7 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		load = loader.FromCheckpoint(file, payloadStore)
+		load = loader.FromCheckpoint(log, payloadStore, file)
 	} else if flagCheckpoint != "" {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -343,9 +344,8 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		initialize := loader.FromCheckpoint(file, payloadStore)
-		load = loader.FromIndex(log, storage, indexDB, payloadStore,
-			loader.WithInitializer(initialize),
+		initialize := loader.FromCheckpoint(log, payloadStore, file)
+		load = loader.FromIndex(log, storage, indexDB, payloadStore, initialize,
 			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
 		)
 	}

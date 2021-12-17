@@ -27,11 +27,13 @@ type step struct {
 	parent flow.StateCommitment
 }
 
-// Forest is a forest of tries with an unlimited size, but which can be reset manually to remove all tries besides one.
+// Forest is a representation of multiple tries mapped by their state commitment hash.
+// NOTE: Contrary to the Flow Forest implementation, the forest is unlimited and never evicts any tries.
 type Forest struct {
 	steps map[flow.StateCommitment]step
 }
 
+// New returns a new empty forest.
 func New() *Forest {
 	f := Forest{
 		steps: make(map[flow.StateCommitment]step),
@@ -40,6 +42,7 @@ func New() *Forest {
 	return &f
 }
 
+// Add adds a tree to the forest.
 func (f *Forest) Add(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {
 	commit := flow.StateCommitment(tree.RootHash())
 
@@ -51,11 +54,13 @@ func (f *Forest) Add(tree *trie.Trie, paths []ledger.Path, parent flow.StateComm
 	f.steps[commit] = s
 }
 
+// Has returns whether a state commitment matches one of the trees within the forest.
 func (f *Forest) Has(commit flow.StateCommitment) bool {
 	_, ok := f.steps[commit]
 	return ok
 }
 
+// Tree returns the matching tree for the given state commitment.
 func (f *Forest) Tree(commit flow.StateCommitment) (*trie.Trie, bool) {
 	s, ok := f.steps[commit]
 	if !ok {
@@ -65,6 +70,7 @@ func (f *Forest) Tree(commit flow.StateCommitment) (*trie.Trie, bool) {
 	return s.tree, true
 }
 
+// Paths returns the matching tree's paths for the given state commitment.
 func (f *Forest) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
 	s, ok := f.steps[commit]
 	if !ok {
@@ -74,6 +80,7 @@ func (f *Forest) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
 	return s.paths, true
 }
 
+// Parent returns the parent of the given state commitment.
 func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool) {
 	st, ok := f.steps[commit]
 	if !ok {
@@ -83,6 +90,7 @@ func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool
 	return st.parent, true
 }
 
+// Reset deletes all tries that do not match the given state commitment.
 func (f *Forest) Reset(finalized flow.StateCommitment) {
 	for commit := range f.steps {
 		if commit != finalized {
@@ -91,6 +99,7 @@ func (f *Forest) Reset(finalized flow.StateCommitment) {
 	}
 }
 
+// Trees returns each of the tries from the forest.
 func (f *Forest) Trees() []*trie.Trie {
 	var tries []*trie.Trie
 	for _, step := range f.steps {
