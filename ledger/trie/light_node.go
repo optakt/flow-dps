@@ -157,7 +157,7 @@ func EncodeLightNode(lightNode *LightNode, store dps.Store) []byte {
 	encPayload := encoding.EncodePayload(payload)
 
 	// Length is calculated using:
-	// 	* encoding version (2 bytes)
+	// 	* Encoding version (2 bytes)
 	// 	* LIndex (8 bytes)
 	// 	* RIndex (8 bytes)
 	// 	* Height (2 bytes)
@@ -211,11 +211,15 @@ func DecodeLightNode(reader io.Reader, store dps.Store) (*LightNode, error) {
 func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 
 	// Length is calculated using:
+	// 	* Height (2 bytes)
 	// 	* LIndex (8 bytes)
 	// 	* RIndex (8 bytes)
-	// 	* Height (2 bytes)
-	// 	* Skip (2 bytes)
-	length := 8 + 8 + 2 + 2
+	// 	* Max Depth (2 bytes) -> Skipped
+	// 	* Register Count (8 bytes) -> Skipped
+	//  * Path (32 bytes)
+	//  * Payload (variable)
+	//  * Hash (32 bytes)
+	length := 2 + 8 + 8 + 2 + 8
 	buf := make([]byte, length)
 	_, err := io.ReadFull(reader, buf)
 	if err != nil {
@@ -223,6 +227,10 @@ func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 	}
 
 	var lightNode LightNode
+	lightNode.Height, buf, err = utils.ReadUint16(buf)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode light node height: %w", err)
+	}
 	lightNode.LIndex, buf, err = utils.ReadUint64(buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node left index: %w", err)
@@ -231,22 +239,20 @@ func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node right index: %w", err)
 	}
-	lightNode.Height, buf, err = utils.ReadUint16(buf)
+	// Read and discard Max Depth value.
+	_, buf, err = utils.ReadUint16(buf)
 	if err != nil {
-		return nil, fmt.Errorf("could not decode light node height: %w", err)
+		return nil, fmt.Errorf("could not decode light node max depth: %w", err)
 	}
-	lightNode.Skip, buf, err = utils.ReadUint16(buf)
+	// Read and discard Register Count value.
+	_, _, err = utils.ReadUint64(buf)
 	if err != nil {
-		return nil, fmt.Errorf("could not decode light node skipped height: %w", err)
+		return nil, fmt.Errorf("could not decode light node register count: %w", err)
 	}
 
 	lightNode.Path, err = utils.ReadShortDataFromReader(reader)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node path: %w", err)
-	}
-	lightNode.HashValue, err = utils.ReadShortDataFromReader(reader)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode light node hash: %w", err)
 	}
 
 	encPayload, err := utils.ReadLongDataFromReader(reader)
@@ -257,8 +263,13 @@ func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node payload: %w", err)
 	}
+
 	// We need to store the decoded payload in the store so that if new node insertions come up,
 	// the store can be looked up to recompute node hashes as they are moved to new heights.
+	lightNode.HashValue, err = utils.ReadShortDataFromReader(reader)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode light node hash: %w", err)
+	}
 	h, err := hash.ToHash(lightNode.HashValue)
 	if err != nil {
 		return nil, fmt.Errorf("invalid hash in light node: %w", err)
