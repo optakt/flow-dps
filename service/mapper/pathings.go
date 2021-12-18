@@ -21,6 +21,7 @@ import (
 	"github.com/gammazero/deque"
 
 	"github.com/onflow/flow-go/ledger"
+
 	"github.com/optakt/flow-dps/ledger/trie"
 )
 

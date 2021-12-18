@@ -246,8 +246,12 @@ func (t *Trie) Leaves() []*Leaf {
 		case *Leaf:
 			leaves = append(leaves, n)
 		case *Branch, *Extension:
-			queue.PushBack(node.LeftChild())
-			queue.PushBack(node.RightChild())
+			if node.LeftChild() != nil {
+				queue.PushBack(node.LeftChild())
+			}
+			if node.RightChild() != nil {
+				queue.PushBack(node.RightChild())
+			}
 		}
 	}
 
