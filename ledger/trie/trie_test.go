@@ -15,6 +15,7 @@
 package trie_test
 
 import (
+	"bytes"
 	"encoding/hex"
 	"testing"
 
@@ -286,4 +287,38 @@ func Benchmark_TrieRootHash(b *testing.B) {
 		}
 		_ = trie.RootHash()
 	})
+}
+
+func Test_UnsafeRead(t *testing.T) {
+	const regCount = 65536
+
+	store, teardown := helpers.InMemoryStore(t)
+	defer teardown()
+
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+
+	rng := helpers.NewGenerator()
+	paths := make([]ledger.Path, 0, regCount)
+	payloads := make([]*ledger.Payload, 0, regCount)
+	for i := 0; i < regCount; i++ {
+		paths = append(paths, utils.PathByUint16LeftPadded(uint16(i)))
+		temp := rng.Next()
+		payload := utils.LightPayload(temp, temp)
+		payloads = append(payloads, payload)
+	}
+
+	for i := range paths {
+		trie.Insert(paths[i], payloads[i])
+	}
+
+	got := trie.UnsafeRead(paths)
+
+	for i := range paths {
+		assert.True(t, bytes.Equal(got[i].Value, payloads[i].Value))
+	}
+
+	got = trie.UnsafeRead([]ledger.Path{utils.PathByUint16(42)})
+
+	require.Len(t, got, 1)
+	assert.Nil(t, got[0])
 }

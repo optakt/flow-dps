@@ -283,9 +283,9 @@ func (t *Trie) read(path ledger.Path) *ledger.Payload {
 
 		case *Extension:
 			matched := commonBits(node.path, path)
-			if matched <= nodeHeight(node.skip) {
+			if matched < nodeHeight(node.skip) {
 				// The path we are looking for is skipped in this trie, therefore it does not exist.
-				t.log.Fatal().Hex("path", path[:]).Msg("unsafe read: missing path in trie")
+				return nil
 			}
 
 			if bitutils.Bit(path[:], int(nodeHeight(node.skip))) == 0 {
@@ -298,17 +298,17 @@ func (t *Trie) read(path ledger.Path) *ledger.Payload {
 		case *Leaf:
 			if node.path != path {
 				// The path we are looking for is missing from this trie.
-				t.log.Fatal().Hex("path", path[:]).Msg("unsafe read: missing path in trie")
+				return nil
 			}
 
 			payload, err := t.store.Retrieve(node.Hash())
 			if err != nil {
-				t.log.Fatal().Hex("path", path[:]).Msg("unsafe read: missing entry in persistent storage")
+				return nil
 			}
 			return payload
 
 		case nil:
-			t.log.Fatal().Hex("path", path[:]).Msg("unsafe read: missing path in trie")
+			return nil
 		}
 	}
 }

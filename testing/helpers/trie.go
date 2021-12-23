@@ -34,7 +34,7 @@ func InMemoryStore(t *testing.T) (store dps.Store, teardown func()) {
 	dir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 
-	store, err = storage.NewStore(mocks.NoopLogger, storage.WithStoragePath(dir))
+	store, err = storage.NewStore(mocks.NoopLogger, storage.WithCacheSize(4096), storage.WithStoragePath(dir))
 	require.NoError(t, err)
 
 	teardownFunc := func() {
