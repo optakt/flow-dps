@@ -77,20 +77,26 @@ func (e *Engine) Run() error {
 		}
 		e.log.Info().Msg("engine done")
 	}
-	go func() {
-		<-e.interrupt
-		e.log.Warn().Msg("forcing exit")
-		os.Exit(1)
-	}()
-
 	return nil
 }
 
 // stop each of the engine's components one by one, in the reverse order in which
 // they were registered.
 func (e *Engine) stop() {
+	// Launch goroutine to listen on interrupt channel
+	// to allow force quitting while components are being
+	// gracefully stopped.
+	go e.forceQuit()
 	// Components are stopped in the reverse order in which they were registered.
 	for i := len(e.components) - 1; i >= 0; i-- {
 		e.components[i].Stop()
 	}
+}
+
+// forceQuit waits for an interrupt signal to be received and if so, forcefully
+// exits with an error status code.
+func (e *Engine) forceQuit() {
+	<-e.interrupt
+	e.log.Warn().Msg("forcing exit")
+	os.Exit(1)
 }
