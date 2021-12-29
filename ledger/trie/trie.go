@@ -15,6 +15,8 @@
 package trie
 
 import (
+	"fmt"
+
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
 
@@ -129,10 +131,41 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 					// to be replaced with a branch.
 					*current = NewBranch(nodeHeight(matched), lChild, rChild)
 				} else {
+					if node.height == node.skip+1 {
+						fmt.Println("BUGGGGG")
+					}
 					// The node skipped more than one depth, so we simply shorten its skip value by one.
 					*current = NewExtension(node.height, node.skip+1, node.path, lChild, rChild)
 				}
 
+				return
+			}
+
+			if matched == nodeHeight(node.height) {
+				// The new leaf needs to be inserted precisely at the height below the extension's, and the
+				// extension needs to be replaced with a branch.
+
+				// Create new extension which starts lower but skips to the original height and path.
+				if nodeHeight(matched+1) == node.skip {
+					fmt.Println("BUGGGGG")
+				}
+				newExt := NewExtension(nodeHeight(matched+1), node.skip, node.path, node.lChild, node.rChild)
+
+				// Set the children based on whether the new extension is needed on the left or right child.
+				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
+				t.store.Save(newLeaf.Hash(), payload)
+
+				var lChild, rChild Node
+				if bitutils.Bit(path[:], int(matched)) == 0 {
+					lChild = newLeaf
+					rChild = newExt
+				} else {
+					lChild = newExt
+					rChild = newLeaf
+				}
+
+				// Create new branch to replace current node.
+				*current = NewBranch(node.height, lChild, rChild)
 				return
 			}
 
@@ -142,6 +175,9 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				// of both paths.
 
 				// Create new extension which starts lower but skips to the original height and path.
+				if nodeHeight(matched+1) == node.skip {
+					fmt.Println("BUGGGGG")
+				}
 				newExt := NewExtension(nodeHeight(matched+1), node.skip, node.path, node.lChild, node.rChild)
 
 				// Set the children based on whether the new extension is needed on the left or right child.
@@ -158,6 +194,9 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				}
 
 				// Change children, path and skipped height of the original extension by recreating it.
+				if node.height == nodeHeight(matched) {
+					fmt.Println("BUGGGGG")
+				}
 				*current = NewExtension(node.height, nodeHeight(matched), path, lChild, rChild)
 				return
 			}

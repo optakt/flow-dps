@@ -322,3 +322,34 @@ func Test_UnsafeRead(t *testing.T) {
 	require.Len(t, got, 1)
 	assert.Nil(t, got[0])
 }
+
+// TestTrie_InsertAdvanced is a custom unit test that does not come from the
+// Flow Go unit tests, which covers an edge case with extensions that the
+// original tests do not: it covers the cases where an extension is cut at its
+// root and needs to be transformed into a branch.
+func TestTrie_InsertAdvanced(t *testing.T) {
+	const totalValues = 5000
+
+	paths := mocks.GenericLedgerPaths(totalValues)
+	payloads := mocks.GenericLedgerPayloads(totalValues)
+
+	store, teardown := helpers.InMemoryStore(t)
+	defer teardown()
+
+	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	refTr := reference.NewEmptyMTrie()
+
+	for i := range paths {
+
+		newTr := trie.NewTrie(mocks.NoopLogger, tr.RootNode(), store)
+		newTr.Insert(paths[i], payloads[i])
+
+		newRefTr, err := reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
+		require.NoError(t, err)
+
+		require.Equal(t, newRefTr.RootHash(), newTr.RootHash())
+
+		tr = newTr
+		refTr = newRefTr
+	}
+}
