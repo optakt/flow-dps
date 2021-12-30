@@ -62,6 +62,10 @@ func (t *Trie) RootNode() Node {
 	return t.root
 }
 
+func (t *Trie) Store() dps.Store {
+	return t.store
+}
+
 // RootHash returns the hash of the trie's root node.
 func (t *Trie) RootHash() ledger.RootHash {
 	if t.root == nil {

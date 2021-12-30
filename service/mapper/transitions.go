@@ -369,13 +369,14 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// forest, and save the updated tree in the forest. If the tree is not new,
 	// we should error, as that should not happen.
 	paths, payloads := pathsPayloads(update)
+	newTree := trie.NewTrie(t.log, tree.RootNode(), tree.Store())
 	for i := range paths {
-		tree.Insert(paths[i], payloads[i])
+		newTree.Insert(paths[i], payloads[i])
 	}
 
-	s.forest.Add(tree, paths, parent)
+	s.forest.Add(newTree, paths, parent)
 
-	hash := tree.RootHash()
+	hash := newTree.RootHash()
 	log.Info().Hex("commit", hash[:]).Int("registers", len(paths)).Msg("updated tree with register payloads")
 
 	return nil
