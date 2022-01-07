@@ -81,7 +81,7 @@ require (
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/jrick/bitset v1.0.0 // indirect
 	github.com/kevinburke/go-bindata v3.22.0+incompatible // indirect
-	github.com/klauspost/cpuid/v2 v2.0.4 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/koron/go-ssdp v0.0.0-20191105050749-2e1c40ed0b5d // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libp2p/go-addr-util v0.1.0 // indirect
@@ -195,6 +195,7 @@ require (
 	gopkg.in/ini.v1 v1.51.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	lukechampine.com/blake3 v1.1.7 // indirect
 )
 
 replace github.com/onflow/flow-go/crypto => ./flow-go/crypto

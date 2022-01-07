@@ -14,11 +14,6 @@
 
 package trie
 
-import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/hash"
-)
-
 // TODO: Look into arena allocation for node paths to improve both memory usage
 //  and performance. See https://github.com/optakt/flow-dps/issues/518.
 // TODO: Look into using a sync Pool to reduce allocations at the expense of
@@ -26,10 +21,5 @@ import (
 
 // Node represents a trie node.
 type Node interface {
-	Height() uint16
-	Path() ledger.Path
-	Hash() hash.Hash
-
-	LeftChild() Node
-	RightChild() Node
+	Hash() [32]byte
 }

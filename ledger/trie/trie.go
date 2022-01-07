@@ -15,9 +15,9 @@
 package trie
 
 import (
-	"fmt"
-
+	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
+	"lukechampine.com/blake3"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
@@ -25,6 +25,8 @@ import (
 
 	"github.com/optakt/flow-dps/models/dps"
 )
+
+const maxDepth = 255
 
 // Trie is a modified Patricia-Merkle Trie, which is the storage layer of the Flow ledger.
 // It uses a payload store to retrieve and persist ledger payloads.
@@ -80,206 +82,173 @@ func (t *Trie) RootHash() ledger.RootHash {
 // Insert adds a new leaf to the trie. While doing so, since the trie is optimized, it might
 // restructure the trie by adding new extensions, branches, or even moving other nodes
 // to different heights along the way.
-func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
+func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
+	var previous *Node
 	current := &t.root
-	depth := uint16(0)
+	depth := uint8(0)
 	for {
 		switch node := (*current).(type) {
+
+		// When the trie is empty, we start with a single root node that is
+		// `nil`. This is the basis from which we build out the trie.
+		case nil:
+
+			// When we have reached maximum depth, we can simple put the leaf
+			// node into this location and we are done with insertion.
+			if depth == maxDepth {
+				leaf := Leaf{
+					hash:    ledger.ComputeCompactValue(hash.Hash(path), payload.Value, 256),
+					payload: blake3.Sum256(payload.Value),
+				}
+				previous = current
+				*current = &leaf
+				return
+			}
+
+			// If we have not reached maximum depth, we have reached a part of
+			// the trie that is empty, and we can reach the leaf's insertion
+			// path by inserting an extension node for the rest of the path.
+			extension := Extension{
+				hash:  [32]byte{},
+				dirty: true,
+				path:  path[:],
+				count: maxDepth - depth,
+				child: nil,
+			}
+			previous = current
+			current = &(extension.child)
+			depth = maxDepth
+			continue
+
+		// Most of the nodes in a sparse trie will initially be made up of
+		// extension nodes. They skip a part of the path where there are no
+		// branches in order to reduce the number of nodes we need to traverse.
+		case *Extension:
+
+			// At this point, we count the number of common bits so we can
+			// compare it against the number of available bits on the extension.
+			available := uint8(len(node.path))
+			common := uint8(0)
+			for i := depth; i < depth+node.count; i++ {
+				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
+					break
+				}
+				common++
+			}
+
+			// If we have all of the bits in common, we have a simple edge case,
+			// where we can simple skip to the end of the extension.
+			if common == available {
+				node.dirty = true
+				previous = current
+				current = &node.child
+				depth = depth + available
+				continue
+			}
+
+			// Otherwise, we always have to create a fork in the path to our
+			// leaf; one of the sides will remain `nil`, which is where we will
+			// continue our traversal. The other side will contain whatever is
+			// left of the extension node.
+			branch := Branch{
+				hash:  [32]byte{},
+				dirty: true,
+			}
+
+			// If we have all but one bit in common, we have the branch on the
+			// last bit, so the correct child for the previous extension side
+			// of the new branch will point to the previous child of the branch.
+			// Otherwise, we need to create a new branch with the remainder of
+			// the previous path.
+			var other Node
+			if available-common == 1 {
+				other = node.child
+			} else {
+				other = &Extension{
+					hash:  [32]byte{},
+					dirty: true,
+					path:  node.path,
+					count: available - common - 1,
+					child: node.child,
+				}
+			}
+
+			// If we have no bits in common, the first bit of the extension
+			// should be replaced with the branch node, and the extension will
+			// be garbage-collected. Otherwise, the extension points to the
+			// branch, with a reduced path length.
+			if common == 0 {
+				*previous = &branch
+			} else {
+				node.child = &branch
+				node.count = common
+				node.dirty = true
+			}
+
+			// Finally, we just have to point the wrong side of the branch,
+			// which we will not follow, back at the previously existing path.
+			previous = current
+			if bitutils.Bit(node.path, int(common)) == 0 {
+				branch.left = other
+				current = &branch.right
+			} else {
+				branch.right = other
+				current = &branch.left
+			}
+			continue
+
+		// Once the trie fills up more, we will have a lot of branch nodes,
+		// where there are nodes on both the left and the right side. We can
+		// simply continue iteration to the correct side.
 		case *Branch:
-			// Since the new leaf is on this path, this branch is now dirty and needs its hash recomputed if it
-			// was already computed.
-			node.FlagDirty()
 
 			// If the key bit at the index i is a 0, move on to the left child,
 			// otherwise the right child.
 			if bitutils.Bit(path[:], int(depth)) == 0 {
-				current = &node.lChild
+				current = &node.left
 			} else {
-				current = &node.rChild
+				current = &node.right
 			}
+			node.dirty = true
 			depth++
+			continue
 
-		case *Extension:
-			// Since the new leaf is on this path, this extension is now dirty and needs its hash recomputed if it
-			// was already computed.
-			node.FlagDirty()
-
-			matched := commonBits(node.path, path)
-
-			if matched == nodeHeight(node.skip)-1 {
-				// The new leaf needs to be inserted precisely at one layer before the height up to which the
-				// extension currently skips.
-				// This is a special case to avoid creating an extension node that skips nothing and to use a branch
-				// instead when a new leaf's path matches with all but the last bit of the extension's skipped path.
-
-				// Create a branch to hold the original extension node's children.
-				newBranch := NewBranch(nodeHeight(matched+1), node.lChild, node.rChild)
-
-				// Create a new leaf to be the new child of the extension, along with the aforementioned branch.
-				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
-				err := t.store.Save(newLeaf.Hash(), payload)
-				if err != nil {
-					return err
-				}
-
-				var lChild, rChild Node
-				if bitutils.Bit(path[:], int(matched)) == 0 {
-					lChild = newLeaf
-					rChild = newBranch
-				} else {
-					lChild = newBranch
-					rChild = newLeaf
-				}
-
-				if node.height-node.skip == 1 {
-					// Node only skipped one depth, so instead of moving it down under the new branch, it also needs
-					// to be replaced with a branch.
-					*current = NewBranch(nodeHeight(matched), lChild, rChild)
-				} else {
-					if node.height == node.skip+1 {
-						fmt.Println("BUGGGGG")
-					}
-					// The node skipped more than one depth, so we simply shorten its skip value by one.
-					*current = NewExtension(node.height, node.skip+1, node.path, lChild, rChild)
-				}
-
-				return nil
-			}
-
-			if matched == nodeHeight(node.height) {
-				// The new leaf needs to be inserted precisely at the height below the extension's, and the
-				// extension needs to be replaced with a branch.
-
-				// Create new extension which starts lower but skips to the original height and path.
-				newExt := NewExtension(nodeHeight(matched+1), node.skip, node.path, node.lChild, node.rChild)
-
-				// Set the children based on whether the new extension is needed on the left or right child.
-				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
-				err := t.store.Save(newLeaf.Hash(), payload)
-				if err != nil {
-					return err
-				}
-
-				var lChild, rChild Node
-				if bitutils.Bit(path[:], int(matched)) == 0 {
-					lChild = newLeaf
-					rChild = newExt
-				} else {
-					lChild = newExt
-					rChild = newLeaf
-				}
-
-				// Create new branch to replace current node.
-				*current = NewBranch(node.height, lChild, rChild)
-				return nil
-			}
-
-			if matched < nodeHeight(node.skip) {
-				// The extension node is skipping over a path that is needed by the new leaf.
-				// It needs to be shortened and a new extension node is needed at the intersection
-				// of both paths.
-
-				// Create new extension which starts lower but skips to the original height and path.
-				newExt := NewExtension(nodeHeight(matched+1), node.skip, node.path, node.lChild, node.rChild)
-
-				// Set the children based on whether the new extension is needed on the left or right child.
-				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
-				t.store.Save(newLeaf.Hash(), payload)
-
-				var lChild, rChild Node
-				if bitutils.Bit(path[:], int(matched)) == 0 {
-					lChild = newLeaf
-					rChild = newExt
-				} else {
-					lChild = newExt
-					rChild = newLeaf
-				}
-
-				// Change children, path and skipped height of the original extension by recreating it.
-				*current = NewExtension(node.height, nodeHeight(matched), path, lChild, rChild)
-				return nil
-			}
-
-			// The path of the new leaf to insert matches with the skipped part of the extension's path, so we just
-			// treat it like a branch and skip through many depths at once.
-			if bitutils.Bit(path[:], int(nodeHeight(node.skip))) == 0 {
-				current = &node.lChild
-			} else {
-				current = &node.rChild
-			}
-			depth = nodeHeight(node.skip - 1)
-
+		// Finally, if we find a leaf, it means that the payload inserted at
+		// this leaf has probably been updated, so let's overwrite it by simply
+		// setting it to nil.
 		case *Leaf:
-			if node.path == path {
-				// This path conflicts with a leaf, overwrite its hash using the new payload.
-				node.hash = ledger.ComputeCompactValue(hash.Hash(path), payload.Value, int(node.height))
 
-				err := t.store.Save(node.hash, payload)
-				if err != nil {
-					return err
-				}
-				return nil
-			}
-
-			// This leaf is currently at a height which conflicts with the new path that we want to insert.
-			// Therefore, we need to replace this leaf with a branch or extension that has two children, the
-			// new leaf and the previous one.
-
-			matched := commonBits(node.path, path)
-
-			// We need to fetch the payload here since the old leaf now resides at a new height and therefore its
-			// hash needs to be recomputed.
-			oldPayload, err := t.store.Retrieve(node.Hash())
-			if err != nil {
-				t.log.Fatal().Err(err).Hex("path", node.path[:]).Msg("could not retrieve node payload from persistent storage")
-			}
-
-			oldLeaf := NewLeaf(nodeHeight(matched+1), node.path, oldPayload)
-			err = t.store.Save(oldLeaf.Hash(), oldPayload)
-			if err != nil {
-				return err
-			}
-
-			newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
-			err = t.store.Save(newLeaf.Hash(), payload)
-			if err != nil {
-				return err
-			}
-
-			// Compare first different bit between existing leaf and new leaf to know which one is which child for the
-			// newly created branch.
-			var lChild, rChild Node
-			if bitutils.Bit(path[:], int(matched)) == 0 {
-				lChild = newLeaf
-				rChild = oldLeaf
-			} else {
-				lChild = oldLeaf
-				rChild = newLeaf
-			}
-
-			// Create an extension node that skips up to the depth at which the old and
-			// new leaves diverge in path, or a branch if the extension would not end up skipping anything.
-			if depth == matched {
-				// Create a branch, since an extension would not skip anything here.
-				*current = NewBranch(nodeHeight(depth), lChild, rChild)
-			} else {
-				// Create an extension to skip over the common bits between both node paths.
-				*current = NewExtension(nodeHeight(depth), nodeHeight(matched), path, lChild, rChild)
-			}
-
-			return nil
-
-		case nil:
-			// There is no leaf here yet, create it.
-			*current = NewLeaf(nodeHeight(depth), path, payload)
-			err := t.store.Save((*current).Hash(), payload)
-			if err != nil {
-				return err
-			}
-			return nil
+			*current = nil
+			continue
 		}
 	}
+}
+
+// Leaves iterates through the trie and returns its leaf nodes.
+func (t *Trie) Leaves() []*Leaf {
+	queue := deque.New()
+
+	root := t.RootNode()
+	if root != nil {
+		queue.PushBack(root)
+	}
+
+	var leaves []*Leaf
+	for queue.Len() > 0 {
+		node := queue.PopBack().(Node)
+		switch n := node.(type) {
+		case *Leaf:
+			leaves = append(leaves, n)
+		case *Extension:
+			queue.PushBack(n.child)
+		case *Branch:
+			queue.PushBack(n.left)
+			queue.PushBack(n.right)
+		}
+	}
+
+	return leaves
 }
 
 // UnsafeRead read payloads for the given paths.
@@ -294,41 +263,43 @@ func (t *Trie) UnsafeRead(paths []ledger.Path) []*ledger.Payload {
 
 func (t *Trie) read(path ledger.Path) *ledger.Payload {
 	current := &t.root
-	depth := uint16(0)
+	depth := uint8(0)
 	for {
 		switch node := (*current).(type) {
 		case *Branch:
 			if bitutils.Bit(path[:], int(depth)) == 0 {
-				current = &node.lChild
+				current = &node.left
 			} else {
-				current = &node.rChild
+				current = &node.right
 			}
 			depth++
+			continue
 
 		case *Extension:
-			matched := commonBits(node.path, path)
-			if matched < nodeHeight(node.skip) {
-				// The path we are looking for is skipped in this trie, therefore it does not exist.
+
+			available := uint8(len(node.path))
+			common := uint8(0)
+			for i := depth; i < depth+node.count; i++ {
+				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
+					break
+				}
+				common++
+			}
+			if available != common {
 				return nil
 			}
 
-			if bitutils.Bit(path[:], int(nodeHeight(node.skip))) == 0 {
-				current = &node.lChild
-			} else {
-				current = &node.rChild
-			}
-			depth = nodeHeight(node.skip - 1)
+			current = &node.child
+			depth += node.count
+			continue
 
 		case *Leaf:
-			if node.path != path {
-				// The path we are looking for is missing from this trie.
-				return nil
-			}
 
 			payload, err := t.store.Retrieve(node.Hash())
 			if err != nil {
 				return nil
 			}
+
 			return payload
 
 		case nil:
@@ -338,8 +309,8 @@ func (t *Trie) read(path ledger.Path) *ledger.Payload {
 }
 
 // Converts depth into Flow Go inverted height (where 256 is root).
-func nodeHeight(depth uint16) uint16 {
-	return ledger.NodeMaxHeight - depth
+func nodeHeight(depth uint8) uint16 {
+	return ledger.NodeMaxHeight - uint16(depth)
 }
 
 // commonBits returns the number of matching bits within two paths.
