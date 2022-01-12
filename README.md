@@ -1,3 +1,9 @@
+# NOTICE
+
+This software is an alpha version. It might not be working correctly and it's subject to large and incompatible changes at any time.
+As such, we do not recommend using it for any purposes.
+We develop the product in the open as a principle and welcome everyone to look around and contribute, but we cannot provide any support or guarantees.
+
 # Flow Data Provisioning Service
 
 [![CI Status](https://img.shields.io/github/workflow/status/optakt/flow-dps/MasterCI?logo=GitHub%20Actions&label=&logoColor=silver&labelColor=gray)](https://github.com/optakt/flow-dps/actions/workflows/master.yml)
