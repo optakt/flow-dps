@@ -254,21 +254,6 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
 }
 
-func TestTrie_Leaves(t *testing.T) {
-
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
-
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
-
-	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 99)
-	for i := range paths {
-		trie.Insert(paths[i], &payloads[i])
-	}
-
-	assert.Len(t, trie.Leaves(), len(paths))
-}
-
 func Benchmark_TrieRootHash(b *testing.B) {
 
 	store := mocks.BaselineStore()

@@ -17,7 +17,6 @@ package trie
 import (
 	"fmt"
 
-	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
@@ -81,7 +80,7 @@ func (t *Trie) RootHash() ledger.RootHash {
 // Insert adds a new leaf to the trie. While doing so, since the trie is optimized, it might
 // restructure the trie by adding new extensions, branches, or even moving other nodes
 // to different heights along the way.
-func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
+func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 	current := &t.root
 	depth := uint16(0)
@@ -119,7 +118,10 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 				// Create a new leaf to be the new child of the extension, along with the aforementioned branch.
 				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
-				t.store.Save(newLeaf.Hash(), payload)
+				err := t.store.Save(newLeaf.Hash(), payload)
+				if err != nil {
+					return err
+				}
 
 				var lChild, rChild Node
 				if bitutils.Bit(path[:], int(matched)) == 0 {
@@ -142,7 +144,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 					*current = NewExtension(node.height, node.skip+1, node.path, lChild, rChild)
 				}
 
-				return
+				return nil
 			}
 
 			if matched == nodeHeight(node.height) {
@@ -150,14 +152,14 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				// extension needs to be replaced with a branch.
 
 				// Create new extension which starts lower but skips to the original height and path.
-				if nodeHeight(matched+1) == node.skip {
-					fmt.Println("BUGGGGG")
-				}
 				newExt := NewExtension(nodeHeight(matched+1), node.skip, node.path, node.lChild, node.rChild)
 
 				// Set the children based on whether the new extension is needed on the left or right child.
 				newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
-				t.store.Save(newLeaf.Hash(), payload)
+				err := t.store.Save(newLeaf.Hash(), payload)
+				if err != nil {
+					return err
+				}
 
 				var lChild, rChild Node
 				if bitutils.Bit(path[:], int(matched)) == 0 {
@@ -170,7 +172,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 				// Create new branch to replace current node.
 				*current = NewBranch(node.height, lChild, rChild)
-				return
+				return nil
 			}
 
 			if matched < nodeHeight(node.skip) {
@@ -179,9 +181,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				// of both paths.
 
 				// Create new extension which starts lower but skips to the original height and path.
-				if nodeHeight(matched+1) == node.skip {
-					fmt.Println("BUGGGGG")
-				}
 				newExt := NewExtension(nodeHeight(matched+1), node.skip, node.path, node.lChild, node.rChild)
 
 				// Set the children based on whether the new extension is needed on the left or right child.
@@ -198,11 +197,8 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				}
 
 				// Change children, path and skipped height of the original extension by recreating it.
-				if node.height == nodeHeight(matched) {
-					fmt.Println("BUGGGGG")
-				}
 				*current = NewExtension(node.height, nodeHeight(matched), path, lChild, rChild)
-				return
+				return nil
 			}
 
 			// The path of the new leaf to insert matches with the skipped part of the extension's path, so we just
@@ -218,8 +214,12 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 			if node.path == path {
 				// This path conflicts with a leaf, overwrite its hash using the new payload.
 				node.hash = ledger.ComputeCompactValue(hash.Hash(path), payload.Value, int(node.height))
-				t.store.Save(node.hash, payload)
-				return
+
+				err := t.store.Save(node.hash, payload)
+				if err != nil {
+					return err
+				}
+				return nil
 			}
 
 			// This leaf is currently at a height which conflicts with the new path that we want to insert.
@@ -236,10 +236,16 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 			}
 
 			oldLeaf := NewLeaf(nodeHeight(matched+1), node.path, oldPayload)
-			t.store.Save(oldLeaf.Hash(), oldPayload)
+			err = t.store.Save(oldLeaf.Hash(), oldPayload)
+			if err != nil {
+				return err
+			}
 
 			newLeaf := NewLeaf(nodeHeight(matched+1), path, payload)
-			t.store.Save(newLeaf.Hash(), payload)
+			err = t.store.Save(newLeaf.Hash(), payload)
+			if err != nil {
+				return err
+			}
 
 			// Compare first different bit between existing leaf and new leaf to know which one is which child for the
 			// newly created branch.
@@ -262,43 +268,18 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				*current = NewExtension(nodeHeight(depth), nodeHeight(matched), path, lChild, rChild)
 			}
 
-			return
+			return nil
 
 		case nil:
 			// There is no leaf here yet, create it.
 			*current = NewLeaf(nodeHeight(depth), path, payload)
-			t.store.Save((*current).Hash(), payload)
-			return
+			err := t.store.Save((*current).Hash(), payload)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 	}
-}
-
-// Leaves iterates through the trie and returns its leaf nodes.
-func (t *Trie) Leaves() []*Leaf {
-	queue := deque.New()
-
-	root := t.RootNode()
-	if root != nil {
-		queue.PushBack(root)
-	}
-
-	var leaves []*Leaf
-	for queue.Len() > 0 {
-		node := queue.PopBack().(Node)
-		switch n := node.(type) {
-		case *Leaf:
-			leaves = append(leaves, n)
-		case *Branch, *Extension:
-			if node.LeftChild() != nil {
-				queue.PushBack(node.LeftChild())
-			}
-			if node.RightChild() != nil {
-				queue.PushBack(node.RightChild())
-			}
-		}
-	}
-
-	return leaves
 }
 
 // UnsafeRead read payloads for the given paths.

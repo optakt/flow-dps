@@ -23,7 +23,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/hashicorp/go-multierror"
-	lru "github.com/hashicorp/golang-lru"
+	lru "github.com/optakt/golang-lru"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/semaphore"
 
@@ -38,24 +38,22 @@ import (
 // this solution allows us to store payloads on disk with a negligible impact to insertion performance and a limited
 // impact to memory usage.
 
-// persistInterval is the time interval at which the store evicts the oldest elements from its LRU cache and stores
-// them persistently in the on-disk database.
-const persistInterval = 100 * time.Millisecond
-
 // Store is a component that provides fast persistent storage by using an LRU cache from which evicted entries get
 // persisted on disk.
 type Store struct {
 	log zerolog.Logger
 
-	db    *badger.DB
-	sema  *semaphore.Weighted
-	tx    *badger.Txn
-	mutex *sync.RWMutex   // guards the current transaction against concurrent access
-	wg    *sync.WaitGroup // keeps track of when the flush goroutine should exit
-	err   chan error
+	db   *badger.DB
+	sema *semaphore.Weighted
+	tx   *badger.Txn
+	txMu *sync.RWMutex   // guards the current transaction against concurrent access
+	wg   *sync.WaitGroup // keeps track of when the flush goroutine should exit
+	err  chan error
 
 	cache     *lru.Cache
 	cacheSize int
+	isDirtyMu *sync.RWMutex      // guards the dirty tracking map against concurrent access
+	isDirty   map[hash.Hash]bool // keeps track of whether cached entries are on disk
 
 	done chan struct{}
 }
@@ -81,44 +79,65 @@ func NewStore(log zerolog.Logger, opts ...Option) (*Store, error) {
 		db:  db,
 		tx:  db.NewTransaction(true),
 
-		sema:  semaphore.NewWeighted(16),
-		err:   make(chan error, 16),
-		done:  make(chan struct{}),
-		mutex: &sync.RWMutex{},
-		wg:    &sync.WaitGroup{},
+		sema: semaphore.NewWeighted(16),
+		err:  make(chan error, 16),
+		done: make(chan struct{}),
+		txMu: &sync.RWMutex{},
+		wg:   &sync.WaitGroup{},
+
+		isDirtyMu: &sync.RWMutex{},
+		isDirty:   make(map[hash.Hash]bool, config.CacheSize),
 	}
 
 	s.wg.Add(1)
 	go s.flush()
 
-	s.cache, err = lru.NewWithEvict(config.CacheSize, func(k interface{}, v interface{}) {
+	s.cache, err = lru.NewWithEvict(config.CacheSize, func(k, v interface{}, used int) bool {
 		hash, ok := k.(hash.Hash)
 		if !ok {
 			logger.Fatal().Interface("got", k).Msg("unexpected key format")
 		}
 
-		value, ok := v.(ledger.Value)
-		if !ok {
-			logger.Fatal().Interface("got", v).Msg("unexpected value format")
+		// If the entry is dirty and the cache is not full, abort eviction.
+		s.isDirtyMu.RLock()
+		if s.isDirty[hash] && used < s.cacheSize {
+			s.isDirtyMu.RUnlock()
+			return false
+		}
+		s.isDirtyMu.RUnlock()
+
+		// If the cache is full of dirty entries, push the current commit to disk and evict the entry.
+		if s.cacheFullAndDirty(used) {
+			s.forceCommit()
 		}
 
-		err := s.write(hash, value)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("could not persist ledger payload")
-		}
+		// If the current entry is clean, we can evict it. Otherwise, abort the eviction.
+		return !s.isDirty[hash]
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not create cache storage for ledger payloads: %w", err)
 	}
 
-	go s.persist()
-
 	return &s, nil
 }
 
 // Save stores a payload.
-func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) {
+func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) error {
+	// Store in cache.
 	_ = s.cache.Add(hash, payload.Value)
+
+	// Set state to dirty.
+	s.isDirtyMu.Lock()
+	s.isDirty[hash] = true
+	s.isDirtyMu.Unlock()
+
+	// Write in transaction.
+	err := s.write(hash, payload.Value)
+	if err != nil {
+		return fmt.Errorf("could not write payload to disk: %w", err)
+	}
+
+	return nil
 }
 
 // Retrieve retrieves a payload from the cache or persistent storage.
@@ -133,8 +152,8 @@ func (s *Store) Retrieve(hash hash.Hash) (*ledger.Payload, error) {
 	}
 
 	// Otherwise, check if it has been evicted from the cache and is in the current transaction or in the DB.
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.txMu.RLock()
+	defer s.txMu.RUnlock()
 	it, err := s.tx.Get(hash[:])
 	if err != nil {
 		return nil, fmt.Errorf("could not read payload %x: %w", hash[:], err)
@@ -162,9 +181,9 @@ func (s *Store) Close() error {
 	// transaction is properly committed. We assume that we are no longer
 	// applying new operations when we call `Close`, so we can explicitly do so
 	// here, without using the callback.
-	s.mutex.Lock()
+	s.txMu.Lock()
 	err := s.tx.Commit()
-	s.mutex.Unlock()
+	s.txMu.Unlock()
 	if err != nil {
 		return fmt.Errorf("could not commit final transaction: %w", err)
 	}
@@ -184,30 +203,6 @@ func (s *Store) Close() error {
 	return merr.ErrorOrNil()
 }
 
-// Persist periodically checks whether the cache is over half full, and if so, persist some of its entries until it is
-// no longer half full. If the cache gets full, calls to `Add` become much slower, so it is good to preemptively persist
-// part of it regularly.
-func (s *Store) persist() {
-	ticker := time.NewTicker(persistInterval)
-	for {
-		select {
-		case <-s.done:
-			return
-
-		case <-ticker.C:
-			// If the cache is less than half full, do nothing.
-			if s.cache.Len() < s.cacheSize/2 {
-				continue
-			}
-
-			// If cache is at least half full, persist its oldest entries until it is only half full.
-			for i := 0; i < s.cache.Len()-s.cacheSize/2; i++ {
-				s.cache.RemoveOldest()
-			}
-		}
-	}
-}
-
 func (s *Store) write(hash hash.Hash, value ledger.Value) error {
 	// Before applying an additional operation to the transaction we are
 	// currently building, we want to see if there was an error committing any
@@ -222,7 +217,7 @@ func (s *Store) write(hash hash.Hash, value ledger.Value) error {
 	}
 
 	// Attempt to add a new value in this transaction.
-	s.mutex.Lock()
+	s.txMu.Lock()
 	err := s.tx.Set(hash[:], value[:])
 	if errors.Is(err, badger.ErrTxnTooBig) {
 		// The transaction is too big already, so it needs to be committed and the operation
@@ -235,12 +230,44 @@ func (s *Store) write(hash hash.Hash, value ledger.Value) error {
 		// Attempt the operation again.
 		err = s.tx.Set(hash[:], value[:])
 	}
-	s.mutex.Unlock()
+	s.txMu.Unlock()
 	if err != nil {
 		return fmt.Errorf("could not apply operation: %w", err)
 	}
 
 	return nil
+}
+
+// Check if cache is full of dirty entries, in which case it needs to block new entries
+// from being added until the current transaction is written to disk.
+func (s *Store) cacheFullAndDirty(used int) bool {
+	// Check if there is still space in the cache.
+	if used < s.cacheSize {
+		return false
+	}
+
+	// Check if there is any clean entry in the cache that can be evicted.
+	s.isDirtyMu.RLock()
+	defer s.isDirtyMu.RUnlock()
+	for _, isDirty := range s.isDirty {
+		if !isDirty {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Since the cache is full of dirty entries, we need to commit the current ones
+// to disk immediately so that they can be evicted and let new entries take
+// their place.
+func (s *Store) forceCommit() {
+	s.txMu.Lock()
+	defer s.txMu.Unlock()
+
+	_ = s.sema.Acquire(context.Background(), 1)
+	s.tx.CommitWith(s.committed)
+	s.tx = s.db.NewTransaction(true)
 }
 
 func (s *Store) committed(err error) {
@@ -252,11 +279,20 @@ func (s *Store) committed(err error) {
 		s.err <- err
 	}
 
+	// Once the transaction has been committed, the entries in the cache are no
+	// longer dirty.
+	s.isDirtyMu.Lock()
+	for h := range s.isDirty {
+		s.isDirty[h] = false
+	}
+	s.isDirtyMu.Unlock()
+
 	// Releasing one resource on the semaphore frees up one slot for
 	// inflight transactions.
 	s.sema.Release(1)
 }
 
+// flush is in charge of periodically flushing the cache to disk.
 func (s *Store) flush() {
 	defer s.wg.Done()
 
@@ -266,11 +302,11 @@ func (s *Store) flush() {
 	for {
 		select {
 		case <-ticker.C:
-			s.mutex.Lock()
+			s.txMu.Lock()
 			_ = s.sema.Acquire(context.Background(), 1)
 			s.tx.CommitWith(s.committed)
 			s.tx = s.db.NewTransaction(true)
-			s.mutex.Unlock()
+			s.txMu.Unlock()
 
 		case <-s.done:
 			return

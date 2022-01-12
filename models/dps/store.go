@@ -6,7 +6,7 @@ import (
 )
 
 type Store interface {
-	Save(hash hash.Hash, payload *ledger.Payload)
+	Save(hash hash.Hash, payload *ledger.Payload) error
 	Retrieve(hash hash.Hash) (*ledger.Payload, error)
 	Close() error
 }

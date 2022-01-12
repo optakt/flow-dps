@@ -373,7 +373,11 @@ func (t *Transitions) UpdateTree(s *State) error {
 	paths, payloads := pathsPayloads(update)
 	newTree := trie.NewTrie(t.log, tree.RootNode(), tree.Store())
 	for i := range paths {
-		newTree.Insert(paths[i], payloads[i])
+		err = newTree.Insert(paths[i], payloads[i])
+		if err != nil {
+			log.Error().Err(err).Msg("could not insert trie update")
+			return err
+		}
 	}
 
 	s.forest.Add(newTree, paths, parent)

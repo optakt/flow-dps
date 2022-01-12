@@ -103,20 +103,9 @@ func RebuildTries(log zerolog.Logger, store dps.Store, lightForest *LightForest)
 			return nil, fmt.Errorf("restored trie root hash mismatch: %w", err)
 		}
 
-		// Because the checkpoint contains tries that do not use extension nodes, we need to rebuild a new trie
-		// using the original trie's leaves, which is effectively a trimmed version of the original trie.
-		trimmedTrie := trie.NewEmptyTrie(log, store)
-		for _, leaf := range tr.Leaves() {
-			payload, err := store.Retrieve(leaf.Hash())
-			if err != nil {
-				return nil, fmt.Errorf("restored trie missing payload: %w", err)
-			}
-
-			trimmedTrie.Insert(leaf.Path(), payload)
-		}
-
-		// Append the trimmed trie to the returned slice of tries.
-		tries = append(tries, trimmedTrie)
+		// TODO: Investigate whether it is worth trimming the tries after all.
+		//       See https://github.com/optakt/flow-dps/issues/521.
+		tries = append(tries, tr)
 	}
 
 	return tries, nil

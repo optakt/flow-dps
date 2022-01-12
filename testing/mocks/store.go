@@ -20,14 +20,14 @@ import (
 )
 
 type Store struct {
-	SaveFunc     func(hash hash.Hash, payload *ledger.Payload)
+	SaveFunc     func(hash hash.Hash, payload *ledger.Payload) error
 	RetrieveFunc func(hash hash.Hash) (*ledger.Payload, error)
 	CloseFunc    func() error
 }
 
 func BaselineStore() *Store {
 	s := Store{
-		SaveFunc: func(hash hash.Hash, payload *ledger.Payload) {},
+		SaveFunc: func(hash hash.Hash, payload *ledger.Payload) error { return nil },
 		RetrieveFunc: func(hash hash.Hash) (*ledger.Payload, error) {
 			return GenericLedgerPayload(0), nil
 		},
@@ -37,8 +37,8 @@ func BaselineStore() *Store {
 	return &s
 }
 
-func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) {
-	s.SaveFunc(hash, payload)
+func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) error {
+	return s.SaveFunc(hash, payload)
 }
 
 func (s *Store) Retrieve(hash hash.Hash) (*ledger.Payload, error) {
