@@ -23,12 +23,12 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/hashicorp/go-multierror"
-	lru "github.com/optakt/golang-lru"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
+	lru "github.com/optakt/golang-lru"
 )
 
 // NOTE: When loading a checkpoint, so many payloads need to be written at once that they, in most cases, get added to
@@ -58,8 +58,8 @@ type Store struct {
 	done chan struct{}
 }
 
-// NewStore creates a new store using a cache of the given size and storing payloads on disk at the given path.
-func NewStore(log zerolog.Logger, opts ...Option) (*Store, error) {
+// New creates a new store using a cache of the given size and storing payloads on disk at the given path.
+func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 	logger := log.With().Str("component", "payload_store").Logger()
 
 	config := DefaultConfig
@@ -264,6 +264,8 @@ func (s *Store) cacheFullAndDirty(used int) bool {
 func (s *Store) forceCommit() {
 	s.txMu.Lock()
 	defer s.txMu.Unlock()
+
+	fmt.Println("Forcing commit: store is full of dirty entries")
 
 	_ = s.sema.Acquire(context.Background(), 1)
 	s.tx.CommitWith(s.committed)

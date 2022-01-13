@@ -207,9 +207,11 @@ func GenericLedgerValue(index int) ledger.Value {
 }
 
 func GenericLedgerPayloads(number int) []*ledger.Payload {
+	values := GenericLedgerValues(number)
+
 	var payloads []*ledger.Payload
 	for i := 0; i < number; i++ {
-		payloads = append(payloads, ledger.NewPayload(GenericLedgerKey, GenericLedgerValue(i)))
+		payloads = append(payloads, ledger.NewPayload(GenericLedgerKey, values[i]))
 	}
 
 	return payloads

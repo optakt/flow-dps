@@ -317,7 +317,7 @@ func run() int {
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
-	payloadStore, err := store.NewStore(log, store.WithCacheSize(flagCacheSize), store.WithStoragePath(flagPayloadStorage))
+	payloadStore, err := store.New(log, store.WithCacheSize(flagCacheSize), store.WithStoragePath(flagPayloadStorage))
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize payload storage")
 		return failure
