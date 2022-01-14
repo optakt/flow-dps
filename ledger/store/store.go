@@ -112,6 +112,8 @@ func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 		}
 
 		// If the current entry is clean, we can evict it. Otherwise, abort the eviction.
+		s.isDirtyMu.RLock()
+		defer s.isDirtyMu.RUnlock()
 		return !s.isDirty[hash]
 	})
 	if err != nil {
@@ -264,8 +266,6 @@ func (s *Store) cacheFullAndDirty(used int) bool {
 func (s *Store) forceCommit() {
 	s.txMu.Lock()
 	defer s.txMu.Unlock()
-
-	fmt.Println("Forcing commit: store is full of dirty entries")
 
 	_ = s.sema.Acquire(context.Background(), 1)
 	s.tx.CommitWith(s.committed)
