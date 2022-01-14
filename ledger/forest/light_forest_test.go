@@ -30,8 +30,8 @@ import (
 
 func TestLightForest(t *testing.T) {
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	f := forest.New()
 

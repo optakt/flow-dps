@@ -16,7 +16,6 @@ package store_test
 
 import (
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 
@@ -33,11 +32,7 @@ func TestStore_Eviction(t *testing.T) {
 	payloads := mocks.GenericLedgerPayloads(512)
 
 	t.Run("without concurrency", func(t *testing.T) {
-		dir, err := os.MkdirTemp("", "")
-		require.NoError(t, err)
-		defer os.RemoveAll(dir)
-
-		s, err := store.New(mocks.NoopLogger, store.WithCacheSize(256), store.WithStoragePath(dir))
+		s, err := store.New(mocks.NoopLogger, store.WithCacheSize(256), store.WithStoragePath(t.TempDir()))
 		require.NoError(t, err)
 
 		// Insert all values.
@@ -63,11 +58,7 @@ func TestStore_Eviction(t *testing.T) {
 	})
 
 	t.Run("with concurrency", func(t *testing.T) {
-		dir, err := os.MkdirTemp("", "")
-		require.NoError(t, err)
-		defer os.RemoveAll(dir)
-
-		s, err := store.New(mocks.NoopLogger, store.WithCacheSize(256), store.WithStoragePath(dir))
+		s, err := store.New(mocks.NoopLogger, store.WithCacheSize(256), store.WithStoragePath(t.TempDir()))
 		require.NoError(t, err)
 
 		done := make(chan struct{})

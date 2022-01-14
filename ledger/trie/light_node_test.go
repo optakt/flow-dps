@@ -42,8 +42,8 @@ func Test_DecodeLegacyFormat(t *testing.T) {
 	}
 	wantPayload := utils.LightPayload8('A', 'a')
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	// Version 0.
 	encoded := []byte{

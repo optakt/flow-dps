@@ -612,8 +612,8 @@ func TestTransitions_UpdateTree(t *testing.T) {
 
 func TestTransitions_CollectRegisters(t *testing.T) {
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	tree := trie.NewEmptyTrie(mocks.NoopLogger, store)
 	paths := mocks.GenericLedgerPaths(6)

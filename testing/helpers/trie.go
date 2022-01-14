@@ -15,7 +15,6 @@
 package helpers
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,19 +29,11 @@ import (
 
 // InMemoryStore returns a store with enough storage to handle our tests in memory,
 // as well as a function to tear it down once it is no longer needed.
-func InMemoryStore(t *testing.T) (store dps.Store, teardown func()) {
-	dir, err := os.MkdirTemp("", "")
+func InMemoryStore(t *testing.T) dps.Store {
+	store, err := storage.New(mocks.NoopLogger, storage.WithCacheSize(4096), storage.WithStoragePath(t.TempDir()))
 	require.NoError(t, err)
 
-	store, err = storage.New(mocks.NoopLogger, storage.WithCacheSize(4096), storage.WithStoragePath(dir))
-	require.NoError(t, err)
-
-	teardownFunc := func() {
-		_ = store.Close()
-		_ = os.RemoveAll(dir)
-	}
-
-	return store, teardownFunc
+	return store
 }
 
 // LinearCongruentialGenerator is a pseudo random number generator that produces specifically
