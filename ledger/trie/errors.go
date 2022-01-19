@@ -14,17 +14,10 @@
 
 package trie
 
-// Leaf is what contains the values in the trie. This implementation uses nodes that are
-// compacted and do not always reside at the bottom layer of the trie.
-// Instead, they are inserted at the first heights where they do not conflict with others.
-// This allows the trie to keep a relatively small amount of nodes, instead of having
-// many nodes/extensions for each leaf in order to bring it all the way to the bottom
-// of the trie.
-type Leaf struct {
-	hash [32]byte
-}
+import (
+	"errors"
+)
 
-// Hash returns the leaf hash.
-func (l *Leaf) Hash() [32]byte {
-	return l.hash
-}
+var (
+	ErrPathNotFound = errors.New("path not found")
+)

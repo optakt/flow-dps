@@ -15,12 +15,15 @@
 package trie
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
-	"lukechampine.com/blake3"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
+	"github.com/onflow/flow-go/ledger/common/encoding"
 	"github.com/onflow/flow-go/ledger/common/hash"
 
 	"github.com/optakt/flow-dps/models/dps"
@@ -63,10 +66,6 @@ func (t *Trie) RootNode() Node {
 	return t.root
 }
 
-func (t *Trie) Store() dps.Store {
-	return t.store
-}
-
 // RootHash returns the hash of the trie's root node.
 func (t *Trie) RootHash() ledger.RootHash {
 	if t.root == nil {
@@ -90,19 +89,17 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 	for {
 		switch node := (*current).(type) {
 
-		// When the trie is empty, we start with a single root node that is
-		// `nil`. This is the basis from which we build out the trie.
+		// There are two cases where we hit a `nil` node:
+		// - before reaching max depth, in which case we should create an
+		// extension node to lead the rest of the path until max depth; and
+		// - when reaching max depth, in which case we should place an empty
+		// leaf node, which can then be populated.
 		case nil:
 
-			// When we have reached maximum depth, we can simple put the leaf
-			// node into this location and we are done with insertion.
+			// When we have reached maximum depth, we can simple put a leaf node
+			// into this location, which will then be populated in the leaf case.
 			if depth == maxDepth {
-				leaf := Leaf{
-					hash:    ledger.ComputeCompactValue(hash.Hash(path), payload.Value, 256),
-					payload: blake3.Sum256(payload.Value),
-				}
-				previous = current
-				*current = &leaf
+				*current = &Leaf{}
 				return
 			}
 
@@ -128,7 +125,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 			// At this point, we count the number of common bits so we can
 			// compare it against the number of available bits on the extension.
-			available := uint8(len(node.path))
 			common := uint8(0)
 			for i := depth; i < depth+node.count; i++ {
 				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
@@ -139,11 +135,11 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 
 			// If we have all of the bits in common, we have a simple edge case,
 			// where we can simple skip to the end of the extension.
-			if common == available {
+			if common == node.count {
 				node.dirty = true
 				previous = current
 				current = &node.child
-				depth = depth + available
+				depth = depth + node.count
 				continue
 			}
 
@@ -162,14 +158,14 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 			// Otherwise, we need to create a new branch with the remainder of
 			// the previous path.
 			var other Node
-			if available-common == 1 {
+			if node.count-common == 1 {
 				other = node.child
 			} else {
 				other = &Extension{
 					hash:  [32]byte{},
 					dirty: true,
 					path:  node.path,
-					count: available - common - 1,
+					count: node.count - common - 1,
 					child: node.child,
 				}
 			}
@@ -214,13 +210,14 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 			depth++
 			continue
 
-		// Finally, if we find a leaf, it means that the payload inserted at
-		// this leaf has probably been updated, so let's overwrite it by simply
-		// setting it to nil.
+		// When we reach a leaf node, we store the payload value in storage
+		// and insert the node hash and payload hash into the leaf.
 		case *Leaf:
 
-			*current = nil
-			continue
+			data := encoding.EncodePayload(payload)
+			t.store.Save(path, data)
+			node.hash = ledger.ComputeCompactValue(hash.Hash(path), payload.Value, 256)
+
 		}
 	}
 }
@@ -256,17 +253,54 @@ func (t *Trie) Leaves() []*Leaf {
 func (t *Trie) UnsafeRead(paths []ledger.Path) []*ledger.Payload {
 	payloads := make([]*ledger.Payload, len(paths)) // pre-allocate slice for the result
 	for i := range paths {
-		payloads[i] = t.read(paths[i])
+		payload, err := t.read(paths[i])
+		if errors.Is(err, ErrPathNotFound) {
+			payloads[i] = nil
+			continue
+		}
+		if err != nil {
+			panic(err)
+		}
+		payloads[i] = payload
 	}
 	return payloads
 }
 
-func (t *Trie) read(path ledger.Path) *ledger.Payload {
+func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 	current := &t.root
 	depth := uint8(0)
 	for {
 		switch node := (*current).(type) {
+
+		// If we hit a `nil` node, it means nothing exists on that path and we
+		// should return a `nil` payload.
+		case nil:
+			return nil, ErrPathNotFound
+
+		// If we hit an extension node, we have two cases:
+		// - the extension path overlaps fully with ours, and we jump to its end; or
+		// - the extension path mismatches ours, and there is no value for our path.
+		case *Extension:
+
+			common := uint8(0)
+			for i := depth; i < depth+node.count; i++ {
+				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
+					break
+				}
+				common++
+			}
+			if common != node.count {
+				return nil, ErrPathNotFound
+			}
+
+			current = &node.child
+			depth += node.count
+			continue
+
+		// If we hit a branch node, we have to sides to it, so we just forward
+		// by one and go to the correct side.
 		case *Branch:
+
 			if bitutils.Bit(path[:], int(depth)) == 0 {
 				current = &node.left
 			} else {
@@ -275,35 +309,21 @@ func (t *Trie) read(path ledger.Path) *ledger.Payload {
 			depth++
 			continue
 
-		case *Extension:
-
-			available := uint8(len(node.path))
-			common := uint8(0)
-			for i := depth; i < depth+node.count; i++ {
-				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
-					break
-				}
-				common++
-			}
-			if available != common {
-				return nil
-			}
-
-			current = &node.child
-			depth += node.count
-			continue
-
+		// Finally, if we reach the leaf, we can retrieve the by its hash from
+		// storage and return it.
 		case *Leaf:
 
-			payload, err := t.store.Retrieve(node.Hash())
+			data, err := t.store.Retrieve(path)
 			if err != nil {
-				return nil
+				return nil, fmt.Errorf("could not retrieve payload data: %w", err)
 			}
 
-			return payload
+			payload, err := encoding.DecodePayload(data)
+			if err != nil {
+				return nil, fmt.Errorf("could not decode payload data: %w", err)
+			}
 
-		case nil:
-			return nil
+			return payload, nil
 		}
 	}
 }
