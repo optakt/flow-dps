@@ -61,6 +61,6 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func (s *Server) Stop() {
-	s.server.Shutdown(context.Background())
+func (s *Server) Stop() error {
+	return s.server.Shutdown(context.Background())
 }

@@ -401,8 +401,17 @@ func run() int {
 			"api",
 			func() error {
 				api.RegisterAPIServer(gsvr, server)
-				// FIXME: Check whether it makes sense to check for the ErrServerClosed.
-				return gsvr.Serve(listener)
+
+				err := gsvr.Serve(listener)
+				if err == grpc.ErrServerStopped {
+					log.Debug().Msg("grpc server stopped")
+					return nil
+				}
+				if err != nil {
+					return err
+				}
+
+				return nil
 			},
 			func() {
 				gsvr.GracefulStop()
@@ -436,10 +445,18 @@ func run() int {
 				if !metricsEnabled {
 					return nil
 				}
+
 				return metricsSrv.Start()
 			},
 			func() {
-				metricsSrv.Stop()
+				if !metricsEnabled {
+					return
+				}
+
+				err := metricsSrv.Stop()
+				if err != nil {
+					log.Error().Err(err).Msg("could not stop metrics server")
+				}
 			},
 		).
 		Run()

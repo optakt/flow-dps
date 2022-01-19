@@ -71,9 +71,7 @@ func (e *Engine) Run() error {
 		e.stop()
 	case err := <-e.notify:
 		if err != nil {
-			e.log.Error().Err(err).Msg("engine failed")
-			e.stop()
-			return err
+			e.log.Error().Msg("engine stopped due to component failure")
 		}
 		e.log.Info().Msg("engine done")
 	}
