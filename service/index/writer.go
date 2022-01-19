@@ -227,11 +227,7 @@ func (w *Writer) apply(ops ...func(*badger.Txn) error) error {
 	// currently building, we want to see if there was an error committing any
 	// previous transaction.
 	select {
-	case err, ok := <-w.err:
-		// The channel was closed, so we can stop here.
-		if !ok {
-			return nil
-		}
+	case err := <-w.err:
 		return fmt.Errorf("could not commit transaction: %w", err)
 	default:
 		// skip
