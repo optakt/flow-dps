@@ -52,8 +52,8 @@ type Store struct {
 
 	cache     *lru.Cache
 	cacheSize int
-	isDirtyMu *sync.RWMutex      // guards the dirty tracking map against concurrent access
-	isDirty   map[hash.Hash]bool // keeps track of whether cached entries are on disk
+	isCleanMu *sync.RWMutex      // guards the dirty tracking map against concurrent access
+	isClean   map[hash.Hash]bool // keeps track of whether cached entries are on disk
 
 	done chan struct{}
 }
@@ -85,8 +85,8 @@ func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 		txMu: &sync.RWMutex{},
 		wg:   &sync.WaitGroup{},
 
-		isDirtyMu: &sync.RWMutex{},
-		isDirty:   make(map[hash.Hash]bool, config.CacheSize),
+		isCleanMu: &sync.RWMutex{},
+		isClean:   make(map[hash.Hash]bool, config.CacheSize),
 	}
 
 	s.wg.Add(1)
@@ -98,23 +98,28 @@ func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 			logger.Fatal().Interface("got", k).Msg("unexpected key format")
 		}
 
-		// If the entry is dirty and the cache is not full, abort eviction.
-		s.isDirtyMu.RLock()
-		if s.isDirty[hash] && used < s.cacheSize {
-			s.isDirtyMu.RUnlock()
-			return false
-		}
-		s.isDirtyMu.RUnlock()
-
 		// If the cache is full of dirty entries, push the current commit to disk and evict the entry.
 		if s.cacheFullAndDirty(used) {
 			s.forceCommit()
+
+			// Remove entry from map since we evict it.
+			s.isCleanMu.Lock()
+			delete(s.isClean, hash)
+			s.isCleanMu.Unlock()
+
+			return true
 		}
 
-		// If the current entry is clean, we can evict it. Otherwise, abort the eviction.
-		s.isDirtyMu.RLock()
-		defer s.isDirtyMu.RUnlock()
-		return !s.isDirty[hash]
+		// If the entry is dirty, abort eviction.
+		s.isCleanMu.RLock()
+		defer s.isCleanMu.RUnlock()
+		if !s.isClean[hash] {
+			return false
+		}
+
+		// Otherwise, delete the entry from the map and return true to evict it.
+		delete(s.isClean, hash)
+		return false
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not create cache storage for ledger payloads: %w", err)
@@ -125,19 +130,20 @@ func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 
 // Save stores a payload.
 func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) error {
+	s.isCleanMu.Lock()
+	defer s.isCleanMu.Unlock()
+
 	// Store in cache.
 	_ = s.cache.Add(hash, payload.Value)
-
-	// Set state to dirty.
-	s.isDirtyMu.Lock()
-	s.isDirty[hash] = true
-	s.isDirtyMu.Unlock()
 
 	// Write in transaction.
 	err := s.write(hash, payload.Value)
 	if err != nil {
 		return fmt.Errorf("could not write payload to disk: %w", err)
 	}
+
+	// Set state to dirty.
+	s.isClean[hash] = true
 
 	return nil
 }
@@ -249,10 +255,10 @@ func (s *Store) cacheFullAndDirty(used int) bool {
 	}
 
 	// Check if there is any clean entry in the cache that can be evicted.
-	s.isDirtyMu.RLock()
-	defer s.isDirtyMu.RUnlock()
-	for _, isDirty := range s.isDirty {
-		if !isDirty {
+	s.isCleanMu.RLock()
+	defer s.isCleanMu.RUnlock()
+	for _, isClean := range s.isClean {
+		if isClean {
 			return false
 		}
 	}
@@ -283,11 +289,11 @@ func (s *Store) committed(err error) {
 
 	// Once the transaction has been committed, the entries in the cache are no
 	// longer dirty.
-	s.isDirtyMu.Lock()
-	for h := range s.isDirty {
-		s.isDirty[h] = false
+	s.isCleanMu.Lock()
+	for h := range s.isClean {
+		s.isClean[h] = false
 	}
-	s.isDirtyMu.Unlock()
+	s.isCleanMu.Unlock()
 
 	// Releasing one resource on the semaphore frees up one slot for
 	// inflight transactions.
