@@ -214,9 +214,10 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 		// and insert the node hash and payload hash into the leaf.
 		case *Leaf:
 
+			hash := ledger.ComputeCompactValue(hash.Hash(path), payload.Value, 256)
 			data := encoding.EncodePayload(payload)
 			t.store.Save(path, data)
-			node.hash = ledger.ComputeCompactValue(hash.Hash(path), payload.Value, 256)
+			node.hash = hash
 
 		}
 	}
