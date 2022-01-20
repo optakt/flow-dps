@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/engine"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
@@ -117,7 +118,7 @@ func run() int {
 
 	// Check if index already exists.
 	read := index.NewReader(indexDB, storage)
-	first, err := read.First()
+	_, err = read.First()
 	empty := errors.Is(err, badger.ErrKeyNotFound)
 	if err != nil && !empty {
 		log.Error().Err(err).Msg("could not get first height from index reader")
@@ -153,33 +154,10 @@ func run() int {
 	}()
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
-	bootstrap := flagCheckpoint != ""
-	if empty {
-		file, err := os.Open(flagCheckpoint)
-		if err != nil {
-			log.Error().Err(err).Msg("could not open checkpoint file")
-			return failure
-		}
-		defer file.Close()
-		load = loader.FromCheckpoint(file)
-	} else if bootstrap {
-		file, err := os.Open(flagCheckpoint)
-		if err != nil {
-			log.Error().Err(err).Msg("could not open checkpoint file")
-			return failure
-		}
-		defer file.Close()
-		initialize := loader.FromCheckpoint(file)
-		load = loader.FromIndex(log, storage, indexDB,
-			loader.WithInitializer(initialize),
-			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
-		)
-	}
+	load := loader.FromScratch()
 
 	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
-		mapper.WithBootstrapState(bootstrap),
+		mapper.WithBootstrapState(true),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
@@ -195,48 +173,19 @@ func run() int {
 		mapper.WithTransition(mapper.StatusForward, transitions.ForwardHeight),
 	)
 
-	// This section launches the main executing components in their own
-	// goroutine, so they can run concurrently. Afterwards, we wait for an
-	// interrupt signal in order to proceed with the next section.
-	done := make(chan struct{})
-	failed := make(chan struct{})
-	go func() {
-		start := time.Now()
-		log.Info().Time("start", start).Msg("Flow DPS Indexer starting")
-		err := fsm.Run()
-		if err != nil {
-			log.Warn().Err(err).Msg("Flow DPS Indexer failed")
-			close(failed)
-		} else {
-			close(done)
-		}
-		finish := time.Now()
-		duration := finish.Sub(start)
-		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
-	}()
-
-	select {
-	case <-sig:
-		log.Info().Msg("Flow DPS Indexer stopping")
-	case <-done:
-		log.Info().Msg("Flow DPS Indexer done")
-	case <-failed:
-		log.Warn().Msg("Flow DPS Indexer aborted")
-		return failure
-	}
-	go func() {
-		<-sig
-		log.Warn().Msg("forcing exit")
-		os.Exit(1)
-	}()
-
-	// The following code starts a shut down with a certain timeout and makes
-	// sure that the main executing components are shutting down within the
-	// allocated shutdown time. Otherwise, we will force the shutdown and log
-	// an error. We then wait for shutdown on each component to complete.
-	err = fsm.Stop()
+	err = engine.New(log, "Flow DPS Indexer", sig).
+		Component(
+			"mapper",
+			func() error {
+				return fsm.Run()
+			},
+			func() {
+				fsm.Stop()
+			},
+		).
+		Run()
 	if err != nil {
-		log.Error().Err(err).Msg("could not stop indexer")
+		log.Error().Err(err).Msg("failed")
 		return failure
 	}
 

@@ -75,8 +75,7 @@ func (f *FSM) Run() error {
 }
 
 // Stop gracefully stops the state machine.
-func (f *FSM) Stop() error {
+func (f *FSM) Stop() {
 	close(f.state.done)
 	f.wg.Wait()
-	return nil
 }

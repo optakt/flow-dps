@@ -19,7 +19,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -45,6 +44,7 @@ import (
 
 	api "github.com/optakt/flow-dps/api/dps"
 	"github.com/optakt/flow-dps/codec/zbor"
+	"github.com/optakt/flow-dps/engine"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/service/cloud"
 	"github.com/optakt/flow-dps/service/forest"
@@ -176,7 +176,6 @@ func run() int {
 		storage,
 		index.WithFlushInterval(flagFlushInterval),
 	)
-
 	defer func() {
 		err := write.Close()
 		if err != nil {
@@ -269,7 +268,7 @@ func run() int {
 
 	// On the other side, we also need access to the execution data. The cloud
 	// streamer is responsible for retrieving block execution records from a
-	// Google Cloud Storage bucket. This component plays the role of what would
+	// Google Cloud Storage bucket. This engine plays the role of what would
 	// otherwise be a network protocol, such as a publish socket.
 	client, err := gcloud.NewClient(context.Background(),
 		option.WithoutAuthentication(),
@@ -372,7 +371,7 @@ func run() int {
 	logOpts := []logging.Option{
 		logging.WithLevels(logging.DefaultServerCodeToLevel),
 	}
-	interceptor := grpczerolog.InterceptorLogger(log.With().Str("component", "grpc_server").Logger())
+	interceptor := grpczerolog.InterceptorLogger(log.With().Str("engine", "grpc_server").Logger())
 	gsvr := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			tags.UnaryServerInterceptor(),
@@ -393,76 +392,76 @@ func run() int {
 		log.Error().Str("address", flagAddress).Err(err).Msg("could not create listener")
 		return failure
 	}
-	done := make(chan struct{})
-	failed := make(chan struct{})
+
 	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		follow.Run(ctx)
-	}()
-	go func() {
-		start := time.Now()
-		log.Info().Time("start", start).Msg("Flow DPS Live Indexer starting")
-		err := fsm.Run()
-		if err != nil {
-			log.Warn().Err(err).Msg("Flow DPS Live Indexer failed")
-			close(failed)
-		} else {
-			close(done)
-		}
-		finish := time.Now()
-		duration := finish.Sub(start)
-		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
-	}()
-	go func() {
-		log.Info().Msg("Flow DPS Live Server starting")
-		api.RegisterAPIServer(gsvr, server)
-		err = gsvr.Serve(listener)
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Warn().Err(err).Msg("Flow DPS Server failed")
-		}
-		log.Info().Msg("Flow DPS Live Server stopped")
-	}()
-	go func() {
-		if !metricsEnabled {
-			return
-		}
+	metricsSrv := metrics.NewServer(log, flagMetrics)
 
-		log.Info().Msg("metrics server starting")
-		server := metrics.NewServer(log, flagMetrics)
-		err := server.Start()
-		if err != nil {
-			log.Warn().Err(err).Msg("metrics server failed")
-		}
-		log.Info().Msg("metrics server stopped")
-	}()
+	err = engine.New(log, "Flow DPS Live", sig).
+		Component(
+			"api",
+			func() error {
+				api.RegisterAPIServer(gsvr, server)
 
-	// Here, we are waiting for a signal, or for one of the components to fail
-	// or finish. In both cases, we proceed to shut down everything, while also
-	// entering a goroutine that allows us to force shut down by sending
-	// another signal.
-	select {
-	case <-sig:
-		log.Info().Msg("Flow DPS Indexer stopping")
-	case <-done:
-		log.Info().Msg("Flow DPS Indexer done")
-	case <-failed:
-		log.Warn().Msg("Flow DPS Indexer aborted")
-	}
-	go func() {
-		<-sig
-		log.Warn().Msg("forcing exit")
-		os.Exit(1)
-	}()
+				err := gsvr.Serve(listener)
+				if err == grpc.ErrServerStopped {
+					log.Debug().Msg("grpc server stopped")
+					return nil
+				}
+				if err != nil {
+					return err
+				}
 
-	// We first stop serving the DPS API by shutting down the GRPC server. Next,
-	// we shut down the consensus follower, so that there is no indexing to be
-	// done anymore. Lastly, we stop the mapper logic itself.
-	gsvr.GracefulStop()
-	cancel()
-	<-follow.NodeBuilder.Done()
-	err = fsm.Stop()
+				return nil
+			},
+			func() {
+				gsvr.GracefulStop()
+			},
+		).
+		Component(
+			"follower",
+			func() error {
+				follow.Run(ctx)
+				return nil
+			},
+			func() {
+				// Cancel the context given to the consensus follower.
+				cancel()
+				// Wait for it to have stopped gracefully.
+				<-follow.NodeBuilder.Done()
+			},
+		).
+		Component(
+			"mapper",
+			func() error {
+				return fsm.Run()
+			},
+			func() {
+				fsm.Stop()
+			},
+		).
+		Component(
+			"metrics",
+			func() error {
+				if !metricsEnabled {
+					return nil
+				}
+
+				return metricsSrv.Start()
+			},
+			func() {
+				if !metricsEnabled {
+					return
+				}
+
+				err := metricsSrv.Stop()
+				if err != nil {
+					log.Error().Err(err).Msg("could not stop metrics server")
+				}
+			},
+		).
+		Run()
 	if err != nil {
-		log.Error().Err(err).Msg("could not stop indexer")
+		log.Error().Err(err).Msg("failed")
 		return failure
 	}
 
