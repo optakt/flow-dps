@@ -112,8 +112,8 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 
 	const expectedRootHashHex = "74f748dbe563bb5819d6c09a34362a048531fd9647b4b2ea0b6ff43f200198aa"
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
@@ -134,8 +134,8 @@ func TestTrie_InsertFullTrie(t *testing.T) {
 	const expectedRootHashHex = "6b3a48d672744f5586c571c47eae32d7a4a3549c1d4fa51a0acfd7b720471de9"
 	const regCount = 65536
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
@@ -182,8 +182,8 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 		"ce633e9ca6329d6984c37a46e0a479bb1841674c2db00970dacfe035882d4aba",
 	}
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
@@ -220,8 +220,8 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 
 	const expectedRootHashHex = "d81e27a93f2bef058395f70e00fb5d3c8e426e22b3391d048b34017e1ecb483e"
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	rng := helpers.NewGenerator()
 	testTrie := trie.NewEmptyTrie(mocks.NoopLogger, store)
@@ -254,21 +254,6 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
 }
 
-func TestTrie_Leaves(t *testing.T) {
-
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
-
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
-
-	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 99)
-	for i := range paths {
-		trie.Insert(paths[i], &payloads[i])
-	}
-
-	assert.Len(t, trie.Leaves(), len(paths))
-}
-
 func Benchmark_TrieRootHash(b *testing.B) {
 
 	store := mocks.BaselineStore()
@@ -292,8 +277,8 @@ func Benchmark_TrieRootHash(b *testing.B) {
 func Test_UnsafeRead(t *testing.T) {
 	const regCount = 65536
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
@@ -333,8 +318,8 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 	paths := mocks.GenericLedgerPaths(totalValues)
 	payloads := mocks.GenericLedgerPayloads(totalValues)
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
 	refTr := reference.NewEmptyMTrie()

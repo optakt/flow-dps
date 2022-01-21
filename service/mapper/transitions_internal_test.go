@@ -92,7 +92,7 @@ func TestTransitions_BootstrapState(t *testing.T) {
 			}
 			assert.NotNil(t, tree.RootNode())
 			// FIXME:
-			//assert.Len(t, tree.AllPayloads(), len(paths))
+			// assert.Len(t, tree.AllPayloads(), len(paths))
 			assert.Len(t, paths, 3) // Expect the three paths from leaves.
 			assert.NotZero(t, parent)
 		}
@@ -612,8 +612,8 @@ func TestTransitions_UpdateTree(t *testing.T) {
 
 func TestTransitions_CollectRegisters(t *testing.T) {
 
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	tree := trie.NewEmptyTrie(mocks.NoopLogger, store)
 	paths := mocks.GenericLedgerPaths(6)
@@ -723,7 +723,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 
 		// Should not be StateIndexed because registers map was not empty.
 		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusMap, st.status)
+		assert.Equal(t, StatusCollect, st.status)
 	})
 
 	t.Run("nominal case no more registers left to write", func(t *testing.T) {

@@ -54,8 +54,8 @@ func TestForest_InsertAndReadBatches(t *testing.T) {
 	}
 
 	// Create store dependency for our trie.
-	store, teardown := helpers.InMemoryStore(t)
-	defer teardown()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
 
 	// Create our trie and the reference trie.
 	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
