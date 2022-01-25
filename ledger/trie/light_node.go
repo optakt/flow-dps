@@ -44,9 +44,9 @@ type LightNode struct {
 	HashValue []byte
 
 	// Height where the node is at.
-	Height uint16
+	Height uint8
 	// Height at which the node skips if it is an extension.
-	Skip uint16
+	Skip uint8
 }
 
 // IndexMap is a map used to index light nodes. It keeps track of the position of
@@ -55,39 +55,36 @@ type IndexMap map[Node]uint64
 
 // ToLightNode converts the given node into a light node and indexes its position in the given index.
 func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
-	leftIndex, found := index[node.LeftChild()]
-	if !found {
-		hash := node.LeftChild().Hash()
-		return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(hash[:]))
-	}
-	rightIndex, found := index[node.RightChild()]
-	if !found {
-		hash := node.RightChild().Hash()
-		return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(hash[:]))
-	}
-
 	// By calling node.Hash we ensure that the node hash is computed and does not get stored in a dirty state.
 	hash := node.Hash()
-
-	// Set the common node data.
 	lightNode := LightNode{
-		LIndex:    leftIndex,
-		RIndex:    rightIndex,
-		Height:    node.Height(),
 		HashValue: hash[:],
 	}
 
-	// Add the missing data that is specific to each different node type.
+	// FIXME: How to get the height? Could be given as an arg.
 	switch n := node.(type) {
 	case *Extension:
-		lightNode.Skip = n.skip
+		// FIXME: How to store the extension and its child?
+		lightNode.Skip = n.count
 		lightNode.Path = n.path[:]
 
 	case *Leaf:
-		lightNode.Path = n.path[:]
+		// FIXME: Need the path. Maybe can be given as an argument to the function.
+		lightNode.Path = ledger.DummyPath[:]
 
 	case *Branch:
-		// No extra data is needed in the light node.
+		leftIndex, found := index[n.left]
+		if !found {
+			hash := n.left.Hash()
+			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(hash[:]))
+		}
+		rightIndex, found := index[n.right]
+		if !found {
+			hash := n.right.Hash()
+			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(hash[:]))
+		}
+		lightNode.LIndex = leftIndex
+		lightNode.RIndex = rightIndex
 	}
 
 	return &lightNode, nil
@@ -103,37 +100,27 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 	if len(ln.Path) == 0 {
 		// Since it does not have a path, this node is a branch.
 		return &Branch{
-			lChild: nodes[ln.LIndex],
-			rChild: nodes[ln.RIndex],
-			height: ln.Height,
-			hash:   hash,
-			dirty:  false,
+			left:  nodes[ln.LIndex],
+			right: nodes[ln.RIndex],
+			hash:  hash,
+			dirty: false,
 		}, nil
-	}
-
-	path, err := ledger.ToPath(ln.Path)
-	if err != nil {
-		return nil, fmt.Errorf("invalid path in light node: %w", err)
 	}
 
 	if ln.Skip > 0 {
 		// Since it has a skip value, this node is an extension.
 		return &Extension{
-			lChild: nodes[ln.LIndex],
-			rChild: nodes[ln.RIndex],
-			height: ln.Height,
-			path:   path,
-			skip:   ln.Skip,
-			hash:   hash,
-			dirty:  false,
+			// FIXME: Handle child.
+			path:  ln.Path,
+			count: ln.Skip, // FIXME: Rename skip
+			hash:  hash,
+			dirty: false,
 		}, nil
 	}
 
 	// Since it has a path and has no skip value, this node is a leaf.
 	return &Leaf{
-		path:   path,
-		hash:   hash,
-		height: ln.Height,
+		hash: hash,
 	}, nil
 }
 
@@ -141,27 +128,30 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 func EncodeLightNode(lightNode *LightNode, store dps.Store) []byte {
 
 	var payload *ledger.Payload
+	var err error
 	if len(lightNode.Path) > 0 && lightNode.Skip == 0 {
 		// Since the node has a path and no skip value, we know it is a leaf node.
-		h, err := hash.ToHash(lightNode.HashValue)
+		var h hash.Hash
+		h, err = hash.ToHash(lightNode.HashValue)
 		if err != nil {
 			panic(fmt.Errorf("fatal error: invalid hash in node: %w", err))
 		}
 
 		// Retrieve the payload from the store
-		payload, err = store.Retrieve(h)
+		payload.Value, err = store.Retrieve(h)
 		if err != nil {
 			panic(fmt.Errorf("fatal error: missing payload from store: %w", err))
 		}
 	}
+
 	encPayload := encoding.EncodePayload(payload)
 
 	// Length is calculated using:
 	// 	* Encoding version (2 bytes)
 	// 	* LIndex (8 bytes)
 	// 	* RIndex (8 bytes)
-	// 	* Height (2 bytes)
-	// 	* Skip (2 bytes)
+	// 	* Height (1 byte)
+	// 	* Skip (1 byte) // FIXME: Rename?
 	// 	* Length of path (32 bytes)
 	// 	* Length of hash (32 bytes)
 	//	* Length of encoded payload (variable)
@@ -171,8 +161,8 @@ func EncodeLightNode(lightNode *LightNode, store dps.Store) []byte {
 	buf = utils.AppendUint16(buf, encodingVersion)
 	buf = utils.AppendUint64(buf, lightNode.LIndex)
 	buf = utils.AppendUint64(buf, lightNode.RIndex)
-	buf = utils.AppendUint16(buf, lightNode.Height)
-	buf = utils.AppendUint16(buf, lightNode.Skip)
+	buf = utils.AppendUint8(buf, lightNode.Height)
+	buf = utils.AppendUint8(buf, lightNode.Skip)
 	buf = utils.AppendShortData(buf, lightNode.Path)
 	buf = utils.AppendShortData(buf, lightNode.HashValue)
 	buf = utils.AppendLongData(buf, encPayload)
@@ -226,11 +216,14 @@ func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 		return nil, fmt.Errorf("could not read fixed-length part of light node: %w", err)
 	}
 
-	var lightNode LightNode
-	lightNode.Height, buf, err = utils.ReadUint16(buf)
+	var height uint16
+	height, buf, err = utils.ReadUint16(buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node height: %w", err)
 	}
+
+	var lightNode LightNode
+	lightNode.Height = uint8(height)
 	lightNode.LIndex, buf, err = utils.ReadUint64(buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node left index: %w", err)
@@ -275,7 +268,9 @@ func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 		return nil, fmt.Errorf("invalid hash in light node: %w", err)
 	}
 	if payload != nil {
-		store.Save(h, payload)
+		// FIXME: Do we need to whole payload or just the value?
+		// FIXME: Handle error.
+		store.Save(h, payload.Value)
 	}
 
 	return &lightNode, nil
@@ -284,19 +279,19 @@ func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 // Decodes a legacy-formatted light node.
 func decodeNewFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 	// Length is calculated using:
-	// 	* Height (2 bytes)
+	// 	* Height (1 byte)
 	// 	* LIndex (8 bytes)
 	// 	* RIndex (8 bytes)
-	// 	* MaxDepth (2 bytes) — Ignored
+	// 	* MaxDepth (1 byte) — Ignored
 	// 	* RegisterCount (8 bytes) — Ignored
-	buf := make([]byte, 2+8+8+2+8)
+	buf := make([]byte, 1+8+8+2+8)
 	_, err := io.ReadFull(reader, buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not read fixed-length part of light node: %w", err)
 	}
 
 	var lightNode LightNode
-	lightNode.Height, buf, err = utils.ReadUint16(buf)
+	lightNode.Height, buf, err = utils.ReadUint8(buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node height: %w", err)
 	}
@@ -309,7 +304,7 @@ func decodeNewFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 		return nil, fmt.Errorf("could not decode light node right index: %w", err)
 	}
 	// Ignore the max depth value.
-	_, buf, err = utils.ReadUint16(buf)
+	_, buf, err = utils.ReadUint8(buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node max depth: %w", err)
 	}
@@ -343,7 +338,7 @@ func decodeNewFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 		return nil, fmt.Errorf("invalid hash in light node: %w", err)
 	}
 	if payload != nil {
-		store.Save(h, payload)
+		store.Save(h, payload.Value) // FIXME: Do we need the whole payload or just the value?
 	}
 
 	return &lightNode, nil

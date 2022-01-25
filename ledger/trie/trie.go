@@ -81,7 +81,7 @@ func (t *Trie) RootHash() ledger.RootHash {
 // Insert adds a new leaf to the trie. While doing so, since the trie is optimized, it might
 // restructure the trie by adding new extensions, branches, or even moving other nodes
 // to different heights along the way.
-func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
+func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 	var previous *Node
 	current := &t.root
@@ -96,11 +96,11 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 		// leaf node, which can then be populated.
 		case nil:
 
-			// When we have reached maximum depth, we can simple put a leaf node
+			// When we have reached maximum depth, we can simply put a leaf node
 			// into this location, which will then be populated in the leaf case.
 			if depth == maxDepth {
 				*current = &Leaf{}
-				return
+				continue
 			}
 
 			// If we have not reached maximum depth, we have reached a part of
@@ -123,7 +123,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 		// branches in order to reduce the number of nodes we need to traverse.
 		case *Extension:
 
-			// At this point, we count the number of common bits so we can
+			// At this point, we count the number of common bits, so we can
 			// compare it against the number of available bits on the extension.
 			common := uint8(0)
 			for i := depth; i < depth+node.count; i++ {
@@ -133,8 +133,8 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 				common++
 			}
 
-			// If we have all of the bits in common, we have a simple edge case,
-			// where we can simple skip to the end of the extension.
+			// If all the bits are common, we have a simple edge case,
+			// where we can skip to the end of the extension.
 			if common == node.count {
 				node.dirty = true
 				previous = current
@@ -214,11 +214,21 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) {
 		// and insert the node hash and payload hash into the leaf.
 		case *Leaf:
 
-			hash := ledger.ComputeCompactValue(hash.Hash(path), payload.Value, 256)
-			data := encoding.EncodePayload(payload)
-			t.store.Save(path, data)
+			// FIXME: Find a way to use the height of the previous node for hash computation.
+			height := 256
+			prev, ok := (*previous).(*Extension)
+			if ok {
+				height = 256 - int(prev.count)
+			}
+			hash := ledger.ComputeCompactValue(hash.Hash(path), payload.Value, height)
 			node.hash = hash
 
+			data := encoding.EncodePayload(payload)
+			err := t.store.Save(hash, data)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 	}
 }
@@ -329,18 +339,40 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 	}
 }
 
-// Converts depth into Flow Go inverted height (where 256 is root).
-func nodeHeight(depth uint8) uint16 {
-	return ledger.NodeMaxHeight - uint16(depth)
-}
+func (t *Trie) Paths() []ledger.Path {
 
-// commonBits returns the number of matching bits within two paths.
-func commonBits(path1, path2 ledger.Path) uint16 {
-	for i := uint16(0); i < ledger.NodeMaxHeight; i++ {
-		if bitutils.Bit(path1[:], int(i)) != bitutils.Bit(path2[:], int(i)) {
-			return i
+	queue := deque.New()
+	root := t.RootNode()
+	if root != nil {
+		queue.PushBack(root)
+	}
+
+	var paths []ledger.Path
+	for queue.Len() > 0 {
+		node := queue.PopBack().(Node)
+		switch n := node.(type) {
+		case *Leaf:
+			// FIXME: How to get the path of the leaf here? We could use a
+			//  queue of elements that contain the node and the path so far?
+			paths = append(paths, ledger.DummyPath)
+		case *Extension:
+			queue.PushBack(n.child)
+		case *Branch:
+			if n.left != nil {
+				queue.PushBack(n.left)
+			}
+			if n.right != nil {
+				queue.PushBack(n.right)
+			}
 		}
 	}
 
-	return ledger.NodeMaxHeight
+	return paths
+}
+
+// FIXME: Implement this function.
+func (t *Trie) Clone() *Trie {
+	newTrie := &Trie{log: t.log, store: t.store}
+
+	return newTrie
 }

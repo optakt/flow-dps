@@ -18,41 +18,8 @@ import (
 	"bytes"
 	"sort"
 
-	"github.com/gammazero/deque"
-
 	"github.com/onflow/flow-go/ledger"
-
-	"github.com/optakt/flow-dps/ledger/trie"
 )
-
-func allPaths(tree *trie.Trie) []ledger.Path {
-	if tree == nil {
-		return nil
-	}
-
-	queue := deque.New()
-	root := tree.RootNode()
-	if root != nil {
-		queue.PushBack(root)
-	}
-
-	var paths []ledger.Path
-	for queue.Len() > 0 {
-		node := queue.PopBack().(trie.Node)
-		if node.Path() != ledger.DummyPath {
-			paths = append(paths, node.Path())
-			continue
-		}
-		if node.LeftChild() != nil {
-			queue.PushBack(node.LeftChild())
-		}
-		if node.RightChild() != nil {
-			queue.PushBack(node.RightChild())
-		}
-	}
-
-	return paths
-}
 
 func pathsPayloads(update *ledger.TrieUpdate) ([]ledger.Path, []*ledger.Payload) {
 	paths := make([]ledger.Path, 0, len(update.Paths))

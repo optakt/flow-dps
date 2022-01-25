@@ -22,6 +22,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/cadence"
@@ -34,7 +35,6 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/mempool/entity"
 
-	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -71,27 +71,15 @@ var (
 		ledger.NewKeyPart(2, []byte(`key`)),
 	})
 
-	// GenericRootNode Visual Representation:
+	// GenericTrie Visual Representation:
 	//            B (root)
 	//          /   \
 	//         B     B
 	//        / \   / \
 	//       3   2 1   0
-	GenericRootNode = trie.NewBranch(
-		256,
-		trie.NewBranch(
-			255,
-			trie.NewLeaf(254, GenericLedgerPath(0), GenericLedgerPayload(0)),
-			trie.NewLeaf(254, GenericLedgerPath(1), GenericLedgerPayload(1)),
-		),
-		trie.NewBranch(
-			255,
-			trie.NewLeaf(254, GenericLedgerPath(2), GenericLedgerPayload(2)),
-			trie.NewLeaf(254, GenericLedgerPath(3), GenericLedgerPayload(3)),
-		),
-	)
-
-	GenericTrie = trie.NewTrie(NoopLogger, GenericRootNode, nil)
+	//      FIXME: Need to have constructors in the trie package to be able to test this.
+	GenericTrie     = trie.NewEmptyTrie(NoopLogger, nil)
+	GenericRootNode = GenericTrie.RootNode()
 
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),

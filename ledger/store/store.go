@@ -129,49 +129,50 @@ func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 }
 
 // Save stores a payload.
-func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) error {
+func (s *Store) Save(key [32]byte, value []byte) error {
 	s.isCleanMu.Lock()
 	defer s.isCleanMu.Unlock()
 
 	// Store in cache.
-	_ = s.cache.Add(hash, payload.Value)
+	_ = s.cache.Add(key, value)
 
 	// Write in transaction.
-	err := s.write(hash, payload.Value)
+	err := s.write(key, value)
 	if err != nil {
 		return fmt.Errorf("could not write payload to disk: %w", err)
 	}
 
 	// Set state to dirty.
-	s.isClean[hash] = true
+	s.isClean[key] = true
 
 	return nil
 }
 
 // Retrieve retrieves a payload from the cache or persistent storage.
-func (s *Store) Retrieve(hash hash.Hash) (*ledger.Payload, error) {
-	var payload ledger.Payload
-
+func (s *Store) Retrieve(key [32]byte) ([]byte, error) {
 	// If the value is still in the cache, fetch it from there.
-	val, ok := s.cache.Get(hash)
+	val, ok := s.cache.Get(key)
 	if ok {
-		payload.Value = val.(ledger.Value)
-		return &payload, nil
+		payload, ok := val.([]byte)
+		if !ok {
+			return nil, errors.New("unexpected cache value format")
+		}
+		return payload, nil
 	}
 
 	// Otherwise, check if it has been evicted from the cache and is in the current transaction or in the DB.
 	s.txMu.RLock()
 	defer s.txMu.RUnlock()
-	it, err := s.tx.Get(hash[:])
+	it, err := s.tx.Get(key[:])
 	if err != nil {
-		return nil, fmt.Errorf("could not read payload %x: %w", hash[:], err)
+		return nil, fmt.Errorf("could not read payload %x: %w", key[:], err)
 	}
 
-	payload.Value, err = it.ValueCopy(nil)
+	payload, err := it.ValueCopy(nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not read payload %x: %w", hash[:], err)
+		return nil, fmt.Errorf("could not read payload %x: %w", key[:], err)
 	}
-	return &payload, nil
+	return payload, nil
 }
 
 // Close stops the store's persistence goroutines.

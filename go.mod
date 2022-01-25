@@ -5,7 +5,6 @@ go 1.17
 require (
 	cloud.google.com/go/storage v1.16.1
 	github.com/OneOfOne/xxhash v1.2.8
-	github.com/dgraph-io/badger v1.6.2
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
@@ -34,7 +33,6 @@ require (
 
 require (
 	cloud.google.com/go v0.93.3 // indirect
-	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect

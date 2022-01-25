@@ -20,41 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/optakt/flow-dps/ledger/trie"
-
 	"github.com/optakt/flow-dps/testing/mocks"
 )
-
-func TestAllPaths(t *testing.T) {
-	t.Run("nominal case with single path", func(t *testing.T) {
-		t.Parallel()
-
-		testNode := trie.NewLeaf(256, mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0))
-		testTrie := trie.NewTrie(mocks.NoopLogger, testNode, nil)
-
-		got := allPaths(testTrie)
-
-		assert.NotEmpty(t, got)
-		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPath(0)}, got)
-	})
-
-	t.Run("nominal case with multiple paths", func(t *testing.T) {
-		t.Parallel()
-
-		got := allPaths(mocks.GenericTrie)
-
-		assert.Len(t, got, 4)
-		assert.Equal(t, []ledger.Path{mocks.GenericLedgerPath(3), mocks.GenericLedgerPath(2), mocks.GenericLedgerPath(1), mocks.GenericLedgerPath(0)}, got)
-	})
-
-	t.Run("empty trie", func(t *testing.T) {
-		t.Parallel()
-
-		got := allPaths(trie.NewEmptyTrie(mocks.NoopLogger, nil))
-
-		assert.Empty(t, got)
-	})
-}
 
 func TestPathsPayloads(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {

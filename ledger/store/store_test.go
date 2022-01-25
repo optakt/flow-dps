@@ -40,7 +40,7 @@ func TestStore_Eviction(t *testing.T) {
 			h, err := hash.ToHash(paths[i][:])
 			require.NoError(t, err)
 
-			err = s.Save(h, payloads[i])
+			err = s.Save(h, payloads[i].Value)
 			require.NoError(t, err)
 		}
 
@@ -53,7 +53,7 @@ func TestStore_Eviction(t *testing.T) {
 			payload, err := s.Retrieve(h)
 			require.NoError(t, err)
 
-			assert.Equal(t, payloads[i].Value, payload.Value)
+			assert.ElementsMatch(t, payloads[i].Value[:], payload)
 		}
 	})
 
@@ -77,7 +77,7 @@ func TestStore_Eviction(t *testing.T) {
 				h, err := hash.ToHash(paths[i][:])
 				require.NoError(t, err)
 
-				err = s.Save(h, payloads[i])
+				err = s.Save(h, payloads[i].Value)
 				require.NoError(t, err)
 			}
 		}()
@@ -102,7 +102,7 @@ func TestStore_Eviction(t *testing.T) {
 					continue // The entry might not be in the cache yet.
 				}
 
-				if assert.Equal(t, payloads[i].Value, payload.Value) {
+				if assert.Equal(t, payloads[i].Value[:], payload) {
 					successfulReads++
 				}
 			}

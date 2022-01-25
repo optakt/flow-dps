@@ -14,12 +14,6 @@
 
 package trie
 
-import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/bitutils"
-	"github.com/onflow/flow-go/ledger/common/hash"
-)
-
 // Extension acts as a shortcut between many layers of the trie. It replaces a set of branches.
 // The Flow implementation does not use extensions. This is a DPS optimization, which allows saving
 // memory usage by reducing the amount of nodes necessary in the trie.
@@ -41,14 +35,16 @@ func (e *Extension) Hash() [32]byte {
 
 // computeHash computes the extension's hash.
 func (e *Extension) computeHash() {
-	computed := e.child.Hash()
-	for i := 0; i < int(e.skip); i++ {
-		if bitutils.Bit(e.path[:], int(nodeHeight(i+1))) == 0 {
-			computed = hash.HashInterNode(computed, ledger.GetDefaultHashForHeight(int(i)))
-		} else {
-			computed = hash.HashInterNode(ledger.GetDefaultHashForHeight(int(i)), computed)
-		}
+	defer func() {
+		e.dirty = false
+	}()
+
+	// If the child is a leaf, simply use its hash as the extension's hash,
+	// since in that case the extension is the equivalent of a Flow "compact leaf".
+	_, ok := e.child.(*Leaf)
+	if ok {
+		e.hash = e.child.Hash()
+		return
 	}
-	e.hash = computed
-	e.dirty = false
+
 }

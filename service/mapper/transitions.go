@@ -121,7 +121,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	if err != nil {
 		return fmt.Errorf("could not load root trie: %w", err)
 	}
-	paths := allPaths(tree)
+	paths := tree.Paths()
 	s.forest.Add(tree, paths, first)
 
 	second := tree.RootHash()
@@ -371,7 +371,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// forest, and save the updated tree in the forest. If the tree is not new,
 	// we should error, as that should not happen.
 	paths, payloads := pathsPayloads(update)
-	newTree := trie.NewTrie(t.log, tree.RootNode(), tree.Store())
+	newTree := tree.Clone()
 	for i := range paths {
 		err = newTree.Insert(paths[i], payloads[i])
 		if err != nil {

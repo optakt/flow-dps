@@ -15,6 +15,7 @@
 package trie
 
 import (
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
@@ -22,10 +23,11 @@ import (
 // It does not need to contain a path, because its children are ordered
 // based on their own path differences.
 type Branch struct {
-	hash  hash.Hash
-	dirty bool
-	left  Node
-	right Node
+	height uint16
+	hash   hash.Hash
+	dirty  bool
+	left   Node
+	right  Node
 }
 
 // Hash returns the branch hash. If it is currently dirty, it is recomputed first.
@@ -41,6 +43,20 @@ func (b *Branch) computeHash() {
 	if b.left == nil && b.right == nil {
 		panic("branch node should never have empty children")
 	}
-	b.hash = hash.HashInterNode(b.left.Hash(), b.right.Hash())
+
+	var lHash, rHash hash.Hash
+	if b.left != nil {
+		lHash = b.left.Hash()
+	} else {
+		lHash = ledger.GetDefaultHashForHeight(int(b.height) - 1)
+	}
+
+	if b.right != nil {
+		rHash = b.right.Hash()
+	} else {
+		rHash = ledger.GetDefaultHashForHeight(int(b.height) - 1)
+	}
+
+	b.hash = hash.HashInterNode(lHash, rHash)
 	b.dirty = false
 }

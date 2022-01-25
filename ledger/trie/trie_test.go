@@ -12,6 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
+// FIXME: None of the tests are producing matching hashes.
 package trie_test
 
 import (
@@ -274,6 +275,7 @@ func Benchmark_TrieRootHash(b *testing.B) {
 	})
 }
 
+// FIXME: This one segfaults.
 func Test_UnsafeRead(t *testing.T) {
 	const regCount = 65536
 

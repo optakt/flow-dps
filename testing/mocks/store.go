@@ -14,22 +14,17 @@
 
 package mocks
 
-import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/hash"
-)
-
 type Store struct {
-	SaveFunc     func(hash hash.Hash, payload *ledger.Payload) error
-	RetrieveFunc func(hash hash.Hash) (*ledger.Payload, error)
+	SaveFunc     func(key [32]byte, payload []byte) error
+	RetrieveFunc func(key [32]byte) ([]byte, error)
 	CloseFunc    func() error
 }
 
 func BaselineStore() *Store {
 	s := Store{
-		SaveFunc: func(hash hash.Hash, payload *ledger.Payload) error { return nil },
-		RetrieveFunc: func(hash hash.Hash) (*ledger.Payload, error) {
-			return GenericLedgerPayload(0), nil
+		SaveFunc: func(key [32]byte, payload []byte) error { return nil },
+		RetrieveFunc: func(key [32]byte) ([]byte, error) {
+			return GenericLedgerPayload(0).Value[:], nil
 		},
 		CloseFunc: func() error { return nil },
 	}
@@ -37,12 +32,12 @@ func BaselineStore() *Store {
 	return &s
 }
 
-func (s *Store) Save(hash hash.Hash, payload *ledger.Payload) error {
-	return s.SaveFunc(hash, payload)
+func (s *Store) Save(key [32]byte, payload []byte) error {
+	return s.SaveFunc(key, payload)
 }
 
-func (s *Store) Retrieve(hash hash.Hash) (*ledger.Payload, error) {
-	return s.RetrieveFunc(hash)
+func (s *Store) Retrieve(key [32]byte) ([]byte, error) {
+	return s.RetrieveFunc(key)
 }
 
 func (s *Store) Close() error {
