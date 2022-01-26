@@ -54,14 +54,14 @@ type LightNode struct {
 type IndexMap map[Node]uint64
 
 // ToLightNode converts the given node into a light node and indexes its position in the given index.
-func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
+func ToLightNode(node Node, height uint8, index IndexMap) (*LightNode, error) {
 	// By calling node.Hash we ensure that the node hash is computed and does not get stored in a dirty state.
-	hash := node.Hash()
+	h := node.Hash(height)
 	lightNode := LightNode{
-		HashValue: hash[:],
+		HashValue: h[:],
+		Height:    height,
 	}
 
-	// FIXME: How to get the height? Could be given as an arg.
 	switch n := node.(type) {
 	case *Extension:
 		// FIXME: How to store the extension and its child?
@@ -75,13 +75,13 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 	case *Branch:
 		leftIndex, found := index[n.left]
 		if !found {
-			hash := n.left.Hash()
-			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(hash[:]))
+			h := n.left.Hash(height - 1)
+			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(h[:]))
 		}
 		rightIndex, found := index[n.right]
 		if !found {
-			hash := n.right.Hash()
-			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(hash[:]))
+			h := n.right.Hash(height - 1)
+			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(h[:]))
 		}
 		lightNode.LIndex = leftIndex
 		lightNode.RIndex = rightIndex
@@ -222,8 +222,12 @@ func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 		return nil, fmt.Errorf("could not decode light node height: %w", err)
 	}
 
-	var lightNode LightNode
-	lightNode.Height = uint8(height)
+	// Subtract one height since the checkpoint has nodes with heights from
+	// 256 to 1 instead of 255 to 0.
+	lightNode := LightNode{
+		Height: uint8(height) - 1,
+	}
+
 	lightNode.LIndex, buf, err = utils.ReadUint64(buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node left index: %w", err)

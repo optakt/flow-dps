@@ -25,6 +25,6 @@ type Leaf struct {
 }
 
 // Hash returns the leaf hash.
-func (l *Leaf) Hash() [32]byte {
+func (l *Leaf) Hash(_ uint8) [32]byte {
 	return l.hash
 }

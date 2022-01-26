@@ -21,5 +21,5 @@ package trie
 
 // Node represents a trie node.
 type Node interface {
-	Hash() [32]byte
+	Hash(height uint8) [32]byte
 }

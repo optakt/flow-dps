@@ -69,10 +69,10 @@ func (t *Trie) RootNode() Node {
 // RootHash returns the hash of the trie's root node.
 func (t *Trie) RootHash() ledger.RootHash {
 	if t.root == nil {
-		return ledger.RootHash(ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight))
+		return ledger.RootHash(ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight - 1))
 	}
 
-	return ledger.RootHash(t.root.Hash())
+	return t.root.Hash(ledger.NodeMaxHeight - 1)
 }
 
 // TODO: Add method to add multiple paths and payloads at once and parallelize insertions that do not conflict.
@@ -86,6 +86,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	var previous *Node
 	current := &t.root
 	depth := uint8(0)
+	prevDepth := depth
 	for {
 		switch node := (*current).(type) {
 
@@ -115,6 +116,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			}
 			previous = current
 			current = &(extension.child)
+			prevDepth = depth
 			depth = maxDepth
 			continue
 
@@ -139,6 +141,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				node.dirty = true
 				previous = current
 				current = &node.child
+				prevDepth = depth
 				depth = depth + node.count
 				continue
 			}
@@ -151,6 +154,8 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				hash:  [32]byte{},
 				dirty: true,
 			}
+
+			// FIXME: Update depth and prevDepth accordingly.
 
 			// If we have all but one bit in common, we have the branch on the
 			// last bit, so the correct child for the previous extension side
@@ -207,6 +212,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				current = &node.right
 			}
 			node.dirty = true
+			prevDepth = depth
 			depth++
 			continue
 
@@ -214,11 +220,12 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		// and insert the node hash and payload hash into the leaf.
 		case *Leaf:
 
-			// FIXME: Find a way to use the height of the previous node for hash computation.
-			height := 256
-			prev, ok := (*previous).(*Extension)
-			if ok {
-				height = 256 - int(prev.count)
+			var height int
+			switch (*previous).(type) {
+			case *Extension:
+				height = ledger.NodeMaxHeight - int(prevDepth)
+			case *Branch:
+				height = ledger.NodeMaxHeight - int(depth)
 			}
 			hash := ledger.ComputeCompactValue(hash.Hash(path), payload.Value, height)
 			node.hash = hash

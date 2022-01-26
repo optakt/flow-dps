@@ -23,38 +23,37 @@ import (
 // It does not need to contain a path, because its children are ordered
 // based on their own path differences.
 type Branch struct {
-	height uint16
-	hash   hash.Hash
-	dirty  bool
-	left   Node
-	right  Node
+	hash  hash.Hash
+	dirty bool
+	left  Node
+	right Node
 }
 
 // Hash returns the branch hash. If it is currently dirty, it is recomputed first.
-func (b *Branch) Hash() [32]byte {
+func (b *Branch) Hash(height uint8) [32]byte {
 	if b.dirty {
-		b.computeHash()
+		b.computeHash(height)
 	}
 	return b.hash
 }
 
 // computeHash computes the branch hash by hashing its children.
-func (b *Branch) computeHash() {
+func (b *Branch) computeHash(height uint8) {
 	if b.left == nil && b.right == nil {
 		panic("branch node should never have empty children")
 	}
 
 	var lHash, rHash hash.Hash
 	if b.left != nil {
-		lHash = b.left.Hash()
+		lHash = b.left.Hash(height)
 	} else {
-		lHash = ledger.GetDefaultHashForHeight(int(b.height) - 1)
+		lHash = ledger.GetDefaultHashForHeight(int(height))
 	}
 
 	if b.right != nil {
-		rHash = b.right.Hash()
+		rHash = b.right.Hash(height)
 	} else {
-		rHash = ledger.GetDefaultHashForHeight(int(b.height) - 1)
+		rHash = ledger.GetDefaultHashForHeight(int(height))
 	}
 
 	b.hash = hash.HashInterNode(lHash, rHash)
