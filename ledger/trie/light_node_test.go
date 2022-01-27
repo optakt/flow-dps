@@ -30,14 +30,11 @@ import (
 )
 
 func Test_DecodeLegacyFormat(t *testing.T) {
-	path := utils.PathByUint8(3)
 	h := ledger.GetDefaultHashForHeight(241)
 
 	lightNode := &trie.LightNode{
 		LIndex:    1,
 		RIndex:    2,
-		Height:    241,
-		Path:      path[:],
 		HashValue: h[:],
 	}
 	wantPayload := utils.LightPayload8('A', 'a')

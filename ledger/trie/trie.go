@@ -387,9 +387,77 @@ func (t *Trie) Paths() []ledger.Path {
 	return paths
 }
 
-// FIXME: Implement this function.
 func (t *Trie) Clone() *Trie {
 	newTrie := &Trie{log: t.log, store: t.store}
 
+	queue := deque.New()
+	root := t.RootNode()
+	if root != nil {
+		queue.PushBack(root)
+	}
+
+	var prev, newNode Node
+	for queue.Len() > 0 {
+		node := queue.PopBack().(Node)
+
+		switch n := node.(type) {
+		case *Extension:
+			// Clone extension node and link it to its parent.
+			newExt := &Extension{
+				count: n.count,
+				path:  n.path,
+			}
+			newNode = newExt
+			linkParent(prev, newExt)
+
+			// Add its child to the queue.
+			queue.PushBack(newExt.child)
+
+		case *Branch:
+			// Clone branch node and link it to its parent.
+			newBranch := &Branch{
+				left:  n.left,
+				right: n.right,
+			}
+			newNode = newBranch
+			linkParent(prev, newBranch)
+
+			// Add its children to the queue.
+			if newBranch.left != nil {
+				queue.PushBack(newBranch.left)
+			}
+			if newBranch.right != nil {
+				queue.PushBack(newBranch.right)
+			}
+
+		case *Leaf:
+			// Clone leaf node and link it to its parent.
+			newLeaf := &Leaf{
+				hash: n.hash,
+			}
+			linkParent(prev, newLeaf)
+		}
+
+		prev = newNode
+	}
+
 	return newTrie
+}
+
+func linkParent(parent, child Node) {
+	if parent == nil {
+		return
+	}
+
+	switch p := parent.(type) {
+	case *Extension:
+		p.child = child
+	case *Branch:
+		if p.left == child {
+			p.left = child
+		}
+		if p.right == child {
+			p.right = child
+		}
+	}
 }
