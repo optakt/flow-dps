@@ -45,20 +45,20 @@ func FlattenForest(f *Forest) (*LightForest, error) {
 	for _, t := range tries {
 		// Iterate on the nodes of the trie, from the bottom up.
 		for itr := trie.NewNodeIterator(t); itr.Next(); {
-			item := itr.Value()
+			node := itr.Value()
 
 			// If the node is already in the index, ignore it.
-			_, exists := index[item.Node]
+			_, exists := index[node]
 			if exists {
 				continue
 			}
 
 			// Store the position of the node in the index.
-			index[item.Node] = count
+			index[node] = count
 			count++
 
 			// Transform the node into a light node and insert it into the slice of light nodes.
-			lightNode, err := trie.ToLightNode(item.Node, item.Height, index)
+			lightNode, err := trie.ToLightNode(node, index)
 			if err != nil {
 				return nil, fmt.Errorf("could not build light node: %w", err)
 			}

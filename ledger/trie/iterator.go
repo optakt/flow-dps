@@ -62,13 +62,8 @@ type NodeIterator struct {
 	// unprocessedRoot contains the trie's root before the first call of Next().
 	// Thereafter, it is set to nil (which prevents repeated iteration through the trie).
 	// This has the advantage, that we gracefully handle tries whose root node is nil.
-	unprocessedRoot *Item
-	stack           []*Item
-}
-
-type Item struct {
-	Node   Node
-	Height uint8
+	unprocessedRoot Node
+	stack           []Node
 }
 
 // NewNodeIterator returns a new NodeIterator, which iterates through all nodes
@@ -76,14 +71,9 @@ type Item struct {
 // the sequence of nodes it generates.
 func NewNodeIterator(tr *Trie) *NodeIterator {
 	// For a Trie with height H (measured by number of edges), the longest possible path contains H+1 vertices.
-	root := &Item{
-		Node:   tr.RootNode(),
-		Height: ledger.NodeMaxHeight - 1,
-	}
-
 	i := &NodeIterator{
-		stack:           make([]*Item, 0, ledger.NodeMaxHeight+1),
-		unprocessedRoot: root,
+		stack:           make([]Node, 0, ledger.NodeMaxHeight+1),
+		unprocessedRoot: tr.RootNode(),
 	}
 
 	return i
@@ -107,14 +97,10 @@ func (i *NodeIterator) Next() bool {
 		// As we descend into the left child with priority, the only case where we still dig into the
 		// right child is if `n` is `p`'s left child.
 		parent := i.peek()
-		switch p := parent.Node.(type) {
+		switch p := parent.(type) {
 		case *Branch:
-			if p.left == n.Node {
-				item := &Item{
-					Node:   p.right,
-					Height: parent.Height - 1,
-				}
-				i.dig(item)
+			if p.left == n {
+				i.dig(p.right)
 			}
 		case *Extension, *Leaf:
 			// do nothing
@@ -127,7 +113,7 @@ func (i *NodeIterator) Next() bool {
 }
 
 // Value returns the value of the current node at the top of the iterator's stack.
-func (i *NodeIterator) Value() *Item {
+func (i *NodeIterator) Value() Node {
 	if len(i.stack) == 0 {
 		return nil
 	}
@@ -135,7 +121,7 @@ func (i *NodeIterator) Value() *Item {
 }
 
 // pop pops the current node at the top of the iterator's stack.
-func (i *NodeIterator) pop() *Item {
+func (i *NodeIterator) pop() Node {
 	if len(i.stack) == 0 {
 		return nil
 	}
@@ -146,20 +132,19 @@ func (i *NodeIterator) pop() *Item {
 }
 
 // peek returns the node at the top of the stack.
-func (i *NodeIterator) peek() *Item {
+func (i *NodeIterator) peek() Node {
 	return i.stack[len(i.stack)-1]
 }
 
 // dig adds the children on the given node to the stack.
-func (i *NodeIterator) dig(it *Item) {
-	if it == nil {
+func (i *NodeIterator) dig(node Node) {
+	if node == nil {
 		return
 	}
 
 	// Go through each of the node's children, from left to right.
 	for {
-		i.stack = append(i.stack, it)
-		node := it.Node
+		i.stack = append(i.stack, node)
 		switch n := node.(type) {
 		case *Branch:
 			if n.left != nil {
