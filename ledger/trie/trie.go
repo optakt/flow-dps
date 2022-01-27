@@ -347,7 +347,6 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 }
 
 func (t *Trie) Paths() []ledger.Path {
-
 	queue := deque.New()
 	root := t.RootNode()
 	if root != nil {
@@ -358,12 +357,23 @@ func (t *Trie) Paths() []ledger.Path {
 	for queue.Len() > 0 {
 		node := queue.PopBack().(Node)
 		switch n := node.(type) {
-		case *Leaf:
-			// FIXME: How to get the path of the leaf here? We could use a
-			//  queue of elements that contain the node and the path so far?
-			paths = append(paths, ledger.DummyPath)
 		case *Extension:
-			queue.PushBack(n.child)
+			// If the child of this extension is not a leaf, add it to the queue.
+			switch c := n.child.(type) {
+			case *Extension, *Branch:
+				queue.PushBack(c)
+				continue
+			}
+
+			// Otherwise, we can stop here and add the path in the extension to
+			// the result slice.
+			path, err := ledger.ToPath(n.path)
+			if err != nil {
+				// An extension with a leaf child should always have a full path.
+				panic(err)
+			}
+			paths = append(paths, path)
+
 		case *Branch:
 			if n.left != nil {
 				queue.PushBack(n.left)
