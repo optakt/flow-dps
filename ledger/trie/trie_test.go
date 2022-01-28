@@ -58,7 +58,7 @@ func TestTrie_InsertLeftRegister(t *testing.T) {
 	path := utils.PathByUint16LeftPadded(0)
 	payload := utils.LightPayload(11, 12345)
 
-	trie.Insert(path, payload)
+	require.NoError(t, trie.Insert(path, payload))
 
 	got := trie.RootHash()
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
@@ -120,7 +120,7 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
 
 	for i := range paths {
-		trie.Insert(paths[i], &payloads[i])
+		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
 	}
 
 	got := trie.RootHash()

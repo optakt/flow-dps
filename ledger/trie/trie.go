@@ -69,7 +69,7 @@ func (t *Trie) RootNode() Node {
 // RootHash returns the hash of the trie's root node.
 func (t *Trie) RootHash() ledger.RootHash {
 	if t.root == nil {
-		return ledger.RootHash(ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight - 1))
+		return ledger.RootHash(ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight))
 	}
 
 	return t.root.Hash(ledger.NodeMaxHeight - 1)
@@ -115,6 +115,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				child: nil,
 			}
 			previous = current
+			*current = &extension
 			current = &(extension.child)
 			prevDepth = depth
 			depth = maxDepth
@@ -137,6 +138,9 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// If all the bits are common, we have a simple edge case,
 			// where we can skip to the end of the extension.
+			// FIXME: Except that we can match the whole extension, and need to create a branch
+			//  at the end to store the new leaf. The current implementation just overrides the leaf
+			//  over and over again.
 			if common == node.count {
 				node.dirty = true
 				previous = current
@@ -219,6 +223,30 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		// When we reach a leaf node, we store the payload value in storage
 		// and insert the node hash and payload hash into the leaf.
 		case *Leaf:
+
+			// FIXME: If we stumble upon a leaf with a different path, we need to create a branch that
+			//  has both the new and old leaf as children.
+			if node.hash != [32]byte{} {
+				// In this case, we are conflicting with a previous leaf, so we need to create a branch for both leaves.
+				branch := Branch{
+					hash:  [32]byte{},
+					dirty: true,
+				}
+
+				if bitutils.Bit(path[:], int(depth)) == 0 {
+					branch.left = &Leaf{
+						hash:  node.hash,
+					}
+					branch.right = node
+				} else {
+					branch.left = node
+					branch.right = &Leaf{
+						hash:  node.hash,
+					}
+				}
+				*current = &branch
+				return nil
+			}
 
 			var height int
 			switch (*previous).(type) {
