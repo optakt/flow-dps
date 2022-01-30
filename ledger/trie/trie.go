@@ -138,9 +138,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// If all the bits are common, we have a simple edge case,
 			// where we can skip to the end of the extension.
-			// FIXME: Except that we can match the whole extension, and need to create a branch
-			//  at the end to store the new leaf. The current implementation just overrides the leaf
-			//  over and over again.
 			if common == node.count {
 				node.dirty = true
 				previous = current
@@ -154,6 +151,10 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// leaf; one of the sides will remain `nil`, which is where we will
 			// continue our traversal. The other side will contain whatever is
 			// left of the extension node.
+			// FIXME: When a branch is created to split a leaf, the previous leaf and the
+			//  new leaf also need new extensions to precede them. Currently they are just
+			//  put directly under the branch which results in the wrong height used for
+			//  their hash computation.
 			branch := Branch{
 				hash:  [32]byte{},
 				dirty: true,
@@ -193,6 +194,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// Finally, we just have to point the wrong side of the branch,
 			// which we will not follow, back at the previously existing path.
+			// FIXME: The hash of the old leaf will need to be recomputed since it changed height.
 			previous = current
 			if bitutils.Bit(node.path, int(common)) == 0 {
 				branch.left = other

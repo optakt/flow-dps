@@ -21,6 +21,7 @@ package trie
 // many nodes/extensions for each leaf in order to bring it all the way to the bottom
 // of the trie.
 type Leaf struct {
+	dirty bool
 	hash [32]byte
 }
 

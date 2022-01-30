@@ -302,7 +302,7 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 		newRefTr, err := reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
-		require.Equal(t, newRefTr.RootHash(), newTr.RootHash())
+		require.Equalf(t, newRefTr.RootHash(), newTr.RootHash(), "failed at iteration %d", i)
 
 		tr = newTr
 		refTr = newRefTr
