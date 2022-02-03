@@ -15,7 +15,10 @@
 package trie
 
 import (
+	"fmt"
+
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
@@ -30,28 +33,40 @@ type Branch struct {
 }
 
 // Hash returns the branch hash. If it is currently dirty, it is recomputed first.
-func (b *Branch) Hash(height uint8) [32]byte {
+func (b *Branch) Hash(height uint8, path [32]byte, getPayload payloadRetriever) [32]byte {
 	if b.dirty {
-		b.computeHash(height)
+		b.computeHash(height, path, getPayload)
 	}
 	return b.hash
 }
 
 // computeHash computes the branch hash by hashing its children.
-func (b *Branch) computeHash(height uint8) {
+func (b *Branch) computeHash(height uint8, path [32]byte, getPayload payloadRetriever) {
 	if b.left == nil && b.right == nil {
 		panic("branch node should never have empty children")
 	}
 
 	var lHash, rHash hash.Hash
 	if b.left != nil {
-		lHash = b.left.Hash(height)
+		// Set bit at height to 1 for child.
+		var lPath [32]byte
+		copy(lPath[:], path[:])
+		depth := ledger.NodeMaxHeight - 1 - height
+		bitutils.SetBit(path[:], int(depth))
+		fmt.Println("1")
+
+		lHash = b.left.Hash(height-1, lPath, getPayload)
 	} else {
 		lHash = ledger.GetDefaultHashForHeight(int(height))
 	}
 
 	if b.right != nil {
-		rHash = b.right.Hash(height)
+		// Leave bit at height at 0 for child.
+		var rPath [32]byte
+		copy(rPath[:], path[:])
+		fmt.Println("0")
+
+		rHash = b.right.Hash(height-1, rPath, getPayload)
 	} else {
 		rHash = ledger.GetDefaultHashForHeight(int(height))
 	}

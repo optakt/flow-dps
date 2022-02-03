@@ -67,7 +67,7 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 		}
 	}
 
-	h := node.Hash(0)
+	h := node.Hash(0, [32]byte{}, nil)
 	lightNode := LightNode{
 		HashValue: h[:],
 	}
@@ -82,12 +82,12 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 	case *Branch:
 		leftIndex, found := index[n.left]
 		if !found {
-			h := n.left.Hash(0)
+			h := n.left.Hash(0, [32]byte{}, nil)
 			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(h[:]))
 		}
 		rightIndex, found := index[n.right]
 		if !found {
-			h := n.right.Hash(0)
+			h := n.right.Hash(0, [32]byte{}, nil)
 			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(h[:]))
 		}
 		lightNode.LIndex = leftIndex

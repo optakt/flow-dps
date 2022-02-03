@@ -52,7 +52,9 @@ func TestTrie_InsertLeftRegister(t *testing.T) {
 
 	const expectedRootHashHex = "b30c99cc3e027a6ff463876c638041b1c55316ed935f1b3699e52a2c3e3eaaab"
 
-	store := mocks.BaselineStore()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
+
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	path := utils.PathByUint16LeftPadded(0)
@@ -71,7 +73,9 @@ func TestTrie_InsertRightRegister(t *testing.T) {
 
 	const expectedRootHashHex = "4313d22bcabbf21b1cfb833d38f1921f06a91e7198a6672bc68fa24eaaa1a961"
 
-	store := mocks.BaselineStore()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
+
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	var path ledger.Path
@@ -80,7 +84,7 @@ func TestTrie_InsertRightRegister(t *testing.T) {
 	}
 	payload := utils.LightPayload(12346, 54321)
 
-	trie.Insert(path, payload)
+	require.NoError(t, trie.Insert(path, payload))
 
 	got := trie.RootHash()
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
@@ -93,7 +97,9 @@ func TestTrie_InsertMiddleRegister(t *testing.T) {
 
 	const expectedRootHashHex = "4a29dad0b7ae091a1f035955e0c9aab0692b412f60ae83290b6290d4bf3eb296"
 
-	store := mocks.BaselineStore()
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
+
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	path := utils.PathByUint16LeftPadded(56809)
@@ -116,11 +122,20 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 	defer store.Close()
 
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	refTr := reference.NewEmptyMTrie()
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
 
 	for i := range paths {
 		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
+
+		var err error
+		refTr, err = reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
+		require.NoError(t, err)
+
+		got := trie.RootHash()
+		want := refTr.RootHash()
+		t.Logf("%d: got %x, want %x", i, got[:], want[:])
 	}
 
 	got := trie.RootHash()

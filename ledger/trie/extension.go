@@ -15,6 +15,8 @@
 package trie
 
 import (
+	"fmt"
+
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
@@ -32,31 +34,47 @@ type Extension struct {
 }
 
 // Hash returns the extension hash. If it is currently dirty, it is recomputed first.
-func (e *Extension) Hash(height uint8) [32]byte {
+func (e *Extension) Hash(height uint8, path [32]byte, getPayload payloadRetriever) [32]byte {
 	if e.dirty {
-		e.computeHash(height)
+		e.computeHash(height, path, getPayload)
 	}
 	return e.hash
 }
 
 // computeHash computes the extension's hash.
-func (e *Extension) computeHash(height uint8) {
+func (e *Extension) computeHash(height uint8, path [32]byte, getPayload payloadRetriever) {
 	defer func() {
 		e.dirty = false
 	}()
 
+	// Build the path for the child, based on the parent of the extension.
+	var childPath [32]byte
+	copy(childPath[:], path[:])
+	// For each skipped height, set the bits in the child path accordingly.
+	depth := ledger.NodeMaxHeight - 1 - height
+	for i := int(depth); i <= int(depth)+int(e.count); i++ {
+		if bitutils.Bit(e.path[:], i) == 1 {
+			bitutils.SetBit(childPath[:], i)
+			fmt.Print("1")
+		} else {
+			fmt.Print("0")
+		}
+	}
+	fmt.Println()
+
 	// If the child is a leaf, simply use its hash as the extension's hash,
 	// since in that case the extension is the equivalent of a Flow "compact leaf".
 	// The leaf needs to use the height of its extension for hash computation.
-	_, ok := e.child.(*Leaf)
+	leaf, ok := e.child.(*Leaf)
 	if ok {
-		e.hash = e.child.Hash(height)
+		leaf.dirty = true
+		e.hash = e.child.Hash(height, childPath, getPayload)
 		return
 	}
 
 	// If the child is not a leaf, the height it needs for hash computation
 	// is the height at the bottom of the extension.
-	h := e.child.Hash(height - e.count)
+	h := e.child.Hash(height-e.count, childPath, getPayload)
 
 	// For each skipped height, combine the previous hash with the default ledger
 	// height of the current layer.

@@ -15,6 +15,7 @@
 package trie
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 
@@ -24,7 +25,6 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/encoding"
-	"github.com/onflow/flow-go/ledger/common/hash"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -72,7 +72,7 @@ func (t *Trie) RootHash() ledger.RootHash {
 		return ledger.RootHash(ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight))
 	}
 
-	return t.root.Hash(ledger.NodeMaxHeight - 1)
+	return t.root.Hash(ledger.NodeMaxHeight-1, [32]byte{}, t.store.Retrieve)
 }
 
 // TODO: Add method to add multiple paths and payloads at once and parallelize insertions that do not conflict.
@@ -86,7 +86,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	var previous *Node
 	current := &t.root
 	depth := uint8(0)
-	prevDepth := depth
 	for {
 		switch node := (*current).(type) {
 
@@ -117,7 +116,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			previous = current
 			*current = &extension
 			current = &(extension.child)
-			prevDepth = depth
 			depth = maxDepth
 			continue
 
@@ -136,14 +134,14 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				common++
 			}
 
+			depth += common
+
 			// If all the bits are common, we have a simple edge case,
 			// where we can skip to the end of the extension.
 			if common == node.count {
 				node.dirty = true
 				previous = current
 				current = &node.child
-				prevDepth = depth
-				depth = depth + node.count
 				continue
 			}
 
@@ -151,16 +149,14 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// leaf; one of the sides will remain `nil`, which is where we will
 			// continue our traversal. The other side will contain whatever is
 			// left of the extension node.
-			// FIXME: When a branch is created to split a leaf, the previous leaf and the
-			//  new leaf also need new extensions to precede them. Currently they are just
-			//  put directly under the branch which results in the wrong height used for
-			//  their hash computation.
 			branch := Branch{
 				hash:  [32]byte{},
 				dirty: true,
 			}
 
-			// FIXME: Update depth and prevDepth accordingly.
+			// Since we append a branch here, the depth of the next iteration
+			// needs to be increased by one.
+			depth++
 
 			// If we have all but one bit in common, we have the branch on the
 			// last bit, so the correct child for the previous extension side
@@ -194,7 +190,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// Finally, we just have to point the wrong side of the branch,
 			// which we will not follow, back at the previously existing path.
-			// FIXME: The hash of the old leaf will need to be recomputed since it changed height.
 			previous = current
 			if bitutils.Bit(node.path, int(common)) == 0 {
 				branch.left = other
@@ -218,7 +213,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				current = &node.right
 			}
 			node.dirty = true
-			prevDepth = depth
 			depth++
 			continue
 
@@ -226,10 +220,9 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		// and insert the node hash and payload hash into the leaf.
 		case *Leaf:
 
-			// FIXME: If we stumble upon a leaf with a different path, we need to create a branch that
-			//  has both the new and old leaf as children.
 			if node.hash != [32]byte{} {
-				// In this case, we are conflicting with a previous leaf, so we need to create a branch for both leaves.
+				// In this case, we are conflicting with a previous leaf,
+				// so we need to create a branch for both leaves.
 				branch := Branch{
 					hash:  [32]byte{},
 					dirty: true,
@@ -250,18 +243,9 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				return nil
 			}
 
-			var height int
-			switch (*previous).(type) {
-			case *Extension:
-				height = ledger.NodeMaxHeight - int(prevDepth)
-			case *Branch:
-				height = ledger.NodeMaxHeight - int(depth)
-			}
-			hash := ledger.ComputeCompactValue(hash.Hash(path), payload.Value, height)
-			node.hash = hash
-
 			data := encoding.EncodePayload(payload)
-			err := t.store.Save(hash, data)
+			node.payload = sha256.Sum256(data)
+			err := t.store.Save(node.payload, data)
 			if err != nil {
 				return err
 			}
