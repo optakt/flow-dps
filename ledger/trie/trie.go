@@ -83,7 +83,6 @@ func (t *Trie) RootHash() ledger.RootHash {
 // to different heights along the way.
 func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
-	var previous *Node
 	current := &t.root
 	depth := uint8(0)
 	for {
@@ -113,7 +112,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				count: maxDepth - depth,
 				child: nil,
 			}
-			previous = current
 			*current = &extension
 			current = &(extension.child)
 			depth = maxDepth
@@ -140,7 +138,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// where we can skip to the end of the extension.
 			if common == node.count {
 				node.dirty = true
-				previous = current
 				current = &node.child
 				continue
 			}
@@ -181,7 +178,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// be garbage-collected. Otherwise, the extension points to the
 			// branch, with a reduced path length.
 			if common == 0 {
-				*previous = &branch
+				*current = &branch
 			} else {
 				node.child = &branch
 				node.count = common
@@ -190,7 +187,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// Finally, we just have to point the wrong side of the branch,
 			// which we will not follow, back at the previously existing path.
-			previous = current
 			if bitutils.Bit(node.path, int(common)) == 0 {
 				branch.left = other
 				current = &branch.right
@@ -230,13 +226,13 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 				if bitutils.Bit(path[:], int(depth)) == 0 {
 					branch.left = &Leaf{
-						hash:  node.hash,
+						hash: node.hash,
 					}
 					branch.right = node
 				} else {
 					branch.left = node
 					branch.right = &Leaf{
-						hash:  node.hash,
+						hash: node.hash,
 					}
 				}
 				*current = &branch

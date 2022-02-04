@@ -16,7 +16,9 @@
 package trie_test
 
 import (
+	"bytes"
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -317,7 +319,13 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 		newRefTr, err := reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
-		require.Equalf(t, newRefTr.RootHash(), newTr.RootHash(), "failed at iteration %d", i)
+		want := newRefTr.RootHash()
+		got := newTr.RootHash()
+		if !bytes.Equal(want[:], got[:]) {
+			println("breakpoint")
+		}
+		require.Equalf(t, want, got, "failed at iteration %d", i)
+		fmt.Println(">>>")
 
 		tr = newTr
 		refTr = newRefTr

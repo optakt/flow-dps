@@ -55,12 +55,8 @@ func (e *Extension) computeHash(height uint8, path [32]byte, getPayload payloadR
 	for i := int(depth); i <= int(depth)+int(e.count); i++ {
 		if bitutils.Bit(e.path[:], i) == 1 {
 			bitutils.SetBit(childPath[:], i)
-			fmt.Print("1")
-		} else {
-			fmt.Print("0")
 		}
 	}
-	fmt.Println()
 
 	// If the child is a leaf, simply use its hash as the extension's hash,
 	// since in that case the extension is the equivalent of a Flow "compact leaf".
@@ -79,15 +75,17 @@ func (e *Extension) computeHash(height uint8, path [32]byte, getPayload payloadR
 	// For each skipped height, combine the previous hash with the default ledger
 	// height of the current layer.
 	var lHash, rHash hash.Hash
-	for i := height - e.count; i < height; i++ {
-		if bitutils.Bit(e.path[:], int(255-i)) == 0 {
+	for i := int(height) - int(e.count) + 1; i <= int(height); i++ {
+		if bitutils.Bit(e.path[:], 255-i) == 0 {
 			lHash = h
-			rHash = ledger.GetDefaultHashForHeight(int(i) + 1)
+			rHash = ledger.GetDefaultHashForHeight(i)
 		} else {
-			lHash = ledger.GetDefaultHashForHeight(int(i) + 1)
+			lHash = ledger.GetDefaultHashForHeight(i)
+			fmt.Printf("Default hash for height %d: %x\n", i, lHash[:])
 			rHash = h
 		}
 		h = hash.HashInterNode(lHash, rHash)
+		fmt.Printf("EXT:\t%d\t%x\t+\t%x\t=\t%x\n", height, lHash[:], rHash[:], h[:])
 	}
 
 	e.hash = h
