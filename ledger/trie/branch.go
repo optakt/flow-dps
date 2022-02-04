@@ -44,14 +44,13 @@ func (b *Branch) computeHash(height uint8, path [32]byte, getPayload payloadRetr
 		panic("branch node should never have empty children")
 	}
 
-	var lPath [32]byte
+	var lPath, rPath [32]byte
 	copy(lPath[:], path[:])
-	depth := ledger.NodeMaxHeight - 1 - height
-	bitutils.SetBit(path[:], int(depth))
-	lHash := b.left.Hash(height-1, lPath, getPayload)
-
-	var rPath [32]byte
 	copy(rPath[:], path[:])
+	depth := ledger.NodeMaxHeight - 1 - height
+	bitutils.SetBit(rPath[:], int(depth))
+
+	lHash := b.left.Hash(height-1, lPath, getPayload)
 	rHash := b.right.Hash(height-1, rPath, getPayload)
 
 	b.hash = hash.HashInterNode(lHash, rHash)

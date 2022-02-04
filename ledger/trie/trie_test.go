@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/common/utils"
 	reference "github.com/onflow/flow-go/ledger/complete/mtrie/trie"
@@ -313,16 +314,29 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 
 	for i := range paths {
 
+		if i == 8 {
+			fmt.Print("debugger here")
+		}
+
 		newTr := trie.NewTrie(mocks.NoopLogger, tr.RootNode(), store)
 		require.NoError(t, newTr.Insert(paths[i], payloads[i]))
 
 		newRefTr, err := reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
+		fmt.Print("Inserting new leaf at path ")
+		for j := 0; j < 256; j++ {
+			fmt.Print(bitutils.Bit(paths[i][:], j))
+		}
+		fmt.Println()
+
 		want := newRefTr.RootHash()
 		got := newTr.RootHash()
 		if !bytes.Equal(want[:], got[:]) {
-			println("breakpoint")
+			// FIXME: First few bits of path are wrong with some leaves:
+			//  We have b569f[...]36a80 instead of 9569f[...]36a80
+			//  We have 89341[...]98c04 instead of a9341[...]98c04
+ 			println("breakpoint")
 		}
 		require.Equalf(t, want, got, "failed at iteration %d", i)
 		fmt.Println(">>>")

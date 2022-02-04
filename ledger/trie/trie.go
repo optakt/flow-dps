@@ -187,6 +187,10 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// Finally, we just have to point the wrong side of the branch,
 			// which we will not follow, back at the previously existing path.
+			// FIXME:
+			//  We have a case where we either use the wrong path as reference
+			//  or read at the wrong index. This results in children being inverted
+			//  in some cases.
 			if bitutils.Bit(node.path, int(common)) == 0 {
 				branch.left = other
 				current = &branch.right

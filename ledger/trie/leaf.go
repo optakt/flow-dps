@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/encoding"
 )
 
@@ -54,6 +55,11 @@ func (l *Leaf) computeHash(height uint8, path [32]byte, getPayload payloadRetrie
 
 	// How to access the path and payload here?
 	l.hash = ledger.ComputeCompactValue(path, payload.Value, int(height)+1)
+	fmt.Print("Hashing new leaf at path   ")
+	for j := 0; j < 256; j++ {
+		fmt.Print(bitutils.Bit(path[:], j))
+	}
+	fmt.Println()
 	fmt.Printf("LEAF:\t%x\t+\t%x\t+\t%d\t=\t%x\n", path[:], payload.Value[:], int(height)+1, l.hash[:])
 	l.dirty = false
 }
