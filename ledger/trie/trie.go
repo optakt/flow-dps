@@ -151,10 +151,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				dirty: true,
 			}
 
-			// Since we append a branch here, the depth of the next iteration
-			// needs to be increased by one.
-			depth++
-
 			// If we have all but one bit in common, we have the branch on the
 			// last bit, so the correct child for the previous extension side
 			// of the new branch will point to the previous child of the branch.
@@ -191,13 +187,19 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			//  We have a case where we either use the wrong path as reference
 			//  or read at the wrong index. This results in children being inverted
 			//  in some cases.
-			if bitutils.Bit(node.path, int(common)) == 0 {
-				branch.left = other
-				current = &branch.right
-			} else {
+			if bitutils.Bit(path[:], int(depth)) == 0 {
 				branch.right = other
 				current = &branch.left
+				fmt.Println("new branch goes to the left because of bit at index", depth)
+			} else {
+				branch.left = other
+				current = &branch.right
+				fmt.Println("new branch goes to the right because of bit at index", depth)
 			}
+
+			// Since we append a branch here, the depth of the next iteration
+			// needs to be increased by one.
+			depth++
 			continue
 
 		// Once the trie fills up more, we will have a lot of branch nodes,

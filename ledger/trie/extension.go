@@ -42,17 +42,18 @@ func (e *Extension) Hash(height uint8, path [32]byte, getPayload payloadRetrieve
 }
 
 // computeHash computes the extension's hash.
-func (e *Extension) computeHash(height uint8, path [32]byte, getPayload payloadRetriever) {
+func (e *Extension) computeHash(height uint8, _ [32]byte, getPayload payloadRetriever) {
 	defer func() {
 		e.dirty = false
 	}()
 
 	// Build the path for the child, based on the parent of the extension.
 	var childPath [32]byte
-	copy(childPath[:], path[:])
 	// For each skipped height, set the bits in the child path accordingly.
+	// FIXME: Extension writes one bit too much in the child path. If this change does not work
+	//  we can also unset the bit later maybe?
 	depth := ledger.NodeMaxHeight - 1 - height
-	for i := int(depth); i <= int(depth)+int(e.count); i++ {
+	for i := 0; i <= int(depth)+int(e.count); i++ {
 		if bitutils.Bit(e.path[:], i) == 1 {
 			bitutils.SetBit(childPath[:], i)
 		}

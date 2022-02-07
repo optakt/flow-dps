@@ -314,10 +314,6 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 
 	for i := range paths {
 
-		if i == 8 {
-			fmt.Print("debugger here")
-		}
-
 		newTr := trie.NewTrie(mocks.NoopLogger, tr.RootNode(), store)
 		require.NoError(t, newTr.Insert(paths[i], payloads[i]))
 
