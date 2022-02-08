@@ -127,15 +127,25 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
 
 	for i := range paths {
+		print("insert: ")
+		for j := 240; j < 256; j++ {
+			print(bitutils.Bit(paths[i][:], j))
+		}
+		println()
+
+		if i == 221 {
+			println("breakpoint")
+		}
+
 		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
 		refTr, _ = reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
 
 		got := trie.RootHash()
 		want := refTr.RootHash()
-		if !bytes.Equal(got[:], want[:]) {
+		if !assert.Equal(t, want[:], got[:]) {
 			println("breakpoint")
+			t.FailNow()
 		}
-		assert.Equal(t, want[:], got[:])
 	}
 
 	//refTr, err := reference.NewTrieWithUpdatedRegisters(refTr, paths, payloads)
@@ -143,6 +153,38 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 
 	got := trie.RootHash()
 	want := refTr.RootHash()
+	assert.Equal(t, want[:], got[:])
+}
+
+func TestTrie_InsertNeighbors(t *testing.T) {
+
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
+
+	paths := []ledger.Path{
+		utils.PathByUint16LeftPadded(0),
+		utils.PathByUint16LeftPadded(1),
+		//utils.PathByUint16LeftPadded(2),
+	}
+	payloads := []ledger.Payload{
+		*utils.LightPayload(11, 1111),
+		*utils.LightPayload(11, 2222),
+		//*utils.LightPayload(11, 3333),
+	}
+
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	ref := reference.NewEmptyMTrie()
+
+	for i := range paths {
+		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
+	}
+
+	var err error
+	ref, err = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
+	require.NoError(t, err)
+
+	want := ref.RootHash()
+	got := trie.RootHash()
 	assert.Equal(t, want[:], got[:])
 }
 

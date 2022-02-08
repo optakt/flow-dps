@@ -68,17 +68,17 @@ func SampleRandomRegisterWrites(rng *LinearCongruentialGenerator, count int) ([]
 		payloads = append(payloads, *payload)
 	}
 
-	payloadMapping := make(map[ledger.Path]int)
-	for i, path := range paths {
-		payloadMapping[path] = i
-	}
+	//payloadMapping := make(map[ledger.Path]int)
+	//for i, path := range paths {
+	//	payloadMapping[path] = i
+	//}
+	//
+	//dedupedPaths := make([]ledger.Path, 0, len(payloadMapping))
+	//dedupedPayloads := make([]ledger.Payload, 0, len(payloadMapping))
+	//for path := range payloadMapping {
+	//	dedupedPaths = append(dedupedPaths, path)
+	//	dedupedPayloads = append(dedupedPayloads, payloads[payloadMapping[path]])
+	//}
 
-	dedupedPaths := make([]ledger.Path, 0, len(payloadMapping))
-	dedupedPayloads := make([]ledger.Payload, 0, len(payloadMapping))
-	for path := range payloadMapping {
-		dedupedPaths = append(dedupedPaths, path)
-		dedupedPayloads = append(dedupedPayloads, payloads[payloadMapping[path]])
-	}
-
-	return dedupedPaths, dedupedPayloads
+	return paths, payloads
 }

@@ -216,7 +216,11 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		// and insert the node hash and payload hash into the leaf.
 		case *Leaf:
 
+			node.dirty = true
+
 			if node.hash != [32]byte{} {
+				// FIXME: Can this even happen?
+				// FIXME: If the path is the exact same, we shouldnt create a branch but instead rehash.
 				// In this case, we are conflicting with a previous leaf,
 				// so we need to create a branch for both leaves.
 				branch := Branch{
