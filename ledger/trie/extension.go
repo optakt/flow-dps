@@ -15,8 +15,6 @@
 package trie
 
 import (
-	"fmt"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
@@ -82,11 +80,9 @@ func (e *Extension) computeHash(height uint8, _ [32]byte, getPayload payloadRetr
 			rHash = ledger.GetDefaultHashForHeight(i)
 		} else {
 			lHash = ledger.GetDefaultHashForHeight(i)
-			fmt.Printf("Default hash for height %d: %x\n", i, lHash[:])
 			rHash = h
 		}
 		h = hash.HashInterNode(lHash, rHash)
-		fmt.Printf("EXT:\t%d\t%x\t+\t%x\t=\t%x\n", height, lHash[:], rHash[:], h[:])
 	}
 
 	e.hash = h

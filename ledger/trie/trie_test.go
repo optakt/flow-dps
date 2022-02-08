@@ -12,7 +12,6 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-// FIXME: None of the tests are producing matching hashes.
 package trie_test
 
 import (
@@ -119,8 +118,6 @@ func TestTrie_InsertMiddleRegister(t *testing.T) {
 // The expected value is coming from a reference implementation in python and is hard-coded here.
 func TestTrie_InsertManyRegisters(t *testing.T) {
 
-	const expectedRootHashHex = "74f748dbe563bb5819d6c09a34362a048531fd9647b4b2ea0b6ff43f200198aa"
-
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
@@ -131,18 +128,22 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 
 	for i := range paths {
 		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
-
-		var err error
-		refTr, err = reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
-		require.NoError(t, err)
+		refTr, _ = reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
 
 		got := trie.RootHash()
 		want := refTr.RootHash()
-		t.Logf("%d: got %x, want %x", i, got[:], want[:])
+		if !bytes.Equal(got[:], want[:]) {
+			println("breakpoint")
+		}
+		assert.Equal(t, want[:], got[:])
 	}
 
+	//refTr, err := reference.NewTrieWithUpdatedRegisters(refTr, paths, payloads)
+	//require.NoError(t, err)
+
 	got := trie.RootHash()
-	assert.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
+	want := refTr.RootHash()
+	assert.Equal(t, want[:], got[:])
 }
 
 // TestTrie_InsertFullTrie tests whether the root hash of a trie,

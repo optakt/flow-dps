@@ -52,8 +52,8 @@ type Store struct {
 
 	cache     *lru.Cache
 	cacheSize int
-	isCleanMu *sync.RWMutex      // guards the dirty tracking map against concurrent access
-	isClean   map[hash.Hash]bool // keeps track of whether cached entries are on disk
+	isCleanMu *sync.RWMutex     // guards the dirty tracking map against concurrent access
+	isClean   map[[32]byte]bool // keeps track of whether cached entries are on disk
 
 	done chan struct{}
 }
@@ -85,15 +85,16 @@ func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 		txMu: &sync.RWMutex{},
 		wg:   &sync.WaitGroup{},
 
+		cacheSize: config.CacheSize,
 		isCleanMu: &sync.RWMutex{},
-		isClean:   make(map[hash.Hash]bool, config.CacheSize),
+		isClean:   make(map[[32]byte]bool, config.CacheSize),
 	}
 
 	s.wg.Add(1)
 	go s.flush()
 
 	s.cache, err = lru.NewWithEvict(config.CacheSize, func(k, v interface{}, used int) bool {
-		hash, ok := k.(hash.Hash)
+		hash, ok := k.([32]byte)
 		if !ok {
 			logger.Fatal().Interface("got", k).Msg("unexpected key format")
 		}
@@ -104,22 +105,22 @@ func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 
 			// Remove entry from map since we evict it.
 			s.isCleanMu.Lock()
+			defer s.isCleanMu.Unlock()
 			delete(s.isClean, hash)
-			s.isCleanMu.Unlock()
 
 			return true
 		}
 
 		// If the entry is dirty, abort eviction.
-		s.isCleanMu.RLock()
-		defer s.isCleanMu.RUnlock()
+		s.isCleanMu.Lock()
+		defer s.isCleanMu.Unlock()
 		if !s.isClean[hash] {
 			return false
 		}
 
 		// Otherwise, delete the entry from the map and return true to evict it.
 		delete(s.isClean, hash)
-		return false
+		return true
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not create cache storage for ledger payloads: %w", err)
@@ -130,9 +131,6 @@ func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 
 // Save stores a payload.
 func (s *Store) Save(key [32]byte, value []byte) error {
-	s.isCleanMu.Lock()
-	defer s.isCleanMu.Unlock()
-
 	// Store in cache.
 	_ = s.cache.Add(key, value)
 
@@ -143,7 +141,9 @@ func (s *Store) Save(key [32]byte, value []byte) error {
 	}
 
 	// Set state to dirty.
-	s.isClean[key] = true
+	s.isCleanMu.Lock()
+	s.isClean[key] = false
+	s.isCleanMu.Unlock()
 
 	return nil
 }
@@ -162,11 +162,12 @@ func (s *Store) Retrieve(key [32]byte) ([]byte, error) {
 
 	// Otherwise, check if it has been evicted from the cache and is in the current transaction or in the DB.
 	s.txMu.RLock()
-	defer s.txMu.RUnlock()
 	it, err := s.tx.Get(key[:])
 	if err != nil {
+		s.txMu.RUnlock()
 		return nil, fmt.Errorf("could not read payload %x: %w", key[:], err)
 	}
+	s.txMu.RUnlock()
 
 	payload, err := it.ValueCopy(nil)
 	if err != nil {
@@ -263,7 +264,6 @@ func (s *Store) cacheFullAndDirty(used int) bool {
 			return false
 		}
 	}
-
 	return true
 }
 
@@ -292,7 +292,7 @@ func (s *Store) committed(err error) {
 	// longer dirty.
 	s.isCleanMu.Lock()
 	for h := range s.isClean {
-		s.isClean[h] = false
+		s.isClean[h] = true
 	}
 	s.isCleanMu.Unlock()
 

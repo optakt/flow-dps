@@ -183,18 +183,12 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// Finally, we just have to point the wrong side of the branch,
 			// which we will not follow, back at the previously existing path.
-			// FIXME:
-			//  We have a case where we either use the wrong path as reference
-			//  or read at the wrong index. This results in children being inverted
-			//  in some cases.
 			if bitutils.Bit(path[:], int(depth)) == 0 {
 				branch.right = other
 				current = &branch.left
-				fmt.Println("new branch goes to the left because of bit at index", depth)
 			} else {
 				branch.left = other
 				current = &branch.right
-				fmt.Println("new branch goes to the right because of bit at index", depth)
 			}
 
 			// Since we append a branch here, the depth of the next iteration
