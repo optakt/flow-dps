@@ -218,31 +218,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			node.dirty = true
 
-			if node.hash != [32]byte{} {
-				// FIXME: Can this even happen?
-				// FIXME: If the path is the exact same, we shouldnt create a branch but instead rehash.
-				// In this case, we are conflicting with a previous leaf,
-				// so we need to create a branch for both leaves.
-				branch := Branch{
-					hash:  [32]byte{},
-					dirty: true,
-				}
-
-				if bitutils.Bit(path[:], int(depth)) == 0 {
-					branch.left = &Leaf{
-						hash: node.hash,
-					}
-					branch.right = node
-				} else {
-					branch.left = node
-					branch.right = &Leaf{
-						hash: node.hash,
-					}
-				}
-				*current = &branch
-				return nil
-			}
-
 			data := encoding.EncodePayload(payload)
 			node.payload = sha256.Sum256(data)
 			err := t.store.Save(node.payload, data)

@@ -16,7 +16,6 @@ package trie
 
 import (
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/encoding"
 )
 
@@ -41,13 +40,6 @@ func (l *Leaf) Hash(height uint8, path [32]byte, getPayload payloadRetriever) [3
 }
 
 func (l *Leaf) computeHash(height uint8, path [32]byte, getPayload payloadRetriever) {
-
-	print("got: ")
-	for j := 240; j < 256; j++ {
-		print(bitutils.Bit(path[:], j))
-	}
-	println()
-
 	data, err := getPayload(l.payload)
 	if err != nil {
 		panic(err) // FIXME: Handle error?

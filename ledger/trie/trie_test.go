@@ -15,16 +15,13 @@
 package trie_test
 
 import (
-	"bytes"
 	"encoding/hex"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/common/utils"
 	reference "github.com/onflow/flow-go/ledger/complete/mtrie/trie"
@@ -127,29 +124,13 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
 
 	for i := range paths {
-		print("insert: ")
-		for j := 240; j < 256; j++ {
-			print(bitutils.Bit(paths[i][:], j))
-		}
-		println()
-
-		if i == 221 {
-			println("breakpoint")
-		}
-
 		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
 		refTr, _ = reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
 
 		got := trie.RootHash()
 		want := refTr.RootHash()
-		if !assert.Equal(t, want[:], got[:]) {
-			println("breakpoint")
-			t.FailNow()
-		}
+		require.Equal(t, want[:], got[:])
 	}
-
-	//refTr, err := reference.NewTrieWithUpdatedRegisters(refTr, paths, payloads)
-	//require.NoError(t, err)
 
 	got := trie.RootHash()
 	want := refTr.RootHash()
@@ -363,22 +344,9 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 		newRefTr, err := reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
-		fmt.Print("Inserting new leaf at path ")
-		for j := 0; j < 256; j++ {
-			fmt.Print(bitutils.Bit(paths[i][:], j))
-		}
-		fmt.Println()
-
 		want := newRefTr.RootHash()
 		got := newTr.RootHash()
-		if !bytes.Equal(want[:], got[:]) {
-			// FIXME: First few bits of path are wrong with some leaves:
-			//  We have b569f[...]36a80 instead of 9569f[...]36a80
-			//  We have 89341[...]98c04 instead of a9341[...]98c04
- 			println("breakpoint")
-		}
 		require.Equalf(t, want, got, "failed at iteration %d", i)
-		fmt.Println(">>>")
 
 		tr = newTr
 		refTr = newRefTr
