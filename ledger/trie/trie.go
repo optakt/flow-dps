@@ -15,16 +15,18 @@
 package trie
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
+	"lukechampine.com/blake3"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/encoding"
+	trie "github.com/onflow/flow-go/ledger/common/hash"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -72,7 +74,7 @@ func (t *Trie) RootHash() ledger.RootHash {
 		return ledger.RootHash(ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight))
 	}
 
-	return t.root.Hash(ledger.NodeMaxHeight-1, [32]byte{}, t.store.Retrieve)
+	return t.root.Hash(ledger.NodeMaxHeight - 1)
 }
 
 // TODO: Add method to add multiple paths and payloads at once and parallelize insertions that do not conflict.
@@ -83,150 +85,259 @@ func (t *Trie) RootHash() ledger.RootHash {
 // to different heights along the way.
 func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
+	// Insertions should never fail, so we can start by encoding the payload
+	// data and storing it in our key-value store. We can also check whether the
+	// KV store already has this data stored, to avoid unnecessary I/O.
+	data := encoding.EncodePayload(payload)
+	key := blake3.Sum256(data)
+	err := t.store.Has(key)
+	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+		return fmt.Errorf("could not check payload data in store: %w", err)
+	}
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		err = t.store.Save(key, data)
+	}
+	if err != nil {
+		return fmt.Errorf("could not save payload data to store: %w", err)
+	}
+
+	// Current always points at the current node for the iteration. It's the
+	// pointer that we forward while iterating along the path of the insertion.
+	// We can modify the trie while iterating by replacing its contents.
+	// Previous keeps the previous
+	var parent *Node
 	current := &t.root
+
+	// Depth keeps track of the depth that we are at in the trie. The root node
+	// is at a depth of zero; every branch node adds a depth of one, while every
+	// extension node adds a depth equal to the number of bits in its path. When
+	// we reach a depth of zero again, it means we have passed the maximum depth
+	// and we reached the point of insertion for leaf nodes.
 	depth := uint8(0)
+
+	// The `PathLoop` is responsible for creating all of the intermediary branch
+	// and extension nodes up to the insertion point of the leaf. We start at
+	// the root and insert these nodes until we reach the maximum depth. Once
+	// maximum depth is reached, we know we have reached the point of insertion
+	// of the leaf node.
 	for {
+
+		// We always want to keep track of the parent, so when we break out of
+		// the loop, we can look at it to determine the idiosyncratic Flow leaf
+		// height.
+		parent = current
+
+		// In this switch statement, we create the next intermediary node, based
+		// on what we encounter on the path. After the switch statement, we
+		// check whether we have reached maximum depth in order to break out of
+		// the loop.
 		switch node := (*current).(type) {
 
-		// There are two cases where we hit a `nil` node:
-		// - before reaching max depth, in which case we should create an
-		// extension node to lead the rest of the path until max depth; and
-		// - when reaching max depth, in which case we should place an empty
-		// leaf node, which can then be populated.
+		// If we reach a `nil` node as part of the path traversal, it means that
+		// there are no intermediary nodes left on the given path; we are
+		// entering new territory. At this point, we can simply insert an
+		// extension node with the remainder of the path and skip to maximum
+		// depth.
 		case nil:
 
-			// When we have reached maximum depth, we can simply put a leaf node
-			// into this location, which will then be populated in the leaf case.
-			if depth == maxDepth {
-				*current = &Leaf{}
-				continue
-			}
-
-			// If we have not reached maximum depth, we have reached a part of
-			// the trie that is empty, and we can reach the leaf's insertion
-			// path by inserting an extension node for the rest of the path.
+			// We insert an extension node at the location of the current pointer,
+			// which is currently empty. We already put an empty leaf as its
+			// child.
 			extension := Extension{
-				hash:  [32]byte{},
-				dirty: true,
 				path:  path[:],
 				count: maxDepth - depth,
-				child: nil,
 			}
 			*current = &extension
 			current = &(extension.child)
-			depth = maxDepth
-			continue
 
-		// Most of the nodes in a sparse trie will initially be made up of
-		// extension nodes. They skip a part of the path where there are no
-		// branches in order to reduce the number of nodes we need to traverse.
+			// NOTE: `node-count` is zero-based, so a value of one still means
+			// that there is one bit in the extension node's path. We thus have
+			// to add `node.count+1` to accurately increase depth. This can
+			// overflow, but this is fine. When we reach a depth of zero, we
+			// will know that we reached the depth for leaves.
+			depth += (extension.count + 1)
+			break
+
+		// If we run into a branch node, we simply forward the pointers to the
+		// correct side and increase the depth.
+		case *Branch:
+
+			// If the current bit is zero, we go left; if it is one, we go right.
+			if bitutils.Bit(path[:], int(depth)) == 0 {
+				current = &node.left
+			} else {
+				current = &node.right
+			}
+			node.clean = false
+
+			// NOTE: if we are at maximum depth, this will overflow and set depth
+			// back to zero, which is the condition we check for to realize we
+			// have to have a leaf node.
+			depth++
+			break
+
+		// When we run into an extension, things become more complicated.
+		// Depending on how much of the path we share with the extension node,
+		// we need to do different things.
 		case *Extension:
 
-			// At this point, we count the number of common bits, so we can
-			// compare it against the number of available bits on the extension.
+			// In all cases, we will have some kind of modification of the
+			// extension or the trie part below the extension, so we mark it as
+			// dirty only once.
+			node.clean = false
+
+			// The first edge case happens when we have no bits in common. We
+			// handle this explicitly here, for two reasons:
+			// 1) It allows us to use a zero-based `common` count of bits later,
+			// where `0` corresponds to `1`, and so on, just like the `node.count`
+			// of the extension node.
+			// 2) We can use the existing extension for the part below the new
+			// branch node, while the rest of the code uses it for the part above
+			// the new branch node, thus avoiding garbage collection and allocations.
+			insertionBit := bitutils.Bit(path[:], int(depth))
+			extensionBit := bitutils.Bit(node.path[:], int(depth))
+			if insertionBit != extensionBit {
+
+				// First, we insert the branch and set its children correctly.
+				branch := &Branch{}
+				*current = branch
+				if insertionBit == 0 {
+					current = &(branch.left)
+					branch.right = node
+				} else {
+					current = &(branch.right)
+					branch.left = node
+				}
+
+				// TODO: check if the extension's child is a leaf, in which
+				// case we need to recompute its hash.
+
+				// Finally, we move to the next depth, which is the correct
+				// child of the branch we just introduced.
+				depth++
+				break
+			}
+
+			// At this point, we know that we have at least one bit in common
+			// with the extension's path, so a common value of zero is implicitly
+			// a one. We count common bits starting the the second bit, so the
+			// `common` value is zero-based, just like the `node.count` value.
 			common := uint8(0)
-			for i := depth; i < depth+node.count; i++ {
+			for i := depth + 1; i <= depth+node.count; i++ {
 				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
 					break
 				}
 				common++
 			}
 
-			depth += common
+			// We increase the depth to point to the first node after the path
+			// we have in common with the extension node. We have to add one extra
+			// bit because `common` is zero-based.
+			// NOTE: `depth` can overflow here, but that's behaviour we want and rely
+			// on; a value of zero after the switch statement indicates that we
+			// have reached the depth where leafs are located.
+			depth += (common + 1)
 
-			// If all the bits are common, we have a simple edge case,
-			// where we can skip to the end of the extension.
+			// If we have all of the bits in common with the extension node, we
+			// can simply skip to the end of the extension node here; no
+			// modifications are needed.
 			if common == node.count {
-				node.dirty = true
+				node.clean = false
 				current = &node.child
 				continue
 			}
 
-			// Otherwise, we always have to create a fork in the path to our
-			// leaf; one of the sides will remain `nil`, which is where we will
-			// continue our traversal. The other side will contain whatever is
-			// left of the extension node.
-			branch := Branch{
-				hash:  [32]byte{},
-				dirty: true,
-			}
+			// At this point we have:
+			// - at least one bit in common, for which we can reuse the current
+			//   extension; and
+			// - at least one bit that is different, which means we have to
+			// create a branch.
 
-			// If we have all but one bit in common, we have the branch on the
-			// last bit, so the correct child for the previous extension side
-			// of the new branch will point to the previous child of the branch.
-			// Otherwise, we need to create a new branch with the remainder of
-			// the previous path.
-			var other Node
-			if node.count-common == 1 {
-				other = node.child
-			} else {
-				other = &Extension{
-					hash:  [32]byte{},
-					dirty: true,
+			// First, we have to determine what the child for the extension path
+			// that is distinct from the insertion path will be. If we only have
+			// a single bit that is different, we can point the branch node
+			// to the child of the current extension node. Otherwise, we have
+			// to insert an extension node in-between that holds the remainder
+			// of the extension node's path.
+			child := node.child
+			if common > node.count-1 {
+				child = &Extension{
 					path:  node.path,
 					count: node.count - common - 1,
-					child: node.child,
+					child: child,
 				}
 			}
 
-			// If we have no bits in common, the first bit of the extension
-			// should be replaced with the branch node, and the extension will
-			// be garbage-collected. Otherwise, the extension points to the
-			// branch, with a reduced path length.
-			if common == 0 {
-				*current = &branch
+			// TODO: whether with or without extension, we need to recompute the
+			// child node's hash if it is a leaf.
+
+			// Then, we can cut the path on the current extension node to
+			// correspond to only the shared path and add the branch as its
+			// child.
+			branch := &Branch{}
+			node.count = common
+			node.child = branch
+
+			// Finally, we determine whether the mismatching part of the path
+			// goes to the left or the right of the branch.
+			forkingBit := bitutils.Bit(node.path[:], int(depth))
+			if forkingBit == 0 {
+				branch.left = child
+				current = &(branch.right)
 			} else {
-				node.child = &branch
-				node.count = common
-				node.dirty = true
+				branch.right = child
+				current = &(branch.left)
 			}
 
-			// Finally, we just have to point the wrong side of the branch,
-			// which we will not follow, back at the previously existing path.
-			if bitutils.Bit(path[:], int(depth)) == 0 {
-				branch.right = other
-				current = &branch.left
-			} else {
-				branch.left = other
-				current = &branch.right
-			}
-
-			// Since we append a branch here, the depth of the next iteration
-			// needs to be increased by one.
+			// We have to increase depth here again, as we now already have a
+			// branch node at the bit where we mismatch, and we go to the child
+			// of that branch node.
+			// NOTE: as usual, we can overflow here, which will break us out of
+			// the path iterations, and skip to creating/changing the leaf.
 			depth++
-			continue
+			break
+		}
 
-		// Once the trie fills up more, we will have a lot of branch nodes,
-		// where there are nodes on both the left and the right side. We can
-		// simply continue iteration to the correct side.
-		case *Branch:
-
-			// If the key bit at the index i is a 0, move on to the left child,
-			// otherwise the right child.
-			if bitutils.Bit(path[:], int(depth)) == 0 {
-				current = &node.left
-			} else {
-				current = &node.right
-			}
-			node.dirty = true
-			depth++
-			continue
-
-		// When we reach a leaf node, we store the payload value in storage
-		// and insert the node hash and payload hash into the leaf.
-		case *Leaf:
-
-			node.dirty = true
-
-			data := encoding.EncodePayload(payload)
-			node.payload = sha256.Sum256(data)
-			err := t.store.Save(node.payload, data)
-			if err != nil {
-				return err
-			}
-			return nil
+		// If after inserting the next intermediary node, we have a depth of
+		// zero, it means `depth` has overflown and we reached the leaf node.
+		if depth == 0 {
+			break
 		}
 	}
+
+	// TODO: make sure that we have the correct height here to calculate the
+	// node's hash.
+	height := uint16(0)
+	switch p := (*parent).(type) {
+	case *Extension:
+		height = ledger.NodeMaxHeight - uint16(maxDepth-p.count)
+	case *Branch:
+		height = ledger.NodeMaxHeight - uint16(maxDepth)
+	}
+
+	// If there is no leaf node at the current path yet, we have to insert one,
+	// including all of its field values.
+	leaf, ok := (*current).(*Leaf)
+	if !ok {
+		*current = &Leaf{
+			hash: ledger.ComputeCompactValue(trie.Hash(path), payload.Value, int(height)),
+			path: path[:],
+			key:  key,
+		}
+		return nil
+	}
+
+	// However, if there was already a leaf, we only need to update it if the
+	// key has changed. Otherwise, the payload is still the same.
+	if key == leaf.key {
+		return nil
+	}
+
+	// Finally, if the key has changed, we recompute the hash, but we do not need
+	// to update the path, which might save us some memory on duplicate insertions.
+	leaf.hash = ledger.ComputeCompactValue(trie.Hash(path), payload.Value, int(height))
+	leaf.key = key
+	return nil
 }
 
 // Leaves iterates through the trie and returns its leaf nodes.

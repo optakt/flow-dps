@@ -165,15 +165,31 @@ func (s *Store) Retrieve(key [32]byte) ([]byte, error) {
 	it, err := s.tx.Get(key[:])
 	if err != nil {
 		s.txMu.RUnlock()
-		return nil, fmt.Errorf("could not read payload %x: %w", key[:], err)
+		return nil, fmt.Errorf("could not get payload %x: %w", key[:], err)
 	}
 	s.txMu.RUnlock()
 
 	payload, err := it.ValueCopy(nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not read payload %x: %w", key[:], err)
+		return nil, fmt.Errorf("could not copy payload %x: %w", key[:], err)
 	}
 	return payload, nil
+}
+
+// Has returns true if the given value is currently in the cache.
+func (s *Store) Has(key [32]byte) error {
+
+	// first we check in the cache
+	_, ok := s.cache.Get(key)
+	if ok {
+		return nil
+	}
+
+	// second, check in KV store
+	s.txMu.RLock()
+	_, err := s.tx.Get(key[:])
+	s.txMu.RUnlock()
+	return err
 }
 
 // Close stops the store's persistence goroutines.

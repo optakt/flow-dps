@@ -58,16 +58,16 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 	// to light nodes, since we do not have access to their height here.
 	switch n := node.(type) {
 	case *Extension:
-		if n.dirty {
+		if !n.clean {
 			return nil, fmt.Errorf("cannot convert dirty extension to light node")
 		}
 	case *Branch:
-		if n.dirty {
+		if !n.clean {
 			return nil, fmt.Errorf("cannot convert dirty branch to light node")
 		}
 	}
 
-	h := node.Hash(0, [32]byte{}, nil)
+	h := node.Hash(0)
 	lightNode := LightNode{
 		HashValue: h[:],
 	}
@@ -82,12 +82,12 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 	case *Branch:
 		leftIndex, found := index[n.left]
 		if !found {
-			h := n.left.Hash(0, [32]byte{}, nil)
+			h := n.left.Hash(0)
 			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(h[:]))
 		}
 		rightIndex, found := index[n.right]
 		if !found {
-			h := n.right.Hash(0, [32]byte{}, nil)
+			h := n.right.Hash(0)
 			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(h[:]))
 		}
 		lightNode.LIndex = leftIndex
@@ -110,7 +110,7 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 			left:  nodes[ln.LIndex],
 			right: nodes[ln.RIndex],
 			hash:  hash,
-			dirty: false,
+			clean: true,
 		}, nil
 	}
 
@@ -120,7 +120,7 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 			// FIXME: Handle child.
 			count: ln.Skip, // FIXME: Rename skip
 			hash:  hash,
-			dirty: false,
+			clean: true,
 		}, nil
 	}
 

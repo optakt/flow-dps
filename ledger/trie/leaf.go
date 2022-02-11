@@ -14,43 +14,30 @@
 
 package trie
 
-import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/encoding"
-)
-
-// Leaf is what contains the values in the trie. This implementation uses nodes that are
-// compacted and do not always reside at the bottom layer of the trie.
-// Instead, they are inserted at the first heights where they do not conflict with others.
-// This allows the trie to keep a relatively small amount of nodes, instead of having
-// many nodes/extensions for each leaf in order to bring it all the way to the bottom
-// of the trie.
+// Leaf nodes are found at the end of each path of the trie. They do not contain
+// a part of the path, so they could, in theory, be shuffled around easily. This
+// is made more difficult by the Flow implementation of the trie, which hashes
+// the height of a leaf as part of the node hash, and uses the a height based on
+// the sparse trie, which changes as the trie fills up, instead of the height in
+// terms of path traversed, which would always be the same.
 type Leaf struct {
-	dirty   bool
-	hash    [32]byte
-	payload [32]byte
+
+	// The hash of the leaf node is computed whenever it changes as part of
+	// insertions, so that it is never dirty.
+	hash [32]byte
+
+	// The path is kept as a byte slice, which allows us to share the path
+	// between all of the nodes on that path when inserting, reducing memory use
+	// significantly.
+	path []byte
+
+	// We insert the payload into the KV store and keep its hash here. Using the
+	// payload hash rather than the node hash improves insertion performance by
+	// avoiding storing a payload again when the leaf hash changes.
+	key [32]byte
 }
 
 // Hash returns the leaf hash.
-func (l *Leaf) Hash(height uint8, path [32]byte, getPayload payloadRetriever) [32]byte {
-	if l.dirty {
-		l.computeHash(height, path, getPayload)
-	}
+func (l *Leaf) Hash(height uint16) [32]byte {
 	return l.hash
-}
-
-func (l *Leaf) computeHash(height uint8, path [32]byte, getPayload payloadRetriever) {
-	data, err := getPayload(l.payload)
-	if err != nil {
-		panic(err) // FIXME: Handle error?
-	}
-
-	payload, err := encoding.DecodePayload(data)
-	if err != nil {
-		panic(err) // FIXME: Handle error?
-	}
-
-	// How to access the path and payload here?
-	l.hash = ledger.ComputeCompactValue(path, payload.Value, int(height)+1)
-	l.dirty = false
 }

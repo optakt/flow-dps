@@ -17,72 +17,68 @@ package trie
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
-	"github.com/onflow/flow-go/ledger/common/hash"
+	trie "github.com/onflow/flow-go/ledger/common/hash"
 )
 
-// Extension acts as a shortcut between many layers of the trie. It replaces a set of branches.
-// The Flow implementation does not use extensions. This is a DPS optimization, which allows saving
-// memory usage by reducing the amount of nodes necessary in the trie.
+// Extension nodes are what turn the state trie into a sparse trie. They hold a
+// number of bits of the path, where all nodes in that part of the trie share these
+// same bits of the path. They drastically reduce the memory needed for the trie
+// when most of the paths on the trie are not populated.
 type Extension struct {
+
+	// Extension nodes can be split when inserting additional nodes into sparse
+	// parts of the trie. In those cases, there hash becomes invalid and needs
+	// to be recomputed. In order to avoid redundant recomputations upon multiple
+	// insertions, we lazily recompute when the hash of the trie is requested.
 	hash  [32]byte
-	dirty bool
+	clean bool
+
+	// The full path of the insertion will be stored in the leaf node anyway, so
+	// we can simplify a lot of code by keeping the whole path the extension is
+	// on. We can then use the current depth as starting point for the extension's
+	// bits, and the count as the cut-off at the end.
 	path  []byte
 	count uint8
+
+	// An extension can either have a branch as a child, in case it doesn't reach
+	// the bottom of the trie, or a leaf, in case it extends all the way to the
+	// bottom.
 	child Node
 }
 
 // Hash returns the extension hash. If it is currently dirty, it is recomputed first.
-func (e *Extension) Hash(height uint8, path [32]byte, getPayload payloadRetriever) [32]byte {
-	if e.dirty {
-		e.computeHash(height, path, getPayload)
+func (e *Extension) Hash(height uint16) [32]byte {
+	if !e.clean {
+		e.hash = e.computeHash(height)
+		e.clean = true
 	}
 	return e.hash
 }
 
 // computeHash computes the extension's hash.
-func (e *Extension) computeHash(height uint8, _ [32]byte, getPayload payloadRetriever) {
-	defer func() {
-		e.dirty = false
-	}()
+func (e *Extension) computeHash(height uint16) [32]byte {
 
-	// Build the path for the child, based on the parent of the extension.
-	var childPath [32]byte
-	// For each skipped height, set the bits in the child path accordingly.
-	depth := ledger.NodeMaxHeight - 1 - height
-	for i := 0; i <= int(depth)+int(e.count); i++ {
-		if bitutils.Bit(e.path[:], i) == 1 {
-			bitutils.SetBit(childPath[:], i)
-		}
-	}
+	// We start with the hash of the child node.
+	hash := e.child.Hash(height)
 
 	// If the child is a leaf, simply use its hash as the extension's hash,
 	// since in that case the extension is the equivalent of a Flow "compact leaf".
-	// The leaf needs to use the height of its extension for hash computation.
-	leaf, ok := e.child.(*Leaf)
+	_, ok := e.child.(*Leaf)
 	if ok {
-		leaf.dirty = true
-		e.hash = e.child.Hash(height, childPath, getPayload)
-		return
+		return hash
 	}
 
-	// If the child is not a leaf, the height it needs for hash computation
-	// is the height at the bottom of the extension.
-	h := e.child.Hash(height-e.count, childPath, getPayload)
-
-	// For each skipped height, combine the previous hash with the default ledger
-	// height of the current layer.
-	var lHash, rHash hash.Hash
+	// If the child is not a leaf, we use its hash as the starting point for
+	// the extension's hash. We then hash it against the default hash for each
+	// height for every bit on the extension.
 	for i := int(height) - int(e.count) + 1; i <= int(height); i++ {
-		if bitutils.Bit(e.path[:], 255-i) == 0 {
-			lHash = h
-			rHash = ledger.GetDefaultHashForHeight(i)
+		empty := ledger.GetDefaultHashForHeight(i)
+		if bitutils.Bit(e.path[:], 255-1) == 0 {
+			hash = trie.HashInterNode(hash, empty)
 		} else {
-			lHash = ledger.GetDefaultHashForHeight(i)
-			rHash = h
+			hash = trie.HashInterNode(empty, hash)
 		}
-		h = hash.HashInterNode(lHash, rHash)
 	}
 
-	e.hash = h
-	return
+	return hash
 }

@@ -15,44 +15,42 @@
 package trie
 
 import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
-// Branch is a node is an intermediary node which has children.
-// It does not need to contain a path, because its children are ordered
-// based on their own path differences.
+// Branch nodes are the non-compact default nodes of a trie. They point to the
+// two possible branches of the trie below them, one for each bit. In the sparse
+// implementation of the trie, they are replaced with extension nodes whenever
+// one of their children would be empty.
 type Branch struct {
-	hash  hash.Hash
-	dirty bool
+
+	// The hash of a default node is a hash of both of its children. If either
+	// of the children change, such as when extension nodes are modified, the
+	// hash needs to be recomputed. We do this in a lazy manner when the trie
+	// hash is requested, so we can avoid redundant hash computations when doing
+	// multiple insertions.
+	hash  [32]byte
+	clean bool
+
+	// The left node of a branch points to the node where the path continues with
+	// a `0` bit; the right node points to the `1` bit.
 	left  Node
 	right Node
 }
 
 // Hash returns the branch hash. If it is currently dirty, it is recomputed first.
-func (b *Branch) Hash(height uint8, path [32]byte, getPayload payloadRetriever) [32]byte {
-	if b.dirty {
-		b.computeHash(height, path, getPayload)
+func (b *Branch) Hash(height uint16) [32]byte {
+	if !b.clean {
+		b.hash = b.computeHash(height)
+		b.clean = true
 	}
 	return b.hash
 }
 
 // computeHash computes the branch hash by hashing its children.
-func (b *Branch) computeHash(height uint8, path [32]byte, getPayload payloadRetriever) {
-	if b.left == nil && b.right == nil {
-		panic("branch node should never have empty children")
-	}
-
-	var lPath, rPath [32]byte
-	copy(lPath[:], path[:])
-	copy(rPath[:], path[:])
-	depth := ledger.NodeMaxHeight - 1 - height
-	bitutils.SetBit(rPath[:], int(depth))
-
-	lHash := b.left.Hash(height-1, lPath, getPayload)
-	rHash := b.right.Hash(height-1, rPath, getPayload)
-
-	b.hash = hash.HashInterNode(lHash, rHash)
-	b.dirty = false
+func (b *Branch) computeHash(height uint16) [32]byte {
+	left := b.left.Hash(height)
+	right := b.right.Hash(height)
+	hash := hash.HashInterNode(left, right)
+	return hash
 }
