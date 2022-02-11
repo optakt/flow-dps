@@ -346,8 +346,10 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		}
 	}
 
-	// TODO: make sure that we have the correct height here to calculate the
-	// node's hash.
+	// If the parent of the new leaf is a branch node, the height of the branch
+	// node is one, and the height of the leaf is zero. Otherwise, the height is
+	// the height of the extension node, which is the number of bits in its
+	// path, so the zero-based `p.count` plus one.
 	height := 0
 	p, ok := (*parent).(*Extension)
 	if ok {
@@ -419,18 +421,41 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 	for {
 		switch node := (*current).(type) {
 
-		// If we hit a `nil` node, it means nothing exists on that path and we
-		// should return a `nil` payload.
-		case nil:
-			return nil, ErrPathNotFound
+		// If we hit a branch node, we have to sides to it, so we just forward
+		// by one and go to the correct side.
+		case *Branch:
+
+			// A zero bit goes left, a one bit goes right.
+			if bitutils.Bit(path[:], int(depth)) == 0 {
+				current = &node.left
+			} else {
+				current = &node.right
+			}
+
+			// Increase depth by one to keep track of how far along we are.
+			depth++
+			break
 
 		// If we hit an extension node, we have two cases:
 		// - the extension path overlaps fully with ours, and we jump to its end; or
 		// - the extension path mismatches ours, and there is no value for our path.
 		case *Extension:
 
+			// We simply mimic the earlier code here, so we can use the same
+			// semantics of a zero-based `common` count. If we mismatch on the
+			// first bit, the path is not in our trie.
+			insertionBit := bitutils.Bit(path[:], int(depth))
+			extensionBit := bitutils.Bit(node.path[:], int(depth))
+			if insertionBit != extensionBit {
+				return nil, ErrPathNotFound
+			}
+
+			// Otherwise, we compare, starting with the second bit, using a
+			// `common` value of `0` as one bit in common. That means that if
+			// `common` and `node.count` don't match exactly, there is at least
+			// one bit of difference.
 			common := uint8(0)
-			for i := depth; i < depth+node.count; i++ {
+			for i := depth + 1; i <= depth+node.count; i++ {
 				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
 					break
 				}
@@ -440,39 +465,33 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 				return nil, ErrPathNotFound
 			}
 
+			// At this point, we have everything in common, and we can forward
+			// to the child and increase the depth accordingly.
 			current = &node.child
-			depth += node.count
-			continue
+			depth += node.count + 1
+			break
+		}
 
-		// If we hit a branch node, we have to sides to it, so we just forward
-		// by one and go to the correct side.
-		case *Branch:
-
-			if bitutils.Bit(path[:], int(depth)) == 0 {
-				current = &node.left
-			} else {
-				current = &node.right
-			}
-			depth++
-			continue
-
-		// Finally, if we reach the leaf, we can retrieve the by its hash from
-		// storage and return it.
-		case *Leaf:
-
-			data, err := t.store.Retrieve(path)
-			if err != nil {
-				return nil, fmt.Errorf("could not retrieve payload data: %w", err)
-			}
-
-			payload, err := encoding.DecodePayload(data)
-			if err != nil {
-				return nil, fmt.Errorf("could not decode payload data: %w", err)
-			}
-
-			return payload, nil
+		// Once we reach a depth of zero, it means the value has overflown and
+		// we reached the leaf node.
+		if depth == 0 {
+			break
 		}
 	}
+
+	// At this point, we should aways have a leaf, so we use it to retreve the
+	// data and decode the payload.
+	leaf := (*current).(*Leaf)
+	data, err := t.store.Retrieve(leaf.key)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve payload data: %w", err)
+	}
+	payload, err := encoding.DecodePayload(data)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode payload data: %w", err)
+	}
+
+	return payload, nil
 }
 
 func (t *Trie) Paths() []ledger.Path {
