@@ -25,8 +25,6 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/encoding"
-	trie "github.com/onflow/flow-go/ledger/common/hash"
-
 	"github.com/optakt/flow-dps/models/dps"
 )
 
@@ -116,7 +114,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// and we reached the point of insertion for leaf nodes.
 	depth := uint8(0)
 
-	// The `PathLoop` is responsible for creating all of the intermediary branch
+	// The `PathLoop` is responsible for creating all the intermediary branch
 	// and extension nodes up to the insertion point of the leaf. We start at
 	// the root and insert these nodes until we reach the maximum depth. Once
 	// maximum depth is reached, we know we have reached the point of insertion
@@ -156,7 +154,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// to add `node.count+1` to accurately increase depth. This can
 			// overflow, but this is fine. When we reach a depth of zero, we
 			// will know that we reached the depth for leaves.
-			depth += (extension.count + 1)
+			depth += extension.count + 1
 			break
 
 		// If we run into a branch node, we simply forward the pointers to the
@@ -239,7 +237,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// At this point, we know that we have at least one bit in common
 			// with the extension's path, so a common value of zero is implicitly
-			// a one. We count common bits starting the the second bit, so the
+			// a one. We count common bits starting the second bit, so the
 			// `common` value is zero-based, just like the `node.count` value.
 			common := uint8(0)
 			for i := depth + 1; i <= depth+node.count; i++ {
@@ -254,10 +252,10 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// bit because `common` is zero-based.
 			// NOTE: `depth` can overflow here, but that's behaviour we want and rely
 			// on; a value of zero after the switch statement indicates that we
-			// have reached the depth where leafs are located.
-			depth += (common + 1)
+			// have reached the depth where leaves are located.
+			depth += common + 1
 
-			// If we have all of the bits in common with the extension node, we
+			// If we have all the bits in common with the extension node, we
 			// can simply skip to the end of the extension node here; no
 			// modifications are needed.
 			if common == node.count {
@@ -286,8 +284,24 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				}
 			}
 
-			// TODO: whether with or without extension, we need to recompute the
-			// child node's hash if it is a leaf.
+			// If the extension previously had a leaf as its child, this child's inferred height needs to
+			// change and therefore its hash needs to be recomputed.
+			otherLeaf, ok := child.(*Leaf)
+			if ok {
+				// The hash is computed at the depth of the previous extension, minus
+				// the amount that we got cut by the new conflicting leaf.
+				height := node.count - common - 1
+				otherValue, err := t.store.Retrieve(otherLeaf.key)
+				if err != nil {
+					return fmt.Errorf("could not save retrieve data from store: %w", err)
+				}
+				otherPayload, err := encoding.DecodePayload(otherValue)
+				if err != nil {
+					return fmt.Errorf("could not decode payload: %w", err)
+				}
+				otherLeaf.hash = ledger.ComputeCompactValue(otherLeaf.path, otherPayload.Value, int(height))
+				fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, otherPayload.Value, otherLeaf.path, otherLeaf.hash)
+			}
 
 			// Then, we can cut the path on the current extension node to
 			// correspond to only the shared path and add the branch as its
@@ -307,6 +321,11 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				branch.left = child
 			}
 
+			// FIXME: Need to set the branch as the parent.
+			var branchNode Node
+			branchNode = branch
+			parent = &branchNode
+
 			// We have to increase depth here again, as we now already have a
 			// branch node at the bit where we mismatch, and we go to the child
 			// of that branch node.
@@ -317,7 +336,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		}
 
 		// If after inserting the next intermediary node, we have a depth of
-		// zero, it means `depth` has overflown and we reached the leaf node.
+		// zero, it means `depth` has overflown, and we reached the leaf node.
 		if depth == 0 {
 			break
 		}
@@ -338,9 +357,10 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	}
 
 	// Otherwise, if we already have a leaf at this path, then we haven't used
-	// the new path in any intermediary node and we can discard it.
+	// the new path in any intermediary node, and we can discard it.
 	leaf = (*current).(*Leaf)
-	leaf.hash = ledger.ComputeCompactValue(trie.Hash(leaf.path), payload.Value, height)
+	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height)
+	fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, payload.Value, leaf.path, leaf.hash)
 	leaf.key = key
 	return nil
 }
