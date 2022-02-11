@@ -89,7 +89,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	key := blake3.Sum256(data)
 	err := t.store.Save(key, data)
 	if err != nil {
-		return fmt.Errorf("could not save payload data to store: %w", err)
+		return fmt.Errorf("could not save leaf data to store: %w", err)
 	}
 
 	// Let's do some magic for memory optimization. If we end up inserting this
@@ -110,6 +110,15 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// the trie, so that we know the parent of the leaf eventually, and can
 	// infer the height of the leaf from it.
 	var parent *Node
+
+	// The sibling node is populated if there is a leaf on an extension node
+	// that is modified, which means that the sibling's hash has to be recomputed.
+	// We also need to keep track of the sibling's parent, the uncle, so we can
+	// infer the right height from a potential extension node ancestor.
+	// We only need to bother with uncle's that are extension nodes; otherwise,
+	// a branch node is implied and the height will be zero.
+	var uncle *Node
+	var sibling *Leaf
 
 	// Current always points at the current node for the iteration. It's the
 	// pointer that we forward while iterating along the path of the insertion.
@@ -196,11 +205,17 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// dirty only once.
 			node.clean = false
 
+			// If the child of the extension is currently a leaf, we should
+			// keep track of it as sibling, so we can later recompute its hash.
+			// Below, each time the ancestor of the sibling is an extension node,
+			// we also keep track.
+			sibling, _ = node.child.(*Leaf)
+
 			// The first edge case happens when we have no bits in common. We
 			// handle this explicitly here, for two reasons:
 			// 1) It allows us to use a zero-based `common` count of bits later,
 			// where `0` corresponds to `1`, and so on, just like the `node.count`
-			// of the extension node.
+			// of the extension node, so comparisons are consistent.
 			// 2) We can use the existing extension for the part below the new
 			// branch node, while the rest of the code uses it for the part above
 			// the new branch node, thus avoiding garbage collection and allocations.
@@ -208,37 +223,18 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			extensionBit := bitutils.Bit(node.path[:], int(depth))
 			if insertionBit != extensionBit {
 
-				// If we have a leaf on the extension, we will need to recompute
-				// its hash after changing its parent.
-				extensionLeaf, ok := node.child.(*Leaf)
-
 				// We first determine the child of the branch node on the path
 				// we do NOT follow; it's either the current extension, or the
 				// child of the extension if it was only one bit long. If we
 				// keep the extension, we need to shorten it by one bit.
 				// We also calculate the new height of the potential leaf child
 				// node in case we need to recompute the hash.
-				height := 0
-				child := *current
+				child := Node(node)
 				if node.count == 0 {
 					child = node.child
 				} else {
 					node.count--
-					height = int(node.count) + 1
-				}
-
-				// Now, if we have an extensionLeaf, we can recompute its hash.
-				if ok {
-					otherValue, err := t.store.Retrieve(extensionLeaf.key)
-					if err != nil {
-						return fmt.Errorf("could not save retrieve data from store: %w", err)
-					}
-					otherPayload, err := encoding.DecodePayload(otherValue)
-					if err != nil {
-						return fmt.Errorf("could not decode payload: %w", err)
-					}
-					extensionLeaf.hash = ledger.ComputeCompactValue(extensionLeaf.path, otherPayload.Value, int(height))
-					// fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, otherPayload.Value, extensionLeaf.path, extensionLeaf.hash)
+					uncle = &child
 				}
 
 				// After that, we can create the branch and, depending on the
@@ -254,9 +250,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 					current = &(branch.right)
 					branch.left = child
 				}
-
-				// TODO: check if the extension's child is a leaf, in which
-				// case we need to recompute its hash.
 
 				// Either way, we have to increase the depth by one, because we
 				// only skipped one bit (accounting for the branch we just put
@@ -298,9 +291,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			//   extension; and
 			// - at least one bit that is different, which means we have to
 			// create a branch.
-			// We will modify the trie, so if there is a leaf node at the end of
-			// the extension, we need to recompute its hash later.
-			extensionLeaf, ok := node.child.(*Leaf)
 
 			// First, we have to determine what the child for the extension path
 			// that is distinct from the insertion path will be. If we only have
@@ -311,7 +301,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// We potentially have to recompute the hash of the child node, if
 			// that child node is a leaf, so we already calculate the height
 			// here.
-			height := 0
 			child := node.child
 			if common > node.count-1 {
 				extension := &Extension{
@@ -320,22 +309,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 					child: child,
 				}
 				child = extension
-				height = int(extension.count) + 1
-			}
-
-			// At this point, if the child was a leaf, we can recompute the hash
-			// using the height we have already prepared.
-			if ok {
-				otherValue, err := t.store.Retrieve(extensionLeaf.key)
-				if err != nil {
-					return fmt.Errorf("could not save retrieve data from store: %w", err)
-				}
-				otherPayload, err := encoding.DecodePayload(otherValue)
-				if err != nil {
-					return fmt.Errorf("could not decode payload: %w", err)
-				}
-				extensionLeaf.hash = ledger.ComputeCompactValue(extensionLeaf.path, otherPayload.Value, int(height))
-				// fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, otherPayload.Value, extensionLeaf.path, extensionLeaf.hash)
+				uncle = &child
 			}
 
 			// Then, we can cut the path on the current extension node to
@@ -375,6 +349,25 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		if depth == 0 {
 			break
 		}
+	}
+
+	// First, we want to recompute the hash of a potential sibling whose parent
+	// changed and who thus needs a new hash.
+	if sibling != nil {
+		height := 0
+		u, ok := (*uncle).(*Extension)
+		if ok {
+			height = int(u.count) + 1
+		}
+		value, err := t.store.Retrieve(sibling.key)
+		if err != nil {
+			return fmt.Errorf("could not retrieve sibling data from store: %w", err)
+		}
+		payload, err := encoding.DecodePayload(value)
+		if err != nil {
+			return fmt.Errorf("could not decode sibling payload: %w", err)
+		}
+		sibling.hash = ledger.ComputeCompactValue(sibling.path, payload.Value, int(height))
 	}
 
 	// If the parent of the new leaf is a branch node, the height of the branch
