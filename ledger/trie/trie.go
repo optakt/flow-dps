@@ -30,7 +30,7 @@ import (
 	"github.com/optakt/flow-dps/models/dps"
 )
 
-const maxDepth = 255
+const maxDepth = ledger.NodeMaxHeight - 1
 
 // Trie is a modified Patricia-Merkle Trie, which is the storage layer of the Flow ledger.
 // It uses a payload store to retrieve and persist ledger payloads.
@@ -70,10 +70,10 @@ func (t *Trie) RootNode() Node {
 // RootHash returns the hash of the trie's root node.
 func (t *Trie) RootHash() ledger.RootHash {
 	if t.root == nil {
-		return ledger.RootHash(ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight))
+		return ledger.RootHash(ledger.GetDefaultHashForHeight(maxDepth + 1))
 	}
 
-	return t.root.Hash(ledger.NodeMaxHeight - 1)
+	return t.root.Hash(maxDepth)
 }
 
 // TODO: Add method to add multiple paths and payloads at once and parallelize insertions that do not conflict.
@@ -155,13 +155,16 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		// correct side and increase the depth.
 		case *Branch:
 
+			// In most cases, we will have some kind of modification in the trie
+			// part below the branch, so we mark it as dirty.
+			node.clean = false
+
 			// If the current bit is zero, we go left; if it is one, we go right.
 			if bitutils.Bit(path[:], int(depth)) == 0 {
 				current = &node.left
 			} else {
 				current = &node.right
 			}
-			node.clean = false
 
 			// NOTE: if we are at maximum depth, this will overflow and set depth
 			// back to zero, which is the condition we check for to realize we
@@ -174,7 +177,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		// we need to do different things.
 		case *Extension:
 
-			// In all cases, we will have some kind of modification of the
+			// In most cases, we will have some kind of modification of the
 			// extension or the trie part below the extension, so we mark it as
 			// dirty only once.
 			node.clean = false
@@ -300,12 +303,10 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 	// TODO: make sure that we have the correct height here to calculate the
 	// node's hash.
-	height := uint16(0)
-	switch p := (*parent).(type) {
-	case *Extension:
-		height = ledger.NodeMaxHeight - uint16(maxDepth-p.count)
-	case *Branch:
-		height = ledger.NodeMaxHeight - uint16(maxDepth)
+	height := 0
+	p, ok := (*parent).(*Extension)
+	if ok {
+		height = int(p.count) + 1
 	}
 
 	// If there is no leaf node at the current path yet, we have to insert one,
@@ -313,7 +314,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	leaf, ok := (*current).(*Leaf)
 	if !ok {
 		*current = &Leaf{
-			hash: ledger.ComputeCompactValue(trie.Hash(path), payload.Value, int(height)),
+			hash: ledger.ComputeCompactValue(trie.Hash(path), payload.Value, height),
 			path: path[:],
 			key:  key,
 		}
@@ -328,7 +329,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 	// Finally, if the key has changed, we recompute the hash, but we do not need
 	// to update the path, which might save us some memory on duplicate insertions.
-	leaf.hash = ledger.ComputeCompactValue(trie.Hash(path), payload.Value, int(height))
+	leaf.hash = ledger.ComputeCompactValue(trie.Hash(path), payload.Value, height)
 	leaf.key = key
 	return nil
 }
