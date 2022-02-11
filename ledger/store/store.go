@@ -131,6 +131,13 @@ func New(log zerolog.Logger, opts ...Option) (*Store, error) {
 
 // Save stores a payload.
 func (s *Store) Save(key [32]byte, value []byte) error {
+
+	// Check if it's already in cache.
+	_, ok := s.cache.Get(key)
+	if ok {
+		return nil
+	}
+
 	// Store in cache.
 	_ = s.cache.Add(key, value)
 
@@ -174,12 +181,6 @@ func (s *Store) Retrieve(key [32]byte) ([]byte, error) {
 		return nil, fmt.Errorf("could not copy payload %x: %w", key[:], err)
 	}
 	return payload, nil
-}
-
-// Cached returns true if the given value is currently in the cache.
-func (s *Store) Cached(key [32]byte) bool {
-	_, ok := s.cache.Get(key)
-	return ok
 }
 
 // Close stops the store's persistence goroutines.

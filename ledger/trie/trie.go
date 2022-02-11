@@ -89,12 +89,9 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// check whether the data is already cached and skip this part.
 	data := encoding.EncodePayload(payload)
 	key := blake3.Sum256(data)
-	ok := t.store.Cached(key)
-	if !ok {
-		err := t.store.Save(key, data)
-		if err != nil {
-			return fmt.Errorf("could not save payload data to store: %w", err)
-		}
+	err := t.store.Save(key, data)
+	if err != nil {
+		return fmt.Errorf("could not save payload data to store: %w", err)
 	}
 
 	// Current always points at the current node for the iteration. It's the
