@@ -199,15 +199,37 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			extensionBit := bitutils.Bit(node.path[:], int(depth))
 			if insertionBit != extensionBit {
 
+				// If we have a leaf on the extension, we will need to recompute
+				// its hash after changing its parent.
+				extensionLeaf, ok := node.child.(*Leaf)
+
 				// We first determine the child of the branch node on the path
 				// we do NOT follow; it's either the current extension, or the
 				// child of the extension if it was only one bit long. If we
 				// keep the extension, we need to shorten it by one bit.
+				// We also calculate the new height of the potential leaf child
+				// node in case we need to recompute the hash.
+				height := 0
 				child := *current
 				if node.count == 0 {
 					child = node.child
 				} else {
 					node.count--
+					height = int(node.count) + 1
+				}
+
+				// Now, if we have an extensionLeaf, we can recompute its hash.
+				if ok {
+					otherValue, err := t.store.Retrieve(extensionLeaf.key)
+					if err != nil {
+						return fmt.Errorf("could not save retrieve data from store: %w", err)
+					}
+					otherPayload, err := encoding.DecodePayload(otherValue)
+					if err != nil {
+						return fmt.Errorf("could not decode payload: %w", err)
+					}
+					extensionLeaf.hash = ledger.ComputeCompactValue(extensionLeaf.path, otherPayload.Value, int(height))
+					// fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, otherPayload.Value, extensionLeaf.path, extensionLeaf.hash)
 				}
 
 				// After that, we can create the branch and, depending on the
@@ -289,7 +311,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 					child: child,
 				}
 				child = extension
-				height = int(extension.count) - 1
+				height = int(extension.count) + 1
 			}
 
 			// At this point, if the child was a leaf, we can recompute the hash
@@ -304,7 +326,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 					return fmt.Errorf("could not decode payload: %w", err)
 				}
 				extensionLeaf.hash = ledger.ComputeCompactValue(extensionLeaf.path, otherPayload.Value, int(height))
-				fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, otherPayload.Value, extensionLeaf.path, extensionLeaf.hash)
+				// fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, otherPayload.Value, extensionLeaf.path, extensionLeaf.hash)
 			}
 
 			// Then, we can cut the path on the current extension node to
@@ -366,8 +388,8 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// the new path in any intermediary node, and we can discard it.
 	leaf = (*current).(*Leaf)
 	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height)
-	fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, payload.Value, leaf.path, leaf.hash)
 	leaf.key = key
+	// fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, payload.Value, leaf.path, leaf.hash)
 	return nil
 }
 
