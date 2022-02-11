@@ -84,6 +84,11 @@ func (t *Trie) RootHash() ledger.RootHash {
 // to different heights along the way.
 func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
+	// Let's do some magic for memory optimization.
+	leaf := &Leaf{
+		path: [32]byte(path),
+	}
+
 	// Insertions should never fail, so we can start by encoding the payload
 	// data and storing it in our key-value store. We can also optimistically
 	// check whether the data is already cached and skip this part.
@@ -140,7 +145,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// which is currently empty. We already put an empty leaf as its
 			// child.
 			extension := Extension{
-				path:  path[:],
+				path:  &leaf.path,
 				count: maxDepth - depth,
 			}
 			*current = &extension
@@ -326,27 +331,16 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		height = int(p.count) + 1
 	}
 
-	// If there is no leaf node at the current path yet, we have to insert one,
-	// including all of its field values.
-	leaf, ok := (*current).(*Leaf)
-	if !ok {
-		*current = &Leaf{
-			hash: ledger.ComputeCompactValue(trie.Hash(path), payload.Value, height),
-			path: path[:],
-			key:  key,
-		}
-		return nil
+	// If the new leaf at this path is `nil`, we want to keep the insertion path
+	// array in the leaf, because it is potentially referenced along the way.
+	if *current == nil {
+		*current = leaf
 	}
 
-	// However, if there was already a leaf, we only need to update it if the
-	// key has changed. Otherwise, the payload is still the same.
-	if key == leaf.key {
-		return nil
-	}
-
-	// Finally, if the key has changed, we recompute the hash, but we do not need
-	// to update the path, which might save us some memory on duplicate insertions.
-	leaf.hash = ledger.ComputeCompactValue(trie.Hash(path), payload.Value, height)
+	// Otherwise, if we already have a leaf at this path, then we haven't used
+	// the new path in any intermediary node and we can discard it.
+	leaf = (*current).(*Leaf)
+	leaf.hash = ledger.ComputeCompactValue(trie.Hash(leaf.path), payload.Value, height)
 	leaf.key = key
 	return nil
 }
@@ -478,7 +472,7 @@ func (t *Trie) Paths() []ledger.Path {
 
 			// Otherwise, we can stop here and add the path in the extension to
 			// the result slice.
-			path, err := ledger.ToPath(n.path)
+			path, err := ledger.ToPath((*n.path)[:])
 			if err != nil {
 				// An extension with a leaf child should always have a full path.
 				panic(err)

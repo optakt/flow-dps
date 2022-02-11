@@ -29,7 +29,7 @@ type Leaf struct {
 	// The path is kept as a byte slice, which allows us to share the path
 	// between all of the nodes on that path when inserting, reducing memory use
 	// significantly.
-	path []byte
+	path [32]byte
 
 	// We insert the payload into the KV store and keep its hash here. Using the
 	// payload hash rather than the node hash improves insertion performance by
