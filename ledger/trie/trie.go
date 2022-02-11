@@ -82,11 +82,6 @@ func (t *Trie) RootHash() ledger.RootHash {
 // to different heights along the way.
 func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
-	// Let's do some magic for memory optimization.
-	leaf := &Leaf{
-		path: [32]byte(path),
-	}
-
 	// Insertions should never fail, so we can start by encoding the payload
 	// data and storing it in our key-value store. We can also optimistically
 	// check whether the data is already cached and skip this part.
@@ -95,6 +90,20 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	err := t.store.Save(key, data)
 	if err != nil {
 		return fmt.Errorf("could not save payload data to store: %w", err)
+	}
+
+	// Let's do some magic for memory optimization. If we end up inserting this
+	// new leaf, it means that we forged a new path at some point down the trie.
+	// In all likelihood, there will be at least one extension node that wants
+	// to hold part of the path. As a shortcut, we can just hold the path in the
+	// leaf node once, and use a pointer for _all_ extension nodes that hold
+	// part of it. That way, we only hold the actual path once, and each
+	// additional reference only has 8 bytes instead of 32.
+	// At the same time, if we don't insert a new leaf, it means the path already
+	// existed, and we don't need to hold the new copy of it. In that case, we
+	// simply drop the new leaf and store the new key and hash on the old leaf.
+	leaf := &Leaf{
+		path: [32]byte(path),
 	}
 
 	// The parent node is populated at the beginning of each iteration through
