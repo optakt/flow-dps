@@ -114,11 +114,10 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// and we reached the point of insertion for leaf nodes.
 	depth := uint8(0)
 
-	// The `PathLoop` is responsible for creating all the intermediary branch
-	// and extension nodes up to the insertion point of the leaf. We start at
-	// the root and insert these nodes until we reach the maximum depth. Once
-	// maximum depth is reached, we know we have reached the point of insertion
-	// of the leaf node.
+	// The `PathLoop` is responsible for traversing through and creating missing
+	// intermediary branch  and extension nodes up to the insertion point of the
+	// leaf. We start at the root, traversing nodes and inserting them as needed
+	// until we reach the leaf depth.
 	for {
 
 		// We always want to keep track of the parent, so when we break out of
@@ -268,6 +267,9 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			//   extension; and
 			// - at least one bit that is different, which means we have to
 			// create a branch.
+			// We will modify the trie, so if there is a leaf node at the end of
+			// the extension, we need to recompute its hash later.
+			extensionLeaf, ok := node.child.(*Leaf)
 
 			// First, we have to determine what the child for the extension path
 			// that is distinct from the insertion path will be. If we only have
@@ -275,23 +277,25 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// to the child of the current extension node. Otherwise, we have
 			// to insert an extension node in-between that holds the remainder
 			// of the extension node's path.
+			// We potentially have to recompute the hash of the child node, if
+			// that child node is a leaf, so we already calculate the height
+			// here.
+			height := 0
 			child := node.child
 			if common > node.count-1 {
-				child = &Extension{
+				extension := &Extension{
 					path:  node.path,
 					count: node.count - common - 1,
 					child: child,
 				}
+				child = extension
+				height = int(extension.count) - 1
 			}
 
-			// If the extension previously had a leaf as its child, this child's inferred height needs to
-			// change and therefore its hash needs to be recomputed.
-			otherLeaf, ok := child.(*Leaf)
+			// At this point, if the child was a leaf, we can recompute the hash
+			// using the height we have already prepared.
 			if ok {
-				// The hash is computed at the depth of the previous extension, minus
-				// the amount that we got cut by the new conflicting leaf.
-				height := node.count - common - 1
-				otherValue, err := t.store.Retrieve(otherLeaf.key)
+				otherValue, err := t.store.Retrieve(extensionLeaf.key)
 				if err != nil {
 					return fmt.Errorf("could not save retrieve data from store: %w", err)
 				}
@@ -299,8 +303,8 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				if err != nil {
 					return fmt.Errorf("could not decode payload: %w", err)
 				}
-				otherLeaf.hash = ledger.ComputeCompactValue(otherLeaf.path, otherPayload.Value, int(height))
-				fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, otherPayload.Value, otherLeaf.path, otherLeaf.hash)
+				extensionLeaf.hash = ledger.ComputeCompactValue(extensionLeaf.path, otherPayload.Value, int(height))
+				fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, otherPayload.Value, extensionLeaf.path, extensionLeaf.hash)
 			}
 
 			// Then, we can cut the path on the current extension node to
