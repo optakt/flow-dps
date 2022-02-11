@@ -94,11 +94,14 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		return fmt.Errorf("could not save payload data to store: %w", err)
 	}
 
+	// The parent node is populated at the beginning of each iteration through
+	// the trie, so that we know the parent of the leaf eventually, and can
+	// infer the height of the leaf from it.
+	var parent *Node
+
 	// Current always points at the current node for the iteration. It's the
 	// pointer that we forward while iterating along the path of the insertion.
 	// We can modify the trie while iterating by replacing its contents.
-	// Previous keeps the previous
-	var parent *Node
 	current := &t.root
 
 	// Depth keeps track of the depth that we are at in the trie. The root node
@@ -253,7 +256,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// can simply skip to the end of the extension node here; no
 			// modifications are needed.
 			if common == node.count {
-				node.clean = false
 				current = &node.child
 				continue
 			}
@@ -291,13 +293,13 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// Finally, we determine whether the mismatching part of the path
 			// goes to the left or the right of the branch.
-			forkingBit := bitutils.Bit(node.path[:], int(depth))
+			forkingBit := bitutils.Bit(path[:], int(depth))
 			if forkingBit == 0 {
-				branch.left = child
-				current = &(branch.right)
-			} else {
-				branch.right = child
 				current = &(branch.left)
+				branch.right = child
+			} else {
+				current = &(branch.right)
+				branch.left = child
 			}
 
 			// We have to increase depth here again, as we now already have a
