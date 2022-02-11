@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
 	"lukechampine.com/blake3"
@@ -86,19 +85,16 @@ func (t *Trie) RootHash() ledger.RootHash {
 func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 	// Insertions should never fail, so we can start by encoding the payload
-	// data and storing it in our key-value store. We can also check whether the
-	// KV store already has this data stored, to avoid unnecessary I/O.
+	// data and storing it in our key-value store. We can also optimistically
+	// check whether the data is already cached and skip this part.
 	data := encoding.EncodePayload(payload)
 	key := blake3.Sum256(data)
-	err := t.store.Has(key)
-	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-		return fmt.Errorf("could not check payload data in store: %w", err)
-	}
-	if errors.Is(err, badger.ErrKeyNotFound) {
-		err = t.store.Save(key, data)
-	}
-	if err != nil {
-		return fmt.Errorf("could not save payload data to store: %w", err)
+	ok := t.store.Cached(key)
+	if !ok {
+		err := t.store.Save(key, data)
+		if err != nil {
+			return fmt.Errorf("could not save payload data to store: %w", err)
+		}
 	}
 
 	// Current always points at the current node for the iteration. It's the

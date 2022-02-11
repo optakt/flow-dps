@@ -176,20 +176,10 @@ func (s *Store) Retrieve(key [32]byte) ([]byte, error) {
 	return payload, nil
 }
 
-// Has returns true if the given value is currently in the cache.
-func (s *Store) Has(key [32]byte) error {
-
-	// first we check in the cache
+// Cached returns true if the given value is currently in the cache.
+func (s *Store) Cached(key [32]byte) bool {
 	_, ok := s.cache.Get(key)
-	if ok {
-		return nil
-	}
-
-	// second, check in KV store
-	s.txMu.RLock()
-	_, err := s.tx.Get(key[:])
-	s.txMu.RUnlock()
-	return err
+	return ok
 }
 
 // Close stops the store's persistence goroutines.

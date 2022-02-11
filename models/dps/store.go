@@ -16,7 +16,7 @@ package dps
 
 type Store interface {
 	Save(key [32]byte, payload []byte) error
-	Has(key [32]byte) error
+	Cached(key [32]byte) bool
 	Retrieve(key [32]byte) ([]byte, error)
 	Close() error
 }

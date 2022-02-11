@@ -16,7 +16,7 @@ package mocks
 
 type Store struct {
 	SaveFunc     func(key [32]byte, payload []byte) error
-	HasFunc      func(key [32]byte) error
+	CachedFunc   func(key [32]byte) bool
 	RetrieveFunc func(key [32]byte) ([]byte, error)
 	CloseFunc    func() error
 }
@@ -37,8 +37,8 @@ func (s *Store) Save(key [32]byte, payload []byte) error {
 	return s.SaveFunc(key, payload)
 }
 
-func (s *Store) Has(key [32]byte) error {
-	return s.HasFunc(key)
+func (s *Store) Cached(key [32]byte) bool {
+	return s.CachedFunc(key)
 }
 
 func (s *Store) Retrieve(key [32]byte) ([]byte, error) {
