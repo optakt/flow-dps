@@ -194,22 +194,37 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			extensionBit := bitutils.Bit(node.path[:], int(depth))
 			if insertionBit != extensionBit {
 
-				// First, we insert the branch and set its children correctly.
+				// We first determine the child of the branch node on the path
+				// we do NOT follow; it's either the current extension, or the
+				// child of the extension if it was only one bit long. If we
+				// keep the extension, we need to shorten it by one bit.
+				child := *current
+				if node.count == 0 {
+					child = node.child
+				} else {
+					node.count--
+				}
+
+				// After that, we can create the branch and, depending on the
+				// bit of the insertion path, we point either the right or the
+				// left side to the path we do NOT follow, and load the other
+				// `nil` side on the path we DO follow into our current pointer.
 				branch := &Branch{}
 				*current = branch
 				if insertionBit == 0 {
 					current = &(branch.left)
-					branch.right = node
+					branch.right = child
 				} else {
 					current = &(branch.right)
-					branch.left = node
+					branch.left = child
 				}
 
 				// TODO: check if the extension's child is a leaf, in which
 				// case we need to recompute its hash.
 
-				// Finally, we move to the next depth, which is the correct
-				// child of the branch we just introduced.
+				// Either way, we have to increase the depth by one, because we
+				// only skipped one bit (accounting for the branch we just put
+				// at the place of the previous extension).
 				depth++
 				break
 			}
