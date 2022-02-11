@@ -452,6 +452,11 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 	for {
 		switch node := (*current).(type) {
 
+		// Hitting a `nil` node for a read should only be possible when the
+		// root is `nil` and the trie is completely empty.
+		case nil:
+			return nil, ErrPathNotFound
+
 		// If we hit a branch node, we have to sides to it, so we just forward
 		// by one and go to the correct side.
 		case *Branch:
