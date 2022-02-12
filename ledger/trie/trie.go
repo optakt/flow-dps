@@ -109,7 +109,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// The parent node is populated at the beginning of each iteration through
 	// the trie, so that we know the parent of the leaf eventually, and can
 	// infer the height of the leaf from it.
-	var parent *Node
+	var parent Node
 
 	// The sibling node is populated if there is a leaf on an extension node
 	// that is modified, which means that the sibling's hash has to be recomputed.
@@ -117,7 +117,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// infer the right height from a potential extension node ancestor.
 	// We only need to bother with uncle's that are extension nodes; otherwise,
 	// a branch node is implied and the height will be zero.
-	var uncle *Node
+	var uncle Node
 	var sibling *Leaf
 
 	// Current always points at the current node for the iteration. It's the
@@ -138,11 +138,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// until we reach the leaf depth.
 	for {
 
-		// We always want to keep track of the parent, so when we break out of
-		// the loop, we can look at it to determine the idiosyncratic Flow leaf
-		// height.
-		parent = current
-
 		// In this switch statement, we create the next intermediary node, based
 		// on what we encounter on the path. After the switch statement, we
 		// check whether we have reached maximum depth in order to break out of
@@ -159,11 +154,11 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// We insert an extension node at the location of the current pointer,
 			// which is currently empty. We already put an empty leaf as its
 			// child.
-			extension := Extension{
+			extension := &Extension{
 				path:  &leaf.path,
 				count: maxDepth - depth,
 			}
-			*current = &extension
+			*current = extension
 			current = &(extension.child)
 
 			// NOTE: `node-count` is zero-based, so a value of one still means
@@ -171,6 +166,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// to add `node.count+1` to accurately increase depth. This can
 			// overflow, but this is fine. When we reach a depth of zero, we
 			// will know that we reached the depth for leaves.
+			parent = extension
 			depth += extension.count + 1
 			break
 
@@ -192,6 +188,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// NOTE: if we are at maximum depth, this will overflow and set depth
 			// back to zero, which is the condition we check for to realize we
 			// have to have a leaf node.
+			parent = node
 			depth++
 			break
 
@@ -234,7 +231,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 					child = node.child
 				} else {
 					node.count--
-					uncle = &child
+					uncle = node
 				}
 
 				// After that, we can create the branch and, depending on the
@@ -244,16 +241,17 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				branch := &Branch{}
 				*current = branch
 				if insertionBit == 0 {
-					current = &(branch.left)
+					current = &branch.left
 					branch.right = child
 				} else {
-					current = &(branch.right)
+					current = &branch.right
 					branch.left = child
 				}
 
 				// Either way, we have to increase the depth by one, because we
 				// only skipped one bit (accounting for the branch we just put
 				// at the place of the previous extension).
+				parent = branch
 				depth++
 				break
 			}
@@ -283,7 +281,8 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// modifications are needed.
 			if common == node.count {
 				current = &node.child
-				continue
+				parent = node
+				break
 			}
 
 			// At this point we have:
@@ -302,14 +301,14 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// that child node is a leaf, so we already calculate the height
 			// here.
 			child := node.child
-			if common > node.count-1 {
+			if node.count >= common+2 {
 				extension := &Extension{
 					path:  node.path,
-					count: node.count - common - 1,
+					count: node.count - common - 2,
 					child: child,
 				}
 				child = extension
-				uncle = &child
+				uncle = extension
 			}
 
 			// Then, we can cut the path on the current extension node to
@@ -330,16 +329,12 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				branch.left = child
 			}
 
-			// FIXME: Need to set the branch as the parent.
-			var branchNode Node
-			branchNode = branch
-			parent = &branchNode
-
 			// We have to increase depth here again, as we now already have a
 			// branch node at the bit where we mismatch, and we go to the child
 			// of that branch node.
 			// NOTE: as usual, we can overflow here, which will break us out of
 			// the path iterations, and skip to creating/changing the leaf.
+			parent = branch
 			depth++
 			break
 		}
@@ -355,7 +350,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// changed and who thus needs a new hash.
 	if sibling != nil {
 		height := 0
-		u, ok := (*uncle).(*Extension)
+		u, ok := uncle.(*Extension)
 		if ok {
 			height = int(u.count) + 1
 		}
@@ -367,7 +362,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		if err != nil {
 			return fmt.Errorf("could not decode sibling payload: %w", err)
 		}
-		sibling.hash = ledger.ComputeCompactValue(sibling.path, payload.Value, int(height))
+		sibling.hash = ledger.ComputeCompactValue(sibling.path, payload.Value, height)
 	}
 
 	// If the parent of the new leaf is a branch node, the height of the branch
@@ -375,7 +370,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// the height of the extension node, which is the number of bits in its
 	// path, so the zero-based `p.count` plus one.
 	height := 0
-	p, ok := (*parent).(*Extension)
+	p, ok := parent.(*Extension)
 	if ok {
 		height = int(p.count) + 1
 	}
@@ -391,7 +386,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	leaf = (*current).(*Leaf)
 	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height)
 	leaf.key = key
-	// fmt.Printf("GOT: Height %d, Payload: %x, Path: %x, Hash: %x\n", height, payload.Value, leaf.path, leaf.hash)
 	return nil
 }
 
