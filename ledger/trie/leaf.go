@@ -38,6 +38,6 @@ type Leaf struct {
 }
 
 // Hash returns the leaf hash.
-func (l *Leaf) Hash(height uint16) [32]byte {
+func (l *Leaf) Hash(height int) [32]byte {
 	return l.hash
 }

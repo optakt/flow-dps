@@ -47,7 +47,7 @@ type Extension struct {
 }
 
 // Hash returns the extension hash. If it is currently dirty, it is recomputed first.
-func (e *Extension) Hash(height uint16) [32]byte {
+func (e *Extension) Hash(height int) [32]byte {
 	if !e.clean {
 		e.hash = e.computeHash(height)
 		e.clean = true
@@ -56,24 +56,23 @@ func (e *Extension) Hash(height uint16) [32]byte {
 }
 
 // computeHash computes the extension's hash.
-func (e *Extension) computeHash(height uint16) [32]byte {
-
-	// We start with the hash of the child node.
-	hash := e.child.Hash(height)
+func (e *Extension) computeHash(height int) [32]byte {
 
 	// If the child is a leaf, simply use its hash as the extension's hash,
 	// since in that case the extension is the equivalent of a Flow "compact leaf".
 	_, ok := e.child.(*Leaf)
 	if ok {
+		hash := e.child.Hash(height)
 		return hash
 	}
 
 	// If the child is not a leaf, we use its hash as the starting point for
 	// the extension's hash. We then hash it against the default hash for each
 	// height for every bit on the extension.
-	for i := int(height) - int(e.count) + 1; i <= int(height); i++ {
+	hash := e.child.Hash(height - int(e.count))
+	for i := height - int(e.count) + 1; i <= height; i++ {
 		empty := ledger.GetDefaultHashForHeight(i)
-		if bitutils.Bit(e.path[:], 255-1) == 0 {
+		if bitutils.Bit(e.path[:], 255-i) == 0 {
 			hash = trie.HashInterNode(hash, empty)
 		} else {
 			hash = trie.HashInterNode(empty, hash)

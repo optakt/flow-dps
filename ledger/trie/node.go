@@ -23,5 +23,5 @@ type payloadRetriever func(key [32]byte) ([]byte, error)
 
 // Node represents a trie node.
 type Node interface {
-	Hash(height uint16) [32]byte
+	Hash(height int) [32]byte
 }

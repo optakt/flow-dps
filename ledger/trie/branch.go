@@ -39,7 +39,7 @@ type Branch struct {
 }
 
 // Hash returns the branch hash. If it is currently dirty, it is recomputed first.
-func (b *Branch) Hash(height uint16) [32]byte {
+func (b *Branch) Hash(height int) [32]byte {
 	if !b.clean {
 		b.hash = b.computeHash(height)
 		b.clean = true
@@ -48,9 +48,9 @@ func (b *Branch) Hash(height uint16) [32]byte {
 }
 
 // computeHash computes the branch hash by hashing its children.
-func (b *Branch) computeHash(height uint16) [32]byte {
-	left := b.left.Hash(height)
-	right := b.right.Hash(height)
+func (b *Branch) computeHash(height int) [32]byte {
+	left := b.left.Hash(height - 1)
+	right := b.right.Hash(height - 1)
 	hash := hash.HashInterNode(left, right)
 	return hash
 }
