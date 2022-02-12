@@ -69,8 +69,8 @@ func (e *Extension) computeHash(height int) [32]byte {
 	// If the child is not a leaf, we use its hash as the starting point for
 	// the extension's hash. We then hash it against the default hash for each
 	// height for every bit on the extension.
-	hash := e.child.Hash(height - int(e.count))
-	for i := height - int(e.count) + 1; i <= height; i++ {
+	hash := e.child.Hash(height - int(e.count) - 1)
+	for i := height - int(e.count); i <= height; i++ {
 		empty := ledger.GetDefaultHashForHeight(i)
 		if bitutils.Bit(e.path[:], 255-i) == 0 {
 			hash = trie.HashInterNode(hash, empty)

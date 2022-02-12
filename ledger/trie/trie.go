@@ -301,7 +301,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// that child node is a leaf, so we already calculate the height
 			// here.
 			child := node.child
-			if node.count >= common+2 {
+			if node.count > common+1 {
 				extension := &Extension{
 					path:  node.path,
 					count: node.count - common - 2,
