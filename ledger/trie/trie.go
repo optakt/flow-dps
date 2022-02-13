@@ -205,7 +205,8 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// If the child of the extension is currently a leaf, we should
 			// keep track of it as sibling, so we can later recompute its hash.
 			// Below, each time the ancestor of the sibling is an extension node,
-			// we also keep track.
+			// we also keep track of it as the uncle, so we can properly determine
+			// the sibling's height later.
 			sibling, _ = node.child.(*Leaf)
 
 			// The first edge case happens when we have no bits in common. We
@@ -224,8 +225,6 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				// we do NOT follow; it's either the current extension, or the
 				// child of the extension if it was only one bit long. If we
 				// keep the extension, we need to shorten it by one bit.
-				// We also calculate the new height of the potential leaf child
-				// node in case we need to recompute the hash.
 				child := Node(node)
 				if node.count == 0 {
 					child = node.child
@@ -249,8 +248,8 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				}
 
 				// Either way, we have to increase the depth by one, because we
-				// only skipped one bit (accounting for the branch we just put
-				// at the place of the previous extension).
+				// only skipped one bit (accounting for the branch we just used
+				// to replace the extension at the current location).
 				parent = branch
 				depth++
 				break
@@ -258,7 +257,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// At this point, we know that we have at least one bit in common
 			// with the extension's path, so a common value of zero is implicitly
-			// a one. We count common bits starting the second bit, so the
+			// a one. We count common bits starting with the second bit, so the
 			// `common` value is zero-based, just like the `node.count` value.
 			common := uint8(0)
 			for i := depth + 1; i <= depth+node.count; i++ {
@@ -270,7 +269,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 			// We increase the depth to point to the first node after the path
 			// we have in common with the extension node. We have to add one extra
-			// bit because `common` is zero-based.
+			// because `common` is zero-based.
 			// NOTE: `depth` can overflow here, but that's behaviour we want and rely
 			// on; a value of zero after the switch statement indicates that we
 			// have reached the depth where leaves are located.
@@ -285,21 +284,18 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				break
 			}
 
-			// At this point we have:
-			// - at least one bit in common, for which we can reuse the current
-			//   extension; and
-			// - at least one bit that is different, which means we have to
-			// create a branch.
-
-			// First, we have to determine what the child for the extension path
-			// that is distinct from the insertion path will be. If we only have
-			// a single bit that is different, we can point the branch node
-			// to the child of the current extension node. Otherwise, we have
-			// to insert an extension node in-between that holds the remainder
-			// of the extension node's path.
-			// We potentially have to recompute the hash of the child node, if
-			// that child node is a leaf, so we already calculate the height
-			// here.
+			// At this point, we have to insert a branch node after the current
+			// extension and then, depending on remaining bits after the common
+			// path, we also need to put the remaining path we do NOT follow into
+			// an extra extension on that branch.
+			// We start by figuring out the latter part: do we need to create
+			// an extension on the existing path, which we do NOT follow, or can
+			// we simply point to the child of the current extension?
+			// If the length of the extension's path is bigger than the length
+			// of the common path plus one - to account for the branch's bit -
+			// then we need to create an extension and attach the current
+			// extension's child to it. Otherwise, we can simply go straight to
+			// the current extension's child from the branch.
 			child := node.child
 			if node.count > common+1 {
 				extension := &Extension{
@@ -311,15 +307,16 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				uncle = extension
 			}
 
-			// Then, we can cut the path on the current extension node to
-			// correspond to only the shared path and add the branch as its
-			// child.
+			// Then, we can cut the path on the current extension's path's length
+			// to only contain the common path, and point it to the branch node
+			// as its child.
 			branch := &Branch{}
 			node.count = common
 			node.child = branch
 
-			// Finally, we determine whether the mismatching part of the path
-			// goes to the left or the right of the branch.
+			// Finally, we point the the branch's correct side to the path we do
+			// NOT follow, and forward the current pointer to point at the branch's
+			// side that has not been populated yet, and on which we will continue.
 			forkingBit := bitutils.Bit(path[:], int(depth))
 			if forkingBit == 0 {
 				current = &(branch.left)
@@ -329,25 +326,35 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 				branch.left = child
 			}
 
-			// We have to increase depth here again, as we now already have a
-			// branch node at the bit where we mismatch, and we go to the child
-			// of that branch node.
-			// NOTE: as usual, we can overflow here, which will break us out of
-			// the path iterations, and skip to creating/changing the leaf.
+			// Depth is currently pointing at the new branch node, so we have to
+			// increase it by one extra bit to skip past the inserted branch node
+			// and continue on our path.
+			// NOTE: as in all cases, `depth` can overflow here, which will break
+			// us out of iteration down the trie, and on the depth of the leaf
+			// nodes, where we can handle the actual insertion.
 			parent = branch
 			depth++
 			break
 		}
 
-		// If after inserting the next intermediary node, we have a depth of
-		// zero, it means `depth` has overflown, and we reached the leaf node.
+		// In all cases, we should end with an overflow of the `depth` value back
+		// to zero after traversing all 256 bits of the insertion path. So once
+		// depth reaches zero, we can break out of the loop and insert the leaf.
 		if depth == 0 {
 			break
 		}
 	}
 
-	// First, we want to recompute the hash of a potential sibling whose parent
-	// changed and who thus needs a new hash.
+	// Before dealing with the leaf, we will check whether we need to recompute
+	// the hash of its sibling. If we have a non-nil sibling, it means the last
+	// child of a split extension was a leaf, and we need to virtually "move it
+	// down" to the height below the last branch node. This accounts for Flow's
+	// concept of compact leaf nodes, which is essentially the combination of a
+	// leaf with the extension node it descends from. Just like we kept track of
+	// the sibling as potential leaf, we kept track of the uncle as potential
+	// extension, so we can determine the leaf's height. Leaves found as children
+	// of branches all have the same height of zero, so we can use that as a
+	// default, which means we don't need to keep track of it at all.
 	if sibling != nil {
 		height := 0
 		u, ok := uncle.(*Extension)
@@ -365,24 +372,39 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		sibling.hash = ledger.ComputeCompactValue(sibling.path, payload.Value, height)
 	}
 
-	// If the parent of the new leaf is a branch node, the height of the branch
-	// node is one, and the height of the leaf is zero. Otherwise, the height is
-	// the height of the extension node, which is the number of bits in its
-	// path, so the zero-based `p.count` plus one.
+	// We determine the height of the leaf node in the same manner as we determined
+	// the height of the sibling: if the parent is a branch node, the height is zero,
+	// because the branch's height is one. This means we don't need to worry about
+	// the parent's type in this case, and can simply use a height of zero as default
+	// value. If the parent is an extension, however, the height of the leaf
+	// corresponds to the height of the extension node, which increases by one for
+	// every bit in its path. As `p.count` is zero-based, we have to account for
+	// one extra bit.
 	height := 0
 	p, ok := parent.(*Extension)
 	if ok {
 		height = int(p.count) + 1
 	}
 
-	// If the new leaf at this path is `nil`, we want to keep the insertion path
-	// array in the leaf, because it is potentially referenced along the way.
+	// If the current leaf at this path is `nil`, we insert the new leaf at its
+	// correct location. This makes sure that the insertion path array we put on
+	// the leaf is kept, as it might be referenced by the path pointers in
+	// extension nodes along the way.
 	if *current == nil {
 		*current = leaf
 	}
 
-	// Otherwise, if we already have a leaf at this path, then we haven't used
-	// the new path in any intermediary node, and we can discard it.
+	// If we get here without inserting the new leaf at the current location, it
+	// means that we already had a leaf in its place, and hence the path already
+	// existed in the trie. This also means that no extension node points at the
+	// path array of the new leaf, and the memory will be freed because nothing
+	// will point at the new leaf.
+	// In both cases, we retrieve the leaf that is at the current location and
+	// update its payload key and hash. We could check for redundant hashing
+	// here, but a single hash is super cheap, so we don't really need to make
+	// the code path more complex. In general, we won't insert the same payload
+	// at the same path, so this is neglible, just like the fact we mark all
+	// nodes as dirty even when we might insert a redundant payload.
 	leaf = (*current).(*Leaf)
 	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height)
 	leaf.key = key
