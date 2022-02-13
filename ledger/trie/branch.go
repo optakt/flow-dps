@@ -15,91 +15,42 @@
 package trie
 
 import (
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
-// Branch is a node is an intermediary node which has children.
-// It does not need to contain a path, because its children are ordered
-// based on their own path differences.
+// Branch nodes are the non-compact default nodes of a trie. They point to the
+// two possible branches of the trie below them, one for each bit. In the sparse
+// implementation of the trie, they are replaced with extension nodes whenever
+// one of their children would be empty.
 type Branch struct {
-	lChild Node
-	rChild Node
 
-	height uint16
-	hash   hash.Hash
+	// The hash of a default node is a hash of both of its children. If either
+	// of the children change, such as when extension nodes are modified, the
+	// hash needs to be recomputed. We do this in a lazy manner when the trie
+	// hash is requested, so we can avoid redundant hash computations when doing
+	// multiple insertions.
+	hash  [32]byte
+	clean bool
 
-	// dirty marks whether the current hash value of the branch is valid.
-	// If this is set to true, the hash needs to be recomputed.
-	dirty bool
-}
-
-// NewBranch creates a new branch with the given children at the given height.
-func NewBranch(height uint16, lChild, rChild Node) *Branch {
-	b := Branch{
-		lChild: lChild,
-		rChild: rChild,
-
-		height: height,
-		dirty:  true,
-	}
-
-	return &b
-}
-
-// computeHash computes the branch hash by hashing its children.
-func (b *Branch) computeHash() {
-	if b.lChild == nil && b.rChild == nil {
-		b.hash = ledger.GetDefaultHashForHeight(int(b.height))
-		return
-	}
-
-	var lHash, rHash hash.Hash
-	if b.lChild != nil {
-		lHash = b.lChild.Hash()
-	} else {
-		lHash = ledger.GetDefaultHashForHeight(int(b.height) - 1)
-	}
-
-	if b.rChild != nil {
-		rHash = b.rChild.Hash()
-	} else {
-		rHash = ledger.GetDefaultHashForHeight(int(b.height) - 1)
-	}
-
-	b.hash = hash.HashInterNode(lHash, rHash)
-	b.dirty = false
+	// The left node of a branch points to the node where the path continues with
+	// a `0` bit; the right node points to the `1` bit.
+	left  Node
+	right Node
 }
 
 // Hash returns the branch hash. If it is currently dirty, it is recomputed first.
-func (b *Branch) Hash() hash.Hash {
-	if b.dirty {
-		b.computeHash()
+func (b *Branch) Hash(height int) [32]byte {
+	if !b.clean {
+		b.hash = b.computeHash(height)
+		b.clean = true
 	}
 	return b.hash
 }
 
-// FlagDirty flags the branch as having a dirty hash.
-func (b *Branch) FlagDirty() {
-	b.dirty = true
-}
-
-// Height returns the branch height.
-func (b *Branch) Height() uint16 {
-	return b.height
-}
-
-// Path returns a dummy path, since branches do not have paths.
-func (b *Branch) Path() ledger.Path {
-	return ledger.DummyPath
-}
-
-// LeftChild returns the left child.
-func (b *Branch) LeftChild() Node {
-	return b.lChild
-}
-
-// RightChild returns the right child.
-func (b *Branch) RightChild() Node {
-	return b.rChild
+// computeHash computes the branch hash by hashing its children.
+func (b *Branch) computeHash(height int) [32]byte {
+	left := b.left.Hash(height - 1)
+	right := b.right.Hash(height - 1)
+	hash := hash.HashInterNode(left, right)
+	return hash
 }

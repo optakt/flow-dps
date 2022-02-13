@@ -17,110 +17,67 @@ package trie
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
-	"github.com/onflow/flow-go/ledger/common/hash"
+	trie "github.com/onflow/flow-go/ledger/common/hash"
 )
 
-// Extension acts as a shortcut between many layers of the trie. It replaces a set of branches.
-// The Flow implementation does not use extensions. This is a DPS optimization, which allows saving
-// memory usage by reducing the amount of nodes necessary in the trie.
+// Extension nodes are what turn the state trie into a sparse trie. They hold a
+// number of bits of the path, where all nodes in that part of the trie share these
+// same bits of the path. They drastically reduce the memory needed for the trie
+// when most of the paths on the trie are not populated.
 type Extension struct {
-	lChild Node
-	rChild Node
 
-	height uint16
-	// skip is the height up to which the extension skips to.
-	skip uint16
-	// path is the path that the extension skips through.
-	// TODO: Store only skipped part of the path rather than whole path.
-	// 	https://github.com/optakt/flow-dps/issues/516
-	path ledger.Path
-	hash hash.Hash
+	// Extension nodes can be split when inserting additional nodes into sparse
+	// parts of the trie. In those cases, there hash becomes invalid and needs
+	// to be recomputed. In order to avoid redundant recomputations upon multiple
+	// insertions, we lazily recompute when the hash of the trie is requested.
+	hash  [32]byte
+	clean bool
 
-	// dirty marks whether the current hash value of the branch is valid.
-	// If this is set to false, the hash needs to be recomputed.
-	dirty bool
-}
+	// The full path of the insertion will be stored in the leaf node anyway, so
+	// we can simplify a lot of code by keeping the whole path the extension is
+	// on. We can then use the current depth as starting point for the extension's
+	// bits, and the count as the cut-off at the end.
+	path  *[32]byte
+	count uint8
 
-// NewExtension creates a new extension, from the given height to the given skip value.
-func NewExtension(height, skip uint16, path ledger.Path, lChild, rChild Node) *Extension {
-	e := Extension{
-		lChild: lChild,
-		rChild: rChild,
-
-		height: height,
-		skip:   skip,
-		path:   path,
-		dirty:  true,
-	}
-
-	return &e
-}
-
-// computeHash computes the extension's hash.
-func (e *Extension) computeHash() {
-	var computed hash.Hash
-
-	// Compute the bottom hash.
-	var lHash, rHash hash.Hash
-	if e.lChild != nil {
-		lHash = e.lChild.Hash()
-	} else {
-		lHash = ledger.GetDefaultHashForHeight(int(e.skip) - 1)
-	}
-
-	if e.rChild != nil {
-		rHash = e.rChild.Hash()
-	} else {
-		rHash = ledger.GetDefaultHashForHeight(int(e.skip) - 1)
-	}
-	computed = hash.HashInterNode(lHash, rHash)
-
-	// For each skipped height, combine the previous hash with the default ledger
-	// height of the current layer.
-	for i := e.skip; i < e.height; i++ {
-		if bitutils.Bit(e.path[:], int(nodeHeight(i+1))) == 0 {
-			lHash = computed
-			rHash = ledger.GetDefaultHashForHeight(int(i))
-		} else {
-			lHash = ledger.GetDefaultHashForHeight(int(i))
-			rHash = computed
-		}
-		computed = hash.HashInterNode(lHash, rHash)
-	}
-
-	e.hash = computed
-	e.dirty = false
+	// An extension can either have a branch as a child, in case it doesn't reach
+	// the bottom of the trie, or a leaf, in case it extends all the way to the
+	// bottom.
+	child Node
 }
 
 // Hash returns the extension hash. If it is currently dirty, it is recomputed first.
-func (e *Extension) Hash() hash.Hash {
-	if e.dirty {
-		e.computeHash()
+func (e *Extension) Hash(height int) [32]byte {
+	if !e.clean {
+		e.hash = e.computeHash(height)
+		e.clean = true
 	}
 	return e.hash
 }
 
-// FlagDirty flags the extension as having a dirty hash.
-func (e *Extension) FlagDirty() {
-	e.dirty = true
-}
+// computeHash computes the extension's hash.
+func (e *Extension) computeHash(height int) [32]byte {
 
-// Height returns the extension height.
-func (e *Extension) Height() uint16 {
-	return e.height
-}
+	// If the child is a leaf, simply use its hash as the extension's hash,
+	// since in that case the extension is the equivalent of a Flow "compact leaf".
+	_, ok := e.child.(*Leaf)
+	if ok {
+		hash := e.child.Hash(height)
+		return hash
+	}
 
-// Path returns the extension path.
-func (e *Extension) Path() ledger.Path {
-	return e.path
-}
+	// If the child is not a leaf, we use its hash as the starting point for
+	// the extension's hash. We then hash it against the default hash for each
+	// height for every bit on the extension.
+	hash := e.child.Hash(height - int(e.count) - 1)
+	for i := height - int(e.count); i <= height; i++ {
+		empty := ledger.GetDefaultHashForHeight(i)
+		if bitutils.Bit(e.path[:], 255-i) == 0 {
+			hash = trie.HashInterNode(hash, empty)
+		} else {
+			hash = trie.HashInterNode(empty, hash)
+		}
+	}
 
-// LeftChild returns the left child.
-func (e *Extension) LeftChild() Node {
-	return e.lChild
-}
-
-// RightChild returns the right child.
-func (e *Extension) RightChild() Node {
-	return e.rChild
+	return hash
 }

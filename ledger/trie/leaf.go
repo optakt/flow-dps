@@ -14,56 +14,30 @@
 
 package trie
 
-import (
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/hash"
-)
-
-// Leaf is what contains the values in the trie. This implementation uses nodes that are
-// compacted and do not always reside at the bottom layer of the trie.
-// Instead, they are inserted at the first heights where they do not conflict with others.
-// This allows the trie to keep a relatively small amount of nodes, instead of having
-// many nodes/extensions for each leaf in order to bring it all the way to the bottom
-// of the trie.
+// Leaf nodes are found at the end of each path of the trie. They do not contain
+// a part of the path, so they could, in theory, be shuffled around easily. This
+// is made more difficult by the Flow implementation of the trie, which hashes
+// the height of a leaf as part of the node hash, and uses the a height based on
+// the sparse trie, which changes as the trie fills up, instead of the height in
+// terms of path traversed, which would always be the same.
 type Leaf struct {
-	path   ledger.Path
-	hash   hash.Hash
-	height uint16
-}
 
-// NewLeaf creates a new leaf at the given height, and computes its hash using the
-// given path and payload.
-func NewLeaf(height uint16, path ledger.Path, payload *ledger.Payload) *Leaf {
-	n := Leaf{
-		path:   path,
-		hash:   ledger.ComputeCompactValue(hash.Hash(path), payload.Value, int(height)),
-		height: height,
-	}
+	// The hash of the leaf node is computed whenever it changes as part of
+	// insertions, so that it is never dirty.
+	hash [32]byte
 
-	return &n
+	// The path is kept as a byte slice, which allows us to share the path
+	// between all of the nodes on that path when inserting, reducing memory use
+	// significantly.
+	path [32]byte
+
+	// We insert the payload into the KV store and keep its hash here. Using the
+	// payload hash rather than the node hash improves insertion performance by
+	// avoiding storing a payload again when the leaf hash changes.
+	key [32]byte
 }
 
 // Hash returns the leaf hash.
-func (l Leaf) Hash() hash.Hash {
+func (l *Leaf) Hash(height int) [32]byte {
 	return l.hash
-}
-
-// Height returns the extension height.
-func (l Leaf) Height() uint16 {
-	return l.height
-}
-
-// Path returns the leaf path.
-func (l Leaf) Path() ledger.Path {
-	return l.path
-}
-
-// LeftChild returns nothing since leaves do not have any children.
-func (l Leaf) LeftChild() Node {
-	return nil
-}
-
-// RightChild returns nothing since leaves do not have any children.
-func (l Leaf) RightChild() Node {
-	return nil
 }

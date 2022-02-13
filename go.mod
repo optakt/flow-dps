@@ -29,10 +29,12 @@ require (
 	google.golang.org/api v0.56.0
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1
+	lukechampine.com/blake3 v1.1.7
 )
 
 require (
 	cloud.google.com/go v0.93.3 // indirect
+	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
@@ -81,7 +83,7 @@ require (
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/jrick/bitset v1.0.0 // indirect
 	github.com/kevinburke/go-bindata v3.22.0+incompatible // indirect
-	github.com/klauspost/cpuid/v2 v2.0.4 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/koron/go-ssdp v0.0.0-20191105050749-2e1c40ed0b5d // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libp2p/go-addr-util v0.1.0 // indirect
@@ -190,6 +192,7 @@ require (
 	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf // indirect
 	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
+	gonum.org/v1/gonum v0.8.2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210828152312-66f60bf46e71 // indirect
 	gopkg.in/ini.v1 v1.51.0 // indirect
@@ -198,3 +201,5 @@ require (
 )
 
 replace github.com/onflow/flow-go/crypto => ./flow-go/crypto
+
+replace github.com/onflow/flow-go => ./flow-go

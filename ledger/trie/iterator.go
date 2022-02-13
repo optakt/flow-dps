@@ -97,8 +97,13 @@ func (i *NodeIterator) Next() bool {
 		// As we descend into the left child with priority, the only case where we still dig into the
 		// right child is if `n` is `p`'s left child.
 		parent := i.peek()
-		if parent.LeftChild() == n {
-			i.dig(parent.RightChild())
+		switch p := parent.(type) {
+		case *Branch:
+			if p.left == n {
+				i.dig(p.right)
+			}
+		case *Extension, *Leaf:
+			// do nothing
 		}
 		return true
 	}
@@ -132,22 +137,25 @@ func (i *NodeIterator) peek() Node {
 }
 
 // dig adds the children on the given node to the stack.
-func (i *NodeIterator) dig(n Node) {
-	if n == nil {
+func (i *NodeIterator) dig(node Node) {
+	if node == nil {
 		return
 	}
 
 	// Go through each of the node's children, from left to right.
 	for {
-		i.stack = append(i.stack, n)
-		if lChild := n.LeftChild(); lChild != nil {
-			n = lChild
-			continue
+		i.stack = append(i.stack, node)
+		switch n := node.(type) {
+		case *Branch:
+			if n.left != nil {
+				node = n.left
+				continue
+			}
+			if n.right != nil {
+				node = n.right
+				continue
+			}
+			return
 		}
-		if rChild := n.RightChild(); rChild != nil {
-			n = rChild
-			continue
-		}
-		return
 	}
 }
