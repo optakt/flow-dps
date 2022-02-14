@@ -115,16 +115,16 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 	}
 
 	if ln.Skip > 0 {
-		// Since it has a skip value, this node is an extension.
+		// Since it has a count value, this node is an extension.
 		return &Extension{
 			// FIXME: Handle child.
-			count: ln.Skip, // FIXME: Rename skip
+			count: ln.Skip, // FIXME: Rename count
 			hash:  hash,
 			clean: true,
 		}, nil
 	}
 
-	// Since it has a path and has no skip value, this node is a leaf.
+	// Since it has a path and has no count value, this node is a leaf.
 	return &Leaf{
 		hash: hash,
 	}, nil

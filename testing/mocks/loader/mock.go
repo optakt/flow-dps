@@ -12,18 +12,32 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-// FIXME: Not having constructors for nodes means that these tests need to become
-//  internal, which means that since we need Generic tries and nodes in the mocks package
-//  those tests can't use the mocks package without causing an import cycle.
-package trie_test
+package loader
 
 import (
 	"testing"
+
+	"github.com/rs/zerolog"
+
+	"github.com/optakt/flow-dps/ledger/trie"
 )
 
-// TestExtension verifies that the hash value of a branch node with
-// both children (left and right) is computed correctly. As it is in our implementation,
-// extensions can never have less than two children, so no further test is necessary.
-func TestExtension(t *testing.T) {
-	t.Skip()
+type Mock struct {
+	TrieFunc func() (*trie.Trie, error)
+}
+
+func BaselineMock(t *testing.T) *Mock {
+	t.Helper()
+
+	l := Mock{
+		TrieFunc: func() (*trie.Trie, error) {
+			return trie.NewEmptyTrie(zerolog.Nop(), nil), nil
+		},
+	}
+
+	return &l
+}
+
+func (l *Mock) Trie() (*trie.Trie, error) {
+	return l.TrieFunc()
 }

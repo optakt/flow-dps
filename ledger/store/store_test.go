@@ -15,15 +15,18 @@
 package store_test
 
 import (
+	"bytes"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/onflow/flow-go/ledger/common/hash"
-	"github.com/optakt/flow-dps/ledger/store"
-	"github.com/optakt/flow-dps/testing/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/flow-go/ledger/common/hash"
+
+	"github.com/optakt/flow-dps/ledger/store"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestStore_Eviction(t *testing.T) {
@@ -102,7 +105,7 @@ func TestStore_Eviction(t *testing.T) {
 					continue // The entry might not be in the cache yet.
 				}
 
-				if assert.Equal(t, payloads[i].Value[:], payload) {
+				if bytes.Equal(payloads[i].Value[:], payload) {
 					successfulReads++
 				}
 			}

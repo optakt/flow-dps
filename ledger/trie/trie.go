@@ -84,7 +84,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 
 	// Insertions should never fail, so we can start by encoding the payload
 	// data and storing it in our key-value store. We can also optimistically
-	// check whether the data is already cached and skip this part.
+	// check whether the data is already cached and count this part.
 	data := encoding.EncodePayload(payload)
 	key := blake3.Sum256(data)
 	err := t.store.Save(key, data)
@@ -128,7 +128,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// Depth keeps track of the depth that we are at in the trie. The root node
 	// is at a depth of zero; every branch node adds a depth of one, while every
 	// extension node adds a depth equal to the number of bits in its path. When
-	// we reach a depth of zero again, it means we have passed the maximum depth
+	// we reach a depth of zero again, it means we have passed the maximum depth,
 	// and we reached the point of insertion for leaf nodes.
 	depth := uint8(0)
 
@@ -147,7 +147,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 		// If we reach a `nil` node as part of the path traversal, it means that
 		// there are no intermediary nodes left on the given path; we are
 		// entering new territory. At this point, we can simply insert an
-		// extension node with the remainder of the path and skip to maximum
+		// extension node with the remainder of the path and count to maximum
 		// depth.
 		case nil:
 
@@ -260,7 +260,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			// a one. We count common bits starting with the second bit, so the
 			// `common` value is zero-based, just like the `node.count` value.
 			common := uint8(0)
-			for i := depth + 1; i <= depth+node.count; i++ {
+			for i := depth + 1; i != 0 && i <= depth+node.count; i++ {
 				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
 					break
 				}
@@ -276,7 +276,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			depth += common + 1
 
 			// If we have all the bits in common with the extension node, we
-			// can simply skip to the end of the extension node here; no
+			// can simply count to the end of the extension node here; no
 			// modifications are needed.
 			if common == node.count {
 				current = &node.child
@@ -314,7 +314,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			node.count = common
 			node.child = branch
 
-			// Finally, we point the the branch's correct side to the path we do
+			// Finally, we point the branch's correct side to the path we do
 			// NOT follow, and forward the current pointer to point at the branch's
 			// side that has not been populated yet, and on which we will continue.
 			forkingBit := bitutils.Bit(path[:], int(depth))
@@ -327,7 +327,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 			}
 
 			// Depth is currently pointing at the new branch node, so we have to
-			// increase it by one extra bit to skip past the inserted branch node
+			// increase it by one extra bit to count past the inserted branch node
 			// and continue on our path.
 			// NOTE: as in all cases, `depth` can overflow here, which will break
 			// us out of iteration down the trie, and on the depth of the leaf
@@ -403,7 +403,7 @@ func (t *Trie) Insert(path ledger.Path, payload *ledger.Payload) error {
 	// update its payload key and hash. We could check for redundant hashing
 	// here, but a single hash is super cheap, so we don't really need to make
 	// the code path more complex. In general, we won't insert the same payload
-	// at the same path, so this is neglible, just like the fact we mark all
+	// at the same path, so this is negligible, just like the fact we mark all
 	// nodes as dirty even when we might insert a redundant payload.
 	leaf = (*current).(*Leaf)
 	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height)
@@ -517,14 +517,14 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 			break
 		}
 
-		// Once we reach a depth of zero, it means the value has overflown and
+		// Once we reach a depth of zero, it means the value has overflown, and
 		// we reached the leaf node.
 		if depth == 0 {
 			break
 		}
 	}
 
-	// At this point, we should aways have a leaf, so we use it to retreve the
+	// At this point, we should always have a leaf, so we use it to retrieve the
 	// data and decode the payload.
 	leaf := (*current).(*Leaf)
 	data, err := t.store.Retrieve(leaf.key)
@@ -580,77 +580,16 @@ func (t *Trie) Paths() []ledger.Path {
 	return paths
 }
 
-func (t *Trie) Clone() *Trie {
-	newTrie := &Trie{log: t.log, store: t.store}
-
-	queue := deque.New()
-	root := t.RootNode()
-	if root != nil {
-		queue.PushBack(root)
-	}
-
-	var prev, newNode Node
-	for queue.Len() > 0 {
-		node := queue.PopBack().(Node)
-
-		switch n := node.(type) {
-		case *Extension:
-			// Clone extension node and link it to its parent.
-			newExt := &Extension{
-				count: n.count,
-				path:  n.path,
-			}
-			newNode = newExt
-			linkParent(prev, newExt)
-
-			// Add its child to the queue.
-			queue.PushBack(newExt.child)
-
-		case *Branch:
-			// Clone branch node and link it to its parent.
-			newBranch := &Branch{
-				left:  n.left,
-				right: n.right,
-			}
-			newNode = newBranch
-			linkParent(prev, newBranch)
-
-			// Add its children to the queue.
-			if newBranch.left != nil {
-				queue.PushBack(newBranch.left)
-			}
-			if newBranch.right != nil {
-				queue.PushBack(newBranch.right)
-			}
-
-		case *Leaf:
-			// Clone leaf node and link it to its parent.
-			newLeaf := &Leaf{
-				hash: n.hash,
-			}
-			linkParent(prev, newLeaf)
-		}
-
-		prev = newNode
-	}
-
-	return newTrie
-}
-
-func linkParent(parent, child Node) {
-	if parent == nil {
-		return
-	}
-
-	switch p := parent.(type) {
-	case *Extension:
-		p.child = child
-	case *Branch:
-		if p.left == child {
-			p.left = child
-		}
-		if p.right == child {
-			p.right = child
-		}
-	}
-}
+//func (t *Trie) Mutate(paths []ledger.Path, payloads []*ledger.Payload) (*Trie, error) {
+//	if len(paths) != len(payloads) {
+//		return nil, fmt.Errorf("paths and payloads must be the same length")
+//	}
+//
+//	trie := NewTrie(t.log, t.RootNode(), t.store)
+//	for i := range paths {
+//		path := paths[i]
+//		payload := payloads[i]
+//
+//
+//	}
+//}

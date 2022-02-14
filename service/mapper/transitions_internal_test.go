@@ -18,11 +18,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/optakt/flow-dps/testing/mocks/forest"
+	"github.com/optakt/flow-dps/testing/mocks/loader"
 
 	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
@@ -32,7 +35,7 @@ import (
 
 func TestNewTransitions(t *testing.T) {
 	t.Run("nominal case, without options", func(t *testing.T) {
-		load := mocks.BaselineLoader(t)
+		load := loader.BaselineMock(t)
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		read := mocks.BaselineReader(t)
@@ -49,15 +52,14 @@ func TestNewTransitions(t *testing.T) {
 	})
 
 	t.Run("nominal case, with option", func(t *testing.T) {
-		load := mocks.BaselineLoader(t)
+		load := loader.BaselineMock(t)
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		read := mocks.BaselineReader(t)
 		write := mocks.BaselineWriter(t)
 
-		skip := true
 		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, read, write,
-			WithSkipRegisters(skip),
+			WithSkipRegisters(true),
 		)
 
 		assert.NotNil(t, tr)
@@ -67,7 +69,7 @@ func TestNewTransitions(t *testing.T) {
 		assert.NotNil(t, tr.once)
 
 		assert.NotEqual(t, DefaultConfig, tr.cfg)
-		assert.Equal(t, skip, tr.cfg.SkipRegisters)
+		assert.Equal(t, true, tr.cfg.SkipRegisters)
 		assert.Equal(t, DefaultConfig.WaitInterval, tr.cfg.WaitInterval)
 	})
 }
@@ -81,7 +83,7 @@ func TestTransitions_BootstrapState(t *testing.T) {
 		// Copy state in local scope so that we can override its SaveFunc without impacting other
 		// tests running in parallel.
 		var saveCalled bool
-		forest := mocks.BaselineForest(t, true)
+		forest := forest.BaselineMock(t, true)
 		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {
 			if !saveCalled {
 				assert.Nil(t, tree.RootNode())
@@ -491,14 +493,14 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 func TestTransitions_UpdateTree(t *testing.T) {
 	update := mocks.GenericTrieUpdate(0)
-	tree := trie.NewTrie(mocks.NoopLogger, mocks.GenericRootNode, mocks.BaselineStore())
+	tree := trie.NewTrie(mocks.NoopLogger, trie.Node(nil), mocks.BaselineStore())
 
 	t.Run("nominal case without match", func(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusUpdate)
 
-		forest := mocks.BaselineForest(t, false)
+		forest := forest.BaselineMock(t, false)
 		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {
 			// Parent is RootHash of the mocks.GenericTrie.
 			assert.Equal(t, update.RootHash[:], parent[:])
@@ -535,7 +537,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		}
 		tr.feed = feeder
 
-		forest := mocks.BaselineForest(t, true)
+		forest := forest.BaselineMock(t, true)
 		forest.HasFunc = func(flow.StateCommitment) bool {
 			return updateCalled
 		}
@@ -585,7 +587,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		}
 
 		tr, st := baselineFSM(t, StatusUpdate)
-		st.forest = mocks.BaselineForest(t, false)
+		st.forest = forest.BaselineMock(t, false)
 		tr.feed = feed
 
 		err := tr.UpdateTree(st)
@@ -596,7 +598,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 	t.Run("handles forest parent tree not found", func(t *testing.T) {
 		t.Parallel()
 
-		forest := mocks.BaselineForest(t, false)
+		forest := forest.BaselineMock(t, false)
 		forest.TreeFunc = func(_ flow.StateCommitment) (*trie.Trie, bool) {
 			return nil, false
 		}
@@ -624,7 +626,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		forest := mocks.BaselineForest(t, true)
+		forest := forest.BaselineMock(t, true)
 		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.Trie, bool) {
 			return tree, true
 		}
@@ -652,7 +654,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		tr, st := baselineFSM(t, StatusCollect)
 		tr.cfg.SkipRegisters = true
 
-		forest := mocks.BaselineForest(t, true)
+		forest := forest.BaselineMock(t, true)
 		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.Trie, bool) {
 			return tree, true
 		}
@@ -680,7 +682,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusCollect)
-		st.forest = mocks.BaselineForest(t, false)
+		st.forest = forest.BaselineMock(t, false)
 
 		err := tr.CollectRegisters(st)
 
@@ -802,7 +804,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 			return nil
 		}
 
-		forest := mocks.BaselineForest(t, true)
+		forest := forest.BaselineMock(t, true)
 		forest.ResetFunc = func(finalized flow.StateCommitment) {
 			assert.Equal(t, mocks.GenericCommit(0), finalized)
 		}
@@ -912,7 +914,7 @@ func TestTransitions_InitializeMapper(t *testing.T) {
 
 func TestTransitions_ResumeIndexing(t *testing.T) {
 	header := mocks.GenericHeader
-	tree := mocks.GenericTrie
+	tree := trie.NewEmptyTrie(zerolog.Nop(), nil)
 	commit := flow.StateCommitment(tree.RootHash())
 	differentCommit := mocks.GenericCommit(0)
 
@@ -931,7 +933,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return nil
 		}
 
-		loader := mocks.BaselineLoader(t)
+		loader := loader.BaselineMock(t)
 		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
@@ -972,7 +974,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return 0, mocks.GenericError
 		}
 
-		loader := mocks.BaselineLoader(t)
+		loader := loader.BaselineMock(t)
 		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
@@ -1011,7 +1013,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return mocks.GenericError
 		}
 
-		loader := mocks.BaselineLoader(t)
+		loader := loader.BaselineMock(t)
 		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
@@ -1046,7 +1048,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
+		loader := loader.BaselineMock(t)
 		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
@@ -1080,7 +1082,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
+		loader := loader.BaselineMock(t)
 		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
@@ -1114,7 +1116,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
+		loader := loader.BaselineMock(t)
 		loader.TrieFunc = func() (*trie.Trie, error) {
 			return nil, mocks.GenericError
 		}
@@ -1148,7 +1150,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
+		loader := loader.BaselineMock(t)
 		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
@@ -1182,7 +1184,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
+		loader := loader.BaselineMock(t)
 		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
@@ -1212,12 +1214,12 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*Transitions, *State) {
 	t.Helper()
 
-	load := mocks.BaselineLoader(t)
+	load := loader.BaselineMock(t)
 	chain := mocks.BaselineChain(t)
 	feeder := mocks.BaselineFeeder(t)
 	read := mocks.BaselineReader(t)
 	write := mocks.BaselineWriter(t)
-	forest := mocks.BaselineForest(t, true)
+	forest := forest.BaselineMock(t, true)
 
 	once := &sync.Once{}
 	doneCh := make(chan struct{})

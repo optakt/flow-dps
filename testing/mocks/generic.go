@@ -22,7 +22,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/cadence"
@@ -70,16 +69,6 @@ var (
 		ledger.NewKeyPart(1, []byte(`controller`)),
 		ledger.NewKeyPart(2, []byte(`key`)),
 	})
-
-	// GenericTrie Visual Representation:
-	//            B (root)
-	//          /   \
-	//         B     B
-	//        / \   / \
-	//       3   2 1   0
-	//      FIXME: Need to have constructors in the trie package to be able to test this.
-	GenericTrie     = trie.NewEmptyTrie(NoopLogger, nil)
-	GenericRootNode = GenericTrie.RootNode()
 
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),

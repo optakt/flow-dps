@@ -15,6 +15,7 @@
 package trie_test
 
 import (
+	"bytes"
 	"encoding/hex"
 	"testing"
 
@@ -233,10 +234,10 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	path := utils.PathByUint16LeftPadded(rng.Next())
 	temp := rng.Next()
 	payload := utils.LightPayload(temp, temp)
-	trie.Insert(path, payload)
+	require.NoError(t, trie.Insert(path, payload))
 
 	got := trie.RootHash()
-	assert.Equal(t, expectedRootHashes[0], hex.EncodeToString(got[:]))
+	assert.Equal(t, expectedRootHashes[0], hex.EncodeToString(got[:]), "Before iterations")
 
 	var paths []ledger.Path
 	var payloads []ledger.Payload
@@ -244,18 +245,18 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 		paths, payloads = helpers.SampleRandomRegisterWrites(rng, r*100)
 
 		for i := range paths {
-			trie.Insert(paths[i], &payloads[i])
+			require.NoError(t, trie.Insert(paths[i], &payloads[i]))
 		}
 		got = trie.RootHash()
-		assert.Equal(t, expectedRootHashes[r], hex.EncodeToString(got[:]))
+		assert.Equal(t, expectedRootHashes[r], hex.EncodeToString(got[:]), "Iteration %d", r)
 	}
 
 	// update with the same registers with the same values
 	for i := range paths {
-		trie.Insert(paths[i], &payloads[i])
+		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
 	}
 	got = trie.RootHash()
-	assert.Equal(t, expectedRootHashes[19], hex.EncodeToString(got[:]))
+	assert.Equal(t, expectedRootHashes[19], hex.EncodeToString(got[:]), "After iterations")
 }
 
 func TestTrie_InsertDeallocateRegisters(t *testing.T) {
@@ -317,7 +318,37 @@ func Benchmark_TrieRootHash(b *testing.B) {
 }
 
 func Test_UnsafeRead(t *testing.T) {
-	t.Skip()
+	const regCount = 65536
+
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
+
+	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+
+	rng := helpers.NewGenerator()
+	paths := make([]ledger.Path, 0, regCount)
+	payloads := make([]*ledger.Payload, 0, regCount)
+	for i := 0; i < regCount; i++ {
+		paths = append(paths, utils.PathByUint16LeftPadded(uint16(i)))
+		temp := rng.Next()
+		payload := utils.LightPayload(temp, temp)
+		payloads = append(payloads, payload)
+	}
+
+	for i := range paths {
+		require.NoError(t, trie.Insert(paths[i], payloads[i]))
+	}
+
+	got := trie.UnsafeRead(paths)
+
+	for i := range paths {
+		assert.True(t, bytes.Equal(got[i].Value, payloads[i].Value))
+	}
+
+	got = trie.UnsafeRead([]ledger.Path{utils.PathByUint16(42)})
+
+	require.Len(t, got, 1)
+	assert.Nil(t, got[0])
 }
 
 // TestTrie_InsertAdvanced is a custom unit test that does not come from the

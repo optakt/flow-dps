@@ -12,29 +12,53 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-// FIXME: Not having constructors for nodes means that these tests need to become
-//  internal, which means that since we need Generic tries and nodes in the mocks package
-//  those tests can't use the mocks package without causing an import cycle.
-package trie_test
+package trie
 
 import (
+	"encoding/hex"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/hash"
+	"github.com/onflow/flow-go/ledger/common/utils"
 )
 
 // Test_BranchWithoutChildren verifies that the hash value of a branch node without children is computed correctly.
 // We test the hash at the lowest-possible height (0), at an interim height (9) and the max possible height (256)
 func Test_BranchWithoutChildren(t *testing.T) {
-	t.Skip()
+	t.Skip() // Does not exist in our implementation
 }
 
 // Test_BranchWithOneChild verifies that the hash value of a branch node with
 // only one child (left or right) is computed correctly.
 func Test_BranchWithOneChild(t *testing.T) {
-	t.Skip()
+	t.Skip() // Does not exist in our implementation
 }
 
 // Test_BranchWithBothChildren verifies that the hash value of a branch node with
 // both children (left and right) is computed correctly.
 func Test_BranchWithBothChildren(t *testing.T) {
-	t.Skip()
+	const expectedHashHex = "1e4754fb35ec011b6192e205de403c1031d8ce64bd3d1ff8f534a20595af90c3"
+
+	leftPath := utils.PathByUint16(56809)
+	leftPayload := utils.LightPayload(56810, 59656)
+	lHash, err := hash.ToHash(leftPath[:])
+	require.NoError(t, err)
+	leftChild := Leaf{
+		hash: ledger.ComputeCompactValue(lHash, leftPayload.Value, 0),
+	}
+
+	rightPath := utils.PathByUint16(2)
+	rightPayload := utils.LightPayload(11, 22)
+	rHash, err := hash.ToHash(rightPath[:])
+	require.NoError(t, err)
+	rightChild := Leaf{
+		hash: ledger.ComputeCompactValue(rHash, rightPayload.Value, 0),
+	}
+
+	n := Branch{left: &leftChild, right: &rightChild}
+	got := n.Hash(1)
+	require.Equal(t, expectedHashHex, hex.EncodeToString(got[:]))
 }
