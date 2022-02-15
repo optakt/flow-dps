@@ -60,7 +60,9 @@ func TestTrie_InsertLeftRegister(t *testing.T) {
 	path := utils.PathByUint16LeftPadded(0)
 	payload := utils.LightPayload(11, 12345)
 
-	require.NoError(t, trie.Insert(path, payload))
+	var err error
+	trie, err = trie.Insert([]ledger.Path{path}, []ledger.Payload{*payload})
+	require.NoError(t, err)
 
 	got := trie.RootHash()
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
@@ -84,7 +86,9 @@ func TestTrie_InsertRightRegister(t *testing.T) {
 	}
 	payload := utils.LightPayload(12346, 54321)
 
-	require.NoError(t, trie.Insert(path, payload))
+	var err error
+	trie, err = trie.Insert([]ledger.Path{path}, []ledger.Payload{*payload})
+	require.NoError(t, err)
 
 	got := trie.RootHash()
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
@@ -105,7 +109,9 @@ func TestTrie_InsertMiddleRegister(t *testing.T) {
 	path := utils.PathByUint16LeftPadded(56809)
 	payload := utils.LightPayload(12346, 59656)
 
-	trie.Insert(path, payload)
+	var err error
+	trie, err = trie.Insert([]ledger.Path{path}, []ledger.Payload{*payload})
+	require.NoError(t, err)
 
 	got := trie.RootHash()
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
@@ -125,12 +131,19 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
 
 	for i := range paths {
-		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
+
+		before := trie.RootHash()
+		newTr, _ := trie.Insert([]ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
+		after := trie.RootHash()
+		require.Equal(t, before, after, "unexpected mutation of base trie")
+
+		trie = newTr
+
 		refTr, _ = reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
 
 		got := trie.RootHash()
 		want := refTr.RootHash()
-		require.Equal(t, want[:], got[:])
+		require.Equal(t, want[:], got[:], "failed at iteration %d", i)
 	}
 
 	got := trie.RootHash()
@@ -157,11 +170,10 @@ func TestTrie_InsertNeighbors(t *testing.T) {
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 	ref := reference.NewEmptyMTrie()
 
-	for i := range paths {
-		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
-	}
-
 	var err error
+	trie, err = trie.Insert(paths, payloads)
+	require.NoError(t, err)
+
 	ref, err = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
 	require.NoError(t, err)
 
@@ -184,17 +196,17 @@ func TestTrie_InsertFullTrie(t *testing.T) {
 
 	rng := helpers.NewGenerator()
 	paths := make([]ledger.Path, 0, regCount)
-	payloads := make([]*ledger.Payload, 0, regCount)
+	payloads := make([]ledger.Payload, 0, regCount)
 	for i := 0; i < regCount; i++ {
 		paths = append(paths, utils.PathByUint16LeftPadded(uint16(i)))
 		temp := rng.Next()
 		payload := utils.LightPayload(temp, temp)
-		payloads = append(payloads, payload)
+		payloads = append(payloads, *payload)
 	}
 
-	for i := range paths {
-		trie.Insert(paths[i], payloads[i])
-	}
+	var err error
+	trie, err = trie.Insert(paths, payloads)
+	require.NoError(t, err)
 
 	got := trie.RootHash()
 	assert.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
@@ -234,7 +246,10 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	path := utils.PathByUint16LeftPadded(rng.Next())
 	temp := rng.Next()
 	payload := utils.LightPayload(temp, temp)
-	require.NoError(t, trie.Insert(path, payload))
+
+	var err error
+	trie, err = trie.Insert([]ledger.Path{path}, []ledger.Payload{*payload})
+	require.NoError(t, err)
 
 	got := trie.RootHash()
 	assert.Equal(t, expectedRootHashes[0], hex.EncodeToString(got[:]), "Before iterations")
@@ -244,17 +259,17 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	for r := 0; r < 20; r++ {
 		paths, payloads = helpers.SampleRandomRegisterWrites(rng, r*100)
 
-		for i := range paths {
-			require.NoError(t, trie.Insert(paths[i], &payloads[i]))
-		}
+		trie, err = trie.Insert(paths, payloads)
+		require.NoError(t, err)
+
 		got = trie.RootHash()
 		assert.Equal(t, expectedRootHashes[r], hex.EncodeToString(got[:]), "Iteration %d", r)
 	}
 
 	// update with the same registers with the same values
-	for i := range paths {
-		require.NoError(t, trie.Insert(paths[i], &payloads[i]))
-	}
+	trie, err = trie.Insert(paths, payloads)
+	require.NoError(t, err)
+
 	got = trie.RootHash()
 	assert.Equal(t, expectedRootHashes[19], hex.EncodeToString(got[:]), "After iterations")
 }
@@ -270,24 +285,24 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 	testTrie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 	refTrie := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
+	var err error
+
 	// Draw 99 random key-value pairs that will be first allocated and later deallocated.
 	paths1, payloads1 := helpers.SampleRandomRegisterWrites(rng, 99)
-	for i := range paths1 {
-		testTrie.Insert(paths1[i], &payloads1[i])
-	}
+	testTrie, err = testTrie.Insert(paths1, payloads1)
+	require.NoError(t, err)
 
 	// Write an additional 117 registers.
 	paths2, payloads2 := helpers.SampleRandomRegisterWrites(rng, 117)
-	for i := range paths2 {
-		testTrie.Insert(paths2[i], &payloads2[i])
-		refTrie.Insert(paths2[i], &payloads2[i])
-	}
+	testTrie, err = testTrie.Insert(paths2, payloads2)
+	require.NoError(t, err)
+	refTrie, err = refTrie.Insert(paths2, payloads2)
+	require.NoError(t, err)
 
 	// Now we override the first 99 registers with default values, i.e. deallocate them.
 	payloads0 := make([]ledger.Payload, len(payloads1))
-	for i := range paths1 {
-		testTrie.Insert(paths1[i], &payloads0[i])
-	}
+	testTrie, err = testTrie.Insert(paths1, payloads0)
+	require.NoError(t, err)
 
 	// this should be identical to the first 99 registers never been written
 	gotRef := refTrie.RootHash()
@@ -310,9 +325,7 @@ func Benchmark_TrieRootHash(b *testing.B) {
 
 	b.Run("insert elements (new)", func(b *testing.B) {
 		trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
-		for i := range paths {
-			trie.Insert(paths[i], &payloads[i])
-		}
+		trie, _ = trie.Insert(paths, payloads)
 		_ = trie.RootHash()
 	})
 }
@@ -327,17 +340,17 @@ func Test_UnsafeRead(t *testing.T) {
 
 	rng := helpers.NewGenerator()
 	paths := make([]ledger.Path, 0, regCount)
-	payloads := make([]*ledger.Payload, 0, regCount)
+	payloads := make([]ledger.Payload, 0, regCount)
 	for i := 0; i < regCount; i++ {
 		paths = append(paths, utils.PathByUint16LeftPadded(uint16(i)))
 		temp := rng.Next()
 		payload := utils.LightPayload(temp, temp)
-		payloads = append(payloads, payload)
+		payloads = append(payloads, *payload)
 	}
 
-	for i := range paths {
-		require.NoError(t, trie.Insert(paths[i], payloads[i]))
-	}
+	var err error
+	trie, err = trie.Insert(paths, payloads)
+	require.NoError(t, err)
 
 	got := trie.UnsafeRead(paths)
 
@@ -367,24 +380,21 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
 	refTr := reference.NewEmptyMTrie()
 
+	var err error
 	for i := range paths {
-
-		newTr := trie.NewTrie(mocks.NoopLogger, tr.RootNode(), store)
-		require.NoError(t, newTr.Insert(paths[i], payloads[i]))
-
-		newRefTr, err := reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
+		tr, err = tr.Insert([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
-		want := newRefTr.RootHash()
-		got := newTr.RootHash()
-		require.Equalf(t, want, got, "failed at iteration %d", i)
+		refTr, err = reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
+		require.NoError(t, err)
 
-		tr = newTr
-		refTr = newRefTr
+		want := refTr.RootHash()
+		got := tr.RootHash()
+		require.Equalf(t, want, got, "failed at iteration %d", i)
 	}
 }
 
-func TestTrie_Clone(t *testing.T) {
+func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 	const totalValues = 5000
 
 	paths := mocks.GenericLedgerPaths(totalValues)
@@ -396,10 +406,10 @@ func TestTrie_Clone(t *testing.T) {
 	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
 
 	for i := range paths {
-		require.NoError(t, tr.Insert(paths[i], payloads[i]))
-		clone := tr.Clone()
+		newTr, err := tr.Insert([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
+		require.NoError(t, err)
 
-		t.Log(tr.RootHash(), clone.RootHash())
-		assert.Equal(t, tr.RootHash(), clone.RootHash())
+		assert.NotEqual(t, tr.RootHash(), newTr.RootHash())
+		tr = newTr
 	}
 }
