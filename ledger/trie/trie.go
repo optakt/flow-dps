@@ -82,18 +82,22 @@ func (t *Trie) Insert(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 		return nil, fmt.Errorf("paths and payloads must be the same length")
 	}
 
+	tree := t
+
 	root := Node(nil)
 	for i := range paths {
 		path := paths[i]
 		payload := payloads[i]
 
-		err := t.insert(&root, path, &payload)
+		err := tree.insert(&root, path, &payload)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert leaf: %w", err)
 		}
+
+		tree = NewTrie(t.log, root, t.store)
 	}
 
-	return NewTrie(t.log, root, t.store), nil
+	return tree, nil
 }
 
 // insert adds a new leaf to the trie. While doing so, since the trie is optimized, it might
@@ -205,7 +209,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 				prevPointer = &node.left
 			} else {
 				branch := &Branch{
-					left:  node.left,
+					left: node.left,
 				}
 				*newPointer = branch
 				newPointer = &branch.right
@@ -253,7 +257,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 				} else {
 					extension := &Extension{
 						path:  node.path,
-						count: node.count-1,
+						count: node.count - 1,
 						child: node.child,
 					}
 					uncle = extension
@@ -344,7 +348,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 
 			// Now we can re-create the original extension with the proper values to be inserted in the mutated trie.
 			extension := &Extension{
-				path: node.path,
+				path:  node.path,
 				count: common,
 				child: child,
 			}
@@ -404,8 +408,10 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 		// Save the current position of the pointer so that we can get back to the new path after dealing
 		// with the uncle and sibling.
 		height := 0
-		u, _ := uncle.(*Extension)
-		height = int(u.count) + 1
+		u, ok := uncle.(*Extension)
+		if ok {
+			height = int(u.count) + 1
+		}
 
 		value, err := t.store.Retrieve(sibling.key)
 		if err != nil {
@@ -417,10 +423,26 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 		}
 
 		// Update the values for the uncle and sibling in the mutated trie.
-		newPointer = &(u.child)
+		// FIXME: This is ugly as fuck.
+		if ok {
+			// If the uncle is an extension, simply point to its child.
+			newPointer = &(u.child)
+		} else {
+			// If the uncle is not set, then it's actually the same as the parent,
+			// and must be a branch. We need to set the newPointer to the opposite
+			// child to the one that is getting inserted.
+			// FIXME: Turns out we can have a nil uncle and a parent that is not a branch... Since this panics.
+			b := parent.(*Branch)
+			if bitutils.Bit(path[:], int(depth-1)) == 0 {
+				newPointer = &(b.right)
+			} else {
+				newPointer = &(b.left)
+			}
+		}
+
 		clone := &Leaf{
 			path: sibling.path,
-			key: sibling.key,
+			key:  sibling.key,
 			hash: ledger.ComputeCompactValue(sibling.path, payload.Value, height),
 		}
 		*newPointer = clone
@@ -429,7 +451,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 		// FIXME: This is ugly as fuck.
 		switch p := parent.(type) {
 		case *Branch:
-			if bitutils.Bit(path[:], int(depth)) == 0 {
+			if bitutils.Bit(path[:], int(depth-1)) == 0 {
 				newPointer = &(p.left)
 			} else {
 				newPointer = &(p.right)

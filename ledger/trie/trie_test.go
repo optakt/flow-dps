@@ -158,12 +158,10 @@ func TestTrie_InsertNeighbors(t *testing.T) {
 	paths := []ledger.Path{
 		utils.PathByUint16LeftPadded(0),
 		utils.PathByUint16LeftPadded(1),
-		//utils.PathByUint16LeftPadded(2),
 	}
 	payloads := []ledger.Payload{
 		*utils.LightPayload(11, 1111),
 		*utils.LightPayload(11, 2222),
-		//*utils.LightPayload(11, 3333),
 	}
 
 	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
@@ -266,6 +264,7 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	}
 
 	// update with the same registers with the same values
+	// FIXME: For some reason it breaks here instead of in the initial Insert calls.
 	trie, err = trie.Insert(paths, payloads)
 	require.NoError(t, err)
 
