@@ -138,7 +138,6 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 		require.Equal(t, before, after, "unexpected mutation of base trie")
 
 		trie = newTr
-
 		refTr, _ = reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
 
 		got := trie.RootHash()

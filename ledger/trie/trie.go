@@ -254,10 +254,10 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 					extension := &Extension{
 						path:  node.path,
 						count: node.count-1,
+						child: node.child,
 					}
-					*newPointer = extension
-					newPointer = &(extension.child) // FIXME: Double check this
 					uncle = extension
+					child = extension
 				}
 
 				// After that, we can create the branch and, depending on the
@@ -401,11 +401,12 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// of branches all have the same height of zero, so we can use that as a
 	// default, which means we don't need to keep track of it at all.
 	if sibling != nil {
+		// Save the current position of the pointer so that we can get back to the new path after dealing
+		// with the uncle and sibling.
 		height := 0
-		u, ok := uncle.(*Extension)
-		if ok {
-			height = int(u.count) + 1
-		}
+		u, _ := uncle.(*Extension)
+		height = int(u.count) + 1
+
 		value, err := t.store.Retrieve(sibling.key)
 		if err != nil {
 			return fmt.Errorf("could not retrieve sibling data from store: %w", err)
@@ -414,7 +415,28 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 		if err != nil {
 			return fmt.Errorf("could not decode sibling payload: %w", err)
 		}
-		sibling.hash = ledger.ComputeCompactValue(sibling.path, payload.Value, height)
+
+		// Update the values for the uncle and sibling in the mutated trie.
+		newPointer = &(u.child)
+		clone := &Leaf{
+			path: sibling.path,
+			key: sibling.key,
+			hash: ledger.ComputeCompactValue(sibling.path, payload.Value, height),
+		}
+		*newPointer = clone
+
+		// Get back to the original node where the pointer was before we dealt with the sibling.
+		// FIXME: This is ugly as fuck.
+		switch p := parent.(type) {
+		case *Branch:
+			if bitutils.Bit(path[:], int(depth)) == 0 {
+				newPointer = &(p.left)
+			} else {
+				newPointer = &(p.right)
+			}
+		case *Extension:
+			newPointer = &(p.child)
+		}
 	}
 
 	// We determine the height of the leaf node in the same manner as we determined
