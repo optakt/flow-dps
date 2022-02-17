@@ -216,6 +216,10 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 				prevPointer = &node.right
 			}
 
+			if depth == maxDepth {
+				uncle = node
+			}
+
 			// NOTE: if we are at maximum depth, this will overflow and set depth
 			// back to zero, which is the condition we check for to realize we
 			// have to have a leaf node.
@@ -278,6 +282,10 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 					newPointer = &(branch.right)
 					prevPointer = &(branch.right)
 					branch.left = child
+				}
+
+				if uncle == nil {
+					uncle = branch
 				}
 
 				// Either way, we have to increase the depth by one, because we
@@ -360,6 +368,9 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			// as its child.
 			branch := &Branch{}
 			*newPointer = branch
+			if uncle == nil {
+				uncle = branch
+			}
 
 			// Finally, we point the branch's correct side to the path we do
 			// NOT follow, and forward the current pointer to point at the branch's
@@ -404,7 +415,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// extension, so we can determine the leaf's height. Leaves found as children
 	// of branches all have the same height of zero, so we can use that as a
 	// default, which means we don't need to keep track of it at all.
-	if sibling != nil {
+	if sibling != nil && uncle != nil {
 		// Save the current position of the pointer so that we can get back to the new path after dealing
 		// with the uncle and sibling.
 		height := 0
