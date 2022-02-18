@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/common/utils"
 	reference "github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-
 	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/testing/helpers"
 	"github.com/optakt/flow-dps/testing/mocks"
@@ -310,26 +309,6 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(gotRef[:]))
 	require.Equal(t, expectedRootHashHex, hex.EncodeToString(got[:]))
-}
-
-func Benchmark_TrieRootHash(b *testing.B) {
-
-	store := helpers.InMemoryStore(b)
-	defer store.Close()
-
-	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
-
-	b.Run("insert elements (reference)", func(b *testing.B) {
-		ref := reference.NewEmptyMTrie()
-		ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
-		_ = ref.RootHash()
-	})
-
-	b.Run("insert elements (new)", func(b *testing.B) {
-		tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
-		tr, _ = tr.Insert(paths, payloads)
-		_ = tr.RootHash()
-	})
 }
 
 func Test_UnsafeRead(t *testing.T) {

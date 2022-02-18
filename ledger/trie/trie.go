@@ -81,20 +81,20 @@ func (t *Trie) Insert(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	if len(paths) != len(payloads) {
 		return nil, fmt.Errorf("paths and payloads must be the same length")
 	}
+	if len(paths) == 0 {
+		return t, nil
+	}
 
 	tree := t
 
 	root := Node(nil)
 	for i := range paths {
-		path := paths[i]
-		payload := payloads[i]
-
-		err := tree.insert(&root, path, &payload)
+		err := tree.insert(&root, paths[i], &payloads[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert leaf: %w", err)
 		}
 
-		tree.root = root
+		tree = NewTrie(t.log, root, t.store)
 	}
 
 	return tree, nil
@@ -666,4 +666,54 @@ func (t *Trie) Paths() []ledger.Path {
 	}
 
 	return paths
+}
+
+// FIXME: Remove this before merging.
+
+func (t *Trie) PrintSize() {
+	var (
+		branchNodes    uint64
+		extensionNodes uint64
+		leafNodes      uint64
+		branchBytes    uint64
+		extensionBytes uint64
+		leafBytes      uint64
+		payloadBytes   uint64
+	)
+
+	queue := deque.New()
+	root := t.RootNode()
+	if root != nil {
+		queue.PushBack(root)
+	}
+
+	for queue.Len() > 0 {
+		node := queue.PopBack().(Node)
+		switch n := node.(type) {
+		case *Extension:
+			queue.PushBack(n.child)
+
+			extensionBytes += uint64(unsafe.Sizeof(*n))
+			extensionNodes++
+
+		case *Branch:
+			queue.PushBack(n.left)
+			queue.PushBack(n.right)
+
+			branchBytes += uint64(unsafe.Sizeof(*n))
+			branchNodes++
+
+		case *Leaf:
+			leafBytes += uint64(unsafe.Sizeof(*n))
+			leafNodes++
+
+			payload, _ := t.store.Retrieve(n.key)
+			payloadBytes += uint64(len(payload))
+		}
+	}
+
+	fmt.Printf("Extensions: %d - %d bytes\n", extensionNodes, extensionBytes)
+	fmt.Printf("Branches: %d - %d bytes\n", branchNodes, branchBytes)
+	fmt.Printf("Leaves: %d - %d bytes\n", leafNodes, leafBytes)
+	fmt.Printf("Payloads: %d bytes\n", payloadBytes)
 }
