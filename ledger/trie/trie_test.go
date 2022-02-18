@@ -312,7 +312,9 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 
 func Benchmark_TrieRootHash(b *testing.B) {
 
-	store := mocks.BaselineStore()
+	store := helpers.InMemoryStore(b)
+	defer store.Close()
+
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
 
 	b.Run("insert elements (reference)", func(b *testing.B) {
@@ -322,9 +324,9 @@ func Benchmark_TrieRootHash(b *testing.B) {
 	})
 
 	b.Run("insert elements (new)", func(b *testing.B) {
-		trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
-		trie, _ = trie.Insert(paths, payloads)
-		_ = trie.RootHash()
+		tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+		tr, _ = tr.Insert(paths, payloads)
+		_ = tr.RootHash()
 	})
 }
 

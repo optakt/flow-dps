@@ -94,7 +94,7 @@ func (t *Trie) Insert(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			return nil, fmt.Errorf("failed to insert leaf: %w", err)
 		}
 
-		tree = NewTrie(t.log, root, t.store)
+		tree.root = root
 	}
 
 	return tree, nil

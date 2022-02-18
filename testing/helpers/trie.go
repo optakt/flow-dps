@@ -15,8 +15,6 @@
 package helpers
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
@@ -27,9 +25,14 @@ import (
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
+type TestingT interface {
+	require.TestingT
+	TempDir() string
+}
+
 // InMemoryStore returns a store with enough storage to handle our tests in memory,
 // as well as a function to tear it down once it is no longer needed.
-func InMemoryStore(t *testing.T) dps.Store {
+func InMemoryStore(t TestingT) dps.Store {
 	store, err := storage.New(mocks.NoopLogger, storage.WithCacheSize(4096), storage.WithStoragePath(t.TempDir()))
 	require.NoError(t, err)
 
