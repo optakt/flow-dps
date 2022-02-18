@@ -17,6 +17,8 @@ package trie_test
 import (
 	"bytes"
 	"encoding/hex"
+	"os"
+	"runtime/pprof"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -412,4 +414,84 @@ func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 		assert.NotEqual(t, tr.RootHash(), newTr.RootHash())
 		tr = newTr
 	}
+}
+
+func BenchmarkTrie_Insert(b *testing.B) {
+
+	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
+
+	b.Run("insert 1000 elements (reference)", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ref := reference.NewEmptyMTrie()
+			ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
+			_ = ref.RootHash()
+		}
+	})
+
+	store := helpers.InMemoryStore(b)
+	defer store.Close()
+
+	b.Run("insert 1000 elements (new)", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+			tr, _ = tr.Insert(paths, payloads)
+			_ = tr.RootHash()
+		}
+	})
+}
+
+func BenchmarkTrie_Read(b *testing.B) {
+
+	store := helpers.InMemoryStore(b)
+	defer store.Close()
+
+	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
+
+	ref, _ := reference.NewTrieWithUpdatedRegisters(reference.NewEmptyMTrie(), paths, payloads)
+	tr, _ := trie.NewEmptyTrie(mocks.NoopLogger, store).Insert(paths, payloads)
+
+	b.Run("read one element (reference)", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ref.UnsafeRead(paths)
+		}
+	})
+
+	b.Run("read one element (new)", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			tr.UnsafeRead(paths)
+		}
+	})
+}
+
+func Test_NewMemoryUsage(t *testing.T) {
+	const totalValues = 5000
+
+	paths := mocks.GenericLedgerPaths(totalValues)
+	p := mocks.GenericLedgerPayloads(totalValues)
+	var payloads []ledger.Payload
+	for i := range p {
+		payloads = append(payloads, *p[i])
+	}
+
+	store := helpers.InMemoryStore(t)
+	defer store.Close()
+
+	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	// FIXME: Doing a single insertion somehow prevents the insertion logic from even appearing in the heap profile.
+	//tr, _ = tr.Insert(paths, payloads)
+	_ = tr.RootHash()
+
+	// FIXME: Calling insert repeatedly for each insertion makes it show in the heap profile. We don't see exactly what
+	//        is being allocated, but it's not the same as the memory usage of the trie.
+	for i := range paths {
+		tr, _ = tr.Insert([]ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
+	}
+
+	file, _ := os.Create("/tmp/new_bench_heap.prof")
+	defer file.Close()
+	pprof.WriteHeapProfile(file)
+
+	_ = tr.RootHash()
+
+	tr.PrintSize()
 }

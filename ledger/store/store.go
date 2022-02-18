@@ -39,6 +39,7 @@ import (
 // impact to memory usage.
 
 // TODO: Implement an alternative version of the store that puts all payloads simply into a map[[32]byte]*Payload.
+//       See https://github.com/optakt/flow-dps/issues/527.
 
 // Store is a component that provides fast persistent storage by using an LRU cache from which evicted entries get
 // persisted on disk.

@@ -592,7 +592,7 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 			// `common` and `node.count` don't match exactly, there is at least
 			// one bit of difference.
 			common := uint8(0)
-			for i := depth + 1; i <= depth+node.count; i++ {
+			for i := depth + 1; i != 0 && i <= depth+node.count; i++ {
 				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
 					break
 				}
@@ -660,12 +660,8 @@ func (t *Trie) Paths() []ledger.Path {
 			paths = append(paths, path)
 
 		case *Branch:
-			if n.left != nil {
-				queue.PushBack(n.left)
-			}
-			if n.right != nil {
-				queue.PushBack(n.right)
-			}
+			queue.PushBack(n.left)
+			queue.PushBack(n.right)
 		}
 	}
 
