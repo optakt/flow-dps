@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/encoding"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/common/utils"
 
@@ -45,10 +46,10 @@ func Test_DecodeLegacyFormat(t *testing.T) {
 	// Version 0.
 	encoded := []byte{
 		0x00, 0x00, // Encoding version
-		0xf1,                                           // Height
+		0x00, 0xf1, // Height
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // LIndex
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // RIndex
-		0x07,                                           // Max depth
+		0x00, 0x07, // Max depth
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x88, // Register count
 		0x00, 0x20, // Path data len
 		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -69,5 +70,10 @@ func Test_DecodeLegacyFormat(t *testing.T) {
 	require.NoError(t, err)
 
 	got, err := store.Retrieve(key)
-	assert.ElementsMatch(t, wantPayload.Value[:], got[:])
+	require.NoError(t, err)
+
+	gotPayload, err := encoding.DecodePayload(got)
+	require.NoError(t, err)
+
+	assert.Equal(t, wantPayload, gotPayload)
 }

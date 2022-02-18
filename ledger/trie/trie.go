@@ -216,10 +216,6 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 				prevPointer = &node.right
 			}
 
-			if depth == maxDepth {
-				uncle = node
-			}
-
 			// NOTE: if we are at maximum depth, this will overflow and set depth
 			// back to zero, which is the condition we check for to realize we
 			// have to have a leaf node.
@@ -368,6 +364,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			// as its child.
 			branch := &Branch{}
 			*newPointer = branch
+
 			if uncle == nil {
 				uncle = branch
 			}
@@ -412,9 +409,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// concept of compact leaf nodes, which is essentially the combination of a
 	// leaf with the extension node it descends from. Just like we kept track of
 	// the sibling as potential leaf, we kept track of the uncle as potential
-	// extension, so we can determine the leaf's height. Leaves found as children
-	// of branches all have the same height of zero, so we can use that as a
-	// default, which means we don't need to keep track of it at all.
+	// extension, so we can determine the leaf's height.
 	if sibling != nil && uncle != nil {
 		// Save the current position of the pointer so that we can get back to the new path after dealing
 		// with the uncle and sibling.
@@ -434,7 +429,6 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 		}
 
 		// Update the values for the uncle and sibling in the mutated trie.
-		// FIXME: This is ugly as fuck.
 		if ok {
 			// If the uncle is an extension, simply point to its child.
 			newPointer = &(u.child)
@@ -442,7 +436,6 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			// If the uncle is not set, then it's actually the same as the parent,
 			// and must be a branch. We need to set the newPointer to the opposite
 			// child to the one that is getting inserted.
-			// FIXME: Turns out we can have a nil uncle and a parent that is not a branch... Since this panics.
 			b := parent.(*Branch)
 			if bitutils.Bit(path[:], int(depth-1)) == 0 {
 				newPointer = &(b.right)
@@ -459,7 +452,6 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 		*newPointer = clone
 
 		// Get back to the original node where the pointer was before we dealt with the sibling.
-		// FIXME: This is ugly as fuck.
 		switch p := parent.(type) {
 		case *Branch:
 			if bitutils.Bit(path[:], int(depth-1)) == 0 {
