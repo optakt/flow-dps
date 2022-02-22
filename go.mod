@@ -29,7 +29,6 @@ require (
 	google.golang.org/api v0.56.0
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1
-	lukechampine.com/blake3 v1.1.7
 )
 
 require (

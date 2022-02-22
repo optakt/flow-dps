@@ -127,7 +127,7 @@ func RebuildNodes(lightNodes []*trie.LightNode) ([]trie.Node, error) {
 		// If the node has children that have a higher index than it, it means the node slice is disordered and
 		// cannot be processed.
 		if lightNode.LIndex >= uint64(i) || lightNode.RIndex >= uint64(i) {
-			return nil, errors.New("sequence of light nodes does not satisfy descendents first relationship")
+			return nil, errors.New("sequence of light nodes does not satisfy descendants first relationship")
 		}
 
 		// Convert the lightNode into a proper node and append it to the returned slice of nodes.

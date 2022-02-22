@@ -27,7 +27,7 @@ import (
 type Extension struct {
 
 	// Extension nodes can be split when inserting additional nodes into sparse
-	// parts of the trie. In those cases, there hash becomes invalid and needs
+	// parts of the trie. In those cases, their hash becomes invalid and needs
 	// to be recomputed. In order to avoid redundant recomputations upon multiple
 	// insertions, we lazily recompute when the hash of the trie is requested.
 	hash  [32]byte

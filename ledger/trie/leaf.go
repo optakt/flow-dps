@@ -31,13 +31,11 @@ type Leaf struct {
 	// significantly.
 	path [32]byte
 
-	// We insert the payload into the KV store and keep its hash here. Using the
-	// payload hash rather than the node hash improves insertion performance by
-	// avoiding storing a payload again when the leaf hash changes.
-	key [32]byte
+	// The encoded payload of the leaf.
+	payload []byte
 }
 
 // Hash returns the leaf hash.
-func (l *Leaf) Hash(height int) [32]byte {
+func (l *Leaf) Hash(int) [32]byte {
 	return l.hash
 }

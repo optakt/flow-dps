@@ -17,6 +17,7 @@ package trie_test
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"runtime/pprof"
 	"testing"
@@ -395,7 +396,7 @@ func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 	}
 }
 
-func BenchmarkTrie_Insert(b *testing.B) {
+func BenchmarkTrie_InsertMany(b *testing.B) {
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
 
@@ -411,6 +412,63 @@ func BenchmarkTrie_Insert(b *testing.B) {
 	defer store.Close()
 
 	b.Run("insert 1000 elements (new)", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+			tr, _ = tr.Insert(paths, payloads)
+			_ = tr.RootHash()
+		}
+	})
+}
+
+func BenchmarkTrie_InsertX(b *testing.B) {
+
+	store := helpers.InMemoryStore(b)
+	defer store.Close()
+
+	for i := 1; i <= 16; i++ {
+		paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
+
+		b.Run(fmt.Sprintf("insert %d elements (reference)", i), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				ref := reference.NewEmptyMTrie()
+				ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
+				_ = ref.RootHash()
+			}
+		})
+
+		b.Run(fmt.Sprintf("insert %d elements (new)", i), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+				tr, _ = tr.Insert(paths, payloads)
+				_ = tr.RootHash()
+			}
+		})
+	}
+}
+
+func BenchmarkTrie_InsertNeighbors(b *testing.B) {
+
+	paths := []ledger.Path{
+		utils.PathByUint16LeftPadded(0),
+		utils.PathByUint16LeftPadded(1),
+	}
+	payloads := []ledger.Payload{
+		*utils.LightPayload(11, 1111),
+		*utils.LightPayload(11, 2222),
+	}
+
+	b.Run("insert neighbors (reference)", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ref := reference.NewEmptyMTrie()
+			ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
+			_ = ref.RootHash()
+		}
+	})
+
+	store := helpers.InMemoryStore(b)
+	defer store.Close()
+
+	b.Run("insert neighbors (new)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
 			tr, _ = tr.Insert(paths, payloads)

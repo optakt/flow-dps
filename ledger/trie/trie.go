@@ -17,10 +17,10 @@ package trie
 import (
 	"errors"
 	"fmt"
+	"unsafe"
 
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog"
-	"lukechampine.com/blake3"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
@@ -94,7 +94,7 @@ func (t *Trie) Insert(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			return nil, fmt.Errorf("failed to insert leaf: %w", err)
 		}
 
-		tree = NewTrie(t.log, root, t.store)
+		tree.root = root
 	}
 
 	return tree, nil
@@ -108,12 +108,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// Insertions should never fail, so we can start by encoding the payload
 	// data and storing it in our key-value store. We can also optimistically
 	// check whether the data is already cached and count this part.
-	data := encoding.EncodePayload(payload)
-	key := blake3.Sum256(data)
-	err := t.store.Save(key, data)
-	if err != nil {
-		return fmt.Errorf("could not save leaf data to store: %w", err)
-	}
+	data := encoding.EncodePayload(payload) // FIXME: 2.67s out of 170s.
 
 	// Let's do some magic for memory optimization. If we end up inserting this
 	// new leaf, it means that we forged a new path at some point down the trie.
@@ -126,7 +121,8 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// existed, and we don't need to hold the new copy of it. In that case, we
 	// simply drop the new leaf and store the new key and hash on the old leaf.
 	leaf := &Leaf{
-		path: [32]byte(path),
+		path:    [32]byte(path),
+		payload: data,
 	}
 
 	// The parent node is populated at the beginning of each iteration through
@@ -297,8 +293,8 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			// a one. We count common bits starting with the second bit, so the
 			// `common` value is zero-based, just like the `node.count` value.
 			common := uint8(0)
-			for i := depth + 1; i != 0 && i <= depth+node.count; i++ {
-				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
+			for i := depth + 1; i != 0 && i <= depth+node.count; i++ { // FIXME: 540ms out of 170s
+				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) { // FIXME: 3.31s out of 170s.
 					break
 				}
 				common++
@@ -419,11 +415,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			height = int(u.count) + 1
 		}
 
-		value, err := t.store.Retrieve(sibling.key)
-		if err != nil {
-			return fmt.Errorf("could not retrieve sibling data from store: %w", err)
-		}
-		payload, err := encoding.DecodePayload(value)
+		payload, err := encoding.DecodePayload(sibling.payload) // FIXME: 1s out of 170s.
 		if err != nil {
 			return fmt.Errorf("could not decode sibling payload: %w", err)
 		}
@@ -445,9 +437,9 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 		}
 
 		clone := &Leaf{
-			path: sibling.path,
-			key:  sibling.key,
-			hash: ledger.ComputeCompactValue(sibling.path, payload.Value, height),
+			path:    sibling.path,
+			payload: sibling.payload,
+			hash:    ledger.ComputeCompactValue(sibling.path, payload.Value, height), // FIXME: 20.63s out of 170s.
 		}
 		*newPointer = clone
 
@@ -498,8 +490,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// at the same path, so this is negligible, just like the fact we mark all
 	// nodes as dirty even when we might insert a redundant payload.
 	leaf = (*newPointer).(*Leaf)
-	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height)
-	leaf.key = key
+	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height) // FIXME: 135s out of 170s.
 	return nil
 }
 
@@ -619,11 +610,7 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 	// At this point, we should always have a leaf, so we use it to retrieve the
 	// data and decode the payload.
 	leaf := (*current).(*Leaf)
-	data, err := t.store.Retrieve(leaf.key)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve payload data: %w", err)
-	}
-	payload, err := encoding.DecodePayload(data)
+	payload, err := encoding.DecodePayload(leaf.payload)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode payload data: %w", err)
 	}
@@ -678,7 +665,6 @@ func (t *Trie) PrintSize() {
 		branchBytes    uint64
 		extensionBytes uint64
 		leafBytes      uint64
-		payloadBytes   uint64
 	)
 
 	queue := deque.New()
@@ -704,16 +690,12 @@ func (t *Trie) PrintSize() {
 			branchNodes++
 
 		case *Leaf:
-			leafBytes += uint64(unsafe.Sizeof(*n))
+			leafBytes += uint64(unsafe.Sizeof(*n)) + uint64(len(n.payload))
 			leafNodes++
-
-			payload, _ := t.store.Retrieve(n.key)
-			payloadBytes += uint64(len(payload))
 		}
 	}
 
 	fmt.Printf("Extensions: %d - %d bytes\n", extensionNodes, extensionBytes)
 	fmt.Printf("Branches: %d - %d bytes\n", branchNodes, branchBytes)
 	fmt.Printf("Leaves: %d - %d bytes\n", leafNodes, leafBytes)
-	fmt.Printf("Payloads: %d bytes\n", payloadBytes)
 }
