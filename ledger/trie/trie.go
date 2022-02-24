@@ -108,7 +108,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// Insertions should never fail, so we can start by encoding the payload
 	// data and storing it in our key-value store. We can also optimistically
 	// check whether the data is already cached and count this part.
-	data := encoding.EncodePayload(payload) // FIXME: 2.67s out of 170s.
+	data := encoding.EncodePayload(payload)
 
 	// Let's do some magic for memory optimization. If we end up inserting this
 	// new leaf, it means that we forged a new path at some point down the trie.
@@ -293,8 +293,8 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			// a one. We count common bits starting with the second bit, so the
 			// `common` value is zero-based, just like the `node.count` value.
 			common := uint8(0)
-			for i := depth + 1; i != 0 && i <= depth+node.count; i++ { // FIXME: 540ms out of 170s
-				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) { // FIXME: 3.31s out of 170s.
+			for i := depth + 1; i != 0 && i <= depth+node.count; i++ {
+				if bitutils.Bit(path[:], int(i)) != bitutils.Bit(node.path[:], int(i)) {
 					break
 				}
 				common++
@@ -415,7 +415,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			height = int(u.count) + 1
 		}
 
-		payload, err := encoding.DecodePayload(sibling.payload) // FIXME: 1s out of 170s.
+		payload, err := encoding.DecodePayload(sibling.payload)
 		if err != nil {
 			return fmt.Errorf("could not decode sibling payload: %w", err)
 		}
@@ -439,7 +439,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 		clone := &Leaf{
 			path:    sibling.path,
 			payload: sibling.payload,
-			hash:    ledger.ComputeCompactValue(sibling.path, payload.Value, height), // FIXME: 20.63s out of 170s.
+			hash:    ledger.ComputeCompactValue(sibling.path, payload.Value, height),
 		}
 		*newPointer = clone
 
@@ -490,7 +490,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// at the same path, so this is negligible, just like the fact we mark all
 	// nodes as dirty even when we might insert a redundant payload.
 	leaf = (*newPointer).(*Leaf)
-	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height) // FIXME: 135s out of 170s.
+	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height)
 	return nil
 }
 

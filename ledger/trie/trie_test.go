@@ -391,7 +391,7 @@ func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 		newTr, err := tr.Insert([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
-		assert.NotEqual(t, tr.RootHash(), newTr.RootHash())
+		require.NotEqual(t, tr.RootHash(), newTr.RootHash())
 		tr = newTr
 	}
 }
