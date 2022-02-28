@@ -17,6 +17,7 @@ package trie
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"unsafe"
 
 	"github.com/gammazero/deque"
@@ -36,14 +37,49 @@ type Trie struct {
 	log   zerolog.Logger
 	root  Node
 	store dps.Store
+
+	extensions *sync.Pool
+	branches   *sync.Pool
+	leaves     *sync.Pool
+}
+
+func preallocate(number int) (*sync.Pool, *sync.Pool, *sync.Pool) {
+	ePool := &sync.Pool{}
+	ePool.New = func() interface{} {
+		return &Extension{}
+	}
+	bPool := &sync.Pool{}
+	bPool.New = func() interface{} {
+		return &Branch{}
+	}
+	lPool := &sync.Pool{}
+	lPool.New = func() interface{} {
+		return &Leaf{}
+	}
+
+	// Pre allocate each node type.
+	for i := 0; i < number; i++ {
+		ePool.Put(ePool.New())
+		bPool.Put(bPool.New())
+		lPool.Put(lPool.New())
+	}
+
+	return ePool, bPool, lPool
 }
 
 // NewEmptyTrie creates a new trie without a root node, with the given payload store.
 func NewEmptyTrie(log zerolog.Logger, store dps.Store) *Trie {
+
+	ePool, bPool, lPool := preallocate(50000)
+
 	t := Trie{
 		log:   log.With().Str("subcomponent", "trie").Logger(),
 		root:  nil,
 		store: store,
+
+		extensions: ePool,
+		branches:   bPool,
+		leaves:     lPool,
 	}
 
 	return &t
@@ -51,10 +87,17 @@ func NewEmptyTrie(log zerolog.Logger, store dps.Store) *Trie {
 
 // NewTrie creates a new trie using the given root node and payload store.
 func NewTrie(log zerolog.Logger, root Node, store dps.Store) *Trie {
+
+	ePool, bPool, lPool := preallocate(50000)
+
 	t := Trie{
 		log:   log.With().Str("subcomponent", "trie").Logger(),
 		root:  root,
 		store: store,
+
+		extensions: ePool,
+		branches:   bPool,
+		leaves:     lPool,
 	}
 
 	return &t
@@ -89,7 +132,7 @@ func (t *Trie) Insert(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 	root := Node(nil)
 	for i := range paths {
-		err := tree.insert(&root, paths[i], &payloads[i])
+		err := tree.insert(t, &root, paths[i], &payloads[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert leaf: %w", err)
 		}
@@ -103,7 +146,7 @@ func (t *Trie) Insert(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 // insert adds a new leaf to the trie. While doing so, since the trie is optimized, it might
 // restructure the trie by adding new extensions, branches, or even moving other nodes
 // to different heights along the way.
-func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) error {
+func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *ledger.Payload) error {
 
 	// Insertions should never fail, so we can start by encoding the payload
 	// data and storing it in our key-value store. We can also optimistically
@@ -120,10 +163,9 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// At the same time, if we don't insert a new leaf, it means the path already
 	// existed, and we don't need to hold the new copy of it. In that case, we
 	// simply drop the new leaf and store the new key and hash on the old leaf.
-	leaf := &Leaf{
-		path:    [32]byte(path),
-		payload: data,
-	}
+	leaf := t.leaves.Get().(*Leaf)
+	leaf.path = path
+	leaf.payload = data
 
 	// The parent node is populated at the beginning of each iteration through
 	// the trie, so that we know the parent of the leaf eventually, and can
@@ -143,6 +185,7 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 	// pointer that we forward while iterating along the path of the insertion.
 	// We can modify the trie while iterating by replacing its contents.
 	prevPointer := &t.root
+	originalPointer := &original.root
 	newPointer := root
 
 	// Depth keeps track of the depth that we are at in the trie. The root node
@@ -174,10 +217,12 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			// We insert an extension node at the location of the current pointer,
 			// which is currently empty. We already put an empty leaf as its
 			// child.
-			extension := &Extension{
-				path:  &leaf.path,
-				count: maxDepth - depth,
-			}
+			extension := t.extensions.Get().(*Extension)
+			extension.path = &leaf.path
+			extension.count = maxDepth - depth
+			extension.child = nil
+			extension.clean = false
+
 			*newPointer = extension
 			newPointer = &(extension.child)
 			prevPointer = &(extension.child)
@@ -195,21 +240,35 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 		// correct side and increase the depth.
 		case *Branch:
 
+			var branch *Branch
+			if newPointer != originalPointer {
+				branch = node
+			} else {
+				branch = t.branches.Get().(*Branch)
+				branch.left = nil
+				branch.right = nil
+			}
+			branch.clean = false
+
 			// If the current bit is zero, we go left; if it is one, we go right.
 			if bitutils.Bit(path[:], int(depth)) == 0 {
-				branch := &Branch{
-					right: node.right,
-				}
+				branch.right = node.right
+
 				*newPointer = branch
 				newPointer = &branch.left
 				prevPointer = &node.left
-			} else {
-				branch := &Branch{
-					left: node.left,
+				if prevPointer == originalPointer {
+					originalPointer = &node.left
 				}
+			} else {
+				branch.left = node.left
+
 				*newPointer = branch
 				newPointer = &branch.right
 				prevPointer = &node.right
+				if prevPointer == originalPointer {
+					originalPointer = &node.right
+				}
 			}
 
 			// NOTE: if we are at maximum depth, this will overflow and set depth
@@ -251,11 +310,12 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 				if node.count == 0 {
 					child = node.child
 				} else {
-					extension := &Extension{
-						path:  node.path,
-						count: node.count - 1,
-						child: node.child,
-					}
+					extension := t.extensions.Get().(*Extension)
+					extension.path = node.path
+					extension.count = node.count - 1
+					extension.child = node.child
+					extension.clean = false
+
 					uncle = extension
 					child = extension
 				}
@@ -264,16 +324,27 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 				// bit of the insertion path, we point either the right or the
 				// left side to the path we do NOT follow, and load the other
 				// `nil` side on the path we DO follow into our current pointer.
-				branch := &Branch{}
+				branch := t.branches.Get().(*Branch)
+				branch.clean = false
 				*newPointer = branch
 				if insertionBit == 0 {
+					branch.left = nil
+					branch.right = child
+
 					newPointer = &(branch.left)
 					prevPointer = &(branch.left)
-					branch.right = child
+					if prevPointer == originalPointer {
+						originalPointer = &(branch.left)
+					}
 				} else {
+					branch.left = child
+					branch.right = nil
+
 					newPointer = &(branch.right)
 					prevPointer = &(branch.right)
-					branch.left = child
+					if prevPointer == originalPointer {
+						originalPointer = &(branch.right)
+					}
 				}
 
 				if uncle == nil {
@@ -312,13 +383,23 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			// can simply count to the end of the extension node here; no
 			// modifications are needed.
 			if common == node.count {
-				extension := &Extension{
-					path:  node.path,
-					count: node.count,
+				var extension *Extension
+				if prevPointer != originalPointer {
+					extension = node
+				} else {
+					extension = t.extensions.Get().(*Extension)
 				}
+				extension.path = node.path
+				extension.child = nil
+				extension.count = node.count
+				extension.clean = false
+
 				*newPointer = extension
 				newPointer = &(extension.child)
 				prevPointer = &(node.child)
+				if prevPointer == originalPointer {
+					originalPointer = &(node.child)
+				}
 				parent = node
 				break
 			}
@@ -337,28 +418,36 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			// the current extension's child from the branch.
 			child := node.child
 			if node.count > common+1 {
-				extension := &Extension{
-					path:  node.path,
-					count: node.count - common - 2,
-					child: child,
-				}
+				extension := t.extensions.Get().(*Extension)
+				extension.path = node.path
+				extension.count = node.count - common - 2
+				extension.child = child
+				extension.clean = false
+
 				child = extension
 				uncle = extension
 			}
 
 			// Now we can re-create the original extension with the proper values to be inserted in the mutated trie.
-			extension := &Extension{
-				path:  node.path,
-				count: common,
-				child: child,
+			var extension *Extension
+			if prevPointer != originalPointer {
+				extension = node
+			} else {
+				extension = t.extensions.Get().(*Extension)
 			}
+			extension.path = node.path
+			extension.count = common
+			extension.child = child
+			extension.clean = false
+
 			*newPointer = extension
 			newPointer = &(extension.child)
 
 			// Then, we can cut the path on the current extension's path's length
 			// to only contain the common path, and point it to the branch node
 			// as its child.
-			branch := &Branch{}
+			branch := t.branches.Get().(*Branch)
+			branch.clean = false
 			*newPointer = branch
 
 			if uncle == nil {
@@ -370,13 +459,23 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			// side that has not been populated yet, and on which we will continue.
 			forkingBit := bitutils.Bit(path[:], int(depth))
 			if forkingBit == 0 {
+				branch.left = nil
+				branch.right = child
+
 				newPointer = &(branch.left)
 				prevPointer = &(branch.left)
-				branch.right = child
+				if prevPointer == originalPointer {
+					originalPointer = &(branch.left)
+				}
 			} else {
+				branch.left = child
+				branch.right = nil
+
 				newPointer = &(branch.right)
 				prevPointer = &(branch.right)
-				branch.left = child
+				if prevPointer == originalPointer {
+					originalPointer = &(branch.right)
+				}
 			}
 
 			// Depth is currently pointing at the new branch node, so we have to
@@ -436,11 +535,11 @@ func (t *Trie) insert(root *Node, path ledger.Path, payload *ledger.Payload) err
 			}
 		}
 
-		clone := &Leaf{
-			path:    sibling.path,
-			payload: sibling.payload,
-			hash:    ledger.ComputeCompactValue(sibling.path, payload.Value, height),
-		}
+		clone := t.leaves.Get().(*Leaf)
+		clone.path = sibling.path
+		clone.payload = sibling.payload
+		clone.hash = ledger.ComputeCompactValue(sibling.path, payload.Value, height)
+
 		*newPointer = clone
 
 		// Get back to the original node where the pointer was before we dealt with the sibling.
