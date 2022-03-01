@@ -40,7 +40,7 @@ func Test_EmptyTrie(t *testing.T) {
 	const expectedRootHashHex = "568f4ec740fe3b5de88034cb7b1fbddb41548b068f31aebc8ae9189e429c5749"
 
 	store := mocks.BaselineStore()
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie := trie.NewEmptyTrie(store)
 
 	got := trie.RootHash()
 	require.Equal(t, ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight), hash.Hash(got))
@@ -57,7 +57,7 @@ func TestTrie_InsertLeftRegister(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie := trie.NewEmptyTrie(store)
 
 	path := utils.PathByUint16LeftPadded(0)
 	payload := utils.LightPayload(11, 12345)
@@ -80,7 +80,7 @@ func TestTrie_InsertRightRegister(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie := trie.NewEmptyTrie(store)
 
 	var path ledger.Path
 	for i := 0; i < len(path); i++ {
@@ -106,7 +106,7 @@ func TestTrie_InsertMiddleRegister(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie := trie.NewEmptyTrie(store)
 
 	path := utils.PathByUint16LeftPadded(56809)
 	payload := utils.LightPayload(12346, 59656)
@@ -123,12 +123,11 @@ func TestTrie_InsertMiddleRegister(t *testing.T) {
 // matches the formal specification.
 // The expected value is coming from a reference implementation in python and is hard-coded here.
 func TestTrie_InsertManyRegisters(t *testing.T) {
-	t.Skip()
 
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie := trie.NewEmptyTrie(store)
 	refTr := reference.NewEmptyMTrie()
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
@@ -145,6 +144,9 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 
 		got := trie.RootHash()
 		want := refTr.RootHash()
+		if !bytes.Equal(got[:], want[:]) {
+			println("breakpoint")
+		}
 		require.Equal(t, want[:], got[:], "failed at iteration %d", i)
 	}
 
@@ -167,7 +169,7 @@ func TestTrie_InsertNeighbors(t *testing.T) {
 		*utils.LightPayload(11, 2222),
 	}
 
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie := trie.NewEmptyTrie(store)
 	ref := reference.NewEmptyMTrie()
 
 	var err error
@@ -192,7 +194,7 @@ func TestTrie_InsertFullTrie(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie := trie.NewEmptyTrie(store)
 
 	rng := helpers.NewGenerator()
 	paths := make([]ledger.Path, 0, regCount)
@@ -240,7 +242,7 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie := trie.NewEmptyTrie(store)
 
 	rng := helpers.NewGenerator()
 	path := utils.PathByUint16LeftPadded(rng.Next())
@@ -283,8 +285,8 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 	defer store.Close()
 
 	rng := helpers.NewGenerator()
-	testTrie := trie.NewEmptyTrie(mocks.NoopLogger, store)
-	refTrie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	testTrie := trie.NewEmptyTrie(store)
+	refTrie := trie.NewEmptyTrie(store)
 
 	var err error
 
@@ -319,7 +321,7 @@ func Test_UnsafeRead(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	trie := trie.NewEmptyTrie(store)
 
 	rng := helpers.NewGenerator()
 	paths := make([]ledger.Path, 0, regCount)
@@ -360,7 +362,7 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	tr := trie.NewEmptyTrie(store)
 	refTr := reference.NewEmptyMTrie()
 
 	var err error
@@ -388,7 +390,7 @@ func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	tr := trie.NewEmptyTrie(store)
 
 	for i := range paths {
 		newTr, err := tr.Insert([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
@@ -406,7 +408,7 @@ func BenchmarkTrie_InsertMany(b *testing.B) {
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
 	ref := reference.NewEmptyMTrie()
-	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	tr := trie.NewEmptyTrie(store)
 
 	b.Run("insert 1000 elements (reference)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -440,7 +442,7 @@ func BenchmarkTrie_InsertX(b *testing.B) {
 
 		b.Run(fmt.Sprintf("insert %d elements (new)", i), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+				tr := trie.NewEmptyTrie(store)
 				tr, _ = tr.Insert(paths, payloads)
 				_ = tr.RootHash()
 			}
@@ -472,7 +474,7 @@ func BenchmarkTrie_InsertNeighbors(b *testing.B) {
 
 	b.Run("insert neighbors (new)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+			tr := trie.NewEmptyTrie(store)
 			tr, _ = tr.Insert(paths, payloads)
 			_ = tr.RootHash()
 		}
@@ -487,7 +489,7 @@ func BenchmarkTrie_Read(b *testing.B) {
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
 
 	ref, _ := reference.NewTrieWithUpdatedRegisters(reference.NewEmptyMTrie(), paths, payloads)
-	tr, _ := trie.NewEmptyTrie(mocks.NoopLogger, store).Insert(paths, payloads)
+	tr, _ := trie.NewEmptyTrie(store).Insert(paths, payloads)
 
 	b.Run("read one element (reference)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -515,7 +517,7 @@ func Test_NewMemoryUsage(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	tr := trie.NewEmptyTrie(mocks.NoopLogger, store)
+	tr := trie.NewEmptyTrie(store)
 	// FIXME: Doing a single insertion somehow prevents the insertion logic from even appearing in the heap profile.
 	// tr, _ = tr.Insert(paths, payloads)
 	_ = tr.RootHash()

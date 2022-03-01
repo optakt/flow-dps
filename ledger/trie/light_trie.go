@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/rs/zerolog"
-
 	"github.com/onflow/flow-go/ledger/common/utils"
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -47,8 +45,8 @@ func ToLightTrie(t *Trie, index IndexMap) (*LightTrie, error) {
 	return &lt, nil
 }
 
-func FromLightTrie(log zerolog.Logger, store dps.Store, lt *LightTrie, nodes []Node) (*Trie, error) {
-	t := NewTrie(log, nodes[lt.RootIndex], store)
+func FromLightTrie(store dps.Store, lt *LightTrie, nodes []Node) (*Trie, error) {
+	t := NewTrie(nodes[lt.RootIndex], store, NewPool(50000))
 	rootHash := t.RootHash()
 	if !bytes.Equal(lt.RootHash, rootHash[:]) {
 		return nil, fmt.Errorf("could not restore trie: roothash does not match")
