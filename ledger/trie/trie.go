@@ -201,7 +201,7 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 			var branch *Branch
 			// Since we are just traversing this node, if it's already different to the original trie's node
 			// at this point, we can simply reuse the current node without risk of mutating the original trie.
-			if newPointer != originalPointer {
+			if prevPointer != originalPointer {
 				branch = node
 			} else {
 				// Otherwise, we need to get a new branch and reset its attributes.
@@ -295,20 +295,20 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 					branch.left = nil
 					branch.right = child
 
-					newPointer = &(branch.left)
-					prevPointer = &(branch.left)
 					if prevPointer == originalPointer {
 						originalPointer = &(branch.left)
 					}
+					newPointer = &(branch.left)
+					prevPointer = &(branch.left)
 				} else {
 					branch.left = child
 					branch.right = nil
 
-					newPointer = &(branch.right)
-					prevPointer = &(branch.right)
 					if prevPointer == originalPointer {
 						originalPointer = &(branch.right)
 					}
+					newPointer = &(branch.right)
+					prevPointer = &(branch.right)
 				}
 
 				if uncle == nil {
@@ -356,7 +356,7 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 					extension = t.nodes.extensions.Get().(*Extension)
 				}
 				extension.path = node.path
-				extension.child = nil
+				extension.child = node.child
 				extension.count = node.count
 				extension.clean = false
 

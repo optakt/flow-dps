@@ -144,9 +144,6 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 
 		got := trie.RootHash()
 		want := refTr.RootHash()
-		if !bytes.Equal(got[:], want[:]) {
-			println("breakpoint")
-		}
 		require.Equal(t, want[:], got[:], "failed at iteration %d", i)
 	}
 
@@ -380,8 +377,6 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 }
 
 func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
-	t.Skip()
-
 	const totalValues = 5000
 
 	paths := mocks.GenericLedgerPaths(totalValues)
