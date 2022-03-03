@@ -46,7 +46,7 @@ func ToLightTrie(t *Trie, index IndexMap) (*LightTrie, error) {
 }
 
 func FromLightTrie(store dps.Store, lt *LightTrie, nodes []Node) (*Trie, error) {
-	t := NewTrie(nodes[lt.RootIndex], store, NewPool(50000))
+	t := NewTrie(nodes[lt.RootIndex], store, NewPool(50000), newQueue()) // FIXME
 	rootHash := t.RootHash()
 	if !bytes.Equal(lt.RootHash, rootHash[:]) {
 		return nil, fmt.Errorf("could not restore trie: roothash does not match")

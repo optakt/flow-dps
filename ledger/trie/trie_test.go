@@ -266,7 +266,6 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	}
 
 	// update with the same registers with the same values
-	// FIXME: For some reason it breaks here instead of in the initial Insert calls.
 	trie, err = trie.Insert(paths, payloads)
 	require.NoError(t, err)
 

@@ -17,6 +17,7 @@ package trie
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"unsafe"
 
 	"github.com/gammazero/deque"
@@ -37,7 +38,9 @@ type Trie struct {
 	log   zerolog.Logger
 	root  Node
 	store dps.Store
+
 	nodes *Pool
+	queue *queue
 }
 
 // NewEmptyTrie creates a new trie without a root node, with the given payload store.
@@ -46,17 +49,19 @@ func NewEmptyTrie(store dps.Store) *Trie {
 		root:  nil,
 		store: store,
 		nodes: NewPool(50000),
+		queue: newQueue(),
 	}
 
 	return &t
 }
 
 // NewTrie creates a new trie using the given root node and payload store.
-func NewTrie(root Node, store dps.Store, pool *Pool) *Trie {
+func NewTrie(root Node, store dps.Store, pool *Pool, queue *queue) *Trie {
 	t := Trie{
 		root:  root,
 		store: store,
 		nodes: pool,
+		queue: queue,
 	}
 
 	return &t
@@ -87,6 +92,9 @@ func (t *Trie) Insert(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 		return t, nil
 	}
 
+	// Sort paths and payloads, ordered by ascending paths.
+	sort.Sort(sortByPath{paths, payloads})
+
 	tree := t
 	root := Node(nil)
 	for i := range paths {
@@ -95,7 +103,7 @@ func (t *Trie) Insert(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			return nil, fmt.Errorf("failed to insert leaf: %w", err)
 		}
 
-		tree = NewTrie(root, t.store, t.nodes)
+		tree = NewTrie(root, t.store, t.nodes, t.queue)
 	}
 
 	return tree, nil
@@ -139,10 +147,59 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 	var uncle Node
 	var sibling *Leaf
 
+	// Use the closest possible root node from the queue.
+	prevPointer := &t.root
+	if t.queue.Len() > 0 {
+		// Look at the last queued node to compare paths and know which node we should use as root for this iteration.
+		n := t.queue.Pop()
+		prev, ok := n.(*Leaf)
+		if !ok {
+			panic("fixme: handle this")
+		}
+		common := uint8(0)
+		for i := uint8(0); i < 255; i++ {
+			if bitutils.Bit(path[:], int(i)) != bitutils.Bit(prev.path[:], int(i)) {
+				break
+			}
+			common++
+		}
+		fmt.Println("DEBUG: common", common)
+
+		// Pop nodes from the queue until we reach the height at which the two paths diverge.
+		depth := uint8(255)
+		var node Node
+		for depth > common && t.queue.Len() > 0 {
+			fmt.Println("DEBUG: depth", depth)
+			// We need to pop the last node from the queue, and use it as the root
+			// for this iteration.
+			node = t.queue.Pop()
+			switch n := node.(type) {
+			case *Extension:
+				fmt.Println("DEBUG: extension")
+				depth = depth - n.count
+				continue
+
+			case *Branch:
+				fmt.Println("DEBUG: branch")
+				depth--
+				continue
+
+			case nil:
+				fmt.Println("DEBUG: root")
+				break
+
+				// FIXME: Currently somehow we end up on a leaf at some point!
+			}
+		}
+
+		// Set prevPointer to the last node that shares path with the new leaf, or the root node of the trie if
+		// there was no common bit.
+		prevPointer = &node
+	}
+
 	// Current always points at the current node for the iteration. It's the
 	// pointer that we forward while iterating along the path of the insertion.
 	// We can modify the trie while iterating by replacing its contents.
-	prevPointer := &t.root
 	originalPointer := &original.root
 	newPointer := root
 
@@ -165,6 +222,10 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 		// the loop.
 		switch node := (*prevPointer).(type) {
 
+		// FIXME: Remove
+		case *Leaf:
+			panic("fixme: handle this")
+
 		// If we reach a `nil` node as part of the path traversal, it means that
 		// there are no intermediary nodes left on the given path; we are
 		// entering new territory. At this point, we can simply insert an
@@ -181,6 +242,7 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 			extension.child = nil
 			extension.clean = false
 
+			t.queue.Push(extension)
 			*newPointer = extension
 			newPointer = &(extension.child)
 			prevPointer = &(extension.child)
@@ -210,6 +272,7 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 				branch.right = nil
 			}
 			branch.clean = false
+			t.queue.Push(branch)
 
 			// If the current bit is zero, we go left; if it is one, we go right.
 			if bitutils.Bit(path[:], int(depth)) == 0 {
@@ -290,7 +353,10 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 				// `nil` side on the path we DO follow into our current pointer.
 				branch := t.nodes.branches.Get().(*Branch)
 				branch.clean = false
+
+				t.queue.Push(branch)
 				*newPointer = branch
+
 				if insertionBit == 0 {
 					branch.left = nil
 					branch.right = child
@@ -360,6 +426,7 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 				extension.count = node.count
 				extension.clean = false
 
+				t.queue.Push(extension)
 				*newPointer = extension
 				newPointer = &(extension.child)
 				prevPointer = &(node.child)
@@ -408,6 +475,7 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 			extension.child = child
 			extension.clean = false
 
+			t.queue.Push(extension)
 			*newPointer = extension
 			newPointer = &(extension.child)
 
@@ -416,6 +484,8 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 			// as its child.
 			branch := t.nodes.branches.Get().(*Branch)
 			branch.clean = false
+
+			t.queue.Push(branch)
 			*newPointer = branch
 
 			if uncle == nil {
@@ -560,6 +630,7 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 	// nodes as dirty even when we might insert a redundant payload.
 	leaf = (*newPointer).(*Leaf)
 	leaf.hash = ledger.ComputeCompactValue(leaf.path, payload.Value, height)
+	t.queue.Push(leaf)
 	return nil
 }
 

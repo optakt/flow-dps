@@ -15,41 +15,26 @@
 package trie
 
 import (
-	"sync"
+	"bytes"
+
+	"github.com/onflow/flow-go/ledger"
 )
 
-type Pool struct {
-	extensions *sync.Pool
-	branches   *sync.Pool
-	leaves     *sync.Pool
+type sortByPath struct {
+	paths []ledger.Path
+	payloads []ledger.Payload
 }
 
-func NewPool(number int) *Pool {
-	ePool := &sync.Pool{}
-	ePool.New = func() interface{} {
-		return &Extension{}
-	}
-	bPool := &sync.Pool{}
-	bPool.New = func() interface{} {
-		return &Branch{}
-	}
-	lPool := &sync.Pool{}
-	lPool.New = func() interface{} {
-		return &Leaf{}
-	}
-
-	// Pre allocate each node type.
-	for i := 0; i < number; i++ {
-		ePool.Put(ePool.New())
-		bPool.Put(bPool.New())
-		lPool.Put(lPool.New())
-	}
-
-	p := Pool{
-		extensions: ePool,
-		branches:   bPool,
-		leaves:     lPool,
-	}
-
-	return &p
+func (s sortByPath) Len() int {
+	return len(s.paths)
 }
+
+func (s sortByPath) Swap(i, j int) {
+	s.paths[i], s.paths[j] = s.paths[j], s.paths[i]
+	s.payloads[i], s.payloads[j] = s.payloads[j], s.payloads[i]
+}
+
+func (s sortByPath) Less(i, j int) bool {
+	return bytes.Compare(s.paths[i][:], s.paths[j][:]) > 0
+}
+
