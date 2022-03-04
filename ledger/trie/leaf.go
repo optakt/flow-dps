@@ -14,6 +14,8 @@
 
 package trie
 
+import "github.com/onflow/flow-go/ledger"
+
 // Leaf nodes are found at the end of each path of the trie. They do not contain
 // a part of the path, so they could, in theory, be shuffled around easily. This
 // is made more difficult by the Flow implementation of the trie, which hashes
@@ -29,10 +31,10 @@ type Leaf struct {
 	// The path is kept as a byte slice, which allows us to share the path
 	// between all of the nodes on that path when inserting, reducing memory use
 	// significantly.
-	path [32]byte
+	path ledger.Path
 
 	// The encoded payload of the leaf.
-	payload []byte
+	payload ledger.Payload
 }
 
 // Hash returns the leaf hash.

@@ -37,7 +37,7 @@ type Extension struct {
 	// we can simplify a lot of code by keeping the whole path the extension is
 	// on. We can then use the current depth as starting point for the extension's
 	// bits, and the count as the cut-off at the end.
-	path  *[32]byte
+	path  *ledger.Path
 	count uint8
 
 	// An extension can either have a branch as a child, in case it doesn't reach
