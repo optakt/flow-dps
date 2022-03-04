@@ -159,11 +159,12 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 	// FIXME: Using the queue somehow causes mutation of original trie. We must be pushing nodes in the queue that
 	//  are not new nodes but the originals somehow?
 	if t.queue.Len() > 0 {
-		// Look at the last queued node to compare paths and know which node we should use as root for this iteration.
+		// Look at the last queued node to compare paths and know by
+		// how much we need to climb in terms of depth.
 		n := t.queue.Pop()
 		prev, ok := n.(*Leaf)
 		if !ok {
-			panic("fixme: handle this")
+			panic("fixme: should never happen")
 		}
 		common := uint8(0)
 		for i := uint8(0); i < 255; i++ {
@@ -176,22 +177,19 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 		// Pop nodes from the queue until we reach the height at which the two paths diverge.
 		depth = uint8(255)
 		var node Node
-		for (depth >= common && depth != 0) && t.queue.Len() > 0 {
+		for depth >= common && depth != 0 {
 			// We need to pop the last node from the queue, and use it as the root
 			// for this iteration.
 			node = t.queue.Pop()
 			switch n := node.(type) {
 			case *Extension:
-				depth = depth - n.count
-				continue
+				depth -= n.count
 
 			case *Branch:
 				depth--
-				continue
 
 			case nil:
 				depth = 0
-				break
 			}
 		}
 
