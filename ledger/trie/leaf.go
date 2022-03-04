@@ -14,7 +14,10 @@
 
 package trie
 
-import "github.com/onflow/flow-go/ledger"
+import (
+	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/hash"
+)
 
 // Leaf nodes are found at the end of each path of the trie. They do not contain
 // a part of the path, so they could, in theory, be shuffled around easily. This
@@ -24,20 +27,17 @@ import "github.com/onflow/flow-go/ledger"
 // terms of path traversed, which would always be the same.
 type Leaf struct {
 
-	// The hash of the leaf node is computed whenever it changes as part of
-	// insertions, so that it is never dirty.
-	hash [32]byte
+	// The hash of the leaf.
+	hash hash.Hash
 
-	// The path is kept as a byte slice, which allows us to share the path
-	// between all of the nodes on that path when inserting, reducing memory use
-	// significantly.
+	// The path of the laf.
 	path ledger.Path
 
-	// The encoded payload of the leaf.
+	// The payload of the leaf.
 	payload ledger.Payload
 }
 
 // Hash returns the leaf hash.
-func (l *Leaf) Hash(int) [32]byte {
+func (l *Leaf) Hash(int) hash.Hash {
 	return l.hash
 }

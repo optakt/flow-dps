@@ -21,7 +21,6 @@ import (
 	"io"
 
 	"github.com/onflow/flow-go/ledger/common/utils"
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 type LightTrie struct {
@@ -45,8 +44,9 @@ func ToLightTrie(t *Trie, index IndexMap) (*LightTrie, error) {
 	return &lt, nil
 }
 
-func FromLightTrie(store dps.Store, lt *LightTrie, nodes []Node) (*Trie, error) {
-	t := NewTrie(nodes[lt.RootIndex], store, NewPool(50000), newQueue()) // FIXME
+// FIXME
+func FromLightTrie(lt *LightTrie, nodes []Node) (*Trie, error) {
+	t := NewTrie(nodes[lt.RootIndex])
 	rootHash := t.RootHash()
 	if !bytes.Equal(lt.RootHash, rootHash[:]) {
 		return nil, fmt.Errorf("could not restore trie: roothash does not match")

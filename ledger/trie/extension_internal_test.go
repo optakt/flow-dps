@@ -31,11 +31,9 @@ import (
 func TestExtension(t *testing.T) {
 
 	payload := mocks.GenericLedgerPayload(0)
-	p := mocks.GenericLedgerPath(0)
-	hash, err := hash.ToHash(p[:])
+	path := mocks.GenericLedgerPath(0)
+	hash, err := hash.ToHash(path[:])
 	require.NoError(t, err)
-
-	path := [32]byte(p)
 
 	testLeaf := Leaf{
 		hash: ledger.ComputeCompactValue(hash, payload.Value, 0),
@@ -49,7 +47,7 @@ func TestExtension(t *testing.T) {
 		name   string
 		height uint8
 		count  uint8
-		child Node
+		child  Node
 
 		wantHash string
 	}{

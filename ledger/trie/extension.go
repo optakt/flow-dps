@@ -17,6 +17,7 @@ package trie
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
+	"github.com/onflow/flow-go/ledger/common/hash"
 	trie "github.com/onflow/flow-go/ledger/common/hash"
 )
 
@@ -47,7 +48,7 @@ type Extension struct {
 }
 
 // Hash returns the extension hash. If it is currently dirty, it is recomputed first.
-func (e *Extension) Hash(height int) [32]byte {
+func (e *Extension) Hash(height int) hash.Hash {
 	if !e.clean {
 		e.hash = e.computeHash(height)
 		e.clean = true
@@ -56,7 +57,7 @@ func (e *Extension) Hash(height int) [32]byte {
 }
 
 // computeHash computes the extension's hash.
-func (e *Extension) computeHash(height int) [32]byte {
+func (e *Extension) computeHash(height int) hash.Hash {
 
 	// If the child is a leaf, simply use its hash as the extension's hash,
 	// since in that case the extension is the equivalent of a Flow "compact leaf".

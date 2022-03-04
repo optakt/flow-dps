@@ -50,6 +50,15 @@ func NewEmptyTrie() *Trie {
 	return &t
 }
 
+// NewTrie creates a new trie using the given root node and payload store.
+func NewTrie(root Node) *Trie {
+	t := Trie{
+		root: root,
+	}
+
+	return &t
+}
+
 // RootNode returns the root node of the trie.
 func (t *Trie) RootNode() Node {
 	return t.root
@@ -60,20 +69,20 @@ func (t *Trie) RootHash() ledger.RootHash {
 	if t.root == nil {
 		return ledger.RootHash(ledger.GetDefaultHashForHeight(maxDepth + 1))
 	}
-	return t.root.Hash(maxDepth)
+	return ledger.RootHash(t.root.Hash(maxDepth))
 }
 
-func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
+func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, error) {
 
 	// If there are no paths to be inserted, we can return right away. This will
 	// save us from dealing with some edge cases in the logic that follows.
 	if len(paths) == 0 {
-		return t
+		return t, nil
 	}
 
 	// We should have the same amount of paths and payloads.
 	if len(payloads) != len(paths) {
-		panic("payloads mismatch paths")
+		return nil, fmt.Errorf("mismatch between path and payload size (paths: %d, payloads: %d)", len(paths), len(payloads))
 	}
 
 	// We sort the paths and payloads by path, with zero bits to the left and
@@ -84,7 +93,8 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 
 	// We create a queue of groups, where each group represents a set of paths
 	// that have all bits in common up to the next depth of that group.
-	queue := deque.New(len(paths), len(paths))
+	process := deque.New(len(paths), len(paths))
+	insert := deque.New(len(paths), len(paths))
 
 	// The first group of paths holds all paths, checking depth zero as the first
 	// depth, and using the root to determine what to do at that depth.
@@ -96,14 +106,14 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 	group.node = &t.root
 
 	// We then push that group into our queue and start consuming it.
-	queue.PushFront(group)
+	process.PushFront(group)
 
 	// We keep processing groups that are pushed onto the queue until there are
 	// no groups left to be processed.
-	for queue.Len() != 0 {
+	for process.Len() != 0 {
 
 		// We take the next group from the queue.
-		group := queue.PopBack().(*Group)
+		group := process.PopBack().(*Group)
 
 		// We split the paths for that queue on whether their next bit is zero
 		// or one, and get one set of paths on the left and one on the right.
@@ -129,29 +139,22 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 		// If the node is currently `nil`, we have to create a node.
 		case nil:
 
-			// If we have paths on both sides, we create a new branch node, which
-			// we will then follow on both sides later.
-			if len(left) != 0 && len(right) != 0 {
-				*group.node = &Branch{}
-				continue
-			}
+			switch {
 
-			// If we have paths only on the left side, we insert a new extension
-			// node following the path on the left.
-			if len(left) != 0 {
+			case len(left) != 0 && len(right) != 0:
+				*group.node = &Branch{}
+
+			case len(left) != 0:
 				extension := t.extensions.Get().(*Extension)
 				extension.path = &left[0]
+				extension.count = maxDepth - group.depth
 				*group.node = extension
-				continue
-			}
 
-			// If we have paths only on the right side, we insert a new extension
-			// node following the path on the right.
-			if len(right) != 0 {
+			case len(right) != 0:
 				extension := t.extensions.Get().(*Extension)
 				extension.path = &right[0]
+				extension.count = maxDepth - group.depth
 				*group.node = extension
-				continue
 			}
 
 		// If the node is currently an extension, we should create a branch if
@@ -161,28 +164,17 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 			// We look at the first bit of the extension.
 			extBit := bitutils.Bit(n.path[:], int(group.depth))
 
+			switch {
+
 			// If the extension is on the left, and there are no paths on the
 			// right, do nothing.
-			if extBit == 0 && len(right) == 0 {
-				continue
-			}
+			case extBit == 0 && len(right) == 0:
+				// do nothing
 
 			// If the extension is on the right, and there are no paths on the
 			// left, do nothing.
-			if extBit == 1 && len(left) == 0 {
-				continue
-			}
-
-			// At this point, we are always going to create a branch. We link up
-			// from the deepest to the shallowest node when modifying the trie.
-			branch := &Branch{}
-
-			// We have four different cases:
-			// - the extension has a length of one, and is replaced by the branch;
-			// - we replace the first bit of the extension with a branch;
-			// - we replace the last bit of the extension with a branch;
-			// - we replace a middle bit of the extension with a branch.
-			switch {
+			case extBit == 1 && len(left) == 0:
+				// do nothing
 
 			// If the count of the extension is zero, it has a length of one. In
 			// that case, the extension should simply be replaced by the branch,
@@ -190,6 +182,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 			// previously the extension's child. In this case, we recycle the
 			// memory of the extension node as well to minimize allocations.
 			case n.count == 0:
+				branch := &Branch{}
 				if extBit == 0 {
 					branch.left = n.child
 				} else {
@@ -197,6 +190,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 				}
 				*group.node = branch
 				t.extensions.Put(n)
+				group.count = 0
 
 			// If the count on the group is zero, we have not traversed any bits
 			// of the extension yet. In that case, we shorten the extension by
@@ -204,6 +198,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 			// extension and replace the extension by the branch in its previous
 			// location.
 			case group.count == 0:
+				branch := &Branch{}
 				n.count--
 				if extBit == 0 {
 					branch.left = n
@@ -211,6 +206,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 					branch.right = n
 				}
 				*group.node = branch
+				group.count = 0
 
 			// If the count of the group is equal to the count on the extension,
 			// we are looking at the last bit of the extension now. In that case,
@@ -218,6 +214,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 			// at the branch, point the correct side of the branch at the
 			// extension's child and then point the current group at the branch.
 			case n.count == group.count:
+				branch := &Branch{}
 				if extBit == 0 {
 					branch.left = n.child
 				} else {
@@ -226,10 +223,12 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 				n.child = branch
 				n.count--
 				group.node = &n.child
+				group.count = 0
 
 			// Finally, in all other cases, we will have one extension before and
 			// one extension behind the branch.
 			default:
+				branch := &Branch{}
 				extension := t.extensions.Get().(*Extension)
 				extension.clean = false
 				extension.path = n.path
@@ -242,46 +241,15 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 				}
 				n.child = branch
 				n.count = group.count - 1
+				group.count = 0
 			}
-
-			// In all of the cases, we have to reset the group count on the group
-			// because we are now pointing at a branch.
-			group.count = 0
-
-			// Additionally, if the branch we don't follow is pointing at a
-			// leaf, we need to rehash it.
-
 		}
 
-		// At this point, we are done modifying the trie at the current depth.
-		// If the current depth is 255, the next node should be the leaf, and
-		// we should insert the payload, instead of queuing more groups.
-		if group.depth == maxDepth {
-
-			// If there is more than one path left, panic.
-			if len(group.paths) > 0 {
-				panic("duplicate paths")
-			}
-
-			// If the current leaf is not initialized, do so.
-			leaf, ok := (*group.node).(*Leaf)
-			if !ok {
-				leaf = &Leaf{}
-				*group.node = leaf
-			}
-
-			// Set the payload on the leaf.
-			leaf.payload = group.payloads[0]
-
-			// Calculate the leaf hash.
-			height := 0
-			p, ok := group.parent.(*Extension)
-			if ok {
-				height = int(p.count) + 1
-			}
-			leaf.hash = ledger.ComputeCompactValue(hash.Hash(leaf.path), leaf.payload.Value, height)
-
-			continue
+		// Normally, we push into the processing queue, but if we just modified
+		// the trie at height 255, then all of the next children are leaves.
+		sink := process
+		if group.depth == 255 {
+			sink = insert
 		}
 
 		// At this point, we are done modifying the trie.
@@ -293,7 +261,6 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 			// If the group count is at the extension count, we have reached the
 			// end of the extension and we want to go to the child next. Otherwise
 			// we simply increase the count of bits already checked.
-			group.depth++
 			if group.count == n.count {
 				group.count = 0
 				group.parent = *group.node
@@ -301,7 +268,8 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 			} else {
 				group.count++
 			}
-			queue.PushFront(group)
+			group.depth++
+			sink.PushFront(group)
 
 		// If we have a branch, we might want two groups to go on.
 		case *Branch:
@@ -322,7 +290,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 				group.count = 0
 				group.parent = node
 				group.node = &n.left
-				queue.PushFront(group)
+				sink.PushFront(group)
 			}
 
 			// If we have paths on the right.
@@ -334,12 +302,32 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) *Trie {
 				group.count = 0
 				group.parent = node
 				group.node = &n.right
-				queue.PushFront(group)
+				sink.PushFront(group)
 			}
 		}
 	}
 
-	return t
+	for insert.Len() > 0 {
+		group := insert.PopBack().(*Group)
+		if len(group.paths) > 1 {
+			return nil, fmt.Errorf("duplicate path (%x)", group.paths[0])
+		}
+		leaf, ok := (*group.node).(*Leaf)
+		if !ok {
+			leaf = &Leaf{}
+			*group.node = leaf
+		}
+		height := 0
+		extension, ok := group.parent.(*Extension)
+		if ok {
+			height = int(extension.count) + 1
+		}
+		leaf.path = group.paths[0]
+		leaf.payload = group.payloads[0]
+		leaf.hash = ledger.ComputeCompactValue(hash.Hash(leaf.path), leaf.payload.Value, height)
+	}
+
+	return t, nil
 }
 
 // Leaves iterates through the trie and returns its leaf nodes.

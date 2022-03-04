@@ -29,7 +29,7 @@ type Branch struct {
 	// hash needs to be recomputed. We do this in a lazy manner when the trie
 	// hash is requested, so we can avoid redundant hash computations when doing
 	// multiple insertions.
-	hash  [32]byte
+	hash  hash.Hash
 	clean bool
 
 	// The left node of a branch points to the node where the path continues with
@@ -39,7 +39,7 @@ type Branch struct {
 }
 
 // Hash returns the branch hash. If it is currently dirty, it is recomputed first.
-func (b *Branch) Hash(height int) [32]byte {
+func (b *Branch) Hash(height int) hash.Hash {
 	if !b.clean {
 		b.hash = b.computeHash(height)
 		b.clean = true
@@ -48,7 +48,7 @@ func (b *Branch) Hash(height int) [32]byte {
 }
 
 // computeHash computes the branch hash by hashing its children.
-func (b *Branch) computeHash(height int) [32]byte {
+func (b *Branch) computeHash(height int) hash.Hash {
 	left := b.left.Hash(height - 1)
 	right := b.right.Hash(height - 1)
 	hash := hash.HashInterNode(left, right)

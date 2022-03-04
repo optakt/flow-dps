@@ -39,8 +39,7 @@ func Test_EmptyTrie(t *testing.T) {
 
 	const expectedRootHashHex = "568f4ec740fe3b5de88034cb7b1fbddb41548b068f31aebc8ae9189e429c5749"
 
-	store := mocks.BaselineStore()
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie()
 
 	got := trie.RootHash()
 	require.Equal(t, ledger.GetDefaultHashForHeight(ledger.NodeMaxHeight), hash.Hash(got))
@@ -54,16 +53,13 @@ func TestTrie_InsertLeftRegister(t *testing.T) {
 
 	const expectedRootHashHex = "b30c99cc3e027a6ff463876c638041b1c55316ed935f1b3699e52a2c3e3eaaab"
 
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
-
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie()
 
 	path := utils.PathByUint16LeftPadded(0)
 	payload := utils.LightPayload(11, 12345)
 
 	var err error
-	trie, err = trie.Insert([]ledger.Path{path}, []ledger.Payload{*payload})
+	trie, err = trie.Mutate([]ledger.Path{path}, []ledger.Payload{*payload})
 	require.NoError(t, err)
 
 	got := trie.RootHash()
@@ -80,7 +76,7 @@ func TestTrie_InsertRightRegister(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie()
 
 	var path ledger.Path
 	for i := 0; i < len(path); i++ {
@@ -89,7 +85,7 @@ func TestTrie_InsertRightRegister(t *testing.T) {
 	payload := utils.LightPayload(12346, 54321)
 
 	var err error
-	trie, err = trie.Insert([]ledger.Path{path}, []ledger.Payload{*payload})
+	trie, err = trie.Mutate([]ledger.Path{path}, []ledger.Payload{*payload})
 	require.NoError(t, err)
 
 	got := trie.RootHash()
@@ -106,13 +102,13 @@ func TestTrie_InsertMiddleRegister(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie()
 
 	path := utils.PathByUint16LeftPadded(56809)
 	payload := utils.LightPayload(12346, 59656)
 
 	var err error
-	trie, err = trie.Insert([]ledger.Path{path}, []ledger.Payload{*payload})
+	trie, err = trie.Mutate([]ledger.Path{path}, []ledger.Payload{*payload})
 	require.NoError(t, err)
 
 	got := trie.RootHash()
@@ -127,7 +123,7 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie()
 	refTr := reference.NewEmptyMTrie()
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 12001)
@@ -135,7 +131,7 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 	for i := range paths {
 
 		before := trie.RootHash()
-		newTr, _ := trie.Insert([]ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
+		newTr, _ := trie.Mutate([]ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
 		after := trie.RootHash()
 		require.Equal(t, before, after, "unexpected mutation of base trie")
 
@@ -166,11 +162,11 @@ func TestTrie_InsertNeighbors(t *testing.T) {
 		*utils.LightPayload(11, 2222),
 	}
 
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie()
 	ref := reference.NewEmptyMTrie()
 
 	var err error
-	trie, err = trie.Insert(paths, payloads)
+	trie, err = trie.Mutate(paths, payloads)
 	require.NoError(t, err)
 
 	ref, err = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
@@ -191,7 +187,7 @@ func TestTrie_InsertFullTrie(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie()
 
 	rng := helpers.NewGenerator()
 	paths := make([]ledger.Path, 0, regCount)
@@ -204,7 +200,7 @@ func TestTrie_InsertFullTrie(t *testing.T) {
 	}
 
 	var err error
-	trie, err = trie.Insert(paths, payloads)
+	trie, err = trie.Mutate(paths, payloads)
 	require.NoError(t, err)
 
 	got := trie.RootHash()
@@ -239,7 +235,7 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie()
 
 	rng := helpers.NewGenerator()
 	path := utils.PathByUint16LeftPadded(rng.Next())
@@ -247,7 +243,7 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	payload := utils.LightPayload(temp, temp)
 
 	var err error
-	trie, err = trie.Insert([]ledger.Path{path}, []ledger.Payload{*payload})
+	trie, err = trie.Mutate([]ledger.Path{path}, []ledger.Payload{*payload})
 	require.NoError(t, err)
 
 	got := trie.RootHash()
@@ -258,7 +254,7 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	for r := 0; r < 20; r++ {
 		paths, payloads = helpers.SampleRandomRegisterWrites(rng, r*100)
 
-		trie, err = trie.Insert(paths, payloads)
+		trie, err = trie.Mutate(paths, payloads)
 		require.NoError(t, err)
 
 		got = trie.RootHash()
@@ -266,7 +262,7 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 	}
 
 	// update with the same registers with the same values
-	trie, err = trie.Insert(paths, payloads)
+	trie, err = trie.Mutate(paths, payloads)
 	require.NoError(t, err)
 
 	got = trie.RootHash()
@@ -281,26 +277,26 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 	defer store.Close()
 
 	rng := helpers.NewGenerator()
-	testTrie := trie.NewEmptyTrie(store)
-	refTrie := trie.NewEmptyTrie(store)
+	testTrie := trie.NewEmptyTrie()
+	refTrie := trie.NewEmptyTrie()
 
 	var err error
 
 	// Draw 99 random key-value pairs that will be first allocated and later deallocated.
 	paths1, payloads1 := helpers.SampleRandomRegisterWrites(rng, 99)
-	testTrie, err = testTrie.Insert(paths1, payloads1)
+	testTrie, err = testTrie.Mutate(paths1, payloads1)
 	require.NoError(t, err)
 
 	// Write an additional 117 registers.
 	paths2, payloads2 := helpers.SampleRandomRegisterWrites(rng, 117)
-	testTrie, err = testTrie.Insert(paths2, payloads2)
+	testTrie, err = testTrie.Mutate(paths2, payloads2)
 	require.NoError(t, err)
-	refTrie, err = refTrie.Insert(paths2, payloads2)
+	refTrie, err = refTrie.Mutate(paths2, payloads2)
 	require.NoError(t, err)
 
 	// Now we override the first 99 registers with default values, i.e. deallocate them.
 	payloads0 := make([]ledger.Payload, len(payloads1))
-	testTrie, err = testTrie.Insert(paths1, payloads0)
+	testTrie, err = testTrie.Mutate(paths1, payloads0)
 	require.NoError(t, err)
 
 	// this should be identical to the first 99 registers never been written
@@ -317,7 +313,7 @@ func Test_UnsafeRead(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	trie := trie.NewEmptyTrie(store)
+	trie := trie.NewEmptyTrie()
 
 	rng := helpers.NewGenerator()
 	paths := make([]ledger.Path, 0, regCount)
@@ -330,7 +326,7 @@ func Test_UnsafeRead(t *testing.T) {
 	}
 
 	var err error
-	trie, err = trie.Insert(paths, payloads)
+	trie, err = trie.Mutate(paths, payloads)
 	require.NoError(t, err)
 
 	got := trie.UnsafeRead(paths)
@@ -358,12 +354,12 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	tr := trie.NewEmptyTrie(store)
+	tr := trie.NewEmptyTrie()
 	refTr := reference.NewEmptyMTrie()
 
 	var err error
 	for i := range paths {
-		tr, err = tr.Insert([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
+		tr, err = tr.Mutate([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
 		refTr, err = reference.NewTrieWithUpdatedRegisters(refTr, []ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
@@ -384,10 +380,10 @@ func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	tr := trie.NewEmptyTrie(store)
+	tr := trie.NewEmptyTrie()
 
 	for i := range paths {
-		newTr, err := tr.Insert([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
+		newTr, err := tr.Mutate([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
 		require.NotEqual(t, tr.RootHash(), newTr.RootHash())
@@ -402,7 +398,7 @@ func BenchmarkTrie_InsertMany(b *testing.B) {
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
 	ref := reference.NewEmptyMTrie()
-	tr := trie.NewEmptyTrie(store)
+	tr := trie.NewEmptyTrie()
 
 	b.Run("insert 1000 elements (reference)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -412,7 +408,7 @@ func BenchmarkTrie_InsertMany(b *testing.B) {
 	})
 	b.Run("insert 1000 elements (new)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			tr, _ = tr.Insert(paths, payloads)
+			tr, _ = tr.Mutate(paths, payloads)
 			_ = tr.RootHash()
 		}
 	})
@@ -436,8 +432,8 @@ func BenchmarkTrie_InsertX(b *testing.B) {
 
 		b.Run(fmt.Sprintf("insert %d elements (new)", i), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				tr := trie.NewEmptyTrie(store)
-				tr, _ = tr.Insert(paths, payloads)
+				tr := trie.NewEmptyTrie()
+				tr, _ = tr.Mutate(paths, payloads)
 				_ = tr.RootHash()
 			}
 		})
@@ -468,8 +464,8 @@ func BenchmarkTrie_InsertNeighbors(b *testing.B) {
 
 	b.Run("insert neighbors (new)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			tr := trie.NewEmptyTrie(store)
-			tr, _ = tr.Insert(paths, payloads)
+			tr := trie.NewEmptyTrie()
+			tr, _ = tr.Mutate(paths, payloads)
 			_ = tr.RootHash()
 		}
 	})
@@ -483,7 +479,7 @@ func BenchmarkTrie_Read(b *testing.B) {
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
 
 	ref, _ := reference.NewTrieWithUpdatedRegisters(reference.NewEmptyMTrie(), paths, payloads)
-	tr, _ := trie.NewEmptyTrie(store).Insert(paths, payloads)
+	tr, _ := trie.NewEmptyTrie().Mutate(paths, payloads)
 
 	b.Run("read one element (reference)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -511,15 +507,15 @@ func Test_NewMemoryUsage(t *testing.T) {
 	store := helpers.InMemoryStore(t)
 	defer store.Close()
 
-	tr := trie.NewEmptyTrie(store)
+	tr := trie.NewEmptyTrie()
 	// FIXME: Doing a single insertion somehow prevents the insertion logic from even appearing in the heap profile.
-	// tr, _ = tr.Insert(paths, payloads)
+	// tr, _ = tr.Mutate(paths, payloads)
 	_ = tr.RootHash()
 
 	// FIXME: Calling insert repeatedly for each insertion makes it show in the heap profile. We don't see exactly what
 	//        is being allocated, but it's not the same as the memory usage of the trie.
 	for i := range paths {
-		tr, _ = tr.Insert([]ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
+		tr, _ = tr.Mutate([]ledger.Path{paths[i]}, []ledger.Payload{payloads[i]})
 	}
 
 	file, _ := os.Create("/tmp/new_bench_heap.prof")
