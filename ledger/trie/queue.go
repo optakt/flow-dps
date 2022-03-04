@@ -23,6 +23,10 @@ func (q *queue) Pop() Node {
 	return n
 }
 
+func (q *queue) Clear() {
+	q.nodes.Clear()
+}
+
 func (q *queue) Len() int {
 	return q.nodes.Len()
 }

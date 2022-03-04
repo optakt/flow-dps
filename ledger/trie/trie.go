@@ -92,6 +92,8 @@ func (t *Trie) Insert(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 		return t, nil
 	}
 
+	t.queue.Clear()
+
 	// Sort paths and payloads, ordered by ascending paths.
 	sort.Sort(sortByPath{paths, payloads})
 
