@@ -147,8 +147,17 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 	var uncle Node
 	var sibling *Leaf
 
+	// Depth keeps track of the depth that we are at in the trie. The root node
+	// is at a depth of zero; every branch node adds a depth of one, while every
+	// extension node adds a depth equal to the number of bits in its path. When
+	// we reach a depth of zero again, it means we have passed the maximum depth,
+	// and we reached the point of insertion for leaf nodes.
+	depth := uint8(0)
+
 	// Use the closest possible root node from the queue.
 	prevPointer := &t.root
+	// FIXME: Using the queue somehow causes mutation of original trie. We must be pushing nodes in the queue that
+	//  are not new nodes but the originals somehow?
 	if t.queue.Len() > 0 {
 		// Look at the last queued node to compare paths and know which node we should use as root for this iteration.
 		n := t.queue.Pop()
@@ -163,32 +172,26 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 			}
 			common++
 		}
-		fmt.Println("DEBUG: common", common)
 
 		// Pop nodes from the queue until we reach the height at which the two paths diverge.
-		depth := uint8(255)
+		depth = uint8(255)
 		var node Node
-		for depth > common && t.queue.Len() > 0 {
-			fmt.Println("DEBUG: depth", depth)
+		for (depth >= common && depth != 0) && t.queue.Len() > 0 {
 			// We need to pop the last node from the queue, and use it as the root
 			// for this iteration.
 			node = t.queue.Pop()
 			switch n := node.(type) {
 			case *Extension:
-				fmt.Println("DEBUG: extension")
 				depth = depth - n.count
 				continue
 
 			case *Branch:
-				fmt.Println("DEBUG: branch")
 				depth--
 				continue
 
 			case nil:
-				fmt.Println("DEBUG: root")
+				depth = 0
 				break
-
-				// FIXME: Currently somehow we end up on a leaf at some point!
 			}
 		}
 
@@ -203,13 +206,6 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 	originalPointer := &original.root
 	newPointer := root
 
-	// Depth keeps track of the depth that we are at in the trie. The root node
-	// is at a depth of zero; every branch node adds a depth of one, while every
-	// extension node adds a depth equal to the number of bits in its path. When
-	// we reach a depth of zero again, it means we have passed the maximum depth,
-	// and we reached the point of insertion for leaf nodes.
-	depth := uint8(0)
-
 	// The `PathLoop` is responsible for traversing through and creating missing
 	// intermediary branch  and extension nodes up to the insertion point of the
 	// leaf. We start at the root, traversing nodes and inserting them as needed
@@ -221,10 +217,6 @@ func (t *Trie) insert(original *Trie, root *Node, path ledger.Path, payload *led
 		// check whether we have reached maximum depth in order to break out of
 		// the loop.
 		switch node := (*prevPointer).(type) {
-
-		// FIXME: Remove
-		case *Leaf:
-			panic("fixme: handle this")
 
 		// If we reach a `nil` node as part of the path traversal, it means that
 		// there are no intermediary nodes left on the given path; we are
