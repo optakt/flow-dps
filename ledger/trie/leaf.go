@@ -28,7 +28,8 @@ import (
 type Leaf struct {
 
 	// The hash of the leaf.
-	hash hash.Hash
+	hash  hash.Hash
+	clean bool
 
 	// The path of the laf.
 	path ledger.Path
@@ -38,6 +39,14 @@ type Leaf struct {
 }
 
 // Hash returns the leaf hash.
-func (l *Leaf) Hash(int) hash.Hash {
+func (l *Leaf) Hash(height int) hash.Hash {
+	if !l.clean {
+		l.hash = l.computeHash(height)
+		l.clean = true
+	}
 	return l.hash
+}
+
+func (l *Leaf) computeHash(height int) hash.Hash {
+	return ledger.ComputeCompactValue(hash.Hash(l.path), l.payload.Value, height)
 }

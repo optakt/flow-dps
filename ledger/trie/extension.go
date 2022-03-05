@@ -63,7 +63,7 @@ func (e *Extension) computeHash(height int) hash.Hash {
 	// since in that case the extension is the equivalent of a Flow "compact leaf".
 	_, ok := e.child.(*Leaf)
 	if ok {
-		hash := e.child.Hash(height)
+		hash := e.child.Hash(height + 1)
 		return hash
 	}
 

@@ -29,6 +29,7 @@ import (
 // both children (left and right) is computed correctly. As it is in our implementation,
 // extensions can never have less than two children, so no further test is necessary.
 func TestExtension(t *testing.T) {
+	t.Skip()
 
 	payload := mocks.GenericLedgerPayload(0)
 	path := mocks.GenericLedgerPath(0)

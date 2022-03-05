@@ -23,6 +23,5 @@ type Group struct {
 	payloads []ledger.Payload
 	depth    uint8
 	count    uint8
-	parent   Node
 	node     *Node
 }
