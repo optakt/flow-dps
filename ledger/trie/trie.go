@@ -138,12 +138,11 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 		// We split the paths for that queue on whether their next bit is zero
 		// or one, and get one set of paths on the left and one on the right.
 		var pivot uint
-		for i := group.start; i < group.end; i++ {
-			bit := bitutils.Bit(paths[i][:], int(group.depth))
+		for pivot = group.start; pivot < group.end; pivot++ {
+			bit := bitutils.Bit(paths[pivot][:], int(group.depth))
 			if bit == 1 {
 				break
 			}
-			pivot = i + 1
 		}
 
 		// The following switch only handles modification of the trie. It looks

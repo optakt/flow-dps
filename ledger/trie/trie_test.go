@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -387,6 +388,10 @@ func BenchmarkTrie_InsertX(b *testing.B) {
 
 	for i := 1; i <= 8192; i *= 2 {
 		paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
+
+		sort.Slice(paths, func(i int, j int) bool {
+			return bytes.Compare(paths[i][:], paths[j][:]) < 0
+		})
 
 		b.Run(fmt.Sprintf("insert %d elements (reference)", i), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
