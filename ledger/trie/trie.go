@@ -106,25 +106,15 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	path := paths[0]
 	group.path = &path
 
-	// Every time we process the group, we get back a channel with new groups.
-	sink := make(chan *Group, len(paths))
-
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	sink <- group
-
-	go func() {
-		for group := range sink {
-			go t.process(group, sink, wg)
-		}
-	}()
-
+	go t.process(group, wg)
 	wg.Wait()
 
 	return t, nil
 }
 
-func (t *Trie) process(group *Group, sink chan<- *Group, wg *sync.WaitGroup) {
+func (t *Trie) process(group *Group, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
@@ -296,7 +286,7 @@ func (t *Trie) process(group *Group, sink chan<- *Group, wg *sync.WaitGroup) {
 		}
 
 		wg.Add(1)
-		sink <- group
+		go t.process(group, wg)
 
 	// If we have a branch, we might want two groups to go on.
 	case *Branch:
@@ -308,7 +298,7 @@ func (t *Trie) process(group *Group, sink chan<- *Group, wg *sync.WaitGroup) {
 		if len(left) != 0 && len(right) == 0 {
 			group.node = &n.left
 			wg.Add(1)
-			sink <- group
+			go t.process(group, wg)
 			break
 		}
 
@@ -316,7 +306,7 @@ func (t *Trie) process(group *Group, sink chan<- *Group, wg *sync.WaitGroup) {
 		if len(right) != 0 && len(left) == 0 {
 			group.node = &n.right
 			wg.Add(1)
-			sink <- group
+			go t.process(group, wg)
 			break
 		}
 
@@ -334,7 +324,7 @@ func (t *Trie) process(group *Group, sink chan<- *Group, wg *sync.WaitGroup) {
 		group.node = &n.left
 
 		wg.Add(1)
-		sink <- group
+		go t.process(group, wg)
 
 		// Finally, we want to use a new path as referenc for memory saving
 		// on the new split side.
@@ -342,7 +332,7 @@ func (t *Trie) process(group *Group, sink chan<- *Group, wg *sync.WaitGroup) {
 		split.path = &path
 
 		wg.Add(1)
-		sink <- split
+		go t.process(split, wg)
 	}
 }
 

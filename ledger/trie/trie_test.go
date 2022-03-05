@@ -397,7 +397,7 @@ func BenchmarkTrie_InsertMany(b *testing.B) {
 	store := helpers.InMemoryStore(b)
 	defer store.Close()
 
-	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
+	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 10000)
 	ref := reference.NewEmptyMTrie()
 	tr := trie.NewEmptyTrie()
 
