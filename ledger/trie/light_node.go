@@ -23,6 +23,7 @@ import (
 	"github.com/onflow/flow-go/ledger/common/encoding"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/common/utils"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/optakt/flow-dps/models/dps"
 )
@@ -67,7 +68,7 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 		}
 	}
 
-	h := node.Hash(0)
+	h := node.Hash(semaphore.NewWeighted(1), 0)
 	lightNode := LightNode{
 		HashValue: h[:],
 	}
@@ -82,12 +83,12 @@ func ToLightNode(node Node, index IndexMap) (*LightNode, error) {
 	case *Branch:
 		leftIndex, found := index[n.left]
 		if !found {
-			h := n.left.Hash(0)
+			h := n.left.Hash(semaphore.NewWeighted(1), 0)
 			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(h[:]))
 		}
 		rightIndex, found := index[n.right]
 		if !found {
-			h := n.right.Hash(0)
+			h := n.right.Hash(semaphore.NewWeighted(1), 0)
 			return nil, fmt.Errorf("missing node with hash %s", hex.EncodeToString(h[:]))
 		}
 		lightNode.LIndex = leftIndex

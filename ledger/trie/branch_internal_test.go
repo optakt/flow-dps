@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
@@ -60,6 +61,6 @@ func Test_BranchWithBothChildren(t *testing.T) {
 	}
 
 	n := Branch{left: &leftChild, right: &rightChild}
-	got := n.Hash(1)
+	got := n.Hash(semaphore.NewWeighted(1), 1)
 	require.Equal(t, expectedHashHex, hex.EncodeToString(got[:]))
 }

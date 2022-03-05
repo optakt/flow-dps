@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/onflow/flow-go/ledger/common/hash"
+	"golang.org/x/sync/semaphore"
 )
 
 // Branch nodes are the non-compact default nodes of a trie. They point to the
@@ -41,25 +42,36 @@ type Branch struct {
 }
 
 // Hash returns the branch hash. If it is currently dirty, it is recomputed first.
-func (b *Branch) Hash(height int) hash.Hash {
+func (b *Branch) Hash(sema *semaphore.Weighted, height int) hash.Hash {
 	if !b.clean {
-		b.hash = b.computeHash(height)
+		b.hash = b.computeHash(sema, height)
 		b.clean = true
 	}
 	return b.hash
 }
 
 // computeHash computes the branch hash by hashing its children.
-func (b *Branch) computeHash(height int) hash.Hash {
+func (b *Branch) computeHash(sema *semaphore.Weighted, height int) hash.Hash {
+
+	// try to acquire a semaphore, in which case we can do it in parallel
+	ok := sema.TryAcquire(1)
+	if !ok {
+		left := b.left.Hash(sema, height-1)
+		right := b.right.Hash(sema, height-1)
+		hash := hash.HashInterNode(left, right)
+		return hash
+	}
+
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	var right hash.Hash
 	go func() {
 		defer wg.Done()
-		right = b.right.Hash(height - 1)
+		right = b.right.Hash(sema, height-1)
 	}()
-	left := b.left.Hash(height - 1)
+	left := b.left.Hash(sema, height-1)
 	wg.Wait()
 	hash := hash.HashInterNode(left, right)
+
 	return hash
 }

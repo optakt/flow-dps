@@ -17,6 +17,7 @@ package trie
 import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
+	"golang.org/x/sync/semaphore"
 )
 
 // Leaf nodes are found at the end of each path of the trie. They do not contain
@@ -39,7 +40,7 @@ type Leaf struct {
 }
 
 // Hash returns the leaf hash.
-func (l *Leaf) Hash(height int) hash.Hash {
+func (l *Leaf) Hash(_ *semaphore.Weighted, height int) hash.Hash {
 	if !l.clean {
 		l.hash = l.computeHash(height)
 		l.clean = true

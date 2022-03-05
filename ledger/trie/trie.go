@@ -18,11 +18,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"runtime"
 	"sort"
 	"sync"
 	"unsafe"
 
 	"github.com/gammazero/deque"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/bitutils"
@@ -69,7 +71,8 @@ func (t *Trie) RootHash() ledger.RootHash {
 	if t.root == nil {
 		return ledger.RootHash(ledger.GetDefaultHashForHeight(maxDepth + 1))
 	}
-	return ledger.RootHash(t.root.Hash(maxDepth))
+	sema := semaphore.NewWeighted(int64(2*runtime.GOMAXPROCS(0) + 1))
+	return ledger.RootHash(t.root.Hash(sema, maxDepth))
 }
 
 func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, error) {

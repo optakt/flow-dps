@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
@@ -114,7 +115,7 @@ func TestExtension(t *testing.T) {
 				child: test.child,
 			}
 
-			got := n.Hash(int(test.height))
+			got := n.Hash(semaphore.NewWeighted(1), int(test.height))
 			require.Equal(t, test.wantHash, hex.EncodeToString(got[:]))
 		})
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/onflow/flow-go/ledger/common/bitutils"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	trie "github.com/onflow/flow-go/ledger/common/hash"
+	"golang.org/x/sync/semaphore"
 )
 
 // Extension nodes are what turn the state trie into a sparse trie. They hold a
@@ -56,29 +57,29 @@ func (e *Extension) Reset() *Extension {
 }
 
 // Hash returns the extension hash. If it is currently dirty, it is recomputed first.
-func (e *Extension) Hash(height int) hash.Hash {
+func (e *Extension) Hash(sema *semaphore.Weighted, height int) hash.Hash {
 	if !e.clean {
-		e.hash = e.computeHash(height)
+		e.hash = e.computeHash(sema, height)
 		e.clean = true
 	}
 	return e.hash
 }
 
 // computeHash computes the extension's hash.
-func (e *Extension) computeHash(height int) hash.Hash {
+func (e *Extension) computeHash(sema *semaphore.Weighted, height int) hash.Hash {
 
 	// If the child is a leaf, simply use its hash as the extension's hash,
 	// since in that case the extension is the equivalent of a Flow "compact leaf".
 	_, ok := e.child.(*Leaf)
 	if ok {
-		hash := e.child.Hash(height + 1)
+		hash := e.child.Hash(sema, height+1)
 		return hash
 	}
 
 	// If the child is not a leaf, we use its hash as the starting point for
 	// the extension's hash. We then hash it against the default hash for each
 	// height for every bit on the extension.
-	hash := e.child.Hash(height - int(e.count) - 1)
+	hash := e.child.Hash(sema, height-int(e.count)-1)
 	for i := height - int(e.count); i <= height; i++ {
 		empty := ledger.GetDefaultHashForHeight(i)
 		if bitutils.Bit(e.path[:], 255-i) == 0 {

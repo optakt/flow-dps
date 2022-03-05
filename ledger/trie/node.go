@@ -15,10 +15,12 @@
 package trie
 
 import (
+	"golang.org/x/sync/semaphore"
+
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
 // Node represents a trie node.
 type Node interface {
-	Hash(height int) hash.Hash
+	Hash(sema *semaphore.Weighted, height int) hash.Hash
 }
