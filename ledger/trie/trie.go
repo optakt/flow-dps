@@ -104,6 +104,13 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	group.count = 0
 	group.node = &t.root
 
+	// We make a copy of the leftmost path in the group, and then keep a pointer
+	// to it in our group. This allows us to later garbage collect poth the slice
+	// of paths, and the groups, while we can reuse the pointer to the path
+	// across many intermediate nodes and even leaves.
+	path := paths[0]
+	group.path = &path
+
 	// We then push that group into our queue and start consuming it.
 	process.PushFront(group)
 
@@ -138,22 +145,16 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 		// If the node is currently `nil`, we have to create a node.
 		case nil:
 
-			switch {
-
-			case len(left) != 0 && len(right) != 0:
+			// If we have a path on only one side, insert an extension. In that
+			// case, the reference part of the group should always be right.
+			// Otherwise, we insert a branch.
+			if len(left) == 0 || len(right) == 0 {
+				extension := t.extensions.Get().(*Extension)
+				extension.path = group.path
+				extension.count = maxDepth - group.depth
+				*group.node = extension
+			} else {
 				*group.node = &Branch{}
-
-			case len(left) != 0:
-				extension := t.extensions.Get().(*Extension)
-				extension.path = &left[0]
-				extension.count = maxDepth - group.depth
-				*group.node = extension
-
-			case len(right) != 0:
-				extension := t.extensions.Get().(*Extension)
-				extension.path = &right[0]
-				extension.count = maxDepth - group.depth
-				*group.node = extension
 			}
 
 		// If the node is currently an extension, we should create a branch if
@@ -176,8 +177,10 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 				}
 			}
 
-			// At this point, we are definitely going to create a branch.
+			// At this point, we are definitely going to create a branch. This
+			// means the extension we are modifying is no longer ceal either.
 			branch := &Branch{}
+			n.clean = false
 
 			// We could do this with more concise code by handling common things
 			// in smaller if statements, but having the four cases of breaking
@@ -192,45 +195,57 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 				} else {
 					branch.right = n.child
 				}
-				*group.node = branch
+
+				n.child = nil
+				n.path = nil
 				t.extensions.Put(n)
+
+				*group.node = branch
 
 			// If we have not traversed the extension, replace first bit with branch.
 			case group.count == 0:
+
 				if extBit == 0 {
 					branch.left = n
 				} else {
 					branch.right = n
 				}
-				*group.node = branch
+
 				n.count--
-				n.clean = false
+
+				*group.node = branch
 
 			// If we have traversed up to the last bit, replace last bit with branch.
 			case n.count == group.count:
+
 				if extBit == 0 {
 					branch.left = n.child
 				} else {
 					branch.right = n.child
 				}
+
 				n.child = branch
 				n.count--
+
 				group.node = &n.child
 
 			// If we have traversed partially, split the extension into two.
 			default:
+
 				extension := t.extensions.Get().(*Extension)
 				extension.path = n.path
-				extension.clean = false
 				extension.count = n.count - group.count - 1
 				extension.child = n.child
+
 				if extBit == 0 {
 					branch.left = extension
 				} else {
 					branch.right = extension
 				}
+
 				n.child = branch
 				n.count = group.count - 1
+
 				group.node = &n.child
 			}
 
@@ -252,13 +267,11 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 		// If we have an extension, we always have a single group of paths.
 		case *Extension:
 
-			// mark the extension as unclean, since we have traversed it
-			n.clean = false
-
 			// If the group count is at the extension count, we have reached the
 			// end of the extension and we want to go to the child next. Otherwise
 			// we simply increase the count of bits already checked.
 			if group.count == n.count {
+				n.clean = false
 				group.count = 0
 				group.node = &n.child
 			} else {
@@ -299,6 +312,13 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 				group.count = 0
 				group.node = &n.right
 				sink.PushFront(group)
+
+				// If we are splitting the group into two, we need to create a new
+				// path that can be pointed to on the right side.
+				if len(left) != 0 {
+					path := right[0]
+					group.path = &path
+				}
 			}
 		}
 	}
@@ -306,12 +326,12 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	for insert.Len() > 0 {
 		group := insert.PopBack().(*Group)
 		if len(group.paths) > 1 {
-			return nil, fmt.Errorf("duplicate path (%x)", group.paths[0])
+			return nil, fmt.Errorf("duplicate path (%x)", group.path)
 		}
 		leaf, ok := (*group.node).(*Leaf)
 		if !ok {
 			leaf = &Leaf{}
-			leaf.path = group.paths[0]
+			leaf.path = group.path
 			*group.node = leaf
 		} else {
 			leaf.clean = false

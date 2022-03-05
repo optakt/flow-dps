@@ -20,6 +20,7 @@ import (
 
 type Group struct {
 	paths    []ledger.Path
+	path     *ledger.Path
 	payloads []ledger.Payload
 	depth    uint8
 	count    uint8

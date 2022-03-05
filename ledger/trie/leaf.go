@@ -32,7 +32,7 @@ type Leaf struct {
 	clean bool
 
 	// The path of the laf.
-	path ledger.Path
+	path *ledger.Path
 
 	// The payload of the leaf.
 	payload *ledger.Payload
@@ -48,5 +48,5 @@ func (l *Leaf) Hash(height int) hash.Hash {
 }
 
 func (l *Leaf) computeHash(height int) hash.Hash {
-	return ledger.ComputeCompactValue(hash.Hash(l.path), l.payload.Value, height)
+	return ledger.ComputeCompactValue(hash.Hash(*l.path), l.payload.Value, height)
 }
