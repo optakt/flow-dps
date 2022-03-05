@@ -222,6 +222,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			// extension and replace the extension by the branch in its previous
 			// location.
 			case group.count == 0:
+				n.clean = false
 				n.count--
 				if extBit == 0 {
 					branch.left = n
@@ -346,7 +347,6 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	}
 
 	for insert.Len() > 0 {
-
 		group := insert.PopBack().(*Group)
 		if len(group.paths) > 1 {
 			return nil, fmt.Errorf("duplicate path (%x)", group.paths[0])
@@ -362,7 +362,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			height = int(extension.count) + 1
 		}
 		leaf.path = group.paths[0]
-		leaf.payload = group.payloads[0]
+		leaf.payload = group.payloads[0].DeepCopy()
 		leaf.hash = ledger.ComputeCompactValue(hash.Hash(leaf.path), leaf.payload.Value, height)
 	}
 
@@ -486,7 +486,7 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 	// data and decode the payload.
 	leaf := (*current).(*Leaf)
 
-	return &leaf.payload, nil
+	return leaf.payload, nil
 }
 
 func (t *Trie) Paths() []ledger.Path {

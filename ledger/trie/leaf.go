@@ -34,7 +34,7 @@ type Leaf struct {
 	path ledger.Path
 
 	// The payload of the leaf.
-	payload ledger.Payload
+	payload *ledger.Payload
 }
 
 // Hash returns the leaf hash.
