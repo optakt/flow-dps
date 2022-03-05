@@ -25,6 +25,7 @@ type Group struct {
 	depth    uint8
 	count    uint8
 	node     *Node
+	leaf     bool
 }
 
 func (g *Group) Reset() *Group {
@@ -34,5 +35,6 @@ func (g *Group) Reset() *Group {
 	g.depth = 0
 	g.count = 0
 	g.node = nil
+	g.leaf = false
 	return g
 }

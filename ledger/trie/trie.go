@@ -92,8 +92,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 	// We create a queue of groups, where each group represents a set of paths
 	// that have all bits in common up to the next depth of that group.
-	process := deque.New(len(paths), len(paths))
-	insert := deque.New(len(paths), len(paths))
+	sink := deque.New()
 
 	// The first group of paths holds all paths, checking depth zero as the first
 	// depth, and using the root to determine what to do at that depth.
@@ -112,14 +111,28 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	group.path = &path
 
 	// We then push that group into our queue and start consuming it.
-	process.PushFront(group)
+	sink.PushFront(group)
 
 	// We keep processing groups that are pushed onto the queue until there are
 	// no groups left to be processed.
-	for process.Len() != 0 {
+	for sink.Len() != 0 {
 
 		// We take the next group from the queue.
-		group := process.PopBack().(*Group)
+		group := sink.PopBack().(*Group)
+
+		// If leaf
+		if group.leaf {
+			leaf, ok := (*group.node).(*Leaf)
+			if !ok {
+				leaf = &Leaf{path: group.path}
+				*group.node = leaf
+			} else {
+				leaf.clean = false
+			}
+			leaf.payload = group.payloads[0].DeepCopy()
+			t.groups.Put(group.Reset())
+			continue
+		}
 
 		// We split the paths for that queue on whether their next bit is zero
 		// or one, and get one set of paths on the left and one on the right.
@@ -252,16 +265,12 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			group.count = 0
 		}
 
-		// Normally, we push into the processing queue, but if we just modified
-		// the trie at height 255, then all of the next children are leaves.
-		sink := process
-		if group.depth == 255 {
-			sink = insert
-		}
-
 		// After this check we can increase the depth; if we push into the insert
 		// sink, depth will actually be zero, but we don't care.
 		group.depth++
+		if group.depth == 0 {
+			group.leaf = true
+		}
 
 		// At this point, we are done modifying the trie.
 		switch n := (*group.node).(type) {
@@ -307,6 +316,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			split.payloads = group.payloads[pivot:]
 			split.depth = group.depth
 			split.node = &n.right
+			split.leaf = group.leaf
 
 			// Then we can update the existing to use on the left
 			group.paths = left
@@ -322,26 +332,6 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 			sink.PushFront(split)
 		}
-	}
-
-	for insert.Len() > 0 {
-
-		group := insert.PopBack().(*Group)
-		if len(group.paths) > 1 {
-			return nil, fmt.Errorf("duplicate path (%x)", group.path)
-		}
-
-		leaf, ok := (*group.node).(*Leaf)
-		if !ok {
-			leaf = &Leaf{path: group.path}
-			*group.node = leaf
-		} else {
-			leaf.clean = false
-		}
-
-		leaf.payload = &group.payloads[0]
-
-		t.groups.Put(group.Reset())
 	}
 
 	return t, nil
