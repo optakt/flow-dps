@@ -20,9 +20,19 @@ import (
 
 type Group struct {
 	paths    []ledger.Path
-	path     *ledger.Path
 	payloads []ledger.Payload
+	path     *ledger.Path
 	depth    uint8
 	count    uint8
 	node     *Node
+}
+
+func (g *Group) Reset() *Group {
+	g.paths = nil
+	g.payloads = nil
+	g.path = nil
+	g.depth = 0
+	g.count = 0
+	g.node = nil
+	return g
 }

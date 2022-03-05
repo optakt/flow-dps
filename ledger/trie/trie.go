@@ -196,9 +196,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 					branch.right = n.child
 				}
 
-				n.child = nil
-				n.path = nil
-				t.extensions.Put(n)
+				t.extensions.Put(n.Reset())
 
 				*group.node = branch
 
@@ -261,6 +259,10 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			sink = insert
 		}
 
+		// After this check we can increase the depth; if we push into the insert
+		// sink, depth will actually be zero, but we don't care.
+		group.depth++
+
 		// At this point, we are done modifying the trie.
 		switch n := (*group.node).(type) {
 
@@ -277,66 +279,69 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			} else {
 				group.count++
 			}
-			group.depth++
 			sink.PushFront(group)
 
 		// If we have a branch, we might want two groups to go on.
 		case *Branch:
 
-			// mark the branch as unclean, since we have traversed it
+			// The branch is always unclean, and depth always increases.
 			n.clean = false
 
-			// Keep the new depth, so we can recycle the current group and
-			// keep the code simple.
-			depth := group.depth + 1
-			payloads := group.payloads
-			t.groups.Put(group)
-
-			// First, we collect the current group
-			if len(left) != 0 {
-				group := t.groups.Get().(*Group)
-				group.paths = left
-				group.payloads = payloads[:pivot]
-				group.depth = depth
-				group.count = 0
+			// If we have a single group on the left, no need to reallocate anything.
+			if len(left) != 0 && len(right) == 0 {
 				group.node = &n.left
 				sink.PushFront(group)
+				break
 			}
 
-			// If we have paths on the right.
-			if len(right) != 0 {
-				group := t.groups.Get().(*Group)
-				group.paths = right
-				group.payloads = payloads[pivot:]
-				group.depth = depth
-				group.count = 0
+			// If we have a single group on the right, no need to reallocate either.
+			if len(right) != 0 && len(left) == 0 {
 				group.node = &n.right
 				sink.PushFront(group)
-
-				// If we are splitting the group into two, we need to create a new
-				// path that can be pointed to on the right side.
-				if len(left) != 0 {
-					path := right[0]
-					group.path = &path
-				}
+				break
 			}
+
+			// Otherwise, we first create a new group on the right.
+			split := t.groups.Get().(*Group)
+			split.paths = right
+			split.payloads = group.payloads[pivot:]
+			split.depth = group.depth
+			split.node = &n.right
+
+			// Then we can update the existing to use on the left
+			group.paths = left
+			group.payloads = group.payloads[:pivot]
+			group.node = &n.left
+
+			sink.PushFront(group)
+
+			// Finally, we want to use a new path as referenc for memory saving
+			// on the new split side.
+			path := right[0]
+			split.path = &path
+
+			sink.PushFront(split)
 		}
 	}
 
 	for insert.Len() > 0 {
+
 		group := insert.PopBack().(*Group)
 		if len(group.paths) > 1 {
 			return nil, fmt.Errorf("duplicate path (%x)", group.path)
 		}
+
 		leaf, ok := (*group.node).(*Leaf)
 		if !ok {
-			leaf = &Leaf{}
-			leaf.path = group.path
+			leaf = &Leaf{path: group.path}
 			*group.node = leaf
 		} else {
 			leaf.clean = false
 		}
+
 		leaf.payload = group.payloads[0].DeepCopy()
+
+		t.groups.Put(group.Reset())
 	}
 
 	return t, nil

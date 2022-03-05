@@ -47,6 +47,14 @@ type Extension struct {
 	child Node
 }
 
+func (e *Extension) Reset() *Extension {
+	e.clean = false
+	e.path = nil
+	e.count = 0
+	e.child = nil
+	return e
+}
+
 // Hash returns the extension hash. If it is currently dirty, it is recomputed first.
 func (e *Extension) Hash(height int) hash.Hash {
 	if !e.clean {
