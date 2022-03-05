@@ -339,7 +339,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			leaf.clean = false
 		}
 
-		leaf.payload = group.payloads[0].DeepCopy()
+		leaf.payload = &group.payloads[0]
 
 		t.groups.Put(group.Reset())
 	}

@@ -420,7 +420,7 @@ func BenchmarkTrie_InsertX(b *testing.B) {
 	store := helpers.InMemoryStore(b)
 	defer store.Close()
 
-	for i := 1; i <= 16; i++ {
+	for i := 1; i <= 8192; i *= 2 {
 		paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
 
 		b.Run(fmt.Sprintf("insert %d elements (reference)", i), func(b *testing.B) {
