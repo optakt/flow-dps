@@ -385,7 +385,7 @@ func BenchmarkTrie_InsertMany(b *testing.B) {
 
 func BenchmarkTrie_InsertX(b *testing.B) {
 
-	for i := 1; i <= 8192; i *= 2 {
+	for i := 1; i <= 32768; i *= 2 {
 
 		paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
 
