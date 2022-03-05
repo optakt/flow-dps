@@ -94,21 +94,21 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	// that have all bits in common up to the next depth of that group.
 	sink := deque.New()
 
-	// The first group of paths holds all paths, checking depth zero as the first
-	// depth, and using the root to determine what to do at that depth.
-	group := t.groups.Get().(*Group)
-	group.paths = paths
-	group.payloads = payloads
-	group.depth = 0
-	group.count = 0
-	group.node = &t.root
-
 	// We make a copy of the leftmost path in the group, and then keep a pointer
 	// to it in our group. This allows us to later garbage collect poth the slice
 	// of paths, and the groups, while we can reuse the pointer to the path
 	// across many intermediate nodes and even leaves.
 	path := paths[0]
+
+	// The first group of paths holds all paths, checking depth zero as the first
+	// depth, and using the root to determine what to do at that depth.
+	group := t.groups.Get().(*Group)
 	group.path = &path
+	group.node = &t.root
+	group.start = 0
+	group.end = uint(len(paths))
+	group.depth = 0
+	group.count = 0
 
 	// We then push that group into our queue and start consuming it.
 	sink.PushFront(group)
@@ -129,25 +129,21 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			} else {
 				leaf.clean = false
 			}
-			leaf.payload = group.payloads[0].DeepCopy()
+			leaf.payload = payloads[group.start].DeepCopy()
 			t.groups.Put(group.Reset())
 			continue
 		}
 
 		// We split the paths for that queue on whether their next bit is zero
 		// or one, and get one set of paths on the left and one on the right.
-		var pivot int
-		for i, path := range group.paths {
-			bit := bitutils.Bit(path[:], int(group.depth))
+		var pivot uint
+		for i := group.start; i < group.end; i++ {
+			bit := bitutils.Bit(paths[i][:], int(group.depth))
 			if bit == 1 {
 				break
 			}
 			pivot = i + 1
 		}
-
-		// Now, we can cut the paths into the left and the right side.
-		left := group.paths[:pivot]
-		right := group.paths[pivot:]
 
 		// The following switch only handles modification of the trie. It looks
 		// at what paths need to be present at the current depth to deal with
@@ -161,7 +157,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			// If we have a path on only one side, insert an extension. In that
 			// case, the reference part of the group should always be right.
 			// Otherwise, we insert a branch.
-			if len(left) == 0 || len(right) == 0 {
+			if group.start == pivot || group.end == pivot {
 				extension := t.extensions.Get().(*Extension)
 				extension.path = group.path
 				extension.count = maxDepth - group.depth
@@ -178,12 +174,12 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			extBit := bitutils.Bit(n.path[:], int(group.depth))
 
 			// If the extension is on the same side as all the paths, do nothing.
-			if (extBit == 0 && len(right) == 0) || (extBit == 1 && len(left) == 0) {
+			if (extBit == 0 && group.end == pivot) || (extBit == 1 && group.start == pivot) {
 				break
 			}
 
 			// If the extension is on the opposite side of all the paths, rehash.
-			if (extBit == 0 && len(left) == 0) || (extBit == 1 && len(right) == 0) {
+			if (extBit == 0 && group.start == pivot) || (extBit == 1 && group.end == pivot) {
 				leaf, ok := n.child.(*Leaf)
 				if ok {
 					leaf.clean = false
@@ -191,7 +187,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			}
 
 			// At this point, we are definitely going to create a branch. This
-			// means the extension we are modifying is no longer ceal either.
+			// means the extension we are modifying is no longer clean either.
 			branch := &Branch{}
 			n.clean = false
 
@@ -203,6 +199,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 			// If the extension has a length of zero, we replace it with a branch.
 			case n.count == 0:
+
 				if extBit == 0 {
 					branch.left = n.child
 				} else {
@@ -265,8 +262,8 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			group.count = 0
 		}
 
-		// After this check we can increase the depth; if we push into the insert
-		// sink, depth will actually be zero, but we don't care.
+		// After this check we can increase the depth. If depth is zero, we have
+		// arrived at the leaves.
 		group.depth++
 		if group.depth == 0 {
 			group.leaf = true
@@ -297,38 +294,36 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			n.clean = false
 
 			// If we have a single group on the left, no need to reallocate anything.
-			if len(left) != 0 && len(right) == 0 {
+			if group.end == pivot {
 				group.node = &n.left
 				sink.PushFront(group)
 				break
 			}
 
 			// If we have a single group on the right, no need to reallocate either.
-			if len(right) != 0 && len(left) == 0 {
+			if group.start == pivot {
 				group.node = &n.right
 				sink.PushFront(group)
 				break
 			}
 
+			// The path we want to use on the right is the one of the pivot.
+			path := paths[pivot]
+
 			// Otherwise, we first create a new group on the right.
 			split := t.groups.Get().(*Group)
-			split.paths = right
-			split.payloads = group.payloads[pivot:]
-			split.depth = group.depth
+			split.path = &path
 			split.node = &n.right
+			split.start = pivot
+			split.end = group.end
+			split.depth = group.depth
 			split.leaf = group.leaf
 
 			// Then we can update the existing to use on the left
-			group.paths = left
-			group.payloads = group.payloads[:pivot]
 			group.node = &n.left
+			group.end = pivot
 
 			sink.PushFront(group)
-
-			// Finally, we want to use a new path as referenc for memory saving
-			// on the new split side.
-			path := right[0]
-			split.path = &path
 
 			sink.PushFront(split)
 		}

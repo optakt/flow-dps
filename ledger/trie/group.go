@@ -19,22 +19,22 @@ import (
 )
 
 type Group struct {
-	paths    []ledger.Path
-	payloads []ledger.Payload
-	path     *ledger.Path
-	depth    uint8
-	count    uint8
-	node     *Node
-	leaf     bool
+	path  *ledger.Path
+	node  *Node
+	start uint
+	end   uint
+	depth uint8
+	count uint8
+	leaf  bool
 }
 
 func (g *Group) Reset() *Group {
-	g.paths = nil
-	g.payloads = nil
 	g.path = nil
+	g.node = nil
+	g.start = 0
+	g.end = 0
 	g.depth = 0
 	g.count = 0
-	g.node = nil
 	g.leaf = false
 	return g
 }
