@@ -15,6 +15,8 @@
 package trie
 
 import (
+	"sync"
+
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
@@ -49,8 +51,15 @@ func (b *Branch) Hash(height int) hash.Hash {
 
 // computeHash computes the branch hash by hashing its children.
 func (b *Branch) computeHash(height int) hash.Hash {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	var right hash.Hash
+	go func() {
+		defer wg.Done()
+		right = b.right.Hash(height - 1)
+	}()
 	left := b.left.Hash(height - 1)
-	right := b.right.Hash(height - 1)
+	wg.Wait()
 	hash := hash.HashInterNode(left, right)
 	return hash
 }

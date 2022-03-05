@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -367,17 +366,17 @@ func BenchmarkTrie_InsertMany(b *testing.B) {
 
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
 
-	ref := reference.NewEmptyMTrie()
 	b.Run("insert 1000 elements (reference)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
+			ref := reference.NewEmptyMTrie()
 			ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
 			_ = ref.RootHash()
 		}
 	})
 
-	tr := trie.NewEmptyTrie()
 	b.Run("insert 1000 elements (new)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
+			tr := trie.NewEmptyTrie()
 			tr, _ = tr.Mutate(paths, payloads)
 			_ = tr.RootHash()
 		}
@@ -387,11 +386,8 @@ func BenchmarkTrie_InsertMany(b *testing.B) {
 func BenchmarkTrie_InsertX(b *testing.B) {
 
 	for i := 1; i <= 8192; i *= 2 {
-		paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
 
-		sort.Slice(paths, func(i int, j int) bool {
-			return bytes.Compare(paths[i][:], paths[j][:]) < 0
-		})
+		paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
 
 		b.Run(fmt.Sprintf("insert %d elements (reference)", i), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
