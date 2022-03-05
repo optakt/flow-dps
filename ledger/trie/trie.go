@@ -15,6 +15,7 @@
 package trie
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"sort"
@@ -124,12 +125,12 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 		if group.leaf {
 			leaf, ok := (*group.node).(*Leaf)
 			if !ok {
-				leaf = &Leaf{path: group.path}
+				leaf = &Leaf{path: group.path, payload: payloads[group.start].DeepCopy()}
 				*group.node = leaf
-			} else {
+			} else if bytes.Compare(leaf.payload.Value, payloads[group.start].Value) != 0 {
 				leaf.clean = false
+				leaf.payload = payloads[group.start].DeepCopy()
 			}
-			leaf.payload = payloads[group.start].DeepCopy()
 			t.groups.Put(group.Reset())
 			continue
 		}

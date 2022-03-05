@@ -73,9 +73,6 @@ func TestTrie_InsertRightRegister(t *testing.T) {
 
 	const expectedRootHashHex = "4313d22bcabbf21b1cfb833d38f1921f06a91e7198a6672bc68fa24eaaa1a961"
 
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
-
 	trie := trie.NewEmptyTrie()
 
 	var path ledger.Path
@@ -99,9 +96,6 @@ func TestTrie_InsertMiddleRegister(t *testing.T) {
 
 	const expectedRootHashHex = "4a29dad0b7ae091a1f035955e0c9aab0692b412f60ae83290b6290d4bf3eb296"
 
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
-
 	trie := trie.NewEmptyTrie()
 
 	path := utils.PathByUint16LeftPadded(56809)
@@ -119,9 +113,6 @@ func TestTrie_InsertMiddleRegister(t *testing.T) {
 // matches the formal specification.
 // The expected value is coming from a reference implementation in python and is hard-coded here.
 func TestTrie_InsertManyRegisters(t *testing.T) {
-
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
 
 	trie := trie.NewEmptyTrie()
 	refTr := reference.NewEmptyMTrie()
@@ -149,9 +140,6 @@ func TestTrie_InsertManyRegisters(t *testing.T) {
 }
 
 func TestTrie_InsertNeighbors(t *testing.T) {
-
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
 
 	paths := []ledger.Path{
 		utils.PathByUint16LeftPadded(0),
@@ -183,9 +171,6 @@ func TestTrie_InsertNeighbors(t *testing.T) {
 func TestTrie_InsertFullTrie(t *testing.T) {
 	const expectedRootHashHex = "6b3a48d672744f5586c571c47eae32d7a4a3549c1d4fa51a0acfd7b720471de9"
 	const regCount = 65536
-
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
 
 	trie := trie.NewEmptyTrie()
 
@@ -232,9 +217,6 @@ func TestTrie_InsertManyTimes(t *testing.T) {
 		"ce633e9ca6329d6984c37a46e0a479bb1841674c2db00970dacfe035882d4aba",
 	}
 
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
-
 	trie := trie.NewEmptyTrie()
 
 	rng := helpers.NewGenerator()
@@ -273,9 +255,6 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 
 	const expectedRootHashHex = "d81e27a93f2bef058395f70e00fb5d3c8e426e22b3391d048b34017e1ecb483e"
 
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
-
 	rng := helpers.NewGenerator()
 	testTrie := trie.NewEmptyTrie()
 	refTrie := trie.NewEmptyTrie()
@@ -309,9 +288,6 @@ func TestTrie_InsertDeallocateRegisters(t *testing.T) {
 
 func Test_UnsafeRead(t *testing.T) {
 	const regCount = 65536
-
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
 
 	trie := trie.NewEmptyTrie()
 
@@ -351,9 +327,6 @@ func TestTrie_InsertAdvanced(t *testing.T) {
 	paths := mocks.GenericLedgerPaths(totalValues)
 	payloads := mocks.GenericLedgerPayloads(totalValues)
 
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
-
 	tr := trie.NewEmptyTrie()
 	refTr := reference.NewEmptyMTrie()
 
@@ -378,9 +351,6 @@ func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 	paths := mocks.GenericLedgerPaths(totalValues)
 	payloads := mocks.GenericLedgerPayloads(totalValues)
 
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
-
 	tr := trie.NewEmptyTrie()
 
 	for i := range paths {
@@ -394,19 +364,17 @@ func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 
 func BenchmarkTrie_InsertMany(b *testing.B) {
 
-	store := helpers.InMemoryStore(b)
-	defer store.Close()
-
 	paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), 1000)
-	ref := reference.NewEmptyMTrie()
-	tr := trie.NewEmptyTrie()
 
+	ref := reference.NewEmptyMTrie()
 	b.Run("insert 1000 elements (reference)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
 			_ = ref.RootHash()
 		}
 	})
+
+	tr := trie.NewEmptyTrie()
 	b.Run("insert 1000 elements (new)", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			tr, _ = tr.Mutate(paths, payloads)
@@ -416,9 +384,6 @@ func BenchmarkTrie_InsertMany(b *testing.B) {
 }
 
 func BenchmarkTrie_InsertX(b *testing.B) {
-
-	store := helpers.InMemoryStore(b)
-	defer store.Close()
 
 	for i := 1; i <= 8192; i *= 2 {
 		paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
@@ -504,9 +469,6 @@ func Test_NewMemoryUsage(t *testing.T) {
 	for i := range p {
 		payloads = append(payloads, *p[i])
 	}
-
-	store := helpers.InMemoryStore(t)
-	defer store.Close()
 
 	tr := trie.NewEmptyTrie()
 	// FIXME: Doing a single insertion somehow prevents the insertion logic from even appearing in the heap profile.
