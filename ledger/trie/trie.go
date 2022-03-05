@@ -118,12 +118,12 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 		// We split the paths for that queue on whether their next bit is zero
 		// or one, and get one set of paths on the left and one on the right.
 		var pivot int
-		for index, path := range group.paths {
+		for i, path := range group.paths {
 			bit := bitutils.Bit(path[:], int(group.depth))
 			if bit == 1 {
 				break
 			}
-			pivot = index + 1
+			pivot = i + 1
 		}
 
 		// Now, we can cut the paths into the left and the right side.
@@ -164,17 +164,43 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			// We look at the first bit of the extension.
 			extBit := bitutils.Bit(n.path[:], int(group.depth))
 
-			switch {
-
 			// If the extension is on the left, and there are no paths on the
 			// right, do nothing.
-			case extBit == 0 && len(right) == 0:
-				// do nothing
+			if extBit == 0 && len(right) == 0 {
+				break
+			}
 
 			// If the extension is on the right, and there are no paths on the
 			// left, do nothing.
-			case extBit == 1 && len(left) == 0:
-				// do nothing
+			if extBit == 1 && len(left) == 0 {
+				break
+			}
+
+			// We might have to rehash the child of the extension if it's a leaf
+			// and none of our groups follows it down.
+			var parent Node
+			var leaf *Leaf
+
+			// If the extension is on the left, and all paths on the right, we
+			// don't follow the extension down.
+			if extBit == 0 && len(left) == 0 {
+				leaf, _ = n.child.(*Leaf)
+			}
+
+			// If the extension is on the right, and all paths on the left, we
+			// don't follow the extension down.
+			if extBit == 1 && len(right) == 0 {
+				leaf, _ = n.child.(*Leaf)
+			}
+
+			// At this point, we are definitely going to create a branch.
+			branch := &Branch{}
+
+			// We could do this with more concise code by handling common things
+			// in smaller if statements, but having the four cases of breaking
+			// up an extension well isolated makes it easier to avoid memory
+			// allocations by optimally reusing extensions.
+			switch {
 
 			// If the count of the extension is zero, it has a length of one. In
 			// that case, the extension should simply be replaced by the branch,
@@ -182,7 +208,6 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			// previously the extension's child. In this case, we recycle the
 			// memory of the extension node as well to minimize allocations.
 			case n.count == 0:
-				branch := &Branch{}
 				if extBit == 0 {
 					branch.left = n.child
 				} else {
@@ -190,7 +215,6 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 				}
 				*group.node = branch
 				t.extensions.Put(n)
-				group.count = 0
 
 			// If the count on the group is zero, we have not traversed any bits
 			// of the extension yet. In that case, we shorten the extension by
@@ -198,7 +222,6 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			// extension and replace the extension by the branch in its previous
 			// location.
 			case group.count == 0:
-				branch := &Branch{}
 				n.count--
 				if extBit == 0 {
 					branch.left = n
@@ -206,7 +229,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 					branch.right = n
 				}
 				*group.node = branch
-				group.count = 0
+				parent = n
 
 			// If the count of the group is equal to the count on the extension,
 			// we are looking at the last bit of the extension now. In that case,
@@ -214,7 +237,6 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			// at the branch, point the correct side of the branch at the
 			// extension's child and then point the current group at the branch.
 			case n.count == group.count:
-				branch := &Branch{}
 				if extBit == 0 {
 					branch.left = n.child
 				} else {
@@ -223,12 +245,10 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 				n.child = branch
 				n.count--
 				group.node = &n.child
-				group.count = 0
 
 			// Finally, in all other cases, we will have one extension before and
 			// one extension behind the branch.
 			default:
-				branch := &Branch{}
 				extension := t.extensions.Get().(*Extension)
 				extension.clean = false
 				extension.path = n.path
@@ -241,7 +261,23 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 				}
 				n.child = branch
 				n.count = group.count - 1
-				group.count = 0
+				group.node = &n.child
+				parent = extension
+			}
+
+			// In any case, we have stopped following an extension and are now
+			// on a branch next, so reset group count.
+			group.count = 0
+
+			// If we had a leaf that we are not following, rehash it.
+			if leaf != nil {
+				height := 0
+				extension, ok := parent.(*Extension)
+				if ok {
+					extension.clean = false
+					height = int(extension.count) + 1
+				}
+				leaf.hash = ledger.ComputeCompactValue(hash.Hash(leaf.path), leaf.payload.Value, height)
 			}
 		}
 
@@ -257,6 +293,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 		// If we have an extension, we always have a single group of paths.
 		case *Extension:
+			n.clean = false
 
 			// If the group count is at the extension count, we have reached the
 			// end of the extension and we want to go to the child next. Otherwise
@@ -273,6 +310,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 		// If we have a branch, we might want two groups to go on.
 		case *Branch:
+			n.clean = false
 
 			// Keep the new depth, so we can recycle the current group and
 			// keep the code simple.
@@ -308,6 +346,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	}
 
 	for insert.Len() > 0 {
+
 		group := insert.PopBack().(*Group)
 		if len(group.paths) > 1 {
 			return nil, fmt.Errorf("duplicate path (%x)", group.paths[0])

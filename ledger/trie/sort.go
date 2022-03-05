@@ -21,7 +21,7 @@ import (
 )
 
 type sortByPath struct {
-	paths []ledger.Path
+	paths    []ledger.Path
 	payloads []ledger.Payload
 }
 
@@ -35,6 +35,5 @@ func (s sortByPath) Swap(i, j int) {
 }
 
 func (s sortByPath) Less(i, j int) bool {
-	return bytes.Compare(s.paths[i][:], s.paths[j][:]) > 0
+	return bytes.Compare(s.paths[i][:], s.paths[j][:]) < 0
 }
-
