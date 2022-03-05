@@ -90,11 +90,6 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	// zero, and all paths on the right side having the next bit at one.
 	sort.Sort(sortByPath{paths, payloads})
 
-	// We create a queue of groups, where each group represents a set of paths
-	// that have all bits in common up to the next depth of that group.
-	process := deque.New(len(paths), len(paths))
-	insert := deque.New(len(paths), len(paths))
-
 	// The first group of paths holds all paths, checking depth zero as the first
 	// depth, and using the root to determine what to do at that depth.
 	group := t.groups.Get().(*Group)
@@ -111,240 +106,244 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 	path := paths[0]
 	group.path = &path
 
-	// We then push that group into our queue and start consuming it.
-	process.PushFront(group)
+	// Every time we process the group, we get back a channel with new groups.
+	sink := make(chan *Group, len(paths))
 
-	// We keep processing groups that are pushed onto the queue until there are
-	// no groups left to be processed.
-	for process.Len() != 0 {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	sink <- group
 
-		// We take the next group from the queue.
-		group := process.PopBack().(*Group)
-
-		// We split the paths for that queue on whether their next bit is zero
-		// or one, and get one set of paths on the left and one on the right.
-		var pivot int
-		for i, path := range group.paths {
-			bit := bitutils.Bit(path[:], int(group.depth))
-			if bit == 1 {
-				break
-			}
-			pivot = i + 1
+	go func() {
+		for group := range sink {
+			go t.process(group, sink, wg)
 		}
+	}()
 
-		// Now, we can cut the paths into the left and the right side.
-		left := group.paths[:pivot]
-		right := group.paths[pivot:]
-
-		// The following switch only handles modification of the trie. It looks
-		// at what paths need to be present at the current depth to deal with
-		// all paths we are trying to insert. If anything needs to be modified,
-		// it will do so.
-		switch n := (*group.node).(type) {
-
-		// If the node is currently `nil`, we have to create a node.
-		case nil:
-
-			// If we have a path on only one side, insert an extension. In that
-			// case, the reference part of the group should always be right.
-			// Otherwise, we insert a branch.
-			if len(left) == 0 || len(right) == 0 {
-				extension := t.extensions.Get().(*Extension)
-				extension.path = group.path
-				extension.count = maxDepth - group.depth
-				*group.node = extension
-			} else {
-				*group.node = &Branch{}
-			}
-
-		// If the node is currently an extension, we should create a branch if
-		// there are paths on the side we don't have yet.
-		case *Extension:
-
-			// We look at the first bit of the extension.
-			extBit := bitutils.Bit(n.path[:], int(group.depth))
-
-			// If the extension is on the same side as all the paths, do nothing.
-			if (extBit == 0 && len(right) == 0) || (extBit == 1 && len(left) == 0) {
-				break
-			}
-
-			// If the extension is on the opposite side of all the paths, rehash.
-			if (extBit == 0 && len(left) == 0) || (extBit == 1 && len(right) == 0) {
-				leaf, ok := n.child.(*Leaf)
-				if ok {
-					leaf.clean = false
-				}
-			}
-
-			// At this point, we are definitely going to create a branch. This
-			// means the extension we are modifying is no longer ceal either.
-			branch := &Branch{}
-			n.clean = false
-
-			// We could do this with more concise code by handling common things
-			// in smaller if statements, but having the four cases of breaking
-			// up an extension well isolated makes it easier to avoid memory
-			// allocations by optimally reusing extensions.
-			switch {
-
-			// If the extension has a length of zero, we replace it with a branch.
-			case n.count == 0:
-				if extBit == 0 {
-					branch.left = n.child
-				} else {
-					branch.right = n.child
-				}
-
-				t.extensions.Put(n.Reset())
-
-				*group.node = branch
-
-			// If we have not traversed the extension, replace first bit with branch.
-			case group.count == 0:
-
-				if extBit == 0 {
-					branch.left = n
-				} else {
-					branch.right = n
-				}
-
-				n.count--
-
-				*group.node = branch
-
-			// If we have traversed up to the last bit, replace last bit with branch.
-			case n.count == group.count:
-
-				if extBit == 0 {
-					branch.left = n.child
-				} else {
-					branch.right = n.child
-				}
-
-				n.child = branch
-				n.count--
-
-				group.node = &n.child
-
-			// If we have traversed partially, split the extension into two.
-			default:
-
-				extension := t.extensions.Get().(*Extension)
-				extension.path = n.path
-				extension.count = n.count - group.count - 1
-				extension.child = n.child
-
-				if extBit == 0 {
-					branch.left = extension
-				} else {
-					branch.right = extension
-				}
-
-				n.child = branch
-				n.count = group.count - 1
-
-				group.node = &n.child
-			}
-
-			// In any case, we have stopped following an extension and are now
-			// on a branch next, so reset group count.
-			group.count = 0
-		}
-
-		// Normally, we push into the processing queue, but if we just modified
-		// the trie at height 255, then all of the next children are leaves.
-		sink := process
-		if group.depth == 255 {
-			sink = insert
-		}
-
-		// After this check we can increase the depth; if we push into the insert
-		// sink, depth will actually be zero, but we don't care.
-		group.depth++
-
-		// At this point, we are done modifying the trie.
-		switch n := (*group.node).(type) {
-
-		// If we have an extension, we always have a single group of paths.
-		case *Extension:
-
-			// If the group count is at the extension count, we have reached the
-			// end of the extension and we want to go to the child next. Otherwise
-			// we simply increase the count of bits already checked.
-			if group.count == n.count {
-				n.clean = false
-				group.count = 0
-				group.node = &n.child
-			} else {
-				group.count++
-			}
-			sink.PushFront(group)
-
-		// If we have a branch, we might want two groups to go on.
-		case *Branch:
-
-			// The branch is always unclean, and depth always increases.
-			n.clean = false
-
-			// If we have a single group on the left, no need to reallocate anything.
-			if len(left) != 0 && len(right) == 0 {
-				group.node = &n.left
-				sink.PushFront(group)
-				break
-			}
-
-			// If we have a single group on the right, no need to reallocate either.
-			if len(right) != 0 && len(left) == 0 {
-				group.node = &n.right
-				sink.PushFront(group)
-				break
-			}
-
-			// Otherwise, we first create a new group on the right.
-			split := t.groups.Get().(*Group)
-			split.paths = right
-			split.payloads = group.payloads[pivot:]
-			split.depth = group.depth
-			split.node = &n.right
-
-			// Then we can update the existing to use on the left
-			group.paths = left
-			group.payloads = group.payloads[:pivot]
-			group.node = &n.left
-
-			sink.PushFront(group)
-
-			// Finally, we want to use a new path as referenc for memory saving
-			// on the new split side.
-			path := right[0]
-			split.path = &path
-
-			sink.PushFront(split)
-		}
-	}
-
-	for insert.Len() > 0 {
-
-		group := insert.PopBack().(*Group)
-		if len(group.paths) > 1 {
-			return nil, fmt.Errorf("duplicate path (%x)", group.path)
-		}
-
-		leaf, ok := (*group.node).(*Leaf)
-		if !ok {
-			leaf = &Leaf{path: group.path}
-			*group.node = leaf
-		} else {
-			leaf.clean = false
-		}
-
-		leaf.payload = group.payloads[0].DeepCopy()
-
-		t.groups.Put(group.Reset())
-	}
+	wg.Wait()
 
 	return t, nil
+}
+
+func (t *Trie) process(group *Group, sink chan<- *Group, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	// If leaf if set on the group, we should only have one path and create
+	// a leaf at node.
+	if group.leaf {
+		*group.node = &Leaf{
+			path:    group.path,
+			payload: group.payloads[0].DeepCopy(),
+		}
+		t.groups.Put(group.Reset())
+		return
+	}
+
+	// We split the paths for that queue on whether their next bit is zero
+	// or one, and get one set of paths on the left and one on the right.
+	var pivot int
+	for i, path := range group.paths {
+		bit := bitutils.Bit(path[:], int(group.depth))
+		if bit == 1 {
+			break
+		}
+		pivot = i + 1
+	}
+
+	// Now, we can cut the paths into the left and the right side.
+	left := group.paths[:pivot]
+	right := group.paths[pivot:]
+
+	// The following switch only handles modification of the trie. It looks
+	// at what paths need to be present at the current depth to deal with
+	// all paths we are trying to insert. If anything needs to be modified,
+	// it will do so.
+	switch n := (*group.node).(type) {
+
+	// If the node is currently `nil`, we have to create a node.
+	case nil:
+
+		// If we have a path on only one side, insert an extension. In that
+		// case, the reference part of the group should always be right.
+		// Otherwise, we insert a branch.
+		if len(left) == 0 || len(right) == 0 {
+			extension := t.extensions.Get().(*Extension)
+			extension.path = group.path
+			extension.count = maxDepth - group.depth
+			*group.node = extension
+		} else {
+			*group.node = &Branch{}
+		}
+
+	// If the node is currently an extension, we should create a branch if
+	// there are paths on the side we don't have yet.
+	case *Extension:
+
+		// We look at the first bit of the extension.
+		extBit := bitutils.Bit(n.path[:], int(group.depth))
+
+		// If the extension is on the same side as all the paths, do nothing.
+		if (extBit == 0 && len(right) == 0) || (extBit == 1 && len(left) == 0) {
+			break
+		}
+
+		// If the extension is on the opposite side of all the paths, rehash.
+		if (extBit == 0 && len(left) == 0) || (extBit == 1 && len(right) == 0) {
+			leaf, ok := n.child.(*Leaf)
+			if ok {
+				leaf.clean = false
+			}
+		}
+
+		// At this point, we are definitely going to create a branch. This
+		// means the extension we are modifying is no longer ceal either.
+		branch := &Branch{}
+		n.clean = false
+
+		// We could do this with more concise code by handling common things
+		// in smaller if statements, but having the four cases of breaking
+		// up an extension well isolated makes it easier to avoid memory
+		// allocations by optimally reusing extensions.
+		switch {
+
+		// If the extension has a length of zero, we replace it with a branch.
+		case n.count == 0:
+
+			if extBit == 0 {
+				branch.left = n.child
+			} else {
+				branch.right = n.child
+			}
+
+			t.extensions.Put(n.Reset())
+
+			*group.node = branch
+
+		// If we have not traversed the extension, replace first bit with branch.
+		case group.count == 0:
+
+			if extBit == 0 {
+				branch.left = n
+			} else {
+				branch.right = n
+			}
+
+			n.count--
+
+			*group.node = branch
+
+		// If we have traversed up to the last bit, replace last bit with branch.
+		case n.count == group.count:
+
+			if extBit == 0 {
+				branch.left = n.child
+			} else {
+				branch.right = n.child
+			}
+
+			n.child = branch
+			n.count--
+
+			group.node = &n.child
+
+		// If we have traversed partially, split the extension into two.
+		default:
+
+			extension := t.extensions.Get().(*Extension)
+			extension.path = n.path
+			extension.count = n.count - group.count - 1
+			extension.child = n.child
+
+			if extBit == 0 {
+				branch.left = extension
+			} else {
+				branch.right = extension
+			}
+
+			n.child = branch
+			n.count = group.count - 1
+
+			group.node = &n.child
+		}
+
+		// In any case, we have stopped following an extension and are now
+		// on a branch next, so reset group count.
+		group.count = 0
+	}
+
+	// After this check we can increase the depth; if we push into the insert
+	// sink, depth will actually be zero, but we don't care.
+	group.depth++
+	if group.depth == 0 {
+		group.leaf = true
+	}
+
+	// At this point, we are done modifying the trie.
+	switch n := (*group.node).(type) {
+
+	// If we have an extension, we always have a single group of paths.
+	case *Extension:
+
+		// If the group count is at the extension count, we have reached the
+		// end of the extension and we want to go to the child next. Otherwise
+		// we simply increase the count of bits already checked.
+		if group.count == n.count {
+			n.clean = false
+			group.count = 0
+			group.node = &n.child
+		} else {
+			group.count++
+		}
+
+		wg.Add(1)
+		sink <- group
+
+	// If we have a branch, we might want two groups to go on.
+	case *Branch:
+
+		// The branch is always unclean, and depth always increases.
+		n.clean = false
+
+		// If we have a single group on the left, no need to reallocate anything.
+		if len(left) != 0 && len(right) == 0 {
+			group.node = &n.left
+			wg.Add(1)
+			sink <- group
+			break
+		}
+
+		// If we have a single group on the right, no need to reallocate either.
+		if len(right) != 0 && len(left) == 0 {
+			group.node = &n.right
+			wg.Add(1)
+			sink <- group
+			break
+		}
+
+		// Otherwise, we first create a new group on the right.
+		split := t.groups.Get().(*Group)
+		split.paths = right
+		split.payloads = group.payloads[pivot:]
+		split.depth = group.depth
+		split.node = &n.right
+		split.leaf = group.leaf
+
+		// Then we can update the existing to use on the left
+		group.paths = left
+		group.payloads = group.payloads[:pivot]
+		group.node = &n.left
+
+		wg.Add(1)
+		sink <- group
+
+		// Finally, we want to use a new path as referenc for memory saving
+		// on the new split side.
+		path := right[0]
+		split.path = &path
+
+		wg.Add(1)
+		sink <- split
+	}
 }
 
 // Leaves iterates through the trie and returns its leaf nodes.
@@ -392,6 +391,7 @@ func (t *Trie) UnsafeRead(paths []ledger.Path) []*ledger.Payload {
 }
 
 func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
+
 	current := &t.root
 	depth := uint8(0)
 	for {
