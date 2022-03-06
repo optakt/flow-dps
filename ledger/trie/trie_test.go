@@ -383,13 +383,13 @@ func BenchmarkTrie_InsertMany(b *testing.B) {
 	})
 }
 
-func BenchmarkTrie_InsertX(b *testing.B) {
+func BenchmarkTrie_InsertEmptyTrie(b *testing.B) {
 
 	for i := 1; i <= 32768; i *= 2 {
 
-		paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
-
 		b.Run(fmt.Sprintf("insert %d elements (reference)", i), func(b *testing.B) {
+			paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
+			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				ref := reference.NewEmptyMTrie()
 				ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
@@ -398,8 +398,36 @@ func BenchmarkTrie_InsertX(b *testing.B) {
 		})
 
 		b.Run(fmt.Sprintf("insert %d elements (new)", i), func(b *testing.B) {
+			paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
+			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				tr := trie.NewEmptyTrie()
+				tr, _ = tr.Mutate(paths, payloads)
+				_ = tr.RootHash()
+			}
+		})
+	}
+}
+
+func BenchmarkTrie_InsertCumulative(b *testing.B) {
+
+	for i := 1; i <= 32768; i *= 2 {
+
+		b.Run(fmt.Sprintf("insert %d elements (reference)", i), func(b *testing.B) {
+			paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
+			ref := reference.NewEmptyMTrie()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				ref, _ = reference.NewTrieWithUpdatedRegisters(ref, paths, payloads)
+				_ = ref.RootHash()
+			}
+		})
+
+		b.Run(fmt.Sprintf("insert %d elements (new)", i), func(b *testing.B) {
+			paths, payloads := helpers.SampleRandomRegisterWrites(helpers.NewGenerator(), i)
+			tr := trie.NewEmptyTrie()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
 				tr, _ = tr.Mutate(paths, payloads)
 				_ = tr.RootHash()
 			}
