@@ -15,8 +15,6 @@
 package trie
 
 import (
-	"sync"
-
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"golang.org/x/sync/semaphore"
 )
@@ -62,15 +60,14 @@ func (b *Branch) computeHash(sema *semaphore.Weighted, height int) hash.Hash {
 		return hash
 	}
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	var right hash.Hash
-	go func() {
-		defer wg.Done()
-		right = b.right.Hash(sema, height-1)
-	}()
+	c := make(chan hash.Hash)
+	go func(c chan<- hash.Hash) {
+		right := b.right.Hash(sema, height-1)
+		c <- right
+		close(c)
+	}(c)
 	left := b.left.Hash(sema, height-1)
-	wg.Wait()
+	right := <-c
 	hash := hash.HashInterNode(left, right)
 
 	return hash
