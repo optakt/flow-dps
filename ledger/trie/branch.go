@@ -61,11 +61,12 @@ func (b *Branch) computeHash(sema *semaphore.Weighted, height int) hash.Hash {
 	}
 
 	c := make(chan hash.Hash)
-	go func(c chan<- hash.Hash) {
+	go func(sema *semaphore.Weighted, c chan<- hash.Hash) {
+		defer sema.Release(1)
 		right := b.right.Hash(sema, height-1)
 		c <- right
 		close(c)
-	}(c)
+	}(sema, c)
 	left := b.left.Hash(sema, height-1)
 	right := <-c
 	hash := hash.HashInterNode(left, right)
