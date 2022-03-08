@@ -96,7 +96,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// stopping point when indexing the payloads since the last finalized
 	// block. We thus introduce an empty tree, with no paths and an
 	// irrelevant previous commit.
-	empty := trie.NewEmptyTrie(t.log, nil)
+	empty := trie.NewEmptyTrie()
 	s.forest.Add(empty, nil, flow.DummyStateCommitment)
 
 	// The chain indexing will forward last to next and next to current height,
@@ -371,18 +371,15 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// forest, and save the updated tree in the forest. If the tree is not new,
 	// we should error, as that should not happen.
 	paths, payloads := pathsPayloads(update)
-	newTree := tree.Clone()
-	for i := range paths {
-		err = newTree.Insert(paths[i], payloads[i])
-		if err != nil {
-			log.Error().Err(err).Msg("could not insert trie update")
-			return err
-		}
+	tree, err = tree.Mutate(paths, payloads)
+	if err != nil {
+		log.Error().Err(err).Msg("could not insert trie update")
+		return err
 	}
 
-	s.forest.Add(newTree, paths, parent)
+	s.forest.Add(tree, paths, parent)
 
-	hash := newTree.RootHash()
+	hash := tree.RootHash()
 	log.Info().Hex("commit", hash[:]).Int("registers", len(paths)).Msg("updated tree with register payloads")
 
 	return nil

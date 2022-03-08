@@ -43,6 +43,8 @@ type LightNode struct {
 
 	// Hash of the node in the trie.
 	HashValue []byte
+	// Payload of the node if it's a leaf.
+	Payload *ledger.Payload
 
 	// Height at which the node skips if it is an extension.
 	Skip uint8
@@ -177,7 +179,7 @@ func EncodeLightNode(lightNode *LightNode, store dps.Store) []byte {
 
 // DecodeLightNode reads encoded light node data and returns a light node.
 // It supports the legacy encoding format from FlowGo as well as the new optimized format.
-func DecodeLightNode(reader io.Reader, store dps.Store) (*LightNode, error) {
+func DecodeLightNode(reader io.Reader) (*LightNode, error) {
 
 	// Length is calculated using:
 	// 	* encoding version (2 bytes)
@@ -194,16 +196,16 @@ func DecodeLightNode(reader io.Reader, store dps.Store) (*LightNode, error) {
 
 	switch version {
 	case encodingVersion:
-		return decodeNewFormat(reader, store)
+		return decodeNewFormat(reader)
 	case legacyVersion:
-		return decodeLegacyFormat(reader, store)
+		return decodeLegacyFormat(reader)
 	default:
 		return nil, fmt.Errorf("unsupported encoding version: %d", version)
 	}
 }
 
 // Decodes a newly-formatted light node.
-func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
+func decodeLegacyFormat(reader io.Reader) (*LightNode, error) {
 
 	// Length is calculated using:
 	// 	* Height (2 bytes)
@@ -260,7 +262,8 @@ func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not read light node payload: %w", err)
 	}
-	payload, err := encoding.DecodePayload(encPayload)
+
+	lightNode.Payload, err = encoding.DecodePayload(encPayload)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node payload: %w", err)
 	}
@@ -271,23 +274,12 @@ func decodeLegacyFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node hash: %w", err)
 	}
-	h, err := hash.ToHash(lightNode.HashValue)
-	if err != nil {
-		return nil, fmt.Errorf("invalid hash in light node: %w", err)
-	}
-	if payload != nil {
-		encoded := encoding.EncodePayload(payload)
-		err = store.Save(h, encoded)
-		if err != nil {
-			return nil, fmt.Errorf("could not save light node payload: %w", err)
-		}
-	}
 
 	return &lightNode, nil
 }
 
 // Decodes a legacy-formatted light node.
-func decodeNewFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
+func decodeNewFormat(reader io.Reader) (*LightNode, error) {
 	// Length is calculated using:
 	// 	* LIndex (8 bytes)
 	// 	* RIndex (8 bytes)
@@ -323,7 +315,7 @@ func decodeNewFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not read light node payload: %w", err)
 	}
-	payload, err := encoding.DecodePayload(encPayload)
+	_, err = encoding.DecodePayload(encPayload)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node payload: %w", err)
 	}
@@ -334,17 +326,8 @@ func decodeNewFormat(reader io.Reader, store dps.Store) (*LightNode, error) {
 
 	// We need to store the decoded payload in the store so that if new node insertions come up,
 	// the store can be looked up to recompute node hashes as they are moved to new heights.
-	h, err := hash.ToHash(lightNode.HashValue)
-	if err != nil {
-		return nil, fmt.Errorf("invalid hash in light node: %w", err)
-	}
-	if payload != nil {
-		encoded := encoding.EncodePayload(payload)
-		err = store.Save(h, encoded)
-		if err != nil {
-			return nil, fmt.Errorf("could not save light node payload: %w", err)
-		}
-	}
+
+	// FIXME: Handle payloads
 
 	return &lightNode, nil
 }

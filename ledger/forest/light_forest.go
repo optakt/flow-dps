@@ -19,10 +19,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rs/zerolog"
-
 	"github.com/optakt/flow-dps/ledger/trie"
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 // LightForest is a flattened version of a forest of tries.
@@ -84,7 +81,7 @@ func FlattenForest(f *Forest) (*LightForest, error) {
 }
 
 // RebuildTries transforms the light tries from a light forest into proper tries, while populating the given store.
-func RebuildTries(log zerolog.Logger, store dps.Store, lightForest *LightForest) ([]*trie.Trie, error) {
+func RebuildTries(lightForest *LightForest) ([]*trie.Trie, error) {
 	tries := make([]*trie.Trie, 0, len(lightForest.Tries))
 
 	// Convert light nodes into proper nodes.
@@ -97,7 +94,7 @@ func RebuildTries(log zerolog.Logger, store dps.Store, lightForest *LightForest)
 	// save memory usage.
 	for _, lt := range lightForest.Tries {
 		// Create proper trie by setting its root using the node slice.
-		tr := trie.NewTrie(log, nodes[lt.RootIndex], store)
+		tr := trie.NewTrie(nodes[lt.RootIndex])
 		rootHash := tr.RootHash()
 		if !bytes.Equal(rootHash[:], lt.RootHash) {
 			return nil, fmt.Errorf("restored trie root hash mismatch: %w", err)

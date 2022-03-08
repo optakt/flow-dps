@@ -8,7 +8,6 @@ import (
 
 	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/trie"
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Magic number constants for Flow trie checkpoints.
@@ -24,7 +23,7 @@ const (
 
 // ReadCheckpoint reads a checkpoint and populates a store with its data, while
 // also returning a light forest from the decoded data.
-func ReadCheckpoint(r io.Reader, store dps.Store) (*forest.LightForest, error) {
+func ReadCheckpoint(r io.Reader) (*forest.LightForest, error) {
 
 	var bufReader io.Reader = bufio.NewReader(r)
 	crcReader := NewCRC32Reader(bufReader)
@@ -60,7 +59,7 @@ func ReadCheckpoint(r io.Reader, store dps.Store) (*forest.LightForest, error) {
 
 	// Decode all light nodes.
 	for i := uint64(1); i <= nodesCount; i++ {
-		lightNode, err := trie.DecodeLightNode(reader, store)
+		lightNode, err := trie.DecodeLightNode(reader)
 		if err != nil {
 			return nil, fmt.Errorf("could not read light node %d: %w", i, err)
 		}

@@ -30,7 +30,6 @@ import (
 	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/store"
 	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/chain"
 	"github.com/optakt/flow-dps/service/feeder"
 	"github.com/optakt/flow-dps/service/index"
 	"github.com/optakt/flow-dps/service/loader"
@@ -104,17 +103,17 @@ func run() int {
 			log.Error().Err(err).Msg("could not close index database")
 		}
 	}()
-	protocolDB, err := badger.Open(dps.DefaultOptions(flagData))
-	if err != nil {
-		log.Error().Err(err).Msg("could not open protocol state database")
-		return failure
-	}
-	defer func() {
-		err := protocolDB.Close()
-		if err != nil {
-			log.Error().Err(err).Msg("could not close protocol state database")
-		}
-	}()
+	// protocolDB, err := badger.Open(dps.DefaultOptions(flagData))
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("could not open protocol state database")
+	// 	return failure
+	// }
+	// defer func() {
+	// 	err := protocolDB.Close()
+	// 	if err != nil {
+	// 		log.Error().Err(err).Msg("could not close protocol state database")
+	// 	}
+	// }()
 
 	// The storage library is initialized with a codec and provides functions to
 	// interact with a Badger database while encoding and compressing
@@ -136,7 +135,7 @@ func run() int {
 	}
 
 	// The chain is responsible for reading blockchain data from the protocol state.
-	disk := chain.FromDisk(protocolDB)
+	// disk := chain.FromDisk(protocolDB)
 
 	// Feeder is responsible for reading the write-ahead log of the execution state.
 	segments, err := wal.NewSegmentsReader(flagTrie)
@@ -159,16 +158,10 @@ func run() int {
 		}
 	}()
 
-	payloadStore, err := store.New(log, store.WithCacheSize(flagCacheSize), store.WithStoragePath(flagPayloadStorage))
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize payload storage")
-		return failure
-	}
-
 	// Initialize the transitions with the dependencies and add them to the FSM.
 	var load mapper.Loader
-	fromScratch := loader.FromScratch(log, payloadStore)
-	load = loader.FromIndex(log, storage, indexDB, payloadStore, fromScratch)
+	fromScratch := loader.FromScratch()
+	load = loader.FromIndex(log, storage, indexDB, fromScratch)
 	bootstrap := flagCheckpoint != ""
 	if empty {
 		file, err := os.Open(flagCheckpoint)
@@ -177,7 +170,7 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		load = loader.FromCheckpoint(log, payloadStore, file)
+		load = loader.FromCheckpoint(file)
 	} else if bootstrap {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -185,13 +178,13 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		initialize := loader.FromCheckpoint(log, payloadStore, file)
-		load = loader.FromIndex(log, storage, indexDB, payloadStore, initialize,
+		initialize := loader.FromCheckpoint(file)
+		load = loader.FromIndex(log, storage, indexDB, initialize,
 			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
 		)
 	}
 
-	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
+	transitions := mapper.NewTransitions(log, load, nil, feed, read, write,
 		mapper.WithBootstrapState(bootstrap),
 		mapper.WithSkipRegisters(flagSkip),
 	)
@@ -250,12 +243,6 @@ func run() int {
 	err = fsm.Stop()
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
-		return failure
-	}
-
-	err = payloadStore.Close()
-	if err != nil {
-		log.Error().Err(err).Msg("could not stop payload storage")
 		return failure
 	}
 

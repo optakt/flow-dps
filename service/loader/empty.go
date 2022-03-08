@@ -15,25 +15,17 @@
 package loader
 
 import (
-	"github.com/rs/zerolog"
-
 	"github.com/optakt/flow-dps/ledger/trie"
-	"github.com/optakt/flow-dps/models/dps"
 )
 
 // Empty is a loader that loads as empty execution state trie.
 type Empty struct {
-	log   zerolog.Logger
-	store dps.Store
 }
 
 // FromScratch creates a new loader which loads an empty execution state trie.
-func FromScratch(log zerolog.Logger, store dps.Store) *Empty {
+func FromScratch() *Empty {
 
-	e := Empty{
-		log:   log,
-		store: store,
-	}
+	e := Empty{}
 
 	return &e
 }
@@ -41,7 +33,7 @@ func FromScratch(log zerolog.Logger, store dps.Store) *Empty {
 // Trie returns a freshly initialized empty execution state trie.
 func (e *Empty) Trie() (*trie.Trie, error) {
 
-	tree := trie.NewEmptyTrie(e.log, e.store)
+	tree := trie.NewEmptyTrie()
 
 	return tree, nil
 }

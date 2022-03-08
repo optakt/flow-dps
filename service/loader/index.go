@@ -37,16 +37,13 @@ type Index struct {
 	// db is the database that contains the index.
 	db *badger.DB
 
-	// store is the payload storage to use for the trie that is generated from the index.
-	store dps.Store
-
 	initializer mapper.Loader
 }
 
 // FromIndex creates a new index loader, which can restore the execution state
 // from the given index database, using the given library for decoding ledger
 // paths and payloads.
-func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, store dps.Store, init mapper.Loader, options ...Option) *Index {
+func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, init mapper.Loader, options ...Option) *Index {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -57,7 +54,6 @@ func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, store dps
 		log:         log.With().Str("component", "index_loader").Logger(),
 		lib:         lib,
 		db:          db,
-		store:       store,
 		cfg:         cfg,
 		initializer: init,
 	}
@@ -75,10 +71,10 @@ func (i *Index) Trie() (*trie.Trie, error) {
 		return nil, fmt.Errorf("could not initialize trie: %w", err)
 	}
 
-	trie := trie.NewEmptyTrie(i.log, i.store)
+	trie := trie.NewEmptyTrie()
 	processed := 0
 	process := func(path ledger.Path, payload *ledger.Payload) error {
-		trie.Insert(path, payload)
+		trie, err = trie.Mutate([]ledger.Path{path}, []ledger.Payload{*payload})
 		processed++
 		if processed%10000 == 0 {
 			i.log.Debug().Int("processed", processed).Msg("processing registers for trie restoration")
