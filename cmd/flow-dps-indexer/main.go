@@ -16,9 +16,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
@@ -219,6 +221,25 @@ func run() int {
 		finish := time.Now()
 		duration := finish.Sub(start)
 		log.Info().Time("finish", finish).Str("duration", duration.Round(time.Second).String()).Msg("Flow DPS Indexer stopped")
+	}()
+
+	go func() {
+		tick := time.NewTicker(30 * time.Second)
+		defer tick.Stop()
+
+		i := 0
+		for {
+			select {
+			case <-tick.C:
+				f, err := os.Create(fmt.Sprintf("/tmp/mem.%d.prof", i))
+				if err != nil {
+					panic(err)
+				}
+				_ = pprof.WriteHeapProfile(f)
+				_ = f.Close()
+				i++
+			}
+		}
 	}()
 
 	select {

@@ -109,11 +109,11 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 	// Then, we can load the root height and apply it to the state. That
 	// will allow us to load the root blockchain data in the next step.
-	height, err := t.chain.Root()
-	if err != nil {
-		return fmt.Errorf("could not get root height: %w", err)
-	}
-	s.height = height
+	// height, err := t.chain.Root()
+	// if err != nil {
+	// 	return fmt.Errorf("could not get root height: %w", err)
+	// }
+	s.height = 0
 
 	// When bootstrapping, the loader injected into the mapper loads the root
 	// checkpoint.

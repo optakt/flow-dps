@@ -41,6 +41,8 @@ func ReadCheckpoint(r io.Reader) (*forest.LightForest, error) {
 	nodesCount, pos := readUint64(header, pos)
 	triesCount, _ := readUint16(header, pos)
 
+	fmt.Println("Expect to read", nodesCount, "nodes and", triesCount, "tries")
+
 	if magicBytes != MagicBytes {
 		return nil, fmt.Errorf("unknown file format. Magic constant %x does not match expected %x", magicBytes, MagicBytes)
 	}
