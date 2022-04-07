@@ -12,13 +12,15 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package trie
 
 import (
-	"github.com/optakt/flow-dps/ledger/trie"
+	"golang.org/x/sync/semaphore"
+
+	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
-// Loader represents something that loads its checkpoint and builds it into a trie.
-type Loader interface {
-	Trie() (*trie.Trie, error)
+// Node represents a trie node.
+type Node interface {
+	Hash(sema *semaphore.Weighted, height int) hash.Hash
 }

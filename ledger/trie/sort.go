@@ -12,30 +12,28 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mocks
+package trie
 
 import (
-	"testing"
+	"bytes"
 
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	"github.com/onflow/flow-go/ledger"
 )
 
-type Loader struct {
-	TrieFunc func() (*trie.MTrie, error)
+type sortByPath struct {
+	paths    []ledger.Path
+	payloads []ledger.Payload
 }
 
-func BaselineLoader(t *testing.T) *Loader {
-	t.Helper()
-
-	l := Loader{
-		TrieFunc: func() (*trie.MTrie, error) {
-			return GenericTrie, nil
-		},
-	}
-
-	return &l
+func (s sortByPath) Len() int {
+	return len(s.paths)
 }
 
-func (l *Loader) Trie() (*trie.MTrie, error) {
-	return l.TrieFunc()
+func (s sortByPath) Swap(i, j int) {
+	s.paths[i], s.paths[j] = s.paths[j], s.paths[i]
+	s.payloads[i], s.payloads[j] = s.payloads[j], s.payloads[i]
+}
+
+func (s sortByPath) Less(i, j int) bool {
+	return bytes.Compare(s.paths[i][:], s.paths[j][:]) < 0
 }

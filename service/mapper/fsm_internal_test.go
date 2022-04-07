@@ -130,14 +130,3 @@ func TestFSM_Run(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
-
-func TestFSM_Stop(t *testing.T) {
-	f := &FSM{
-		state: &State{
-			done: make(chan struct{}),
-		},
-		wg: &sync.WaitGroup{},
-	}
-
-	f.Stop()
-}
