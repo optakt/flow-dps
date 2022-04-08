@@ -22,16 +22,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/optakt/flow-dps/testing/mocks/forest"
+	"github.com/optakt/flow-dps/testing/mocks/loader"
 )
 
 func TestNewTransitions(t *testing.T) {
 	t.Run("nominal case, without options", func(t *testing.T) {
-		load := mocks.BaselineLoader(t)
+		load := loader.BaselineMock(t)
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		read := mocks.BaselineReader(t)
@@ -48,15 +50,14 @@ func TestNewTransitions(t *testing.T) {
 	})
 
 	t.Run("nominal case, with option", func(t *testing.T) {
-		load := mocks.BaselineLoader(t)
+		load := loader.BaselineMock(t)
 		chain := mocks.BaselineChain(t)
 		feed := mocks.BaselineFeeder(t)
 		read := mocks.BaselineReader(t)
 		write := mocks.BaselineWriter(t)
 
-		skip := true
 		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, read, write,
-			WithSkipRegisters(skip),
+			WithSkipRegisters(true),
 		)
 
 		assert.NotNil(t, tr)
@@ -66,7 +67,7 @@ func TestNewTransitions(t *testing.T) {
 		assert.NotNil(t, tr.once)
 
 		assert.NotEqual(t, DefaultConfig, tr.cfg)
-		assert.Equal(t, skip, tr.cfg.SkipRegisters)
+		assert.Equal(t, true, tr.cfg.SkipRegisters)
 		assert.Equal(t, DefaultConfig.WaitInterval, tr.cfg.WaitInterval)
 	})
 }
@@ -80,17 +81,17 @@ func TestTransitions_BootstrapState(t *testing.T) {
 		// Copy state in local scope so that we can override its SaveFunc without impacting other
 		// tests running in parallel.
 		var saveCalled bool
-		forest := mocks.BaselineForest(t, true)
-		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
+		forest := forest.BaselineMock(t, true)
+		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {
 			if !saveCalled {
-				assert.True(t, tree.IsEmpty())
+				assert.Nil(t, tree.RootNode())
 				assert.Nil(t, paths)
 				assert.Zero(t, parent)
 				saveCalled = true
 				return
 			}
-			assert.False(t, tree.IsEmpty())
-			assert.Len(t, tree.AllPayloads(), len(paths))
+			assert.NotNil(t, tree.RootNode())
+			assert.Len(t, tree.Leaves(), len(paths))
 			assert.Len(t, paths, 3) // Expect the three paths from leaves.
 			assert.NotZero(t, parent)
 		}
@@ -489,21 +490,21 @@ func TestTransitions_IndexChain(t *testing.T) {
 
 func TestTransitions_UpdateTree(t *testing.T) {
 	update := mocks.GenericTrieUpdate(0)
-	tree := mocks.GenericTrie
+	tree := trie.NewEmptyTrie()
 
 	t.Run("nominal case without match", func(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusUpdate)
 
-		forest := mocks.BaselineForest(t, false)
-		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
+		forest := forest.BaselineMock(t, false)
+		forest.AddFunc = func(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {
 			// Parent is RootHash of the mocks.GenericTrie.
 			assert.Equal(t, update.RootHash[:], parent[:])
 			assert.ElementsMatch(t, paths, update.Paths)
 			assert.NotZero(t, tree)
 		}
-		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.MTrie, bool) {
+		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.Trie, bool) {
 			assert.Equal(t, update.RootHash[:], commit[:])
 			return tree, true
 		}
@@ -533,7 +534,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		}
 		tr.feed = feeder
 
-		forest := mocks.BaselineForest(t, true)
+		forest := forest.BaselineMock(t, true)
 		forest.HasFunc = func(flow.StateCommitment) bool {
 			return updateCalled
 		}
@@ -583,7 +584,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		}
 
 		tr, st := baselineFSM(t, StatusUpdate)
-		st.forest = mocks.BaselineForest(t, false)
+		st.forest = forest.BaselineMock(t, false)
 		tr.feed = feed
 
 		err := tr.UpdateTree(st)
@@ -594,8 +595,8 @@ func TestTransitions_UpdateTree(t *testing.T) {
 	t.Run("handles forest parent tree not found", func(t *testing.T) {
 		t.Parallel()
 
-		forest := mocks.BaselineForest(t, false)
-		forest.TreeFunc = func(_ flow.StateCommitment) (*trie.MTrie, bool) {
+		forest := forest.BaselineMock(t, false)
+		forest.TreeFunc = func(_ flow.StateCommitment) (*trie.Trie, bool) {
 			return nil, false
 		}
 
@@ -609,10 +610,25 @@ func TestTransitions_UpdateTree(t *testing.T) {
 }
 
 func TestTransitions_CollectRegisters(t *testing.T) {
+
+	tree := trie.NewEmptyTrie()
+	paths := mocks.GenericLedgerPaths(6)
+	var payloads []ledger.Payload
+	for _, payload := range mocks.GenericLedgerPayloads(6) {
+		payloads = append(payloads, *payload)
+	}
+
+	var err error
+	tree, err = tree.Mutate(paths, payloads)
+	require.NoError(t, err)
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		forest := mocks.BaselineForest(t, true)
+		forest := forest.BaselineMock(t, true)
+		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.Trie, bool) {
+			return tree, true
+		}
 		forest.ParentFunc = func(commit flow.StateCommitment) (flow.StateCommitment, bool) {
 			assert.Equal(t, mocks.GenericCommit(0), commit)
 
@@ -623,9 +639,10 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		st.forest = forest
 
 		err := tr.CollectRegisters(st)
-
 		require.NoError(t, err)
+
 		assert.Equal(t, StatusMap, st.status)
+		assert.Len(t, st.registers, 6)
 		for _, wantPath := range mocks.GenericLedgerPaths(6) {
 			assert.Contains(t, st.registers, wantPath)
 		}
@@ -636,6 +653,12 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 
 		tr, st := baselineFSM(t, StatusCollect)
 		tr.cfg.SkipRegisters = true
+
+		forest := forest.BaselineMock(t, true)
+		forest.TreeFunc = func(commit flow.StateCommitment) (*trie.Trie, bool) {
+			return tree, true
+		}
+		st.forest = forest
 
 		err := tr.CollectRegisters(st)
 
@@ -659,7 +682,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusCollect)
-		st.forest = mocks.BaselineForest(t, false)
+		st.forest = forest.BaselineMock(t, false)
 
 		err := tr.CollectRegisters(st)
 
@@ -702,7 +725,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 
 		// Should not be StateIndexed because registers map was not empty.
 		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusMap, st.status)
+		assert.Equal(t, StatusCollect, st.status)
 	})
 
 	t.Run("nominal case no more registers left to write", func(t *testing.T) {
@@ -781,7 +804,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 			return nil
 		}
 
-		forest := mocks.BaselineForest(t, true)
+		forest := forest.BaselineMock(t, true)
 		forest.ResetFunc = func(finalized flow.StateCommitment) {
 			assert.Equal(t, mocks.GenericCommit(0), finalized)
 		}
@@ -891,7 +914,7 @@ func TestTransitions_InitializeMapper(t *testing.T) {
 
 func TestTransitions_ResumeIndexing(t *testing.T) {
 	header := mocks.GenericHeader
-	tree := mocks.GenericTrie
+	tree := trie.NewEmptyTrie()
 	commit := flow.StateCommitment(tree.RootHash())
 	differentCommit := mocks.GenericCommit(0)
 
@@ -910,8 +933,8 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return nil
 		}
 
-		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader := loader.BaselineMock(t)
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -951,8 +974,8 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return 0, mocks.GenericError
 		}
 
-		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader := loader.BaselineMock(t)
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -990,8 +1013,8 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return mocks.GenericError
 		}
 
-		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader := loader.BaselineMock(t)
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1025,8 +1048,8 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader := loader.BaselineMock(t)
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1059,8 +1082,8 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader := loader.BaselineMock(t)
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1093,8 +1116,8 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader := loader.BaselineMock(t)
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1127,8 +1150,8 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader := loader.BaselineMock(t)
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1161,8 +1184,8 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 			return header.Height, nil
 		}
 
-		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
+		loader := loader.BaselineMock(t)
+		loader.TrieFunc = func() (*trie.Trie, error) {
 			return tree, nil
 		}
 
@@ -1191,12 +1214,12 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*Transitions, *State) {
 	t.Helper()
 
-	load := mocks.BaselineLoader(t)
+	load := loader.BaselineMock(t)
 	chain := mocks.BaselineChain(t)
 	feeder := mocks.BaselineFeeder(t)
 	read := mocks.BaselineReader(t)
 	write := mocks.BaselineWriter(t)
-	forest := mocks.BaselineForest(t, true)
+	forest := forest.BaselineMock(t, true)
 
 	once := &sync.Once{}
 	doneCh := make(chan struct{})

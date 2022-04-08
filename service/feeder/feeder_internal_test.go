@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/flow-go/ledger/common/encoding"
-	"github.com/onflow/flow-go/ledger/complete/wal"
 
+	"github.com/optakt/flow-dps/ledger/wal"
 	"github.com/optakt/flow-dps/models/dps"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
@@ -51,14 +51,14 @@ func TestFeeder_Update(t *testing.T) {
 			// On the first call, return a Delete operation which should get ignored and skipped.
 			if !recordCalled {
 				recordCalled = true
-				_ = builder.WriteByte(byte(wal.WALDelete))
+				_ = builder.WriteByte(byte(wal.OperationDelete))
 				_, _ = builder.Write(update.RootHash[:])
 
 				return []byte(builder.String())
 			}
 
 			// On any subsequent call, return the Update operation.
-			_ = builder.WriteByte(byte(wal.WALUpdate))
+			_ = builder.WriteByte(byte(wal.OperationUpdate))
 			_, _ = builder.Write(data[:])
 
 			return []byte(builder.String())

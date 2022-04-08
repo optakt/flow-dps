@@ -20,11 +20,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/optakt/flow-dps/testing/mocks/forest"
 )
 
 func TestEmptyState(t *testing.T) {
-	f := mocks.BaselineForest(t, true)
+	f := forest.BaselineMock(t, true)
 	s := EmptyState(f)
 
 	assert.Equal(t, f, s.forest)

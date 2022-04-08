@@ -12,13 +12,30 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package loader
 
 import (
+	"testing"
+
 	"github.com/optakt/flow-dps/ledger/trie"
 )
 
-// Loader represents something that loads its checkpoint and builds it into a trie.
-type Loader interface {
-	Trie() (*trie.Trie, error)
+type Mock struct {
+	TrieFunc func() (*trie.Trie, error)
+}
+
+func BaselineMock(t *testing.T) *Mock {
+	t.Helper()
+
+	l := Mock{
+		TrieFunc: func() (*trie.Trie, error) {
+			return trie.NewEmptyTrie(), nil
+		},
+	}
+
+	return &l
+}
+
+func (l *Mock) Trie() (*trie.Trie, error) {
+	return l.TrieFunc()
 }

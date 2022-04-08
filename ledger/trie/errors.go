@@ -12,13 +12,12 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package trie
 
 import (
-	"github.com/optakt/flow-dps/ledger/trie"
+	"errors"
 )
 
-// Loader represents something that loads its checkpoint and builds it into a trie.
-type Loader interface {
-	Trie() (*trie.Trie, error)
-}
+var (
+	ErrPathNotFound = errors.New("path not found")
+)

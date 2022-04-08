@@ -16,17 +16,19 @@ package forest
 
 import (
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/ledger/trie"
 )
 
 type step struct {
-	tree   *trie.MTrie
+	tree   *trie.Trie
 	paths  []ledger.Path
 	parent flow.StateCommitment
 }
 
 // Forest is a representation of multiple tries mapped by their state commitment hash.
+// NOTE: Contrary to the Flow Forest implementation, the forest is unlimited and never evicts any tries.
 type Forest struct {
 	steps map[flow.StateCommitment]step
 }
@@ -36,12 +38,14 @@ func New() *Forest {
 	f := Forest{
 		steps: make(map[flow.StateCommitment]step),
 	}
+
 	return &f
 }
 
-// Save adds a tree to the forest.
-func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
+// Add adds a tree to the forest.
+func (f *Forest) Add(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {
 	commit := flow.StateCommitment(tree.RootHash())
+
 	s := step{
 		tree:   tree,
 		paths:  paths,
@@ -57,11 +61,12 @@ func (f *Forest) Has(commit flow.StateCommitment) bool {
 }
 
 // Tree returns the matching tree for the given state commitment.
-func (f *Forest) Tree(commit flow.StateCommitment) (*trie.MTrie, bool) {
+func (f *Forest) Tree(commit flow.StateCommitment) (*trie.Trie, bool) {
 	s, ok := f.steps[commit]
 	if !ok {
 		return nil, false
 	}
+
 	return s.tree, true
 }
 
@@ -71,6 +76,7 @@ func (f *Forest) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
 	if !ok {
 		return nil, false
 	}
+
 	return s.paths, true
 }
 
@@ -80,6 +86,7 @@ func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool
 	if !ok {
 		return flow.DummyStateCommitment, false
 	}
+
 	return s.parent, true
 }
 
@@ -90,4 +97,13 @@ func (f *Forest) Reset(finalized flow.StateCommitment) {
 			delete(f.steps, commit)
 		}
 	}
+}
+
+// Trees returns each of the tries from the forest.
+func (f *Forest) Trees() []*trie.Trie {
+	var tries []*trie.Trie
+	for _, step := range f.steps {
+		tries = append(tries, step.tree)
+	}
+	return tries
 }

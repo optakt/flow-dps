@@ -23,13 +23,14 @@ import (
 
 // State is the state machine's state.
 type State struct {
-	forest    Forest
-	status    Status
-	height    uint64
-	last      flow.StateCommitment
-	next      flow.StateCommitment
-	registers map[ledger.Path]*ledger.Payload
-	done      chan struct{}
+	forest      Forest
+	status      Status
+	height      uint64
+	last        flow.StateCommitment
+	next        flow.StateCommitment
+	registerIdx int
+	registers   map[ledger.Path]*ledger.Payload
+	done        chan struct{}
 }
 
 // EmptyState returns a new empty state that uses the given forest.

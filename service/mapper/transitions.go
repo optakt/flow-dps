@@ -23,11 +23,13 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/models/dps"
 )
+
+const registerBatchSize = 10000
 
 // TransitionFunc is a function that is applied onto the state machine's
 // state.
@@ -45,7 +47,7 @@ type Transitions struct {
 	once  *sync.Once
 }
 
-// NewTransitions returns a Transitions engine using the given dependencies and using the given options
+// NewTransitions returns a Transitions component using the given dependencies and using the given options
 func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feeder, read dps.Reader, write dps.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
@@ -94,8 +96,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// stopping point when indexing the payloads since the last finalized
 	// block. We thus introduce an empty tree, with no paths and an
 	// irrelevant previous commit.
-	empty := trie.NewEmptyMTrie()
-	s.forest.Save(empty, nil, flow.DummyStateCommitment)
+	empty := trie.NewEmptyTrie()
+	s.forest.Add(empty, nil, flow.DummyStateCommitment)
 
 	// The chain indexing will forward last to next and next to current height,
 	// which will be the one for the checkpoint.
@@ -119,8 +121,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 	if err != nil {
 		return fmt.Errorf("could not load root trie: %w", err)
 	}
-	paths := allPaths(tree)
-	s.forest.Save(tree, paths, first)
+	paths := tree.Paths()
+	s.forest.Add(tree, paths, first)
 
 	second := tree.RootHash()
 	t.log.Info().Uint64("height", s.height).Hex("commit", second[:]).Int("registers", len(paths)).Msg("added checkpoint tree to forest")
@@ -186,7 +188,7 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 	// state commitment or the paths, as they should not be used.
 	s.last = flow.DummyStateCommitment
 	s.next = commit
-	s.forest.Save(tree, nil, flow.DummyStateCommitment)
+	s.forest.Add(tree, nil, flow.DummyStateCommitment)
 
 	// Lastly, we just need to point to the next height. The chain indexing will
 	// then proceed with the first non-indexed block and forward the state
@@ -361,7 +363,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	parent := flow.StateCommitment(update.RootHash)
 	tree, ok := s.forest.Tree(parent)
 	if !ok {
-		log.Warn().Msg("state commitment mismatch, retrieving next trie update")
+		log.Error().Msg("state commitment mismatch, retrieving next trie update")
 		return nil
 	}
 
@@ -369,11 +371,13 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// forest, and save the updated tree in the forest. If the tree is not new,
 	// we should error, as that should not happen.
 	paths, payloads := pathsPayloads(update)
-	tree, err = trie.NewTrieWithUpdatedRegisters(tree, paths, payloads)
+	tree, err = tree.Mutate(paths, payloads)
 	if err != nil {
-		return fmt.Errorf("could not update tree: %w", err)
+		log.Error().Err(err).Msg("could not insert trie update")
+		return err
 	}
-	s.forest.Save(tree, paths, parent)
+
+	s.forest.Add(tree, paths, parent)
 
 	hash := tree.RootHash()
 	log.Info().Hex("commit", hash[:]).Int("registers", len(paths)).Msg("updated tree with register payloads")
@@ -423,25 +427,41 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		// allows us to ignore sorting of paths.
 		tree, _ := s.forest.Tree(commit)
 		paths, _ := s.forest.Paths(commit)
-		for _, path := range paths {
-			_, ok := s.registers[path]
-			if ok {
-				continue
-			}
-			payloads := tree.UnsafeRead([]ledger.Path{path})
-			s.registers[path] = payloads[0]
+
+		// Read enough paths to fill the batch.
+		end := registerBatchSize - len(s.registers)
+		if end >= len(paths) {
+			// If there are not enough paths to fill the batch, just read all
+			// paths instead.
+			end = len(paths)
 		}
 
-		log.Debug().Int("batch", len(paths)).Msg("collected register batch for finalized block")
+		payloads := tree.UnsafeRead(paths[:end])
+		for i := range payloads {
+			s.registers[paths[i]] = payloads[i]
+		}
+
+		if len(s.registers) >= registerBatchSize {
+			break
+		}
 
 		// We now step back to the parent of the current state trie.
 		parent, _ := s.forest.Parent(commit)
 		commit = parent
 	}
 
-	log.Info().Int("registers", len(s.registers)).Msg("collected all registers for finalized block")
+	// We now have all the payloads we need to index for this block, so we
+	// can forward the height to the next finalized block's.
+	if len(s.registers) == 0 {
+		log.Info().Msg("register collection finished, no new registers")
 
-	// At this point, we have collected all the payloads, so we go to the next
+		s.status = StatusForward
+		return nil
+	}
+
+	log.Info().Int("batch", len(s.registers)).Msg("collected batch of registers for finalized block")
+
+	// At this point, we have collected a batch of payloads, so we go to the next
 	// step, where we will index them.
 	s.status = StatusMap
 	return nil
@@ -463,18 +483,19 @@ func (t *Transitions) MapRegisters(s *State) error {
 		return nil
 	}
 
-	// We will now collect and index 1000 registers at a time. This gives the
-	// FSM the chance to exit the loop between every 1000 payloads we index. It
+	// We will now collect and index a batch of registers at a time. This gives the
+	// FSM the chance to exit the loop between every batch of payloads we index. It
 	// doesn't really matter for badger if they are in random order, so this
 	// way of iterating should be fine.
-	n := 1000
-	paths := make([]ledger.Path, 0, n)
-	payloads := make([]*ledger.Payload, 0, n)
+	paths := make([]ledger.Path, 0, registerBatchSize)
+	payloads := make([]*ledger.Payload, 0, registerBatchSize)
 	for path, payload := range s.registers {
 		paths = append(paths, path)
 		payloads = append(payloads, payload)
 		delete(s.registers, path)
-		if len(paths) >= n {
+		s.registerIdx++
+
+		if len(paths) >= registerBatchSize {
 			break
 		}
 	}
@@ -485,7 +506,12 @@ func (t *Transitions) MapRegisters(s *State) error {
 		return fmt.Errorf("could not index registers: %w", err)
 	}
 
-	log.Debug().Int("batch", len(paths)).Int("remaining", len(s.registers)).Msg("indexed register batch for finalized block")
+	log.Debug().Int("batch", len(paths)).Msg("indexed register batch for finalized block")
+
+	// We processed this batch, but there might be more registers to index,
+	// so the state machine needs to get back to collecting. If no registers are
+	// left, the FSM will move to the next height.
+	s.status = StatusCollect
 
 	return nil
 }
@@ -513,6 +539,7 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	// and reset the forest to free up memory.
 	s.height++
 	s.forest.Reset(s.next)
+	s.registerIdx = 0
 
 	t.log.Info().Uint64("height", s.height).Msg("forwarded finalized block to next height")
 

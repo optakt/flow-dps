@@ -12,42 +12,44 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mocks
+package forest
 
 import (
 	"testing"
 
 	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/optakt/flow-dps/ledger/trie"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
-type Forest struct {
-	SaveFunc   func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment)
+type Mock struct {
+	AddFunc    func(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment)
 	HasFunc    func(commit flow.StateCommitment) bool
-	TreeFunc   func(commit flow.StateCommitment) (*trie.MTrie, bool)
+	TreeFunc   func(commit flow.StateCommitment) (*trie.Trie, bool)
 	PathsFunc  func(commit flow.StateCommitment) ([]ledger.Path, bool)
 	ParentFunc func(commit flow.StateCommitment) (flow.StateCommitment, bool)
 	ResetFunc  func(finalized flow.StateCommitment)
 	SizeFunc   func() uint
 }
 
-func BaselineForest(t *testing.T, hasCommit bool) *Forest {
+func BaselineMock(t *testing.T, hasCommit bool) *Mock {
 	t.Helper()
 
-	f := Forest{
-		SaveFunc: func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {},
+	f := Mock{
+		AddFunc: func(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {},
 		HasFunc: func(commit flow.StateCommitment) bool {
 			return hasCommit
 		},
-		TreeFunc: func(commit flow.StateCommitment) (*trie.MTrie, bool) {
-			return GenericTrie, true
+		TreeFunc: func(commit flow.StateCommitment) (*trie.Trie, bool) {
+			return trie.NewEmptyTrie(), true
 		},
 		PathsFunc: func(commit flow.StateCommitment) ([]ledger.Path, bool) {
-			return GenericLedgerPaths(6), true
+			return mocks.GenericLedgerPaths(6), true
 		},
 		ParentFunc: func(commit flow.StateCommitment) (flow.StateCommitment, bool) {
-			return GenericCommit(1), true
+			return mocks.GenericCommit(1), true
 		},
 		ResetFunc: func(finalized flow.StateCommitment) {},
 		SizeFunc: func() uint {
@@ -58,30 +60,30 @@ func BaselineForest(t *testing.T, hasCommit bool) *Forest {
 	return &f
 }
 
-func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
-	f.SaveFunc(tree, paths, parent)
+func (f *Mock) Add(tree *trie.Trie, paths []ledger.Path, parent flow.StateCommitment) {
+	f.AddFunc(tree, paths, parent)
 }
 
-func (f *Forest) Has(commit flow.StateCommitment) bool {
+func (f *Mock) Has(commit flow.StateCommitment) bool {
 	return f.HasFunc(commit)
 }
 
-func (f *Forest) Tree(commit flow.StateCommitment) (*trie.MTrie, bool) {
+func (f *Mock) Tree(commit flow.StateCommitment) (*trie.Trie, bool) {
 	return f.TreeFunc(commit)
 }
 
-func (f *Forest) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
+func (f *Mock) Paths(commit flow.StateCommitment) ([]ledger.Path, bool) {
 	return f.PathsFunc(commit)
 }
 
-func (f *Forest) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool) {
+func (f *Mock) Parent(commit flow.StateCommitment) (flow.StateCommitment, bool) {
 	return f.ParentFunc(commit)
 }
 
-func (f *Forest) Reset(finalized flow.StateCommitment) {
+func (f *Mock) Reset(finalized flow.StateCommitment) {
 	f.ResetFunc(finalized)
 }
 
-func (f *Forest) Size() uint {
+func (f *Mock) Size() uint {
 	return f.SizeFunc()
 }
