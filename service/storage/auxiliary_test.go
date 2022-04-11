@@ -24,11 +24,13 @@ import (
 
 	"github.com/optakt/flow-dps/service/storage"
 	"github.com/optakt/flow-dps/testing/helpers"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func Test_Fallback(t *testing.T) {
 	db := helpers.InMemoryDB(t)
 	defer db.Close()
+
 	txn := db.NewTransaction(false)
 
 	// This is a success func that is never expected to be called.
@@ -52,7 +54,7 @@ func Test_Fallback(t *testing.T) {
 			failFn,
 		)(txn)
 
-		// shut up the linter
+		// Make linter stop complaining.
 		_ = multierror.Error{}
 
 		assert.Error(t, err)
@@ -130,7 +132,7 @@ func TestCombine(t *testing.T) {
 		return nil
 	}
 	failFn := func(txn *badger.Txn) error {
-		return errors.New("fail")
+		return mocks.GenericError
 	}
 
 	t.Run("nominal case", func(t *testing.T) {

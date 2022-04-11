@@ -38,61 +38,57 @@ func TestEncodeKey(t *testing.T) {
 	}, nil)
 
 	tests := []struct {
-		name string
-
-		segments []interface{}
-
+		name      string
+		segments  []interface{}
 		wantKey   []byte
 		wantPanic bool
 	}{
 		{
 			name: "a key with all types combined should work",
-
 			segments: []interface{}{
 				uint64(42),
 				id,
 				path,
 				commit,
 			},
-
 			wantPanic: false,
 			wantKey:   fullKey,
 		},
 		{
-			name: "empty segments should work",
-
+			name:      "empty segments should work",
 			wantPanic: false,
 			wantKey:   []byte{1},
 		},
 		{
 			name: "unsupported types should panic",
-
 			segments: []interface{}{
 				struct{}{},
 			},
-
 			wantPanic: true,
 		},
 	}
 
 	for _, test := range tests {
 		test := test
+
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if test.wantPanic {
+			switch test.wantPanic {
+
+			case false:
 				assert.Panics(t, func() {
 					EncodeKey(1, test.segments...)
 				})
-				return
+
+			case true:
+				var got []byte
+				assert.NotPanics(t, func() {
+					got = EncodeKey(1, test.segments...)
+				})
+
+				assert.Equal(t, test.wantKey, got)
 			}
-
-			var got []byte
-			assert.NotPanics(t, func() {
-				got = EncodeKey(1, test.segments...)
-			})
-
-			assert.Equal(t, test.wantKey, got)
 		})
 	}
 }

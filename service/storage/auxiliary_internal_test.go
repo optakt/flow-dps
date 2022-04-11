@@ -69,12 +69,13 @@ func TestLibrary_Retrieve(t *testing.T) {
 			codec: mocks.BaselineCodec(t),
 		}
 
+		unknownKey := []byte{13, 37}
+
 		var got uint64
-		err := db.View(l.retrieve([]byte{13, 37}, &got))
+		err := db.View(l.retrieve(unknownKey, &got))
 
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, badger.ErrKeyNotFound))
-
 	})
 
 	t.Run("badly encoded value, should fail", func(t *testing.T) {
@@ -86,6 +87,7 @@ func TestLibrary_Retrieve(t *testing.T) {
 		codec := mocks.BaselineCodec(t)
 		codec.UnmarshalFunc = func(b []byte, v interface{}) error {
 			assert.Equal(t, wantUnencodedValue, b)
+
 			return mocks.GenericError
 		}
 
@@ -109,6 +111,7 @@ func TestLibrary_Save(t *testing.T) {
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.IsType(t, uint64(0), v)
+
 			return []byte{}, nil
 		}
 		l := &Library{
@@ -125,6 +128,7 @@ func TestLibrary_Save(t *testing.T) {
 		codec := mocks.BaselineCodec(t)
 		codec.MarshalFunc = func(v interface{}) ([]byte, error) {
 			assert.Nil(t, v)
+
 			return []byte{}, nil
 		}
 

@@ -120,11 +120,11 @@ func TestLibrary(t *testing.T) {
 		events1 := allEvents[0:4]
 		events2 := allEvents[4:8]
 
-		// First 4 events are under type 0
+		// First 4 events are under type 0.
 		err := db.Update(lib.SaveEvents(mocks.GenericHeight, mocks.GenericEventType(0), events1))
 		assert.NoError(t, err)
 
-		// Next 4 events are under type 1
+		// Next 4 events are under type 1.
 		err = db.Update(lib.SaveEvents(mocks.GenericHeight, mocks.GenericEventType(1), events2))
 		assert.NoError(t, err)
 
