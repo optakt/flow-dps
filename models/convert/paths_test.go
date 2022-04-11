@@ -18,26 +18,28 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/optakt/flow-dps/models/convert"
 	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestPathsToBytes(t *testing.T) {
-	got := convert.PathsToBytes(mocks.GenericLedgerPaths(3))
-
-	assert.Equal(t, [][]byte{
+	want := [][]byte{
 		mocks.ByteSlice(mocks.GenericLedgerPath(0)),
 		mocks.ByteSlice(mocks.GenericLedgerPath(1)),
 		mocks.ByteSlice(mocks.GenericLedgerPath(2)),
-	}, got)
+	}
+	got := convert.PathsToBytes(mocks.GenericLedgerPaths(3))
+
+	assert.Equal(t, want, got)
 }
 
 func TestBytesToPaths(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		wantPaths := mocks.GenericLedgerPaths(3)
+		want := mocks.GenericLedgerPaths(3)
 
 		bb := [][]byte{
 			mocks.ByteSlice(mocks.GenericLedgerPath(0)),
@@ -47,8 +49,8 @@ func TestBytesToPaths(t *testing.T) {
 
 		got, err := convert.BytesToPaths(bb)
 
-		assert.NoError(t, err)
-		assert.Equal(t, wantPaths, got)
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("incorrect-length paths should fail", func(t *testing.T) {
