@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/optakt/flow-dps/testing/mocks"
 )
@@ -76,7 +77,7 @@ func TestFSM_Run(t *testing.T) {
 		go func() {
 			err := f.Run()
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			close(done)
 		}()
