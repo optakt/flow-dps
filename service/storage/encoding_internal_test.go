@@ -76,12 +76,12 @@ func TestEncodeKey(t *testing.T) {
 
 			switch test.wantPanic {
 
-			case false:
+			case true:
 				assert.Panics(t, func() {
 					EncodeKey(1, test.segments...)
 				})
 
-			case true:
+			case false:
 				var got []byte
 				assert.NotPanics(t, func() {
 					got = EncodeKey(1, test.segments...)
