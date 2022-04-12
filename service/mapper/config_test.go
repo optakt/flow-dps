@@ -12,44 +12,46 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package mapper_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/optakt/flow-dps/service/mapper"
 )
 
 func TestWithBootstrapState(t *testing.T) {
-	c := Config{
+	c := mapper.Config{
 		BootstrapState: false,
 	}
 	bootstrap := true
 
-	WithBootstrapState(bootstrap)(&c)
+	mapper.WithBootstrapState(bootstrap)(&c)
 
 	assert.Equal(t, bootstrap, c.BootstrapState)
 }
 
 func TestWithSkipRegisters(t *testing.T) {
-	c := Config{
+	c := mapper.Config{
 		SkipRegisters: false,
 	}
 	skip := true
 
-	WithSkipRegisters(skip)(&c)
+	mapper.WithSkipRegisters(skip)(&c)
 
 	assert.Equal(t, skip, c.SkipRegisters)
 }
 
 func TestWithIndexHeader(t *testing.T) {
-	c := &Config{
+	c := &mapper.Config{
 		WaitInterval: time.Second,
 	}
 	interval := time.Millisecond
 
-	WithWaitInterval(interval)(c)
+	mapper.WithWaitInterval(interval)(c)
 
 	assert.Equal(t, interval, c.WaitInterval)
 }

@@ -83,6 +83,8 @@ func TestGCPStreamer_Next(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("returns available record if buffer not empty", func(t *testing.T) {
+		t.Parallel()
+
 		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 			rw.WriteHeader(http.StatusOK)
 		}))
@@ -113,6 +115,8 @@ func TestGCPStreamer_Next(t *testing.T) {
 	})
 
 	t.Run("returns unavailable when no block data in buffer", func(t *testing.T) {
+		t.Parallel()
+
 		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 			rw.WriteHeader(http.StatusOK)
 		}))
@@ -141,6 +145,8 @@ func TestGCPStreamer_Next(t *testing.T) {
 	})
 
 	t.Run("downloads records from queue when they are available", func(t *testing.T) {
+		t.Parallel()
+
 		serverCalled := make(chan struct{})
 		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 			_, _ = rw.Write(data)

@@ -39,7 +39,7 @@ func TestNew(t *testing.T) {
 		invoke, err := New(index, WithCacheSize(1_000_000))
 
 		require.NoError(t, err)
-		assert.NotNil(t, invoke)
+		require.NotNil(t, invoke)
 		assert.Equal(t, index, invoke.index)
 		assert.NotNil(t, invoke.cache)
 		assert.NotNil(t, invoke.vm)

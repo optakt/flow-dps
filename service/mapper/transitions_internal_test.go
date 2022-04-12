@@ -41,7 +41,7 @@ func TestNewTransitions(t *testing.T) {
 
 		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, read, write)
 
-		assert.NotNil(t, tr)
+		require.NotNil(t, tr)
 		assert.Equal(t, chain, tr.chain)
 		assert.Equal(t, feed, tr.feed)
 		assert.Equal(t, write, tr.write)
@@ -60,7 +60,7 @@ func TestNewTransitions(t *testing.T) {
 			WithSkipRegisters(true),
 		)
 
-		assert.NotNil(t, tr)
+		require.NotNil(t, tr)
 		assert.Equal(t, chain, tr.chain)
 		assert.Equal(t, feed, tr.feed)
 		assert.Equal(t, write, tr.write)
@@ -722,9 +722,8 @@ func TestTransitions_MapRegisters(t *testing.T) {
 		err := tr.MapRegisters(st)
 
 		require.NoError(t, err)
-
-		// Should not be StateIndexed because registers map was not empty.
 		assert.Empty(t, st.registers)
+		// Should not be StatusIndexed because registers map was not empty.
 		assert.Equal(t, StatusCollect, st.status)
 	})
 
@@ -829,6 +828,8 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 
 		// First should have been called only once.
 		assert.Equal(t, 1, firstCalled)
+		// Last should be called each time.
+		assert.Equal(t, 2, lastCalled)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {

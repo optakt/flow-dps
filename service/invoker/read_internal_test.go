@@ -28,12 +28,15 @@ func TestReadRegister(t *testing.T) {
 	owner := string(mocks.GenericLedgerKey.KeyParts[0].Value)
 	controller := string(mocks.GenericLedgerKey.KeyParts[1].Value)
 	key := string(mocks.GenericLedgerKey.KeyParts[2].Value)
+	wantKey := "42/6f776e6572/636f6e74726f6c6c6572/key"
 
 	t.Run("nominal case with cached register", func(t *testing.T) {
 		t.Parallel()
 
 		cache := mocks.BaselineCache(t)
-		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+		cache.GetFunc = func(k interface{}) (interface{}, bool) {
+			assert.Equal(t, wantKey, k)
+
 			// Return that the cache contains the register's value already.
 			return mocks.GenericBytes, true
 		}
@@ -57,7 +60,9 @@ func TestReadRegister(t *testing.T) {
 		t.Parallel()
 
 		cache := mocks.BaselineCache(t)
-		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+		cache.GetFunc = func(k interface{}) (interface{}, bool) {
+			assert.Equal(t, wantKey, k)
+
 			// Return that the cache DOES NOT contain the register's value already.
 			return nil, false
 		}
@@ -81,7 +86,9 @@ func TestReadRegister(t *testing.T) {
 		t.Parallel()
 
 		cache := mocks.BaselineCache(t)
-		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+		cache.GetFunc = func(k interface{}) (interface{}, bool) {
+			assert.Equal(t, wantKey, k)
+
 			// Return that the cache DOES NOT contain the register's value already.
 			return nil, false
 		}

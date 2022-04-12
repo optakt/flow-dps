@@ -36,6 +36,7 @@ import (
 )
 
 func TestIntegrationServer_GetFirst(t *testing.T) {
+
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 

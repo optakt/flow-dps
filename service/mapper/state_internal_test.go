@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/optakt/flow-dps/testing/mocks/forest"
 )
@@ -27,6 +28,7 @@ func TestEmptyState(t *testing.T) {
 	f := forest.BaselineMock(t, true)
 	s := EmptyState(f)
 
+	require.NotNil(t, s)
 	assert.Equal(t, f, s.forest)
 	assert.Equal(t, StatusInitialize, s.status)
 	assert.Equal(t, s.height, uint64(math.MaxUint64))

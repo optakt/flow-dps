@@ -65,7 +65,9 @@ func TestProtocolState(t *testing.T) {
 		assert.NoError(t, err)
 
 		var have uint64
-		assert.NoError(t, db.View(operation.RetrieveRootHeight(&have)))
+		err = db.View(operation.RetrieveRootHeight(&have))
+
+		require.NoError(t, err)
 		assert.Equal(t, root, have)
 	})
 
