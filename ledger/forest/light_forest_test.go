@@ -53,6 +53,6 @@ func TestLightForest(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, rebuiltTries, 2)
-	assert.Equal(t, trie1.RootNode(), rebuiltTries[0].RootNode())
-	assert.Equal(t, trie2.RootNode(), rebuiltTries[1].RootNode())
+	assert.Contains(t, []trie.Node{trie1.RootNode(), trie2.RootNode()}, rebuiltTries[0].RootNode())
+	assert.Contains(t, []trie.Node{trie1.RootNode(), trie2.RootNode()}, rebuiltTries[1].RootNode())
 }
