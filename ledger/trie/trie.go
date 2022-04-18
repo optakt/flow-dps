@@ -39,7 +39,7 @@ type Trie struct {
 // NewEmptyTrie creates a new trie without a root node, with the given payload store.
 func NewEmptyTrie() *Trie {
 	t := Trie{
-		root:       nil,
+		root: nil,
 	}
 
 	return &t
@@ -48,7 +48,7 @@ func NewEmptyTrie() *Trie {
 // NewTrie creates a new trie using the given root node and payload store.
 func NewTrie(root Node) *Trie {
 	t := Trie{
-		root:       root,
+		root: root,
 	}
 
 	return &t
@@ -107,7 +107,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 	// Create the new trie that will hold the mutated root.
 	target := &Trie{
-		root:       nil,
+		root: nil,
 	}
 
 	// We create a queue of groups, where each group represents a set of paths
