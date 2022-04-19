@@ -353,11 +353,43 @@ func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 	tr := trie.NewEmptyTrie()
 
 	for i := range paths {
-		newTr, err := tr.Mutate([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
+		newTr, err := tr.Mutate(paths[i:i], []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
 		require.NotEqual(t, tr.RootHash(), newTr.RootHash())
 		tr = newTr
+	}
+}
+
+func TestTrie_InsertUpdatesLeaves(t *testing.T) {
+
+	const totalValues = 5000
+
+	paths := mocks.GenericLedgerPaths(totalValues)
+	rng := helpers.NewGenerator()
+	_, payloads1 := helpers.SampleRandomRegisterWrites(rng, totalValues)
+	_, payloads2 := helpers.SampleRandomRegisterWrites(rng, totalValues)
+	_, payloads3 := helpers.SampleRandomRegisterWrites(rng, totalValues)
+
+	tr := trie.NewEmptyTrie()
+
+	tr, err := tr.Mutate(paths, payloads1)
+	require.NoError(t, err)
+
+	tr, err = tr.Mutate(paths, payloads2)
+	require.NoError(t, err)
+
+	tr, err = tr.Mutate(paths, payloads3)
+	require.NoError(t, err)
+
+	gotPaths := tr.Paths()
+	require.ElementsMatch(t, paths, gotPaths)
+
+	gotPayloads := tr.UnsafeRead(gotPaths)
+	require.Len(t, gotPayloads, totalValues)
+	for i := range gotPayloads {
+		// Make sure that the final payloads are the ones from the payload3 slice.
+		assert.Contains(t, payloads3, *gotPayloads[i])
 	}
 }
 

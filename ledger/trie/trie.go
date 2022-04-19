@@ -626,34 +626,6 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 	return leaf.payload, nil
 }
 
-// Leaves iterates through the trie and returns its leaf nodes.
-func (t *Trie) Leaves() []*Leaf {
-	queue := deque.New()
-
-	root := t.RootNode()
-	if root != nil {
-		queue.PushBack(root)
-	}
-
-	var leaves []*Leaf
-	for queue.Len() > 0 {
-		node := queue.PopBack().(Node)
-		switch n := node.(type) {
-		case *Extension:
-			queue.PushBack(n.child)
-
-		case *Branch:
-			queue.PushBack(n.left)
-			queue.PushBack(n.right)
-
-		case *Leaf:
-			leaves = append(leaves, n)
-		}
-	}
-
-	return leaves
-}
-
 func (t *Trie) Paths() []ledger.Path {
 	queue := deque.New()
 
