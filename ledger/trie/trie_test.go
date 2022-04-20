@@ -353,10 +353,10 @@ func TestTrie_InsertDoesNotMutateBaseTrie(t *testing.T) {
 	tr := trie.NewEmptyTrie()
 
 	for i := range paths {
-		newTr, err := tr.Mutate(paths[i:i], []ledger.Payload{*payloads[i]})
+		newTr, err := tr.Mutate([]ledger.Path{paths[i]}, []ledger.Payload{*payloads[i]})
 		require.NoError(t, err)
 
-		require.NotEqual(t, tr.RootHash(), newTr.RootHash())
+		require.NotEqual(t, tr.RootHash(), newTr.RootHash(), "%d mutated base trie", i)
 		tr = newTr
 	}
 }
