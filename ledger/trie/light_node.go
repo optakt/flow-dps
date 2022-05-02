@@ -239,8 +239,8 @@ func decodeLegacyFormat(reader io.Reader) (*LightNode, error) {
 		return nil, fmt.Errorf("could not decode light node register count: %w", err)
 	}
 
-	// Read path but ignore it.
-	_, err = utils.ReadShortDataFromReader(reader)
+	// Read path.
+	lightNode.Path, err = utils.ReadShortDataFromReader(reader)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node path: %w", err)
 	}
