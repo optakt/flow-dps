@@ -116,9 +116,8 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 	}
 
 	// Branch node.
-	if ln.LIndex != 0 && ln.RIndex != 0 {
-		println("Branch")
-		// Since it does not have a path, this node is a branch.
+	if ln.LIndex != 0 || ln.RIndex != 0 {
+		// Since it has children, this node is a branch.
 		return &Branch{
 			left:  nodes[ln.LIndex],
 			right: nodes[ln.RIndex],
@@ -127,18 +126,14 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 		}, nil
 	}
 
-	println(ln.Path)
-	println(ln.Payload)
-	println(ln.HashValue)
-
 	path, err := ledger.ToPath(ln.Path)
 	if err != nil {
 		return nil, fmt.Errorf("invalid path in light node: %w", err)
 	}
 
 	// Extension node.
-	if ln.LIndex != 0 {
-		// Since it only has a single child, this node is an extension.
+	if ln.Count != 0 {
+		// Since it has a count, this node is an extension.
 		return &Extension{
 			child: nodes[ln.LIndex],
 			count: ln.Count,
