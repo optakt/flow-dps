@@ -76,8 +76,15 @@ func (t *Trie) RootHash() ledger.RootHash {
 
 		switch n := node.(type) {
 		case *Branch:
-			nodes.PushFront(n.left)
-			nodes.PushFront(n.right)
+			// We need to add this check since we might be dealing with a
+			// checkpoint trie, which does not contain extensions and might
+			// have branches with a single child.
+			if n.left != nil {
+				nodes.PushFront(n.left)
+			}
+			if n.right != nil {
+				nodes.PushFront(n.right)
+			}
 		case *Extension:
 			nodes.PushFront(n.child)
 		}
@@ -642,8 +649,12 @@ func (t *Trie) Paths() []ledger.Path {
 			queue.PushBack(n.child)
 
 		case *Branch:
-			queue.PushBack(n.left)
-			queue.PushBack(n.right)
+			if n.left != nil {
+				queue.PushBack(n.left)
+			}
+			if n.right != nil {
+				queue.PushBack(n.right)
+			}
 
 		case *Leaf:
 			path, err := ledger.ToPath((*n.path)[:])

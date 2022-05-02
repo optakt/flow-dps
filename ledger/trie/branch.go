@@ -17,6 +17,7 @@ package trie
 import (
 	"golang.org/x/sync/semaphore"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 )
 
@@ -51,26 +52,37 @@ func (b *Branch) Hash(sema *semaphore.Weighted, height int) hash.Hash {
 
 // computeHash computes the branch hash by hashing its children.
 func (b *Branch) computeHash(sema *semaphore.Weighted, height int) hash.Hash {
+	left := ledger.GetDefaultHashForHeight(height - 1)
+	right := ledger.GetDefaultHashForHeight(height - 1)
 
 	// Try to acquire a semaphore, in which case we can do it in parallel.
 	ok := sema.TryAcquire(1)
 	if !ok {
-		left := b.left.Hash(sema, height-1)
-		right := b.right.Hash(sema, height-1)
+		if b.left != nil {
+			left = b.left.Hash(sema, height-1)
+		}
+		if b.right != nil {
+			right = b.right.Hash(sema, height-1)
+		}
+
 		hash := hash.HashInterNode(left, right)
 		return hash
 	}
 
-	c := make(chan hash.Hash)
-	go func(sema *semaphore.Weighted, c chan<- hash.Hash) {
-		defer sema.Release(1)
-		right := b.right.Hash(sema, height-1)
-		c <- right
-		close(c)
-	}(sema, c)
-	left := b.left.Hash(sema, height-1)
-	right := <-c
-	hash := hash.HashInterNode(left, right)
+	if b.left != nil {
+		left = b.left.Hash(sema, height-1)
+	}
+	if b.right != nil {
+		c := make(chan hash.Hash)
+		go func(sema *semaphore.Weighted, c chan<- hash.Hash) {
+			defer sema.Release(1)
+			right := b.right.Hash(sema, height-1)
+			c <- right
+			close(c)
+		}(sema, c)
+		right = <-c
+	}
 
+	hash := hash.HashInterNode(left, right)
 	return hash
 }
