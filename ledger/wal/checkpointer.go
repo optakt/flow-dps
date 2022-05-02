@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/rs/zerolog"
+
 	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/trie"
 )
@@ -23,7 +25,7 @@ const (
 
 // ReadCheckpoint reads a checkpoint and populates a store with its data, while
 // also returning a light forest from the decoded data.
-func ReadCheckpoint(r io.Reader) (*forest.LightForest, error) {
+func ReadCheckpoint(log zerolog.Logger, r io.Reader) (*forest.LightForest, error) {
 
 	var bufReader io.Reader = bufio.NewReader(r)
 	crcReader := NewCRC32Reader(bufReader)
@@ -56,6 +58,12 @@ func ReadCheckpoint(r io.Reader) (*forest.LightForest, error) {
 	// The `nodes` slice needs one extra capacity for the nil node at index 0.
 	nodes := make([]*trie.LightNode, nodesCount+1)
 	tries := make([]*trie.LightTrie, triesCount)
+
+	log.Info().
+		Uint16("encoding_version", version).
+		Uint64("nodes", nodesCount+1).
+		Uint16("tries", triesCount).
+		Msg("commencing checkpoint decoding")
 
 	// Decode all light nodes.
 	for i := uint64(1); i <= nodesCount; i++ {

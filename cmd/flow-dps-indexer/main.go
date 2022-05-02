@@ -163,7 +163,7 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		load = loader.FromCheckpoint(file)
+		load = loader.FromCheckpoint(log, file)
 	} else if bootstrap {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -171,7 +171,7 @@ func run() int {
 			return failure
 		}
 		defer file.Close()
-		initialize := loader.FromCheckpoint(file)
+		initialize := loader.FromCheckpoint(log, file)
 		load = loader.FromIndex(log, storage, indexDB,
 			loader.WithInitializer(initialize),
 			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
