@@ -117,6 +117,7 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 
 	// Branch node.
 	if ln.LIndex != 0 && ln.RIndex != 0 {
+		println("Branch")
 		// Since it does not have a path, this node is a branch.
 		return &Branch{
 			left:  nodes[ln.LIndex],
@@ -126,14 +127,18 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 		}, nil
 	}
 
+	println(ln.Path)
+	println(ln.Payload)
+	println(ln.HashValue)
+
+	path, err := ledger.ToPath(ln.Path)
+	if err != nil {
+		return nil, fmt.Errorf("invalid path in light node: %w", err)
+	}
+
 	// Extension node.
 	if ln.LIndex != 0 {
-		path, err := ledger.ToPath(ln.Path)
-		if err != nil {
-			return nil, fmt.Errorf("invalid path in light node: %w", err)
-		}
-
-		// Since it has a count value, this node is an extension.
+		// Since it only has a single child, this node is an extension.
 		return &Extension{
 			child: nodes[ln.LIndex],
 			count: ln.Count,
@@ -143,17 +148,12 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 		}, nil
 	}
 
-	// Leaf node.
-	path, err := ledger.ToPath(ln.Path)
-	if err != nil {
-		return nil, fmt.Errorf("invalid path in light node: %w", err)
-	}
+	// Since it has no children, this node is a leaf.
 	payload, err := encoding.DecodePayload(ln.Payload)
 	if err != nil {
 		return nil, fmt.Errorf("invalid payload in light node: %w", err)
 	}
 
-	// Since it has a path and has no count value, this node is a leaf.
 	return &Leaf{
 		path:    &path,
 		payload: payload,

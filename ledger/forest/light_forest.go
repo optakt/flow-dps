@@ -130,7 +130,7 @@ func RebuildNodes(lightNodes []*trie.LightNode) ([]trie.Node, error) {
 		// Convert the lightNode into a proper node and append it to the returned slice of nodes.
 		node, err := trie.FromLightNode(lightNode, nodes)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode light node %d: %w", i, err)
+			return nil, fmt.Errorf("could not rebuild node %d: %w", i, err)
 		}
 		nodes = append(nodes, node)
 
