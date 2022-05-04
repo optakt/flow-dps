@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/optakt/flow-dps/ledger/trie"
 )
@@ -94,15 +95,26 @@ func RebuildTries(lightForest *LightForest) ([]*trie.Trie, error) {
 	// save memory usage.
 	for _, lt := range lightForest.Tries {
 		// Create proper trie by setting its root using the node slice.
-		tr := trie.NewTrie(nodes[lt.RootIndex])
-		rootHash := tr.RootHash()
+		original := trie.NewTrie(nodes[lt.RootIndex])
+		rootHash := original.RootHash()
 		if !bytes.Equal(rootHash[:], lt.RootHash) {
 			return nil, fmt.Errorf("restored trie root hash mismatch: %w", err)
 		}
 
-		// TODO: Investigate whether it is worth trimming the tries after all.
-		//       See https://github.com/optakt/flow-dps/issues/521.
-		tries = append(tries, tr)
+		println("rebuilt original trie", time.Now().String()) // FIXME: Remove
+
+		// Since the checkpoint contains a huge trie that does not use extensions,
+		// to make it readable by our algorithm we need to rebuild it from the ground
+		// up by inserting its elements into a fresh new trie.
+		paths, payloads := original.Values()
+		trimmed, err := trie.NewEmptyTrie().Mutate(paths, payloads)
+		if err != nil {
+			return nil, fmt.Errorf("could not trim original trie: %w", err)
+		}
+
+		println("trimmed trie", time.Now().String()) // FIXME: Remove
+
+		tries = append(tries, trimmed)
 	}
 
 	return tries, nil
