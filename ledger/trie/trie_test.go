@@ -382,14 +382,16 @@ func TestTrie_InsertUpdatesLeaves(t *testing.T) {
 	tr, err = tr.Mutate(paths, payloads3)
 	require.NoError(t, err)
 
-	gotPaths := tr.Paths()
+	gotPaths, gotPayloads1 := tr.Values()
 	require.ElementsMatch(t, paths, gotPaths)
+	require.Len(t, gotPayloads1, totalValues)
 
-	gotPayloads := tr.UnsafeRead(gotPaths)
-	require.Len(t, gotPayloads, totalValues)
-	for i := range gotPayloads {
+	gotPayloads2 := tr.UnsafeRead(gotPaths)
+	require.Len(t, gotPayloads2, totalValues)
+	for i := range gotPayloads2 {
 		// Make sure that the final payloads are the ones from the payload3 slice.
-		assert.Contains(t, payloads3, *gotPayloads[i])
+		assert.Contains(t, payloads3, *gotPayloads2[i])
+		assert.Contains(t, gotPayloads1, *gotPayloads2[i])
 	}
 }
 

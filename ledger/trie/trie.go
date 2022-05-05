@@ -544,20 +544,16 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 func (t *Trie) UnsafeRead(paths []ledger.Path) []*ledger.Payload {
 	payloads := make([]*ledger.Payload, len(paths)) // pre-allocate slice for the result
 	for i := range paths {
-		fmt.Printf("read %d: %x\n", i, paths[i][:])
 		payload, err := t.read(paths[i])
 		if errors.Is(err, ErrPathNotFound) {
 			payloads[i] = nil
-			fmt.Printf("path not found %d\n", i)
 			continue
 		}
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("path found %d\n", i)
 		payloads[i] = payload
 	}
-	fmt.Printf("done\n")
 	return payloads
 }
 
@@ -570,26 +566,22 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 		// Hitting a `nil` node for a read should only be possible when the
 		// root is `nil` and the trie is completely empty.
 		case nil:
-			println("path not found")
+
 			return nil, ErrPathNotFound
 
 		// If we hit a branch node, we have two sides to it, so we just forward
 		// by one and go to the correct side.
 		case *Branch:
 
-			println("going through branch at depth", depth)
 			// A zero bit goes left, a one bit goes right.
 			if bitutils.Bit(path[:], int(depth)) == 0 {
-				println("going left: %p", node.left)
 				current = &node.left
 			} else {
-				println("going right: %p", node.right)
 				current = &node.right
 			}
 
 			// Increase depth by one to keep track of how far along we are.
 			depth++
-			println("depth++")
 			break
 
 		// If we hit an extension node, we have two cases:
@@ -597,7 +589,6 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 		// - the extension path mismatches ours, and there is no value for our path.
 		case *Extension:
 
-			println("going through ext at depth", depth)
 			// We simply mimic the earlier code here, so we can use the same
 			// semantics of a zero-based `common` count. If we mismatch on the
 			// first bit, the path is not in our trie.
@@ -640,8 +631,6 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 		}
 
 	}
-
-	println("found leaf at depth", depth)
 
 	// At this point, we should always have a leaf, so we use it to retrieve the
 	// data and decode the payload.

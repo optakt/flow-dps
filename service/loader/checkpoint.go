@@ -51,7 +51,7 @@ func (c *Checkpoint) Trie() (*trie.Trie, error) {
 		return nil, fmt.Errorf("could not read checkpoint: %w", err)
 	}
 
-	trees, err := forest.RebuildTries(checkpoint)
+	trees, err := forest.RebuildTries(c.log, checkpoint)
 	if err != nil {
 		return nil, fmt.Errorf("could not rebuild tries: %w", err)
 	}

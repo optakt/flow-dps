@@ -20,11 +20,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/trie"
 	"github.com/optakt/flow-dps/testing/helpers"
+	"github.com/optakt/flow-dps/testing/mocks"
 )
 
 func TestLightForest(t *testing.T) {
@@ -49,14 +51,15 @@ func TestLightForest(t *testing.T) {
 	lf, err := forest.FlattenForest(f)
 	require.NoError(t, err)
 
-	rebuiltTries, err := forest.RebuildTries(lf)
+	rebuiltTries, err := forest.RebuildTries(mocks.NoopLogger, lf)
 	require.NoError(t, err)
 
 	require.Len(t, rebuiltTries, 2)
-	got := []trie.Node{
-		rebuiltTries[0].RootNode(),
-		rebuiltTries[1].RootNode(),
+	got := []ledger.RootHash{
+		rebuiltTries[0].RootHash(),
+		rebuiltTries[1].RootHash(),
 	}
-	assert.Contains(t, got, trie1.RootNode())
-	assert.Contains(t, got, trie2.RootNode())
+	assert.Contains(t, got, trie1.RootHash())
+	assert.Contains(t, got, trie2.RootHash())
+
 }

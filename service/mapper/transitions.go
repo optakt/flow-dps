@@ -409,7 +409,6 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	// changed payloads at each step.
 	commit := s.next
 	for commit != s.last {
-		t.log.Info().Hex("got", commit[:]).Hex("want", s.last[:]).Msg("collecting registers")
 
 		// We do this check only once, so that we don't need to do it for
 		// each item we retrieve. The tree should always be there, but we
@@ -429,8 +428,6 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		tree, _ := s.forest.Tree(commit)
 		paths, _ := s.forest.Paths(commit)
 
-		t.log.Info().Int("paths", len(paths)).Msg("collecting registers from paths")
-
 		// Read enough paths to fill the batch.
 		end := registerBatchSize - len(s.registers)
 		if end >= len(paths) {
@@ -439,24 +436,24 @@ func (t *Transitions) CollectRegisters(s *State) error {
 			end = len(paths)
 		}
 
-		t.log.Info().Int("end", end).Msg("computed end of register collection in paths")
+		t.log.Info().
+			Hex("got", commit[:]).
+			Hex("want", s.last[:]).
+			Int("registers", end).
+			Msg("collecting batch of registers")
 
 		payloads := tree.UnsafeRead(paths[:end])
 		for i := range payloads {
 			s.registers[paths[i]] = payloads[i]
 		}
-		t.log.Info().Int("payloads", len(payloads)).Msg("fetched payloads for paths")
 
 		if len(s.registers) >= registerBatchSize {
-			t.log.Info().Msg("reached end of registers")
 			break
 		}
 
 		// We now step back to the parent of the current state trie.
 		parent, _ := s.forest.Parent(commit)
 		commit = parent
-
-		t.log.Info().Msg("set commit to parent")
 	}
 
 	// We now have all the payloads we need to index for this block, so we

@@ -18,7 +18,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"time"
+
+	"github.com/rs/zerolog"
 
 	"github.com/optakt/flow-dps/ledger/trie"
 )
@@ -82,7 +83,7 @@ func FlattenForest(f *Forest) (*LightForest, error) {
 }
 
 // RebuildTries transforms the light tries from a light forest into proper tries, while populating the given store.
-func RebuildTries(lightForest *LightForest) ([]*trie.Trie, error) {
+func RebuildTries(log zerolog.Logger, lightForest *LightForest) ([]*trie.Trie, error) {
 	tries := make([]*trie.Trie, 0, len(lightForest.Tries))
 
 	// Convert light nodes into proper nodes.
@@ -96,12 +97,11 @@ func RebuildTries(lightForest *LightForest) ([]*trie.Trie, error) {
 	for _, lt := range lightForest.Tries {
 		// Create proper trie by setting its root using the node slice.
 		original := trie.NewTrie(nodes[lt.RootIndex])
-		rootHash := original.RootHash()
-		if !bytes.Equal(rootHash[:], lt.RootHash) {
-			return nil, fmt.Errorf("restored trie root hash mismatch: %w", err)
-		}
 
-		println("rebuilt original trie", time.Now().String()) // FIXME: Remove
+		log.Info().
+			Uint64("root_index", lt.RootIndex).
+			Int("total_nodes", len(nodes)).
+			Msg("rebuilt original trie")
 
 		// Since the checkpoint contains a huge trie that does not use extensions,
 		// to make it readable by our algorithm we need to rebuild it from the ground
@@ -112,7 +112,12 @@ func RebuildTries(lightForest *LightForest) ([]*trie.Trie, error) {
 			return nil, fmt.Errorf("could not trim original trie: %w", err)
 		}
 
-		println("trimmed trie", time.Now().String()) // FIXME: Remove
+		rootHash := trimmed.RootHash()
+		if !bytes.Equal(rootHash[:], lt.RootHash) {
+			return nil, fmt.Errorf("trimmed trie root hash mismatch: %w", err)
+		}
+
+		log.Info().Int("values", len(paths)).Msg("restructured trie")
 
 		tries = append(tries, trimmed)
 	}
