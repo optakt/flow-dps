@@ -429,7 +429,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		paths, _ := s.forest.Paths(commit)
 
 		// Read enough paths to fill the batch.
-		end := registerBatchSize - len(s.registers)
+		end := s.registerIdx + registerBatchSize - len(s.registers)
 		if end >= len(paths) {
 			// If there are not enough paths to fill the batch, just read all
 			// paths instead.
@@ -439,15 +439,21 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		t.log.Info().
 			Hex("got", commit[:]).
 			Hex("want", s.last[:]).
-			Int("registers", end).
+			Int("start", s.registerIdx).
+			Int("end", end).
 			Msg("collecting batch of registers")
 
-		payloads := tree.UnsafeRead(paths[:end])
+		payloads := tree.UnsafeRead(paths[s.registerIdx:end])
 		for i := range payloads {
 			s.registers[paths[i]] = payloads[i]
 		}
 
+		// Update register index so that the next batch follows this one.
+		s.registerIdx = end
+
+		// If we reached the end of the registers, reset the index and break the loop.
 		if len(s.registers) >= registerBatchSize {
+			s.registerIdx = 0
 			break
 		}
 
