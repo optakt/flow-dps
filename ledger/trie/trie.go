@@ -16,6 +16,8 @@ package trie
 
 import (
 	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"runtime"
@@ -675,4 +677,86 @@ func (t *Trie) Values() ([]ledger.Path, []ledger.Payload) {
 	}
 
 	return paths, payloads
+}
+
+func (t *Trie) Encode() ([]byte, error) {
+	var result []byte
+
+	// Scratch buffer is used as temporary buffer that node can encode into.
+	// Data in scratch buffer should be copied or used before scratch buffer is used again.
+	// If the scratch buffer isn't large enough, a new buffer will be allocated.
+	// However, 4096 bytes will be large enough to handle almost all payloads
+	// and 100% of interim nodes.
+	scratch := make([]byte, 1024*4)
+
+	// allNodes contains all unique nodes of given tries and their index
+	// (ordered by node traversal sequence).
+	// Index 0 is a special case with nil node.
+	allNodes := make(map[Node]uint64)
+	allNodes[nil] = 0
+
+	// Serialize all unique nodes
+	nodeCounter := uint64(1) // start from 1, as 0 marks nil node
+
+	// Traverse all unique nodes for trie t.
+	for itr := NewNodeIterator(t); itr.Next(); {
+		node := itr.Value()
+
+		allNodes[node] = nodeCounter
+		nodeCounter++
+
+		var lchildIndex, rchildIndex uint64
+		switch n := node.(type) {
+		case *Branch:
+			if n.left != nil {
+				var found bool
+				lchildIndex, found = allNodes[n.left]
+				if !found {
+					hash := n.left.Hash(semaphore.NewWeighted(1), 0)
+					return nil, fmt.Errorf("internal error: missing node with hash %s", hex.EncodeToString(hash[:]))
+				}
+			}
+			if n.right != nil {
+				var found bool
+				rchildIndex, found = allNodes[n.right]
+				if !found {
+					hash := n.right.Hash(semaphore.NewWeighted(1), 0)
+					return nil, fmt.Errorf("internal error: missing node with hash %s", hex.EncodeToString(hash[:]))
+				}
+			}
+		case *Extension:
+			if n.child != nil {
+				var found bool
+				lchildIndex, found = allNodes[n.child]
+				if !found {
+					hash := n.child.Hash(semaphore.NewWeighted(1), 0)
+					return nil, fmt.Errorf("internal error: missing node with hash %s", hex.EncodeToString(hash[:]))
+				}
+			}
+		}
+
+		encNode := encodeNode(node, lchildIndex, rchildIndex, scratch) // FIXME: Implement.
+		result = append(result, encNode...)
+	}
+
+	// Serialize trie root nodes
+	rootNode := t.RootNode()
+
+	// Get root node index
+	rootIndex, found := allNodes[rootNode]
+	if !found {
+		rootHash := t.RootHash()
+		return nil, fmt.Errorf("internal error: missing node with hash %s", hex.EncodeToString(rootHash[:]))
+	}
+
+	encTrie := encodeTrie(t, rootIndex, scratch)
+	result = append(result, encTrie...)
+
+	// Write footer with nodes count and tries count.
+	footer := scratch[:encNodeCountSize+encTrieCountSize]
+	binary.BigEndian.PutUint64(footer, uint64(len(allNodes)-1)) // -1 to account for 0 node meaning nil
+	binary.BigEndian.PutUint16(footer[encNodeCountSize:], 1)    // Always 1 since in the DPS we only use one trie.
+	result = append(result, footer...)
+
+	return result, nil
 }

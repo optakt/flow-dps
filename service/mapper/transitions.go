@@ -452,7 +452,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		s.registerIdx = end
 
 		// If we reached the end of the registers, reset the index and break the loop.
-		if len(s.registers) >= registerBatchSize {
+		if end == len(paths) {
 			s.registerIdx = 0
 			break
 		}
