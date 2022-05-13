@@ -20,10 +20,12 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/optakt/flow-dps/ledger/trie"
-	"github.com/optakt/flow-dps/service/loader"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
+
+	"github.com/optakt/flow-dps/ledger/trie"
+	"github.com/optakt/flow-dps/ledger/wal"
+	"github.com/optakt/flow-dps/service/loader"
 )
 
 const (
@@ -67,14 +69,21 @@ func run() int {
 	}
 	log = log.Level(level)
 
-	file, err := os.Open(flagInputPath)
+	input, err := os.Open(flagInputPath)
 	if err != nil {
-		log.Error().Err(err).Msg("could not open checkpoint file")
+		log.Error().Err(err).Msg("could not open input file")
 		return failure
 	}
-	defer file.Close()
+	defer input.Close()
 
-	original, err := loader.FromCheckpoint(log, file).Trie()
+	output, err := os.Create(flagOutputPath)
+	if err != nil {
+		log.Error().Err(err).Msg("could not open output file")
+		return failure
+	}
+	defer output.Close()
+
+	original, err := loader.FromCheckpoint(log, input).Trie()
 	if err != nil {
 		log.Error().Err(err).Msg("could not read original checkpoint")
 		return failure
@@ -82,13 +91,17 @@ func run() int {
 
 	paths, payloads := original.Values()
 
-	_, err = trie.NewEmptyTrie().Mutate(paths, payloads)
+	optimized, err := trie.NewEmptyTrie().Mutate(paths, payloads)
 	if err != nil {
 		log.Error().Err(err).Msg("could not optimize checkpoint")
 		return failure
 	}
 
-	// FIXME: Use checkpointer to write checkpoint.
+	err = wal.Checkpoint(output, optimized)
+	if err != nil {
+		log.Error().Err(err).Msg("could not save optimized checkpoint")
+		return failure
+	}
 
 	return success
 }

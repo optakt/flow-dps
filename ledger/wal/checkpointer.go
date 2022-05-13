@@ -8,6 +8,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/trie"
 )
@@ -124,54 +125,18 @@ func ReadCheckpoint(log zerolog.Logger, r io.Reader) (*forest.LightForest, error
 	}, nil
 }
 
-// StoreCheckpoint writes the given tries to checkpoint file, and also appends
-// a CRC32 file checksum for integrity check.
-// Checkpoint file consists of a flattened forest. Specifically, it consists of:
-//   * a list of encoded nodes, where references to other nodes are by list index.
-//   * a list of encoded tries, each referencing their respective root node by index.
-// Referencing to other nodes by index 0 is a special case, meaning nil.
-//
-// As an important property, the nodes are listed in an order which satisfies
-// Descendents-First-Relationship. The Descendents-First-Relationship has the
-// following important property:
-// When rebuilding the trie from the sequence of nodes, build the trie on the fly,
-// as for each node, the children have been previously encountered.
-func StoreCheckpoint(writer io.Writer, trie *trie.Trie) error {
+// Checkpoint writes a CBOR-encoded and ZSTD-compressed trie as a checkpoint in the given writer.
+func Checkpoint(writer io.Writer, trie *trie.Trie) error {
 
-	crc32Writer := NewCRC32Writer(writer)
-
-	// Scratch buffer is used as temporary buffer that node can encode into.
-	// Data in scratch buffer should be copied or used before scratch buffer is used again.
-	// If the scratch buffer isn't large enough, a new buffer will be allocated.
-	// However, 4096 bytes will be large enough to handle almost all payloads
-	// and 100% of interim nodes.
-	scratch := make([]byte, 1024*4)
-
-	// Write header: magic (2 bytes) + version (2 bytes)
-	header := scratch[:headerSize]
-	binary.BigEndian.PutUint16(header, MagicBytes)
-	binary.BigEndian.PutUint16(header[encMagicSize:], VersionV5)
-
-	_, err := crc32Writer.Write(header)
-	if err != nil {
-		return fmt.Errorf("cannot write checkpoint header: %w", err)
-	}
-
-	// Serialize all unique nodes
-	trieBytes, err := trie.Encode()
+	// FIXME: Instead of doing this, iterate through all nodes and encode them with a simple format.
+	compressed, err := zbor.NewCodec().Marshal(trie)
 	if err != nil {
 		return fmt.Errorf("could not encode trie: %w", err)
 	}
 
-	crc32Writer.Write(trieBytes)
-
-	// Write CRC32 sum
-	crc32buf := scratch[:crc32SumSize]
-	binary.BigEndian.PutUint32(crc32buf, crc32Writer.Crc32())
-
-	_, err = writer.Write(crc32buf)
+	_, err = writer.Write(compressed)
 	if err != nil {
-		return fmt.Errorf("cannot write CRC32: %w", err)
+		return fmt.Errorf("could not write encoded trie: %w", err)
 	}
 
 	return nil
