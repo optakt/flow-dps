@@ -86,7 +86,7 @@ func ReadCheckpoint(log zerolog.Logger, r io.Reader) (*forest.LightForest, error
 			return nil, fmt.Errorf("cannot decode original format: %w", err)
 		}
 	default:
-		forest.Nodes, forest.Tries, err = decodeOriginalFormat(crcReader, nodesCount, triesCount, version)
+		forest.Nodes, forest.Tries, err = decodeOriginalFormat(bufReader, crcReader, nodesCount, triesCount, version)
 		if err != nil {
 			return nil, fmt.Errorf("cannot decode original format: %w", err)
 		}
@@ -95,7 +95,7 @@ func ReadCheckpoint(log zerolog.Logger, r io.Reader) (*forest.LightForest, error
 	return &forest, nil
 }
 
-func decodeOriginalFormat(reader *Crc32Reader, nodesCount uint64, triesCount uint16, version uint16) ([]*trie.LightNode, []*trie.LightTrie, error) {
+func decodeOriginalFormat(bufReader io.Reader, reader *Crc32Reader, nodesCount uint64, triesCount uint16, version uint16) ([]*trie.LightNode, []*trie.LightTrie, error) {
 	// The `nodes` slice needs one extra capacity for the nil node at index 0.
 	nodes := make([]*trie.LightNode, nodesCount+1)
 	tries := make([]*trie.LightTrie, triesCount)
@@ -122,7 +122,7 @@ func decodeOriginalFormat(reader *Crc32Reader, nodesCount uint64, triesCount uin
 	// and then to use the CRC reader to verify it.
 	if version == VersionV3 {
 		crc32buf := make([]byte, 4)
-		_, err := reader.reader.Read(crc32buf) // FIXME: Check if this changes anything compared to using the previous buf reader.
+		_, err := bufReader.Read(crc32buf) // FIXME: Check if this changes anything compared to using the previous buf reader.
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not read CRC32 checksum: %w", err)
 		}
