@@ -83,11 +83,15 @@ func run() int {
 	}
 	defer output.Close()
 
+	log.Info().Msg("starting checkpoint optimizer")
+
 	original, err := loader.FromCheckpoint(log, input).Trie()
 	if err != nil {
 		log.Error().Err(err).Msg("could not read original checkpoint")
 		return failure
 	}
+
+	log.Info().Msg("successfully read checkpoint trie")
 
 	paths, payloads := original.Values()
 
@@ -97,11 +101,15 @@ func run() int {
 		return failure
 	}
 
+	log.Info().Msg("successfully restructured checkpoint")
+
 	err = wal.Checkpoint(output, optimized)
 	if err != nil {
 		log.Error().Err(err).Msg("could not save optimized checkpoint")
 		return failure
 	}
+
+	log.Info().Msg("finished writing encoded optimized checkpoint")
 
 	return success
 }

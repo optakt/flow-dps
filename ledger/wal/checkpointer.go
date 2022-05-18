@@ -34,12 +34,10 @@ const (
 	// See EncodeNode() and EncodeTrie() for more details.
 	VersionV5 uint16 = 0x05
 
-	encMagicSize     = 2
-	encVersionSize   = 2
-	headerSize       = encMagicSize + encVersionSize
-	encNodeCountSize = 8
-	encTrieCountSize = 2
-	crc32SumSize     = 4
+	VersionDPSV1 uint16 = 0xFF01
+
+	encMagicSize   = 2
+	encVersionSize = 2
 )
 
 // ReadCheckpoint reads a checkpoint and populates a store with its data, while
@@ -65,7 +63,7 @@ func ReadCheckpoint(log zerolog.Logger, r io.Reader) (*forest.LightForest, error
 	if magicBytes != MagicBytes {
 		return nil, fmt.Errorf("unknown file format. Magic constant %x does not match expected %x", magicBytes, MagicBytes)
 	}
-	if version != VersionV1 && version != VersionV3 {
+	if version < VersionV1 || version > VersionDPSV1 {
 		return nil, fmt.Errorf("unsupported file version %x", version)
 	}
 
@@ -74,30 +72,48 @@ func ReadCheckpoint(log zerolog.Logger, r io.Reader) (*forest.LightForest, error
 		reader = bufReader
 	}
 
-	// The `nodes` slice needs one extra capacity for the nil node at index 0.
-	nodes := make([]*trie.LightNode, nodesCount+1)
-	tries := make([]*trie.LightTrie, triesCount)
-
 	log.Info().
 		Uint16("encoding_version", version).
 		Uint64("nodes", nodesCount+1).
 		Uint16("tries", triesCount).
 		Msg("commencing checkpoint decoding")
 
+	var forest forest.LightForest
+	switch version {
+	case VersionDPSV1:
+		forest.Nodes, forest.Tries, err = decodeOptimizedFormat(reader, nodesCount, triesCount)
+		if err != nil {
+			return nil, fmt.Errorf("cannot decode original format: %w", err)
+		}
+	default:
+		forest.Nodes, forest.Tries, err = decodeOriginalFormat(crcReader, nodesCount, triesCount, version)
+		if err != nil {
+			return nil, fmt.Errorf("cannot decode original format: %w", err)
+		}
+	}
+
+	return &forest, nil
+}
+
+func decodeOriginalFormat(reader *Crc32Reader, nodesCount uint64, triesCount uint16, version uint16) ([]*trie.LightNode, []*trie.LightTrie, error) {
+	// The `nodes` slice needs one extra capacity for the nil node at index 0.
+	nodes := make([]*trie.LightNode, nodesCount+1)
+	tries := make([]*trie.LightTrie, triesCount)
+
 	// Decode all light nodes.
 	for i := uint64(1); i <= nodesCount; i++ {
-		lightNode, err := trie.DecodeLightNode(reader)
+		lightNode, err := trie.DecodeLightNode(reader.reader)
 		if err != nil {
-			return nil, fmt.Errorf("could not read light node %d: %w", i, err)
+			return nil, nil, fmt.Errorf("could not read light node %d: %w", i, err)
 		}
 		nodes[i] = lightNode
 	}
 
 	// Decode all light tries.
 	for i := uint16(0); i < triesCount; i++ {
-		lightTrie, err := trie.DecodeLightTrie(reader)
+		lightTrie, err := trie.DecodeLightTrie(reader.reader)
 		if err != nil {
-			return nil, fmt.Errorf("could not read light trie %d: %w", i, err)
+			return nil, nil, fmt.Errorf("could not read light trie %d: %w", i, err)
 		}
 		tries[i] = lightTrie
 	}
@@ -106,29 +122,36 @@ func ReadCheckpoint(log zerolog.Logger, r io.Reader) (*forest.LightForest, error
 	// and then to use the CRC reader to verify it.
 	if version == VersionV3 {
 		crc32buf := make([]byte, 4)
-		_, err := bufReader.Read(crc32buf)
+		_, err := reader.reader.Read(crc32buf) // FIXME: Check if this changes anything compared to using the previous buf reader.
 		if err != nil {
-			return nil, fmt.Errorf("could not read CRC32 checksum: %w", err)
+			return nil, nil, fmt.Errorf("could not read CRC32 checksum: %w", err)
 		}
 		readCrc32, _ := readUint32(crc32buf, 0)
 
-		calculatedCrc32 := crcReader.Crc32()
+		calculatedCrc32 := reader.Crc32()
 
 		if calculatedCrc32 != readCrc32 {
-			return nil, fmt.Errorf("invalid CRC32 checksum: got %x want %x", readCrc32, calculatedCrc32)
+			return nil, nil, fmt.Errorf("invalid CRC32 checksum: got %x want %x", readCrc32, calculatedCrc32)
 		}
 	}
 
-	return &forest.LightForest{
-		Nodes: nodes,
-		Tries: tries,
-	}, nil
+	return nodes, tries, nil
+}
+
+func decodeOptimizedFormat(reader io.Reader, nodesCount uint64, triesCount uint16) ([]*trie.LightNode, []*trie.LightTrie, error) {
+	// The `nodes` slice needs one extra capacity for the nil node at index 0.
+	nodes := make([]*trie.LightNode, nodesCount+1)
+	tries := make([]*trie.LightTrie, triesCount)
+
+	// FIXME: to do
+	//nodes, err := trie.Decode(reader)
+
+	return nodes, tries, nil
 }
 
 // Checkpoint writes a CBOR-encoded and ZSTD-compressed trie as a checkpoint in the given writer.
 func Checkpoint(writer io.Writer, trie *trie.Trie) error {
 
-	// FIXME: Instead of doing this, iterate through all nodes and encode them with a simple format.
 	encTrie, err := trie.Encode()
 	if err != nil {
 		return fmt.Errorf("could not encode trie: %w", err)

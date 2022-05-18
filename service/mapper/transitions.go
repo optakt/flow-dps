@@ -429,7 +429,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		paths, _ := s.forest.Paths(commit)
 
 		payloads := tree.UnsafeRead(paths)
-		for i := range payloads {
+		for i := range payloads[s.registerIdx:] {
 			s.registers[paths[i]] = payloads[i]
 		}
 

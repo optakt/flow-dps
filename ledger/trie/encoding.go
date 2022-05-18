@@ -2,10 +2,12 @@ package trie
 
 import (
 	"encoding/binary"
+	"io"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/common/utils"
+
 	"github.com/optakt/flow-dps/codec/zbor"
 )
 
@@ -30,6 +32,10 @@ const (
 	payloadEncodingVersion = 1
 )
 
+func Decode(reader io.Reader) (*Trie, error) {
+	return nil, nil
+}
+
 func encodeNode(node Node, lIndex uint64, rIndex uint64, scratch []byte) []byte {
 	switch n := node.(type) {
 	case *Branch:
@@ -46,6 +52,25 @@ func encodeNode(node Node, lIndex uint64, rIndex uint64, scratch []byte) []byte 
 
 	default:
 		panic("unexpected node type when encoding checkpoint")
+	}
+}
+
+func decodeNode(data []byte, allNodes []Node) (Node, []byte) {
+	nodeType := data[0]
+	data = data[1:]
+
+	switch nodeType {
+	case nodeTypeBranch:
+		return decodeBranch(data, allNodes)
+
+	case nodeTypeExtension:
+		return decodeExtension(data, allNodes)
+
+	case nodeTypeLeaf:
+		return decodeLeaf(data)
+
+	default:
+		panic("unexpected node type when decoding checkpoint")
 	}
 }
 
@@ -69,20 +94,21 @@ func encodeTrie(t *Trie, rootIndex uint64, scratch []byte) []byte {
 	return buf[:pos]
 }
 
-// encodeLeafNode encodes leaf node in the following format:
-// - node type (1 byte)
-// - height (2 bytes)
-// - hash (32 bytes)
-// - path (32 bytes)
-// - payload (4 bytes + n bytes)
-// Encoded leaf node size is 81 bytes (assuming length of hash/path is 32 bytes) +
-// length of encoded payload size.
-// Scratch buffer is used to avoid allocs. It should be used directly instead
-// of using append.  This function uses len(scratch) and ignores cap(scratch),
-// so any extra capacity will not be utilized.
-// WARNING: The returned buffer is likely to share the same underlying array as
-// the scratch buffer. Caller is responsible for copying or using returned buffer
-// before scratch buffer is used again.
+func decodeTrie(data []byte) (uint64, hash.Hash, []byte) {
+	pos := 0
+
+	// Decode root node index (8 bytes Big Endian)
+	rootIndex := binary.BigEndian.Uint64(data)
+	pos += encNodeIndexSize
+
+	// Decode hash (32-bytes hashValue)
+	var rootHash hash.Hash
+	copy(rootHash[:], data[pos:pos+encHashSize])
+	pos += encHashSize
+
+	return rootIndex, rootHash, data[pos:]
+}
+
 func encodeLeaf(leaf *Leaf, scratch []byte) []byte {
 	encPayloadSize := encodedPayloadLength(leaf.payload, payloadEncodingVersion)
 
@@ -128,6 +154,41 @@ func encodeLeaf(leaf *Leaf, scratch []byte) []byte {
 	return buf
 }
 
+func decodeLeaf(data []byte) (*Leaf, []byte) {
+	pos := 0
+
+	// Decode hash (32 bytes)
+	hash := hash.Hash{}
+	copy(hash[:], data[pos:])
+	pos += encHashSize
+
+	// Decode path (32 bytes)
+	path := ledger.Path{}
+	copy(path[:], data[pos:])
+	pos += encHashSize
+
+	// Decode payload length (4 bytes)
+	payloadLength := binary.BigEndian.Uint32(data[pos:])
+	pos += encPayloadLengthSize
+
+	// Decode payload
+	payloadBytes := data[pos : pos+int(payloadLength)]
+	var payload ledger.Payload
+	err := zbor.NewCodec().Unmarshal(payloadBytes, &payload)
+	if err != nil {
+		panic(err) // FIXME
+	}
+	pos += int(payloadLength)
+
+	node := Leaf{
+		hash:    hash,
+		path:    &path,
+		payload: &payload,
+	}
+
+	return &node, data[pos:]
+}
+
 func encodeExtension(ext *Extension, childIndex uint64, scratch []byte) []byte {
 
 	encodedNodeSize := encNodeTypeSize +
@@ -170,6 +231,37 @@ func encodeExtension(ext *Extension, childIndex uint64, scratch []byte) []byte {
 	return buf
 }
 
+func decodeExtension(data []byte, nodes []Node) (*Extension, []byte) {
+	pos := 0
+
+	// Decode hash (32 bytes)
+	hash := hash.Hash{}
+	copy(hash[:], data[pos:])
+	pos += encHashSize
+
+	// Decode path (32 bytes)
+	path := ledger.Path{}
+	copy(path[:], data[pos:])
+	pos += encHashSize
+
+	// Decode extension count (1 byte)
+	count := data[pos]
+	pos += encExtCountSize
+
+	// Decode child index (8 bytes Big Endian)
+	childIndex := binary.BigEndian.Uint64(data[pos:])
+	pos += encNodeIndexSize
+
+	node := Extension{
+		hash:  hash,
+		path:  &path,
+		count: count,
+		child: nodes[childIndex],
+	}
+
+	return &node, data[pos:]
+}
+
 func encodeBranch(branch *Branch, lIndex uint64, rIndex uint64, scratch []byte) []byte {
 	encodedNodeSize := encNodeTypeSize +
 		encHashSize +
@@ -204,6 +296,31 @@ func encodeBranch(branch *Branch, lIndex uint64, rIndex uint64, scratch []byte) 
 	pos += encNodeIndexSize
 
 	return scratch
+}
+
+func decodeBranch(data []byte, nodes []Node) (*Branch, []byte) {
+	pos := 0
+
+	// Decode hash (32 bytes)
+	hash := hash.Hash{}
+	copy(hash[:], data[pos:])
+	pos += encHashSize
+
+	// Decode left child index (8 bytes Big Endian)
+	lIndex := binary.BigEndian.Uint64(data[pos:])
+	pos += encNodeIndexSize
+
+	// Decode right child index (8 bytes Big Endian)
+	rIndex := binary.BigEndian.Uint64(data[pos:])
+	pos += encNodeIndexSize
+
+	node := Branch{
+		hash:  hash,
+		left:  nodes[lIndex],
+		right: nodes[rIndex],
+	}
+
+	return &node, data[pos:]
 }
 
 func encodedPayloadLength(p *ledger.Payload, version uint16) int {
