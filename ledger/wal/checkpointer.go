@@ -129,9 +129,14 @@ func ReadCheckpoint(log zerolog.Logger, r io.Reader) (*forest.LightForest, error
 func Checkpoint(writer io.Writer, trie *trie.Trie) error {
 
 	// FIXME: Instead of doing this, iterate through all nodes and encode them with a simple format.
-	compressed, err := zbor.NewCodec().Marshal(trie)
+	encTrie, err := trie.Encode()
 	if err != nil {
 		return fmt.Errorf("could not encode trie: %w", err)
+	}
+
+	compressed, err := zbor.NewCodec().Compress(encTrie)
+	if err != nil {
+		return fmt.Errorf("could not compress trie: %w", err)
 	}
 
 	_, err = writer.Write(compressed)
