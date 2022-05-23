@@ -91,7 +91,8 @@ func TestTransitions_BootstrapState(t *testing.T) {
 				return
 			}
 			assert.NotNil(t, tree.RootNode())
-			assert.Len(t, tree.Leaves(), len(paths))
+			gotPaths, _ := tree.Values()
+			assert.Len(t, gotPaths, len(paths))
 			assert.Len(t, paths, 3) // Expect the three paths from leaves.
 			assert.NotZero(t, parent)
 		}

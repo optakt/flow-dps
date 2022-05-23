@@ -118,7 +118,7 @@ func run() int {
 
 	// Check if index already exists.
 	read := index.NewReader(indexDB, storage)
-	_, err = read.First()
+	first, err := read.First()
 	empty := errors.Is(err, badger.ErrKeyNotFound)
 	if err != nil && !empty {
 		log.Error().Err(err).Msg("could not get first height from index reader")
@@ -153,9 +153,32 @@ func run() int {
 		}
 	}()
 
-	// Initialize the transitions with the dependencies and add them to the FSM.
-	load := loader.FromScratch()
+	var load mapper.Loader
+	load = loader.FromIndex(log, storage, indexDB)
+	bootstrap := flagCheckpoint != ""
+	if empty {
+		file, err := os.Open(flagCheckpoint)
+		if err != nil {
+			log.Error().Err(err).Msg("could not open checkpoint file")
+			return failure
+		}
+		defer file.Close()
+		load = loader.FromCheckpoint(log, file)
+	} else if bootstrap {
+		file, err := os.Open(flagCheckpoint)
+		if err != nil {
+			log.Error().Err(err).Msg("could not open checkpoint file")
+			return failure
+		}
+		defer file.Close()
+		initialize := loader.FromCheckpoint(log, file)
+		load = loader.FromIndex(log, storage, indexDB,
+			loader.WithInitializer(initialize),
+			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
+		)
+	}
 
+	// Initialize the transitions with the dependencies and add them to the FSM.
 	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
 		mapper.WithBootstrapState(true),
 		mapper.WithSkipRegisters(flagSkip),

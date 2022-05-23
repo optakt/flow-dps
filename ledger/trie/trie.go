@@ -16,11 +16,12 @@ package trie
 
 import (
 	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"runtime"
 	"sort"
-	"sync"
 
 	"github.com/gammazero/deque"
 	"golang.org/x/sync/semaphore"
@@ -35,23 +36,12 @@ const maxDepth = ledger.NodeMaxHeight - 1
 // It uses a payload store to retrieve and persist ledger payloads.
 type Trie struct {
 	root Node
-
-	// TODO: Pre-allocate pools and put elements back in pool when no longer needed.
-	//  See https://github.com/optakt/flow-dps/issues/519
-	groups     *sync.Pool
-	extensions *sync.Pool
-	branches   *sync.Pool
-	leaves     *sync.Pool
 }
 
 // NewEmptyTrie creates a new trie without a root node, with the given payload store.
 func NewEmptyTrie() *Trie {
 	t := Trie{
-		root:       nil,
-		groups:     &sync.Pool{New: func() interface{} { return new(Group) }},
-		extensions: &sync.Pool{New: func() interface{} { return new(Extension) }},
-		branches:   &sync.Pool{New: func() interface{} { return new(Branch) }},
-		leaves:     &sync.Pool{New: func() interface{} { return new(Leaf) }},
+		root: nil,
 	}
 
 	return &t
@@ -60,11 +50,7 @@ func NewEmptyTrie() *Trie {
 // NewTrie creates a new trie using the given root node and payload store.
 func NewTrie(root Node) *Trie {
 	t := Trie{
-		root:       root,
-		groups:     &sync.Pool{New: func() interface{} { return new(Group) }},
-		extensions: &sync.Pool{New: func() interface{} { return new(Extension) }},
-		branches:   &sync.Pool{New: func() interface{} { return new(Branch) }},
-		leaves:     &sync.Pool{New: func() interface{} { return new(Leaf) }},
+		root: root,
 	}
 
 	return &t
@@ -92,8 +78,15 @@ func (t *Trie) RootHash() ledger.RootHash {
 
 		switch n := node.(type) {
 		case *Branch:
-			nodes.PushFront(n.left)
-			nodes.PushFront(n.right)
+			// We need to add this check since we might be dealing with a
+			// checkpoint trie, which does not contain extensions and might
+			// have branches with a single child.
+			if n.left != nil {
+				nodes.PushFront(n.left)
+			}
+			if n.right != nil {
+				nodes.PushFront(n.right)
+			}
 		case *Extension:
 			nodes.PushFront(n.child)
 		}
@@ -123,11 +116,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 	// Create the new trie that will hold the mutated root.
 	target := &Trie{
-		root:       nil,
-		groups:     t.groups,
-		extensions: t.extensions,
-		branches:   t.branches,
-		leaves:     t.leaves,
+		root: nil,
 	}
 
 	// We create a queue of groups, where each group represents a set of paths
@@ -138,7 +127,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 	// The first group of paths holds all paths, checking depth zero as the first
 	// depth, and using the root to determine what to do at that depth.
-	group := t.groups.Get().(*Group)
+	group := &Group{}
 	group.path = &path
 	group.source.node = &t.root
 	group.target.node = &target.root
@@ -177,12 +166,11 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			leaf, ok := (*group.target.node).(*Leaf)
 			if !ok {
 				// Create a new leaf.
-				leaf = t.leaves.Get().(*Leaf)
-				leaf.clean = false
+				leaf = &Leaf{}
 				leaf.path = group.path
 				leaf.payload = payloads[group.start].DeepCopy()
 				*group.target.node = leaf
-			} else if bytes.Compare(leaf.payload.Value, payloads[0].Value) != 0 {
+			} else if bytes.Compare(leaf.payload.Value, payloads[group.start].Value) != 0 {
 				// Update leaf payload.
 				leaf.clean = false
 				leaf.payload = payloads[group.start].DeepCopy()
@@ -209,8 +197,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			case *Leaf:
 
 				// Clone source leaf.
-				leaf := t.leaves.Get().(*Leaf)
-				leaf.clean = false
+				leaf := &Leaf{}
 				leaf.path = n.path
 				leaf.payload = n.payload
 				*group.target.node = leaf
@@ -223,8 +210,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 			case *Branch:
 
 				// Clone source branch.
-				branch := t.branches.Get().(*Branch)
-				branch.clean = false
+				branch := &Branch{}
 				if pivot == group.start {
 					branch.left = n.left
 				}
@@ -244,8 +230,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 				if (extBit == 0 && pivot == group.end) ||
 					(extBit == 1 && pivot == group.start) {
 
-					ext := t.extensions.Get().(*Extension)
-					ext.clean = false
+					ext := &Extension{}
 					ext.path = n.path
 					ext.count = n.count - group.source.count
 					*group.target.node = ext
@@ -254,8 +239,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 				}
 
 				// Otherwise, we want to introduce a branch at the current bit.
-				branch := t.branches.Get().(*Branch)
-				branch.clean = false
+				branch := &Branch{}
 
 				// If we are not following both directions, point the unused side
 				// of the branch to the child. And if the child is a leaf, clone
@@ -267,8 +251,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 					leaf, ok := child.(*Leaf)
 					if ok {
 						// Clone source child leaf.
-						replace := t.leaves.Get().(*Leaf)
-						replace.clean = false
+						replace := &Leaf{}
 						replace.path = leaf.path
 						replace.payload = leaf.payload
 
@@ -279,8 +262,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 					// part of it we want to keep and set the previous child as
 					// its child.
 					if n.count >= group.source.count+1 {
-						ext := t.extensions.Get().(*Extension)
-						ext.clean = false
+						ext := &Extension{}
 						ext.path = n.path
 						ext.child = child
 						// We need to subtract the source count we already went through
@@ -308,14 +290,12 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 			if pivot != group.start && pivot != group.end {
 				// We are going both directions, so we create a branch.
-				branch := t.branches.Get().(*Branch)
-				branch.clean = false
+				branch := &Branch{}
 				*group.target.node = branch
 			} else {
 				// All elements of this group follow the same direction,
 				// so we need to create an extension.
-				ext := t.extensions.Get().(*Extension)
-				ext.clean = false
+				ext := &Extension{}
 				ext.count = maxDepth - group.depth
 				ext.path = group.path
 
@@ -347,8 +327,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 						leaf, ok := child.(*Leaf)
 						if ok {
 							// Clone source child leaf.
-							replace := t.leaves.Get().(*Leaf)
-							replace.clean = false
+							replace := &Leaf{}
 							replace.path = leaf.path
 							replace.payload = leaf.payload
 
@@ -359,8 +338,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 						// part of it we want to keep and set the previous child as
 						// its child.
 						if group.target.count != n.count {
-							ext := t.extensions.Get().(*Extension)
-							ext.clean = false
+							ext := &Extension{}
 							ext.path = n.path
 							// We need to subtract the source count we already went through
 							// from its original value, plus one because we're cutting one
@@ -370,6 +348,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 							child = ext
 						}
+
 						if extBit == 0 && pivot == group.start {
 							branch.left = child
 						}
@@ -503,7 +482,7 @@ func (t *Trie) Mutate(paths []ledger.Path, payloads []ledger.Payload) (*Trie, er
 
 				path := paths[pivot]
 
-				split := t.groups.Get().(*Group)
+				split := &Group{}
 				split.path = &path
 				split.target.node = &n.right
 				split.start = pivot
@@ -589,6 +568,7 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 		// Hitting a `nil` node for a read should only be possible when the
 		// root is `nil` and the trie is completely empty.
 		case nil:
+
 			return nil, ErrPathNotFound
 
 		// If we hit a branch node, we have two sides to it, so we just forward
@@ -640,6 +620,10 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 			current = &node.child
 			depth += node.count + 1
 			break
+
+		case *Leaf:
+			panic("unexpected leaf at non-zero depth")
+
 		}
 
 		// Once we reach a depth of zero, it means the value has overflown, and
@@ -647,6 +631,7 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 		if depth == 0 {
 			break
 		}
+
 	}
 
 	// At this point, we should always have a leaf, so we use it to retrieve the
@@ -656,35 +641,7 @@ func (t *Trie) read(path ledger.Path) (*ledger.Payload, error) {
 	return leaf.payload, nil
 }
 
-// Leaves iterates through the trie and returns its leaf nodes.
-func (t *Trie) Leaves() []*Leaf {
-	queue := deque.New()
-
-	root := t.RootNode()
-	if root != nil {
-		queue.PushBack(root)
-	}
-
-	var leaves []*Leaf
-	for queue.Len() > 0 {
-		node := queue.PopBack().(Node)
-		switch n := node.(type) {
-		case *Extension:
-			queue.PushBack(n.child)
-
-		case *Branch:
-			queue.PushBack(n.left)
-			queue.PushBack(n.right)
-
-		case *Leaf:
-			leaves = append(leaves, n)
-		}
-	}
-
-	return leaves
-}
-
-func (t *Trie) Paths() []ledger.Path {
+func (t *Trie) Values() ([]ledger.Path, []ledger.Payload) {
 	queue := deque.New()
 
 	root := t.RootNode()
@@ -693,6 +650,7 @@ func (t *Trie) Paths() []ledger.Path {
 	}
 
 	var paths []ledger.Path
+	var payloads []ledger.Payload
 	for queue.Len() > 0 {
 		node := queue.PopBack().(Node)
 		switch n := node.(type) {
@@ -700,8 +658,12 @@ func (t *Trie) Paths() []ledger.Path {
 			queue.PushBack(n.child)
 
 		case *Branch:
-			queue.PushBack(n.left)
-			queue.PushBack(n.right)
+			if n.left != nil {
+				queue.PushBack(n.left)
+			}
+			if n.right != nil {
+				queue.PushBack(n.right)
+			}
 
 		case *Leaf:
 			path, err := ledger.ToPath((*n.path)[:])
@@ -710,8 +672,91 @@ func (t *Trie) Paths() []ledger.Path {
 				panic(err)
 			}
 			paths = append(paths, path)
+			payloads = append(payloads, *n.payload)
 		}
 	}
 
-	return paths
+	return paths, payloads
+}
+
+func (t *Trie) Encode() ([]byte, error) {
+	var result []byte
+
+	// Scratch buffer is used as temporary buffer that node can encode into.
+	// Data in scratch buffer should be copied or used before scratch buffer is used again.
+	// If the scratch buffer isn't large enough, a new buffer will be allocated.
+	// However, 4096 bytes will be large enough to handle almost all payloads
+	// and 100% of interim nodes.
+	scratch := make([]byte, 1024*4)
+
+	// allNodes contains all unique nodes of given tries and their index
+	// (ordered by node traversal sequence).
+	// Index 0 is a special case with nil node.
+	allNodes := make(map[Node]uint64)
+	allNodes[nil] = 0
+
+	// Serialize all unique nodes
+	nodeCounter := uint64(1) // start from 1, as 0 marks nil node
+
+	// Traverse all unique nodes for trie t.
+	for itr := NewNodeIterator(t); itr.Next(); {
+		node := itr.Value()
+
+		allNodes[node] = nodeCounter
+		nodeCounter++
+
+		var lchildIndex, rchildIndex uint64
+		switch n := node.(type) {
+		case *Branch:
+			if n.left != nil {
+				var found bool
+				lchildIndex, found = allNodes[n.left]
+				if !found {
+					hash := n.left.Hash(semaphore.NewWeighted(1), 0)
+					return nil, fmt.Errorf("internal error: missing node with hash %s", hex.EncodeToString(hash[:]))
+				}
+			}
+			if n.right != nil {
+				var found bool
+				rchildIndex, found = allNodes[n.right]
+				if !found {
+					hash := n.right.Hash(semaphore.NewWeighted(1), 0)
+					return nil, fmt.Errorf("internal error: missing node with hash %s", hex.EncodeToString(hash[:]))
+				}
+			}
+		case *Extension:
+			if n.child != nil {
+				var found bool
+				lchildIndex, found = allNodes[n.child]
+				if !found {
+					hash := n.child.Hash(semaphore.NewWeighted(1), 0)
+					return nil, fmt.Errorf("internal error: missing node with hash %s", hex.EncodeToString(hash[:]))
+				}
+			}
+		}
+
+		encNode := encodeNode(node, lchildIndex, rchildIndex, scratch) // FIXME: Implement.
+		result = append(result, encNode...)
+	}
+
+	// Serialize trie root nodes
+	rootNode := t.RootNode()
+
+	// Get root node index
+	rootIndex, found := allNodes[rootNode]
+	if !found {
+		rootHash := t.RootHash()
+		return nil, fmt.Errorf("internal error: missing node with hash %s", hex.EncodeToString(rootHash[:]))
+	}
+
+	encTrie := encodeTrie(t, rootIndex, scratch)
+	result = append(result, encTrie...)
+
+	// Write footer with nodes count and tries count.
+	footer := scratch[:encNodeCountSize+encTrieCountSize]
+	binary.BigEndian.PutUint64(footer, uint64(len(allNodes)-1)) // -1 to account for 0 node meaning nil
+	binary.BigEndian.PutUint16(footer[encNodeCountSize:], 1)    // Always 1 since in the DPS we only use one trie.
+	result = append(result, footer...)
+
+	return result, nil
 }

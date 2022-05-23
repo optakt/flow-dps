@@ -51,7 +51,6 @@ func (b *Branch) Hash(sema *semaphore.Weighted, height int) hash.Hash {
 
 // computeHash computes the branch hash by hashing its children.
 func (b *Branch) computeHash(sema *semaphore.Weighted, height int) hash.Hash {
-
 	// Try to acquire a semaphore, in which case we can do it in parallel.
 	ok := sema.TryAcquire(1)
 	if !ok {
@@ -61,6 +60,7 @@ func (b *Branch) computeHash(sema *semaphore.Weighted, height int) hash.Hash {
 		return hash
 	}
 
+	left := b.left.Hash(sema, height-1)
 	c := make(chan hash.Hash)
 	go func(sema *semaphore.Weighted, c chan<- hash.Hash) {
 		defer sema.Release(1)
@@ -68,9 +68,8 @@ func (b *Branch) computeHash(sema *semaphore.Weighted, height int) hash.Hash {
 		c <- right
 		close(c)
 	}(sema, c)
-	left := b.left.Hash(sema, height-1)
 	right := <-c
-	hash := hash.HashInterNode(left, right)
 
+	hash := hash.HashInterNode(left, right)
 	return hash
 }

@@ -16,7 +16,9 @@ package loader
 
 import (
 	"fmt"
-	"io"
+	"os"
+
+	"github.com/rs/zerolog"
 
 	"github.com/optakt/flow-dps/ledger/forest"
 	"github.com/optakt/flow-dps/ledger/trie"
@@ -25,14 +27,16 @@ import (
 
 // Checkpoint is a loader that loads a trie from a LedgerWAL checkpoint file.
 type Checkpoint struct {
-	file io.Reader
+	log  zerolog.Logger
+	file *os.File
 }
 
 // FromCheckpoint creates a loader which loads the trie from the provided
 // reader, which should represent a LedgerWAL checkpoint file.
-func FromCheckpoint(file io.Reader) *Checkpoint {
+func FromCheckpoint(log zerolog.Logger, file *os.File) *Checkpoint {
 
 	c := Checkpoint{
+		log:  log,
 		file: file,
 	}
 
@@ -47,7 +51,7 @@ func (c *Checkpoint) Trie() (*trie.Trie, error) {
 		return nil, fmt.Errorf("could not read checkpoint: %w", err)
 	}
 
-	trees, err := forest.RebuildTries(checkpoint)
+	trees, err := forest.RebuildTries(c.log, checkpoint)
 	if err != nil {
 		return nil, fmt.Errorf("could not rebuild tries: %w", err)
 	}

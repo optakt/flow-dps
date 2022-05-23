@@ -19,8 +19,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/onflow/flow-go/ledger"
 	"golang.org/x/sync/semaphore"
+
+	"github.com/onflow/flow-go/ledger"
 
 	"github.com/onflow/flow-go/ledger/common/encoding"
 	"github.com/onflow/flow-go/ledger/common/hash"
@@ -115,8 +116,8 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 	}
 
 	// Branch node.
-	if ln.LIndex != 0 && ln.RIndex != 0 {
-		// Since it does not have a path, this node is a branch.
+	if ln.LIndex != 0 || ln.RIndex != 0 {
+		// Since it has children, this node is a branch.
 		return &Branch{
 			left:  nodes[ln.LIndex],
 			right: nodes[ln.RIndex],
@@ -125,14 +126,14 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 		}, nil
 	}
 
-	// Extension node.
-	if ln.LIndex != 0 {
-		path, err := ledger.ToPath(ln.Path)
-		if err != nil {
-			return nil, fmt.Errorf("invalid path in light node: %w", err)
-		}
+	path, err := ledger.ToPath(ln.Path)
+	if err != nil {
+		return nil, fmt.Errorf("invalid path in light node: %w", err)
+	}
 
-		// Since it has a count value, this node is an extension.
+	// Extension node.
+	if ln.Count != 0 {
+		// Since it has a count, this node is an extension.
 		return &Extension{
 			child: nodes[ln.LIndex],
 			count: ln.Count,
@@ -142,17 +143,12 @@ func FromLightNode(ln *LightNode, nodes []Node) (Node, error) {
 		}, nil
 	}
 
-	// Leaf node.
-	path, err := ledger.ToPath(ln.Path)
-	if err != nil {
-		return nil, fmt.Errorf("invalid path in light node: %w", err)
-	}
+	// Since it has no children, this node is a leaf.
 	payload, err := encoding.DecodePayload(ln.Payload)
 	if err != nil {
 		return nil, fmt.Errorf("invalid payload in light node: %w", err)
 	}
 
-	// Since it has a path and has no count value, this node is a leaf.
 	return &Leaf{
 		path:    &path,
 		payload: payload,
@@ -167,13 +163,16 @@ func DecodeLightNode(reader io.Reader) (*LightNode, error) {
 
 	// Length is calculated using:
 	// 	* encoding version (2 bytes)
-	var buf [2]byte
-	_, err := io.ReadFull(reader, buf[:])
+	buf := make([]byte, 2)
+	read, err := io.ReadFull(reader, buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not read light node encoding version: %w", err)
 	}
+	if read != len(buf) {
+		return nil, fmt.Errorf("not enough bytes in encoding version: %d expected %d", read, len(buf))
+	}
 
-	version, _, err := utils.ReadUint16(buf[:])
+	version, _, err := utils.ReadUint16(buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not read light node: %w", err)
 	}
@@ -200,9 +199,12 @@ func decodeLegacyFormat(reader io.Reader) (*LightNode, error) {
 	//  * Hash (32 bytes)
 	length := 2 + 8 + 8 + 2 + 8
 	buf := make([]byte, length)
-	_, err := io.ReadFull(reader, buf)
+	read, err := io.ReadFull(reader, buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not read fixed-length part of light node: %w", err)
+	}
+	if read != len(buf) {
+		return nil, fmt.Errorf("not enough bytes read: %d expected %d", read, len(buf))
 	}
 
 	// Read height but ignore it.
@@ -211,8 +213,6 @@ func decodeLegacyFormat(reader io.Reader) (*LightNode, error) {
 		return nil, fmt.Errorf("could not decode light node height: %w", err)
 	}
 
-	// Subtract one height since the checkpoint has nodes with heights from
-	// 256 to 1 instead of 255 to 0.
 	var lightNode LightNode
 
 	lightNode.LIndex, buf, err = utils.ReadUint64(buf)
@@ -223,23 +223,24 @@ func decodeLegacyFormat(reader io.Reader) (*LightNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node right index: %w", err)
 	}
-	// Read and discard Max Depth value.
+	// Read and ignore Max Depth value.
 	_, buf, err = utils.ReadUint16(buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node max depth: %w", err)
 	}
-	// Read and discard Register Count value.
+	// Read and ignore Register Count value.
 	_, _, err = utils.ReadUint64(buf)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node register count: %w", err)
 	}
 
-	// Read path but ignore it.
-	_, err = utils.ReadShortDataFromReader(reader)
+	// Read path.
+	lightNode.Path, err = utils.ReadShortDataFromReader(reader)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node path: %w", err)
 	}
 
+	// Read payload.
 	encPayload, err := utils.ReadLongDataFromReader(reader)
 	if err != nil {
 		return nil, fmt.Errorf("could not read light node payload: %w", err)
@@ -249,6 +250,8 @@ func decodeLegacyFormat(reader io.Reader) (*LightNode, error) {
 		return nil, fmt.Errorf("could not decode light node payload: %w", err)
 	}
 	lightNode.Payload = encoding.EncodePayload(payload)
+
+	// Read hash.
 	lightNode.HashValue, err = utils.ReadShortDataFromReader(reader)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode light node hash: %w", err)

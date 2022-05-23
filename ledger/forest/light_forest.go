@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/rs/zerolog"
+
 	"github.com/optakt/flow-dps/ledger/trie"
 )
 
@@ -81,7 +83,7 @@ func FlattenForest(f *Forest) (*LightForest, error) {
 }
 
 // RebuildTries transforms the light tries from a light forest into proper tries, while populating the given store.
-func RebuildTries(lightForest *LightForest) ([]*trie.Trie, error) {
+func RebuildTries(log zerolog.Logger, lightForest *LightForest) ([]*trie.Trie, error) {
 	tries := make([]*trie.Trie, 0, len(lightForest.Tries))
 
 	// Convert light nodes into proper nodes.
@@ -94,15 +96,30 @@ func RebuildTries(lightForest *LightForest) ([]*trie.Trie, error) {
 	// save memory usage.
 	for _, lt := range lightForest.Tries {
 		// Create proper trie by setting its root using the node slice.
-		tr := trie.NewTrie(nodes[lt.RootIndex])
-		rootHash := tr.RootHash()
-		if !bytes.Equal(rootHash[:], lt.RootHash) {
-			return nil, fmt.Errorf("restored trie root hash mismatch: %w", err)
+		original := trie.NewTrie(nodes[lt.RootIndex])
+
+		log.Info().
+			Uint64("root_index", lt.RootIndex).
+			Int("total_nodes", len(nodes)).
+			Msg("rebuilt original trie")
+
+		// Since the checkpoint contains a huge trie that does not use extensions,
+		// to make it readable by our algorithm we need to rebuild it from the ground
+		// up by inserting its elements into a fresh new trie.
+		paths, payloads := original.Values()
+		trimmed, err := trie.NewEmptyTrie().Mutate(paths, payloads)
+		if err != nil {
+			return nil, fmt.Errorf("could not trim original trie: %w", err)
 		}
 
-		// TODO: Investigate whether it is worth trimming the tries after all.
-		//       See https://github.com/optakt/flow-dps/issues/521.
-		tries = append(tries, tr)
+		rootHash := trimmed.RootHash()
+		if !bytes.Equal(rootHash[:], lt.RootHash) {
+			return nil, fmt.Errorf("trimmed trie root hash mismatch: %w", err)
+		}
+
+		log.Info().Int("values", len(paths)).Msg("restructured trie")
+
+		tries = append(tries, trimmed)
 	}
 
 	return tries, nil
@@ -130,7 +147,7 @@ func RebuildNodes(lightNodes []*trie.LightNode) ([]trie.Node, error) {
 		// Convert the lightNode into a proper node and append it to the returned slice of nodes.
 		node, err := trie.FromLightNode(lightNode, nodes)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode light node: %w", err)
+			return nil, fmt.Errorf("could not rebuild node %d: %w", i, err)
 		}
 		nodes = append(nodes, node)
 

@@ -121,7 +121,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	if err != nil {
 		return fmt.Errorf("could not load root trie: %w", err)
 	}
-	paths := tree.Paths()
+	paths, _ := tree.Values()
 	s.forest.Add(tree, paths, first)
 
 	second := tree.RootHash()
@@ -428,21 +428,9 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		tree, _ := s.forest.Tree(commit)
 		paths, _ := s.forest.Paths(commit)
 
-		// Read enough paths to fill the batch.
-		end := registerBatchSize - len(s.registers)
-		if end >= len(paths) {
-			// If there are not enough paths to fill the batch, just read all
-			// paths instead.
-			end = len(paths)
-		}
-
-		payloads := tree.UnsafeRead(paths[:end])
-		for i := range payloads {
+		payloads := tree.UnsafeRead(paths)
+		for i := range payloads[s.registerIdx:] {
 			s.registers[paths[i]] = payloads[i]
-		}
-
-		if len(s.registers) >= registerBatchSize {
-			break
 		}
 
 		// We now step back to the parent of the current state trie.
