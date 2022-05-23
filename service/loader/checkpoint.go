@@ -16,7 +16,7 @@ package loader
 
 import (
 	"fmt"
-	"io"
+	"os"
 
 	"github.com/rs/zerolog"
 
@@ -28,12 +28,12 @@ import (
 // Checkpoint is a loader that loads a trie from a LedgerWAL checkpoint file.
 type Checkpoint struct {
 	log  zerolog.Logger
-	file io.Reader
+	file *os.File
 }
 
 // FromCheckpoint creates a loader which loads the trie from the provided
 // reader, which should represent a LedgerWAL checkpoint file.
-func FromCheckpoint(log zerolog.Logger, file io.Reader) *Checkpoint {
+func FromCheckpoint(log zerolog.Logger, file *os.File) *Checkpoint {
 
 	c := Checkpoint{
 		log:  log,
@@ -46,7 +46,7 @@ func FromCheckpoint(log zerolog.Logger, file io.Reader) *Checkpoint {
 // Trie loads the execution state trie from the LedgerWAL root checkpoint.
 func (c *Checkpoint) Trie() (*trie.Trie, error) {
 
-	checkpoint, err := wal.ReadCheckpoint(c.log, c.file)
+	checkpoint, err := wal.ReadCheckpoint(c.file)
 	if err != nil {
 		return nil, fmt.Errorf("could not read checkpoint: %w", err)
 	}

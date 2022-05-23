@@ -5,8 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-
-	"github.com/rs/zerolog"
+	"os"
 
 	"github.com/optakt/flow-dps/codec/zbor"
 	"github.com/optakt/flow-dps/ledger/forest"
@@ -36,117 +35,148 @@ const (
 
 	VersionDPSV1 uint16 = 0xFF01
 
-	encMagicSize   = 2
-	encVersionSize = 2
+	encMagicSize     = 2
+	encVersionSize   = 2
+	headerSize       = encMagicSize + encVersionSize
+	encNodeCountSize = 8
+	encTrieCountSize = 2
+	crc32SumSize     = 4
 )
+
+// defaultBufioReadSize replaces the default bufio buffer size of 4096 bytes.
+// defaultBufioReadSize can be increased to 8KiB, 16KiB, 32KiB, etc. if it
+// improves performance on typical EN hardware.
+const defaultBufioReadSize = 1024 * 32
 
 // ReadCheckpoint reads a checkpoint and populates a store with its data, while
 // also returning a light forest from the decoded data.
-func ReadCheckpoint(log zerolog.Logger, r io.Reader) (*forest.LightForest, error) {
+func ReadCheckpoint(f *os.File) (*forest.LightForest, error) {
 
-	var bufReader io.Reader = bufio.NewReader(r)
-	crcReader := NewCRC32Reader(bufReader)
-	var reader io.Reader = crcReader
-
-	header := make([]byte, 4+8+2)
-
-	_, err := io.ReadFull(reader, header)
+	header := make([]byte, headerSize)
+	_, err := io.ReadFull(f, header)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read header bytes: %w", err)
+		return nil, fmt.Errorf("cannot read header: %w", err)
 	}
 
-	magicBytes, pos := readUint16(header, 0)
-	version, pos := readUint16(header, pos)
-	nodesCount, pos := readUint64(header, pos)
-	triesCount, _ := readUint16(header, pos)
+	// Decode header
+	magicBytes := binary.BigEndian.Uint16(header)
+	version := binary.BigEndian.Uint16(header[encMagicSize:])
+
+	// Reset offset
+	_, err = f.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, fmt.Errorf("cannot seek to start of file: %w", err)
+	}
 
 	if magicBytes != MagicBytes {
 		return nil, fmt.Errorf("unknown file format. Magic constant %x does not match expected %x", magicBytes, MagicBytes)
 	}
-	if version < VersionV1 || version > VersionDPSV1 {
-		return nil, fmt.Errorf("unsupported file version %x", version)
-	}
 
-	if version < VersionV3 {
-		// Switch to the plain reader.
-		reader = bufReader
-	}
-
-	log.Info().
-		Uint16("encoding_version", version).
-		Uint64("nodes", nodesCount+1).
-		Uint16("tries", triesCount).
-		Msg("commencing checkpoint decoding")
-
-	var forest forest.LightForest
+	var forest *forest.LightForest
 	switch version {
+
 	case VersionDPSV1:
-		forest.Nodes, forest.Tries, err = decodeOptimizedFormat(reader, nodesCount, triesCount)
+		forest, err = readOptimizedCheckpoint(f)
+		if err != nil {
+			return nil, fmt.Errorf("cannot decode optimized format: %w", err)
+		}
+
+	case VersionV1, VersionV3:
+		forest, err = readCheckpointV3AndEarlier(f, version)
 		if err != nil {
 			return nil, fmt.Errorf("cannot decode original format: %w", err)
 		}
+
+	case VersionV4:
+		return nil, fmt.Errorf("FIXME version %d", version)
+
+	case VersionV5:
+		return nil, fmt.Errorf("FIXME version %d", version)
+
 	default:
-		forest.Nodes, forest.Tries, err = decodeOriginalFormat(bufReader, crcReader, nodesCount, triesCount, version)
-		if err != nil {
-			return nil, fmt.Errorf("cannot decode original format: %w", err)
-		}
+		return nil, fmt.Errorf("unsupported checkpoint version %x", version)
+
 	}
 
-	return &forest, nil
+	return forest, nil
 }
 
-func decodeOriginalFormat(bufReader io.Reader, reader *Crc32Reader, nodesCount uint64, triesCount uint16, version uint16) ([]*trie.LightNode, []*trie.LightTrie, error) {
-	// The `nodes` slice needs one extra capacity for the nil node at index 0.
-	nodes := make([]*trie.LightNode, nodesCount+1)
+func readCheckpointV3AndEarlier(f *os.File, version uint16) (*forest.LightForest, error) {
+	var bufReader io.Reader = bufio.NewReaderSize(f, defaultBufioReadSize)
+	crcReader := NewCRC32Reader(bufReader)
+
+	var reader io.Reader
+	if version != VersionV3 {
+		reader = bufReader
+	} else {
+		reader = crcReader
+	}
+
+	// Read header (magic + version), node count, and trie count.
+	header := make([]byte, headerSize+encNodeCountSize+encTrieCountSize)
+
+	_, err := io.ReadFull(reader, header)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read header: %w", err)
+	}
+
+	// Magic and version are verified by the caller.
+
+	// Decode node count and trie count
+	nodesCount := binary.BigEndian.Uint64(header[headerSize:])
+	triesCount := binary.BigEndian.Uint16(header[headerSize+encNodeCountSize:])
+
+	nodes := make([]*trie.LightNode, nodesCount+1) // +1 for 0 index meaning nil
 	tries := make([]*trie.LightTrie, triesCount)
 
 	// Decode all light nodes.
 	for i := uint64(1); i <= nodesCount; i++ {
-		lightNode, err := trie.DecodeLightNode(reader.reader)
+		lightNode, err := trie.DecodeLightNode(reader)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not read light node %d: %w", i, err)
+			return nil, fmt.Errorf("could not read light node %d: %w", i, err)
 		}
 		nodes[i] = lightNode
 	}
 
 	// Decode all light tries.
 	for i := uint16(0); i < triesCount; i++ {
-		lightTrie, err := trie.DecodeLightTrie(reader.reader)
+		lightTrie, err := trie.DecodeLightTrie(reader)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not read light trie %d: %w", i, err)
+			return nil, fmt.Errorf("could not read light trie %d: %w", i, err)
 		}
 		tries[i] = lightTrie
 	}
 
-	// If the checkpoint uses the version 3, we need to read its CRC32 checksum first,
-	// and then to use the CRC reader to verify it.
 	if version == VersionV3 {
-		crc32buf := make([]byte, 4)
-		_, err := bufReader.Read(crc32buf) // FIXME: Check if this changes anything compared to using the previous buf reader.
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not read CRC32 checksum: %w", err)
-		}
-		readCrc32, _ := readUint32(crc32buf, 0)
+		crc32buf := make([]byte, crc32SumSize)
 
-		calculatedCrc32 := reader.Crc32()
+		_, err := io.ReadFull(bufReader, crc32buf)
+		if err != nil {
+			return nil, fmt.Errorf("cannot read CRC32: %w", err)
+		}
+
+		readCrc32 := binary.BigEndian.Uint32(crc32buf)
+
+		calculatedCrc32 := crcReader.Crc32()
 
 		if calculatedCrc32 != readCrc32 {
-			return nil, nil, fmt.Errorf("invalid CRC32 checksum: got %x want %x", readCrc32, calculatedCrc32)
+			return nil, fmt.Errorf("checkpoint checksum failed! File contains %x but calculated crc32 is %x", readCrc32, calculatedCrc32)
 		}
 	}
 
-	return nodes, tries, nil
+	forest := forest.LightForest{
+		Nodes: nodes,
+		Tries: tries,
+	}
+
+	return &forest, nil
 }
 
-func decodeOptimizedFormat(reader io.Reader, nodesCount uint64, triesCount uint16) ([]*trie.LightNode, []*trie.LightTrie, error) {
-	// The `nodes` slice needs one extra capacity for the nil node at index 0.
-	nodes := make([]*trie.LightNode, nodesCount+1)
-	tries := make([]*trie.LightTrie, triesCount)
-
+func readOptimizedCheckpoint(f *os.File) (*forest.LightForest, error) {
 	// FIXME: to do
 	//nodes, err := trie.Decode(reader)
 
-	return nodes, tries, nil
+	return nil, nil
 }
 
 // Checkpoint writes a CBOR-encoded and ZSTD-compressed trie as a checkpoint in the given writer.
