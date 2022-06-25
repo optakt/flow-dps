@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 // FSM is a finite state machine which is used to map block data from multiple sources into

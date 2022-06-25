@@ -23,8 +23,8 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 
-	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/storage"
+	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/service/storage"
 )
 
 // Generator generates optimized Zstandard dictionaries and turns them into Go files

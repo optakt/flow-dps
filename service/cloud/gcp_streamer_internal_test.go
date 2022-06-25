@@ -29,8 +29,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
 
-	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/testing/mocks"
 )
 
 func TestNewGCPStreamer(t *testing.T) {

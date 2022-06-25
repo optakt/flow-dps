@@ -37,7 +37,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/mempool/entity"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 // Offsets used to ensure different flow identifiers that do not overlap.
@@ -67,6 +67,8 @@ var (
 		Timestamp: time.Date(1972, 11, 12, 13, 14, 15, 16, time.UTC),
 	}
 
+	Generic
+
 	GenericLedgerKey = ledger.NewKey([]ledger.KeyPart{
 		ledger.NewKeyPart(0, []byte(`owner`)),
 		ledger.NewKeyPart(1, []byte(`controller`)),
@@ -88,8 +90,6 @@ var (
 			GenericLedgerPath(2),
 			GenericLedgerPayload(2),
 			hash.DummyHash,
-			64,
-			64,
 		),
 		node.NewNode(
 			256,
@@ -98,14 +98,10 @@ var (
 			GenericLedgerPath(4),
 			GenericLedgerPayload(4),
 			hash.DummyHash,
-			64,
-			64,
 		),
 		GenericLedgerPath(5),
 		GenericLedgerPayload(5),
 		hash.DummyHash,
-		64,
-		64,
 	)
 
 	GenericTrie, _ = trie.NewMTrie(GenericRootNode)

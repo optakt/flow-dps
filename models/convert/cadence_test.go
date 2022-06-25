@@ -22,7 +22,7 @@ import (
 
 	"github.com/onflow/cadence"
 
-	"github.com/optakt/flow-dps/models/convert"
+	"github.com/onflow/flow-dps/models/convert"
 )
 
 func TestParseCadenceArgument(t *testing.T) {

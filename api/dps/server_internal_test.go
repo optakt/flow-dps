@@ -25,8 +25,8 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/convert"
-	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/onflow/flow-dps/models/convert"
+	"github.com/onflow/flow-dps/testing/mocks"
 )
 
 func TestNewServer(t *testing.T) {

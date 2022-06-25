@@ -15,7 +15,7 @@
 package storage
 
 import (
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 // Library is the storage library.

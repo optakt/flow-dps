@@ -21,8 +21,8 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/convert"
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/convert"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 // Index implements the `index.Reader` interface on top of the DPS server's

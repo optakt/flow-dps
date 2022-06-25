@@ -15,7 +15,7 @@
 package loader
 
 import (
-	"github.com/optakt/flow-dps/service/mapper"
+	"github.com/onflow/flow-dps/service/mapper"
 )
 
 // DefaultConfig sets the default configuration for the index loader. It is used

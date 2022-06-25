@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/flow-go/fvm/state"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/onflow/flow-dps/testing/mocks"
 )
 
 func TestNew(t *testing.T) {

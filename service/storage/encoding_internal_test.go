@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/onflow/flow-dps/testing/mocks"
 )
 
 func TestEncodeKey(t *testing.T) {

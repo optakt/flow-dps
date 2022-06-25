@@ -26,15 +26,15 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
-	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/chain"
-	"github.com/optakt/flow-dps/service/feeder"
-	"github.com/optakt/flow-dps/service/forest"
-	"github.com/optakt/flow-dps/service/index"
-	"github.com/optakt/flow-dps/service/loader"
-	"github.com/optakt/flow-dps/service/mapper"
-	"github.com/optakt/flow-dps/service/storage"
+	"github.com/onflow/flow-dps/codec/zbor"
+	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/service/chain"
+	"github.com/onflow/flow-dps/service/feeder"
+	"github.com/onflow/flow-dps/service/forest"
+	"github.com/onflow/flow-dps/service/index"
+	"github.com/onflow/flow-dps/service/loader"
+	"github.com/onflow/flow-dps/service/mapper"
+	"github.com/onflow/flow-dps/service/storage"
 )
 
 const (
@@ -162,16 +162,16 @@ func run() int {
 			log.Error().Err(err).Msg("could not open checkpoint file")
 			return failure
 		}
-		defer file.Close()
-		load = loader.FromCheckpoint(file)
+		file.Close()
+		load = loader.FromCheckpointFile(flagCheckpoint, &log)
 	} else if bootstrap {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
 			log.Error().Err(err).Msg("could not open checkpoint file")
 			return failure
 		}
-		defer file.Close()
-		initialize := loader.FromCheckpoint(file)
+		file.Close()
+		initialize := loader.FromCheckpointFile(flagCheckpoint, &log)
 		load = loader.FromIndex(log, storage, indexDB,
 			loader.WithInitializer(initialize),
 			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
