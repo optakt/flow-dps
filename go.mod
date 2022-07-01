@@ -280,4 +280,4 @@ require (
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
 
-replace github.com/onflow/flow-go/crypto => ../flow-go/crypto
+// replace github.com/onflow/flow-go/crypto => ../flow-go/crypto
