@@ -72,7 +72,7 @@ func (c *Consensus) OnBlockFinalized(block *model.Block) {
 		c.log.Error().Err(err).Hex("block", blockID[:]).Msg("could not get header")
 		return
 	}
-
+	c.last = header.Height
 	c.log.Debug().Hex("block", blockID[:]).Uint64("height", header.Height).Msg("block finalization processed")
 }
 

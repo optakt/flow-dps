@@ -18,6 +18,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"io"
 	"math/rand"
 	"time"
@@ -33,7 +34,6 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/mempool/entity"
 
@@ -102,7 +102,7 @@ var (
 		hash.DummyHash,
 	)
 
-	GenericTrie, _ = trie.NewMTrie(GenericRootNode)
+	GenericTrie, _ = trie.NewMTrie(GenericRootNode, 3, 3*32)
 
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),
