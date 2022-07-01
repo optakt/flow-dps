@@ -16,24 +16,26 @@ package loader
 
 import (
 	"fmt"
-	"io"
 
-	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
+	"github.com/rs/zerolog"
+
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
 // Checkpoint is a loader that loads a trie from a LedgerWAL checkpoint file.
 type Checkpoint struct {
-	file io.Reader
+	filepath string
+	log      *zerolog.Logger
 }
 
-// FromCheckpoint creates a loader which loads the trie from the provided
+// FromCheckpointFile creates a loader which loads the trie from the provided
 // reader, which should represent a LedgerWAL checkpoint file.
-func FromCheckpoint(file io.Reader) *Checkpoint {
+func FromCheckpointFile(filepath string, log *zerolog.Logger) *Checkpoint {
 
 	c := Checkpoint{
-		file: file,
+		filepath: filepath,
+		log:      log,
 	}
 
 	return &c
@@ -42,14 +44,10 @@ func FromCheckpoint(file io.Reader) *Checkpoint {
 // Trie loads the execution state trie from the LedgerWAL root checkpoint.
 func (c *Checkpoint) Trie() (*trie.MTrie, error) {
 
-	checkpoint, err := wal.ReadCheckpoint(c.file)
-	if err != nil {
-		return nil, fmt.Errorf("could not read checkpoint: %w", err)
-	}
+	trees, err := wal.LoadCheckpoint(c.filepath, c.log)
 
-	trees, err := flattener.RebuildTries(checkpoint)
 	if err != nil {
-		return nil, fmt.Errorf("could not rebuild tries: %w", err)
+		return nil, fmt.Errorf("could not create Trie from checkpoint: %w", err)
 	}
 
 	if len(trees) != 1 {

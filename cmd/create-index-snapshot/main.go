@@ -27,7 +27,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 const (

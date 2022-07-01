@@ -75,7 +75,7 @@ func (s *SafeDeque) PushFront(v interface{}) {
 	s.deque.PushFront(v)
 }
 
-// PushBack appends an element to the back of the queue.
+// PushBack appends an element to the back of the  queue.
 func (s *SafeDeque) PushBack(v interface{}) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

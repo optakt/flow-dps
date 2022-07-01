@@ -18,6 +18,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"io"
 	"math/rand"
 	"time"
@@ -33,11 +34,10 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/mempool/entity"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 // Offsets used to ensure different flow identifiers that do not overlap.
@@ -88,8 +88,6 @@ var (
 			GenericLedgerPath(2),
 			GenericLedgerPayload(2),
 			hash.DummyHash,
-			64,
-			64,
 		),
 		node.NewNode(
 			256,
@@ -98,17 +96,13 @@ var (
 			GenericLedgerPath(4),
 			GenericLedgerPayload(4),
 			hash.DummyHash,
-			64,
-			64,
 		),
 		GenericLedgerPath(5),
 		GenericLedgerPayload(5),
 		hash.DummyHash,
-		64,
-		64,
 	)
 
-	GenericTrie, _ = trie.NewMTrie(GenericRootNode)
+	GenericTrie, _ = trie.NewMTrie(GenericRootNode, 3, 3*32)
 
 	GenericAccount = flow.Account{
 		Address: GenericAddress(0),
@@ -462,7 +456,6 @@ func GenericSeals(number int) []*flow.Seal {
 			FinalState: GenericCommit(i),
 
 			AggregatedApprovalSigs: nil,
-			ServiceEvents:          nil,
 		}
 
 		seals = append(seals, &seal)

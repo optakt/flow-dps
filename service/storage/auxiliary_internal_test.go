@@ -23,9 +23,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/testing/helpers"
-	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/onflow/flow-dps/codec/zbor"
+	"github.com/onflow/flow-dps/testing/helpers"
+	"github.com/onflow/flow-dps/testing/mocks"
 )
 
 func TestLibrary_Retrieve(t *testing.T) {

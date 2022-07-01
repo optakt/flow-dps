@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 // Writer implements the `index.Writer` interface to write indexing data to

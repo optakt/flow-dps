@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 // Index implements an execution state trie loader on top of a DPS index,
@@ -68,7 +68,7 @@ func (i *Index) Trie() (*trie.MTrie, error) {
 	processed := 0
 	process := func(path ledger.Path, payload *ledger.Payload) error {
 		var err error
-		tree, err = trie.NewTrieWithUpdatedRegisters(tree, []ledger.Path{path}, []ledger.Payload{*payload})
+		tree, _, err = trie.NewTrieWithUpdatedRegisters(tree, []ledger.Path{path}, []ledger.Payload{*payload}, false)
 		if err != nil {
 			return fmt.Errorf("could not update trie: %w", err)
 		}

@@ -23,8 +23,8 @@ import (
 
 	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
 
-	"github.com/optakt/flow-dps/service/tracker"
-	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/onflow/flow-dps/service/tracker"
+	"github.com/onflow/flow-dps/testing/mocks"
 )
 
 func TestExecution_Update(t *testing.T) {

@@ -16,6 +16,7 @@ package tracker
 
 import (
 	"fmt"
+	"github.com/onflow/flow-go/consensus/hotstuff/model"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
@@ -23,7 +24,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 // Consensus is the DPS consensus follower, which uses a local protocol state
@@ -62,7 +63,8 @@ func NewConsensus(log zerolog.Logger, db *badger.DB, hold RecordHolder) (*Consen
 
 // OnBlockFinalized is a callback that notifies the consensus tracker of a new
 // finalized block.
-func (c *Consensus) OnBlockFinalized(blockID flow.Identifier) {
+func (c *Consensus) OnBlockFinalized(block *model.Block) {
+	blockID := block.BlockID
 
 	var header flow.Header
 	err := c.db.View(operation.RetrieveHeader(blockID, &header))
@@ -70,9 +72,7 @@ func (c *Consensus) OnBlockFinalized(blockID flow.Identifier) {
 		c.log.Error().Err(err).Hex("block", blockID[:]).Msg("could not get header")
 		return
 	}
-
 	c.last = header.Height
-
 	c.log.Debug().Hex("block", blockID[:]).Uint64("height", header.Height).Msg("block finalization processed")
 }
 

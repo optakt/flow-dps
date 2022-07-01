@@ -17,10 +17,10 @@ package chain
 import (
 	"errors"
 	"fmt"
+	"github.com/dgraph-io/badger/v2"
 	"math"
 
-	"github.com/dgraph-io/badger/v2"
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"

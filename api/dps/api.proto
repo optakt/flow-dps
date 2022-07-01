@@ -14,7 +14,7 @@
 
 syntax = "proto3";
 
-option go_package = "github.com/optakt/flow-dps/api/dps";
+option go_package = "github.com/onflow/flow-dps/api/dps";
 
 import "tagger/tagger.proto";
 

@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	"github.com/optakt/flow-dps/models/convert"
-	"github.com/optakt/flow-dps/testing/mocks"
+	"github.com/onflow/flow-dps/models/convert"
+	"github.com/onflow/flow-dps/testing/mocks"
 )
 
 func TestIndexFromAPI(t *testing.T) {

@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/labstack/echo/v4"
+	"github.com/ziflex/lecho/v2"
 	"io/ioutil"
 	"net/http"
 	url2 "net/url"
@@ -14,12 +16,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/optakt/flow-dps/rosetta/identifier"
+	"github.com/optakt/flow-dps-rosetta/service/identifier"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
-	"github.com/ziflex/lecho/v2"
 )
 
 const (

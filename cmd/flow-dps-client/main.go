@@ -28,10 +28,10 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 
-	"github.com/optakt/flow-dps/api/dps"
-	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/models/convert"
-	"github.com/optakt/flow-dps/service/invoker"
+	"github.com/onflow/flow-dps/api/dps"
+	"github.com/onflow/flow-dps/codec/zbor"
+	"github.com/onflow/flow-dps/models/convert"
+	"github.com/onflow/flow-dps/service/invoker"
 )
 
 const (

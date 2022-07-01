@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/optakt/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/models/dps"
 )
 
 // TransitionFunc is a function that is applied onto the state machine's
@@ -369,7 +369,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// forest, and save the updated tree in the forest. If the tree is not new,
 	// we should error, as that should not happen.
 	paths, payloads := pathsPayloads(update)
-	tree, err = trie.NewTrieWithUpdatedRegisters(tree, paths, payloads)
+	tree, _, err = trie.NewTrieWithUpdatedRegisters(tree, paths, payloads, false)
 	if err != nil {
 		return fmt.Errorf("could not update tree: %w", err)
 	}

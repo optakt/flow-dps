@@ -43,18 +43,18 @@ import (
 	unstaked "github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/bootstrap"
 
-	api "github.com/optakt/flow-dps/api/dps"
-	"github.com/optakt/flow-dps/codec/zbor"
-	"github.com/optakt/flow-dps/models/dps"
-	"github.com/optakt/flow-dps/service/cloud"
-	"github.com/optakt/flow-dps/service/forest"
-	"github.com/optakt/flow-dps/service/index"
-	"github.com/optakt/flow-dps/service/initializer"
-	"github.com/optakt/flow-dps/service/loader"
-	"github.com/optakt/flow-dps/service/mapper"
-	"github.com/optakt/flow-dps/service/metrics"
-	"github.com/optakt/flow-dps/service/storage"
-	"github.com/optakt/flow-dps/service/tracker"
+	api "github.com/onflow/flow-dps/api/dps"
+	"github.com/onflow/flow-dps/codec/zbor"
+	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/service/cloud"
+	"github.com/onflow/flow-dps/service/forest"
+	"github.com/onflow/flow-dps/service/index"
+	"github.com/onflow/flow-dps/service/initializer"
+	"github.com/onflow/flow-dps/service/loader"
+	"github.com/onflow/flow-dps/service/mapper"
+	"github.com/onflow/flow-dps/service/metrics"
+	"github.com/onflow/flow-dps/service/storage"
+	"github.com/onflow/flow-dps/service/tracker"
 )
 
 const (
@@ -318,21 +318,9 @@ func run() int {
 	var load mapper.Loader
 	load = loader.FromIndex(log, storage, indexDB)
 	if empty {
-		file, err := os.Open(flagCheckpoint)
-		if err != nil {
-			log.Error().Err(err).Msg("could not open checkpoint file")
-			return failure
-		}
-		defer file.Close()
-		load = loader.FromCheckpoint(file)
+		load = loader.FromCheckpointFile(flagCheckpoint, &log)
 	} else if flagCheckpoint != "" {
-		file, err := os.Open(flagCheckpoint)
-		if err != nil {
-			log.Error().Err(err).Msg("could not open checkpoint file")
-			return failure
-		}
-		defer file.Close()
-		initialize := loader.FromCheckpoint(file)
+		initialize := loader.FromCheckpointFile(flagCheckpoint, &log)
 		load = loader.FromIndex(log, storage, indexDB,
 			loader.WithInitializer(initialize),
 			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
@@ -459,7 +447,7 @@ func run() int {
 	// done anymore. Lastly, we stop the mapper logic itself.
 	gsvr.GracefulStop()
 	cancel()
-	<-follow.NodeBuilder.Done()
+	<-follow.Done()
 	err = fsm.Stop()
 	if err != nil {
 		log.Error().Err(err).Msg("could not stop indexer")
