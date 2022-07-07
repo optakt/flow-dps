@@ -15,8 +15,8 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/klauspost/compress v1.15.1
 	github.com/labstack/echo/v4 v4.5.0
-	github.com/onflow/cadence v0.24.3
-	github.com/onflow/flow-go v0.26.12
+	github.com/onflow/cadence v0.24.6
+	github.com/onflow/flow-go v0.26.13
 	github.com/onflow/flow-go-sdk v0.26.2
 	github.com/onflow/flow-go/crypto v0.24.3
 	github.com/optakt/flow-dps-rosetta v1.0.0
@@ -280,4 +280,4 @@ require (
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
 
-// replace github.com/onflow/flow-go/crypto => ../flow-go/crypto
+replace github.com/onflow/flow-go/crypto => ../flow-go/crypto
