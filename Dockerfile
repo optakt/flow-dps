@@ -18,7 +18,8 @@ RUN ln -s /flow-go /dps/flow-go
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build  \
-    make -C /flow-go crypto_setup_gopath #prebuild crypto dependency
+    make -C /flow-go crypto_setup_gopath #prebuild crypto dependency \
+    bash crypto_setup.sh
 
 RUN ls -la /flow-go/crypto/
 
