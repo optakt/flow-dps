@@ -1,10 +1,10 @@
-FROM golang:1.17-buster AS build-setup
+FROM golang:1.18-buster AS build-setup
 
 RUN apt-get update
 RUN apt-get -y install cmake zip sudo git
 
 ENV FLOW_GO_REPO="https://github.com/onflow/flow-go"
-ENV FLOW_GO_BRANCH=v0.26.13
+ENV FLOW_GO_BRANCH=master
 
 RUN mkdir /dps /docker /flow-go
 
@@ -18,7 +18,7 @@ RUN ln -s /flow-go /dps/flow-go
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build  \
-    make -C /flow-go crypto/relic/build #prebuild crypto dependency
+    make -C /flow-go crypto_setup_gopath #prebuild crypto dependency
 
 RUN ls -la /flow-go/crypto/
 

@@ -1,6 +1,6 @@
 module github.com/onflow/flow-dps
 
-go 1.17
+go 1.18
 
 require (
 	cloud.google.com/go/storage v1.23.0
@@ -16,7 +16,7 @@ require (
 	github.com/klauspost/compress v1.15.1
 	github.com/labstack/echo/v4 v4.5.0
 	github.com/onflow/cadence v0.24.6
-	github.com/onflow/flow-go v0.26.13
+	github.com/onflow/flow-go v0.26.16
 	github.com/onflow/flow-go-sdk v0.26.2
 	github.com/onflow/flow-go/crypto v0.24.3
 	github.com/optakt/flow-dps-rosetta v1.0.0
