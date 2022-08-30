@@ -59,7 +59,8 @@ func TestNewGCPStreamer(t *testing.T) {
 }
 
 func TestGCPStreamer_OnBlockFinalized(t *testing.T) {
-	blockID := mocks.GenericHeader.ID()
+	block := mocks.GenericBlock
+	blockID := block.BlockID
 	queue := dps.NewDeque()
 
 	streamer := &GCPStreamer{
@@ -67,7 +68,7 @@ func TestGCPStreamer_OnBlockFinalized(t *testing.T) {
 		queue: queue,
 	}
 
-	streamer.OnBlockFinalized(blockID)
+	streamer.OnBlockFinalized(block)
 
 	require.Equal(t, 1, queue.Len())
 	assert.Equal(t, queue.PopFront(), blockID)

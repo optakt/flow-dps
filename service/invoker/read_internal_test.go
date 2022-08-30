@@ -27,8 +27,7 @@ import (
 
 func TestReadRegister(t *testing.T) {
 	owner := string(mocks.GenericLedgerKey.KeyParts[0].Value)
-	controller := string(mocks.GenericLedgerKey.KeyParts[1].Value)
-	key := string(mocks.GenericLedgerKey.KeyParts[2].Value)
+	key := string(mocks.GenericLedgerKey.KeyParts[1].Value)
 
 	t.Run("nominal case with cached register", func(t *testing.T) {
 		t.Parallel()
@@ -47,7 +46,7 @@ func TestReadRegister(t *testing.T) {
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
-		value, err := readFunc(owner, controller, key)
+		value, err := readFunc(owner, key)
 
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericBytes, value[:])
@@ -71,7 +70,7 @@ func TestReadRegister(t *testing.T) {
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
-		value, err := readFunc(owner, controller, key)
+		value, err := readFunc(owner, key)
 
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericBytes, value[:])
@@ -93,7 +92,7 @@ func TestReadRegister(t *testing.T) {
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
-		_, err := readFunc(owner, controller, key)
+		_, err := readFunc(owner, key)
 
 		assert.Error(t, err)
 	})
