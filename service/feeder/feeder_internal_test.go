@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/flow-go/ledger/common/encoding"
+	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 
 	"github.com/onflow/flow-dps/models/dps"
@@ -38,7 +38,7 @@ func TestFromWAL(t *testing.T) {
 
 func TestFeeder_Update(t *testing.T) {
 	update := mocks.GenericTrieUpdate(0)
-	data := encoding.EncodeTrieUpdate(update)
+	data := ledger.EncodeTrieUpdate(update)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()

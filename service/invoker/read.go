@@ -28,15 +28,15 @@ import (
 )
 
 func readRegister(index dps.Reader, cache Cache, height uint64) delta.GetRegisterFunc {
-	return func(owner string, controller string, key string) (flow.RegisterValue, error) {
+	return func(owner string, key string) (flow.RegisterValue, error) {
 
-		cacheKey := fmt.Sprintf("%d/%x/%x/%s", height, owner, controller, key)
+		cacheKey := fmt.Sprintf("%d/%x/%s", height, owner, key)
 		cacheValue, ok := cache.Get(cacheKey)
 		if ok {
 			return cacheValue.(flow.RegisterValue), nil
 		}
 
-		regID := flow.NewRegisterID(owner, controller, key)
+		regID := flow.NewRegisterID(owner, key)
 		path, err := pathfinder.KeyToPath(state.RegisterIDToKey(regID), complete.DefaultPathFinderVersion)
 		if err != nil {
 			return nil, fmt.Errorf("could not convert key to path: %w", err)

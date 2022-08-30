@@ -61,7 +61,7 @@ func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Ex
 		return nil, fmt.Errorf("could not retrieve root header: %w", err)
 	}
 	var sealID flow.Identifier
-	err = db.View(operation.LookupBlockSeal(blockID, &sealID))
+	err = db.View(operation.LookupBySealedBlockID(blockID, &sealID))
 	if err != nil {
 		return nil, fmt.Errorf("could not look up root seal: %w", err)
 	}
