@@ -1,6 +1,6 @@
 module github.com/onflow/flow-dps
 
-go 1.17
+go 1.18
 
 require (
 	cloud.google.com/go/storage v1.23.0
@@ -18,7 +18,7 @@ require (
 	github.com/onflow/cadence v0.25.0
 	github.com/onflow/flow-go v0.27.4
 	github.com/onflow/flow-go-sdk v0.26.5-0.20220629191626-900f9f91bffc
-	github.com/onflow/flow-go/crypto v0.24.4
+	//github.com/onflow/flow-go/crypto v0.24.4
 	github.com/optakt/flow-dps-rosetta v1.0.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/tsdb v0.7.1
@@ -32,6 +32,8 @@ require (
 	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
 )
+
+require github.com/onflow/flow-go/crypto v0.24.4
 
 require (
 	cloud.google.com/go v0.102.1 // indirect
@@ -284,4 +286,4 @@ require (
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
 
-// replace github.com/onflow/flow-go/crypto => ../flow-go/crypto
+// replace github.com/onflow/flow-go/crypto => /flow-go/crypto

@@ -30,9 +30,8 @@ ARG BINARY
 WORKDIR /dps
 RUN	--mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build  \
-    GO111MODULE=on CGO_ENABLED=1 GOOS=linux go build -o /app --tags relic -ldflags "-extldflags -static" ./cmd/$BINARY && \
+    CGO_ENABLED=1 GOOS=linux go build -o /app --tags "relic,netgo" -ldflags "-extldflags -static" ./cmd/$BINARY && \
     chmod a+x /app
-
 
 ## Add the statically linked binary to a distroless image
 FROM gcr.io/distroless/base-debian11  AS production
