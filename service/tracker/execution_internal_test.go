@@ -43,7 +43,7 @@ func TestNewExecution(t *testing.T) {
 		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, blockID)))
 		require.NoError(t, db.Update(operation.InsertHeader(blockID, header)))
-		require.NoError(t, db.Update(operation.IndexBlockSeal(blockID, seal.ID())))
+		require.NoError(t, db.Update(operation.IndexLatestSealAtBlock(blockID, seal.ID())))
 		require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
 		exec, err := NewExecution(log, db, stream)
@@ -63,7 +63,7 @@ func TestNewExecution(t *testing.T) {
 		//require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, blockID)))
 		require.NoError(t, db.Update(operation.InsertHeader(blockID, header)))
-		require.NoError(t, db.Update(operation.IndexBlockSeal(blockID, seal.ID())))
+		require.NoError(t, db.Update(operation.IndexLatestSealAtBlock(blockID, seal.ID())))
 		require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
 		_, err := NewExecution(log, db, stream)
@@ -80,7 +80,7 @@ func TestNewExecution(t *testing.T) {
 		// Do not insert block height.
 		//require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, blockID)))
 		require.NoError(t, db.Update(operation.InsertHeader(blockID, header)))
-		require.NoError(t, db.Update(operation.IndexBlockSeal(blockID, seal.ID())))
+		require.NoError(t, db.Update(operation.IndexLatestSealAtBlock(blockID, seal.ID())))
 		require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
 		_, err := NewExecution(log, db, stream)
@@ -97,7 +97,7 @@ func TestNewExecution(t *testing.T) {
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, blockID)))
 		// Do not insert header.
 		//require.NoError(t, db.Update(operation.InsertHeader(blockID, header)))
-		require.NoError(t, db.Update(operation.IndexBlockSeal(blockID, seal.ID())))
+		require.NoError(t, db.Update(operation.IndexLatestSealAtBlock(blockID, seal.ID())))
 		require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
 		_, err := NewExecution(log, db, stream)
@@ -130,9 +130,9 @@ func TestNewExecution(t *testing.T) {
 		require.NoError(t, db.Update(operation.InsertRootHeight(header.Height)))
 		require.NoError(t, db.Update(operation.IndexBlockHeight(header.Height, blockID)))
 		require.NoError(t, db.Update(operation.InsertHeader(blockID, header)))
-		require.NoError(t, db.Update(operation.IndexBlockSeal(blockID, seal.ID())))
+		require.NoError(t, db.Update(operation.IndexLatestSealAtBlock(blockID, seal.ID())))
 		// Do not insert seal.
-		//require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
+		// require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
 		_, err := NewExecution(log, db, stream)
 

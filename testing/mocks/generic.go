@@ -18,6 +18,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/onflow/flow-go/consensus/hotstuff/model"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"io"
 	"math/rand"
@@ -65,6 +66,10 @@ var (
 		Height:    GenericHeight,
 		ParentID:  genericIdentifier(0, offsetBlock),
 		Timestamp: time.Date(1972, 11, 12, 13, 14, 15, 16, time.UTC),
+	}
+
+	GenericBlock = &model.Block{
+		BlockID: GenericHeader.ID(),
 	}
 
 	GenericLedgerKey = ledger.NewKey([]ledger.KeyPart{

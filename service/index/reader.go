@@ -110,7 +110,7 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 			if err != nil {
 				return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
 			}
-			values = append(values, payload.Value)
+			values = append(values, payload.Value())
 		}
 		return nil
 	})

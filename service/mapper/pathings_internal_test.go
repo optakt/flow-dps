@@ -32,7 +32,7 @@ func TestAllPaths(t *testing.T) {
 		t.Parallel()
 
 		testNode := node.NewLeaf(mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0), 256)
-		testTrie, err := trie.NewMTrie(testNode)
+		testTrie, err := trie.NewMTrie(testNode, 3, 3)
 		require.NoError(t, err)
 
 		got := allPaths(testTrie)

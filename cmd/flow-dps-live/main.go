@@ -194,7 +194,7 @@ func run() int {
 		log.Error().Err(err).Msg("could not generate private key seed")
 		return failure
 	}
-	privKey, err := utils.GenerateUnstakedNetworkingKey(seed)
+	privKey, err := utils.GeneratePublicNetworkingKey(seed)
 	if err != nil {
 		log.Error().Err(err).Msg("could not generate private network key")
 		return failure
