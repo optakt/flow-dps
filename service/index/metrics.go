@@ -38,37 +38,37 @@ type MetricsWriter struct {
 // as prometheus counters.
 func NewMetricsWriter(write *Writer) *MetricsWriter {
 	blockOpts := prometheus.CounterOpts{
-		Name: "indexed_blocks",
+		Name: "archive_indexed_blocks",
 		Help: "number of indexed blocks",
 	}
 	block := promauto.NewCounter(blockOpts)
 
 	registerOpts := prometheus.CounterOpts{
-		Name: "indexed_registers",
+		Name: "archive_indexed_registers",
 		Help: "number of indexed registers",
 	}
 	register := promauto.NewCounter(registerOpts)
 
 	collectionOpts := prometheus.CounterOpts{
-		Name: "indexed_collections",
+		Name: "archive_indexed_collections",
 		Help: "number of indexed collections",
 	}
 	collection := promauto.NewCounter(collectionOpts)
 
 	transactionsOpts := prometheus.CounterOpts{
-		Name: "indexed_transactions",
+		Name: "archive_indexed_transactions",
 		Help: "number of indexed transactions",
 	}
 	transaction := promauto.NewCounter(transactionsOpts)
 
 	eventOpts := prometheus.CounterOpts{
-		Name: "indexed_events",
+		Name: "archive_indexed_events",
 		Help: "number of indexed events",
 	}
 	event := promauto.NewCounter(eventOpts)
 
 	sealOpts := prometheus.CounterOpts{
-		Name: "indexed_seals",
+		Name: "archive_indexed_seals",
 		Help: "number of indexed seals",
 	}
 	seal := promauto.NewCounter(sealOpts)
