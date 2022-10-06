@@ -25,17 +25,17 @@ import (
 
 // Checkpoint is a loader that loads a trie from a LedgerWAL checkpoint file.
 type Checkpoint struct {
-	filepath string
-	log      *zerolog.Logger
+	dir string
+	log *zerolog.Logger
 }
 
 // FromCheckpointFile creates a loader which loads the trie from the provided
 // reader, which should represent a LedgerWAL checkpoint file.
-func FromCheckpointFile(filepath string, log *zerolog.Logger) *Checkpoint {
+func FromCheckpointFile(dir string, log *zerolog.Logger) *Checkpoint {
 
 	c := Checkpoint{
-		filepath: filepath,
-		log:      log,
+		dir: dir,
+		log: log,
 	}
 
 	return &c
@@ -44,7 +44,7 @@ func FromCheckpointFile(filepath string, log *zerolog.Logger) *Checkpoint {
 // Trie loads the execution state trie from the LedgerWAL root checkpoint.
 func (c *Checkpoint) Trie() (*trie.MTrie, error) {
 
-	trees, err := wal.LoadCheckpoint(c.filepath, c.log)
+	trees, err := wal.LoadCheckpoint(c.dir, c.log)
 
 	if err != nil {
 		return nil, fmt.Errorf("could not create Trie from checkpoint: %w", err)

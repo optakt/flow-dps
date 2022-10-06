@@ -62,7 +62,7 @@ func run() int {
 		flagSkip       bool
 	)
 
-	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to root checkpoint file for execution state trie")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to directory containing checkpoint files for execution state trie")
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
