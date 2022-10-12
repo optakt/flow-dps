@@ -35,7 +35,7 @@ import (
 // https://github.com/onflow/flow-go/blob/v0.21.0/cmd/bootstrap/cmd/finalize.go#L452
 func ProtocolState(file io.Reader, db *badger.DB) error {
 
-	// If we already have a root heigth, skip bootstrapping.
+	// If we already have a root height, skip bootstrapping.
 	var root uint64
 	err := db.View(operation.RetrieveRootHeight(&root))
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {

@@ -79,11 +79,15 @@ func TestProtocolState(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles empty snapshot", func(t *testing.T) {
+	t.Run("Panics on empty snapshot", func(t *testing.T) {
 		t.Parallel()
 
 		db := helpers.InMemoryDB(t)
-		defer db.Close()
+		defer func() {
+			r := recover()
+			assert.NotNil(t, r)
+			db.Close()
+		}()
 
 		data, err := json.Marshal(&inmem.EncodableSnapshot{})
 		require.NoError(t, err)
@@ -91,6 +95,5 @@ func TestProtocolState(t *testing.T) {
 		reader := bytes.NewBuffer(data)
 
 		err = initializer.ProtocolState(reader, db)
-		assert.Error(t, err)
 	})
 }
