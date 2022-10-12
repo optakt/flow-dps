@@ -16,10 +16,8 @@ require (
 	github.com/klauspost/compress v1.15.1
 	github.com/labstack/echo/v4 v4.5.0
 	github.com/onflow/cadence v0.25.0
-	github.com/onflow/flow-go v0.27.4
+	github.com/onflow/flow-go v0.27.6
 	github.com/onflow/flow-go-sdk v0.26.5-0.20220629191626-900f9f91bffc
-	//github.com/onflow/flow-go/crypto v0.24.4
-	github.com/optakt/flow-dps-rosetta v1.0.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rs/zerolog v1.26.1
@@ -30,10 +28,13 @@ require (
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 	google.golang.org/api v0.85.0
 	google.golang.org/grpc v1.47.0
-	google.golang.org/protobuf v1.28.0
 )
 
-require github.com/onflow/flow-go/crypto v0.24.4
+require (
+	github.com/onflow/flow-go/crypto v0.24.4
+	github.com/optakt/flow-dps-rosetta v1.0.0
+	google.golang.org/protobuf v1.28.0
+)
 
 require (
 	cloud.google.com/go v0.102.1 // indirect
