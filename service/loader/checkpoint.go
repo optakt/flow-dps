@@ -44,6 +44,7 @@ func FromCheckpointFile(filepath string, log *zerolog.Logger) *Checkpoint {
 // Trie loads the execution state trie from the LedgerWAL root checkpoint.
 func (c *Checkpoint) Trie() (*trie.MTrie, error) {
 
+	// LoadCheckpoint now looks for additional partitions apart from the root file for V6
 	trees, err := wal.LoadCheckpoint(c.filepath, c.log)
 
 	if err != nil {

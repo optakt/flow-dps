@@ -66,6 +66,7 @@ func TestNewConsensus(t *testing.T) {
 }
 
 func TestConsensus_OnBlockFinalized(t *testing.T) {
+	block := mocks.GenericBlock
 	header := mocks.GenericHeader
 
 	t.Run("nominal case", func(t *testing.T) {
@@ -78,7 +79,7 @@ func TestConsensus_OnBlockFinalized(t *testing.T) {
 
 		cons := BaselineConsensus(t, WithDB(db))
 
-		cons.OnBlockFinalized(header.ID())
+		cons.OnBlockFinalized(block)
 
 		assert.Equal(t, cons.last, header.Height)
 	})
@@ -91,7 +92,7 @@ func TestConsensus_OnBlockFinalized(t *testing.T) {
 
 		cons := BaselineConsensus(t, WithDB(db))
 
-		cons.OnBlockFinalized(header.ID())
+		cons.OnBlockFinalized(block)
 
 		assert.NotEqual(t, cons.last, header.Height)
 	})

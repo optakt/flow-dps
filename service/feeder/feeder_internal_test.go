@@ -15,6 +15,7 @@
 package feeder
 
 import (
+	"encoding/binary"
 	"strings"
 	"testing"
 
@@ -51,7 +52,12 @@ func TestFeeder_Update(t *testing.T) {
 			// On the first call, return a Delete operation which should get ignored and skipped.
 			if !recordCalled {
 				recordCalled = true
+				size := len(update.RootHash)
+				buffer := make([]byte, 2)
+				binary.BigEndian.PutUint16(buffer, uint16(size))
+
 				_ = builder.WriteByte(byte(wal.WALDelete))
+				_, _ = builder.Write(buffer)
 				_, _ = builder.Write(update.RootHash[:])
 
 				return []byte(builder.String())

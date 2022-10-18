@@ -44,9 +44,9 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(mocks.GenericHeight))
@@ -69,9 +69,9 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -92,9 +92,9 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Last(mocks.GenericHeight))
@@ -117,9 +117,9 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -142,9 +142,9 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Height(blockID, height))
@@ -169,9 +169,9 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -196,9 +196,9 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Commit(height, commit))
@@ -224,9 +224,9 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -251,9 +251,9 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Header(height, header))
@@ -282,9 +282,9 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -314,9 +314,9 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -347,9 +347,9 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -381,9 +381,9 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -409,9 +409,9 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -432,7 +432,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 
 		assert.Len(t, resp.Values, len(paths))
 		for _, payload := range payloads {
-			assert.Contains(t, resp.Values, []byte(payload.Value))
+			assert.Contains(t, resp.Values, []byte(payload.Value()))
 		}
 		assert.Equal(t, convert.PathsToBytes(paths), resp.Paths)
 	})
@@ -445,9 +445,9 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -474,9 +474,9 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -502,9 +502,9 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Collections(mocks.GenericHeight, collections))
@@ -533,9 +533,9 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -560,9 +560,9 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Collections(height, collections))
@@ -593,9 +593,9 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -620,9 +620,9 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Guarantees(mocks.GenericHeight, guarantees))
@@ -651,9 +651,9 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -678,9 +678,9 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Transactions(mocks.GenericHeight, transactions))
@@ -709,9 +709,9 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -736,9 +736,9 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Transactions(mocks.GenericHeight, transactions))
@@ -764,9 +764,9 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -791,9 +791,9 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Transactions(height, transactions))
@@ -824,9 +824,9 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -851,9 +851,9 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Results(results))
@@ -882,9 +882,9 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -909,9 +909,9 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Seals(mocks.GenericHeight, seals))
@@ -940,9 +940,9 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
@@ -967,9 +967,9 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
-		reader := index.NewReader(db, storage)
-		writer := index.NewWriter(db, storage)
+		disk := storage.New(codec)
+		reader := index.NewReader(db, disk)
+		writer := index.NewWriter(db, disk)
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Seals(height, seals))
@@ -1000,9 +1000,9 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		db := helpers.InMemoryDB(t)
 		defer db.Close()
 
-		storage := storage.New(codec)
+		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(db, storage)
+		reader := index.NewReader(db, disk)
 
 		server := dps.NewServer(reader, codec)
 
