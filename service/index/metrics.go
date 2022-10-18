@@ -24,8 +24,7 @@ import (
 
 // MetricsWriter wraps the writer and records metrics for the data it writes.
 type MetricsWriter struct {
-	write *Writer
-
+	write       *Writer
 	block       prometheus.Counter
 	register    prometheus.Counter
 	collection  prometheus.Counter
@@ -74,8 +73,7 @@ func NewMetricsWriter(write *Writer) *MetricsWriter {
 	seal := promauto.NewCounter(sealOpts)
 
 	w := MetricsWriter{
-		write: write,
-
+		write:       write,
 		block:       block,
 		register:    register,
 		collection:  collection,
