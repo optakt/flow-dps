@@ -17,6 +17,7 @@ package dps
 import (
 	"context"
 	"fmt"
+	"github.com/onflow/flow-go/module/trace"
 
 	"github.com/go-playground/validator/v10"
 
@@ -31,20 +32,21 @@ import (
 // This is generally an on-disk interface, but could be a GRPC-based index as
 // well, in which case there is a double redirection.
 type Server struct {
-	index dps.Reader
-	codec dps.Codec
-
+	index    dps.Reader
+	codec    dps.Codec
+	tracer   *trace.Tracer
 	validate *validator.Validate
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index dps.Reader, codec dps.Codec) *Server {
+func NewServer(index dps.Reader, codec dps.Codec, tracer *trace.Tracer) *Server {
 
 	s := Server{
 		index:    index,
 		codec:    codec,
 		validate: validator.New(),
+		tracer:   tracer,
 	}
 
 	return &s

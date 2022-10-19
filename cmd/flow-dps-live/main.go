@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"github.com/onflow/flow-go/module/trace"
 	"net"
 	"net/http"
 	"os"
@@ -252,7 +253,7 @@ func run() int {
 		return failure
 	}
 	defer file.Close()
-	err = initializer.ProtocolState(file, protocolDB)
+	snapshot, err := initializer.ProtocolState(file, protocolDB)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize protocol state")
 		return failure
@@ -332,7 +333,18 @@ func run() int {
 	writer := dps.Writer(write)
 	metricsEnabled := flagMetrics != ""
 	if metricsEnabled {
-		writer = index.NewMetricsWriter(write)
+		writer = metrics.NewMetricsWriter(write)
+	}
+	chainID, err := snapshot.Params().ChainID()
+	if err != nil {
+		log.Error().Err(err).Msg("could not get Chain Id")
+		return failure
+	}
+	tr, err := trace.NewTracer(log, "archive", chainID.String(), trace.SensitivityCaptureAll)
+
+	if err != nil {
+		log.Error().Err(err).Msg("could not get Chain Id")
+		return failure
 	}
 
 	// At this point, we can initialize the core business logic of the indexer,
@@ -371,7 +383,7 @@ func run() int {
 			logging.StreamServerInterceptor(interceptor, logOpts...),
 		),
 	)
-	server := api.NewServer(read, codec)
+	server := api.NewServer(read, codec, tr)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

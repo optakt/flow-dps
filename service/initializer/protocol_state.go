@@ -33,29 +33,29 @@ import (
 // ProtocolState initializes the Flow protocol state in the given database. The
 // code is inspired by the related unexported code in the Flow Go code base:
 // https://github.com/onflow/flow-go/blob/v0.21.0/cmd/bootstrap/cmd/finalize.go#L452
-func ProtocolState(file io.Reader, db *badger.DB) error {
-
-	// If we already have a root height, skip bootstrapping.
-	var root uint64
-	err := db.View(operation.RetrieveRootHeight(&root))
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return fmt.Errorf("could not check root: %w", err)
-	}
-	if err == nil {
-		return nil
-	}
+func ProtocolState(file io.Reader, db *badger.DB) (*inmem.Snapshot, error) {
 
 	// Load the protocol snapshot from disk.
 	data, err := io.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("could not read protocol snapshot file: %w", err)
+		return nil, fmt.Errorf("could not read protocol snapshot file: %w", err)
 	}
 	var entities inmem.EncodableSnapshot
 	err = json.Unmarshal(data, &entities)
 	if err != nil {
-		return fmt.Errorf("could not decode protocol snapshot: %w", err)
+		return nil, fmt.Errorf("could not decode protocol snapshot: %w", err)
 	}
 	snapshot := inmem.SnapshotFromEncodable(entities)
+
+	// If we already have a root height, skip bootstrapping.
+	var root uint64
+	err = db.View(operation.RetrieveRootHeight(&root))
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		return nil, fmt.Errorf("could not check root: %w", err)
+	}
+	if err == nil {
+		return snapshot, nil
+	}
 
 	// Initialize the protocol state with the snapshot.
 	collector := metrics.NewNoopCollector()
@@ -79,8 +79,8 @@ func ProtocolState(file io.Reader, db *badger.DB) error {
 		snapshot,
 	)
 	if err != nil {
-		return fmt.Errorf("could not bootstrap protocol state: %w", err)
+		return nil, fmt.Errorf("could not bootstrap protocol state: %w", err)
 	}
 
-	return nil
+	return snapshot, nil
 }

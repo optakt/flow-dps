@@ -12,9 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package metrics
 
 import (
+	"github.com/onflow/flow-dps/service/index"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -24,7 +25,7 @@ import (
 
 // MetricsWriter wraps the writer and records metrics for the data it writes.
 type MetricsWriter struct {
-	write       *Writer
+	write       *index.Writer
 	block       prometheus.Counter
 	register    prometheus.Counter
 	collection  prometheus.Counter
@@ -35,7 +36,7 @@ type MetricsWriter struct {
 
 // NewMetricsWriter creates a counter that counts indexed elements and exposes this information
 // as prometheus counters.
-func NewMetricsWriter(write *Writer) *MetricsWriter {
+func NewMetricsWriter(write *index.Writer) *MetricsWriter {
 	blockOpts := prometheus.CounterOpts{
 		Name: "archive_indexed_blocks",
 		Help: "number of indexed blocks",
