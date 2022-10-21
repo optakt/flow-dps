@@ -40,13 +40,12 @@ type Server struct {
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index dps.Reader, codec dps.Codec, tracer *trace.Tracer) *Server {
+func NewServer(index dps.Reader, codec dps.Codec) *Server {
 
 	s := Server{
 		index:    index,
 		codec:    codec,
 		validate: validator.New(),
-		tracer:   tracer,
 	}
 
 	return &s
