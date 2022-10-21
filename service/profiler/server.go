@@ -1,4 +1,4 @@
-// Copyright 2021 Optakt Labs OÜ
+// Copyright 2022 Dapper Labs, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not
 // use this file except in compliance with the License. You may obtain a copy of
@@ -12,31 +12,29 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package metrics
+package profiler
 
 import (
 	"fmt"
 	"net/http"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	_ "net/http/pprof"
+
 	"github.com/rs/zerolog"
 )
 
-// Server is the http server that will be serving the /metrics request for prometheus.
+// Server is the http server that will be serving the /debug/pprof/ request for pprof.
 type Server struct {
 	server *http.Server
 	log    zerolog.Logger
 }
 
-// NewServer creates a new server that exposes metrics.
+// NewServer creates a new server that exposes pprof endpoint.
 func NewServer(log zerolog.Logger, address string) *Server {
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-
 	m := Server{
 		server: &http.Server{
 			Addr:    address,
-			Handler: mux,
+			Handler: http.DefaultServeMux,
 		},
 		log: log,
 	}
@@ -44,14 +42,9 @@ func NewServer(log zerolog.Logger, address string) *Server {
 	return &m
 }
 
-// Start registers the metrics and launches the server.
+// Start registers the pprof and launches the server.
 func (s *Server) Start() error {
-	err := RegisterBadgerMetrics()
-	if err != nil {
-		return fmt.Errorf("could not register badger metrics: %w", err)
-	}
-
-	err = s.server.ListenAndServe()
+	err := s.server.ListenAndServe()
 	if err != nil {
 		return fmt.Errorf("could not listen and serve: %w", err)
 	}
