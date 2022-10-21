@@ -16,6 +16,7 @@ package main
 
 import (
 	"errors"
+	"github.com/onflow/flow-dps/service/metrics"
 	"net"
 	"net/http"
 	"os"
@@ -103,7 +104,12 @@ func run() int {
 		),
 	)
 	index := index.NewReader(db, storage)
-	server := api.NewServer(index, codec)
+	tracer, err := metrics.NewTracer(log, "archive")
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize tracer")
+		return failure
+	}
+	server := api.NewServer(index, codec, tracer)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

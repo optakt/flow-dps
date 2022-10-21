@@ -16,6 +16,7 @@ package dps
 
 import (
 	"context"
+	"github.com/onflow/flow-dps/service/trace"
 	"testing"
 
 	"github.com/go-playground/validator/v10"
@@ -32,8 +33,9 @@ import (
 func TestNewServer(t *testing.T) {
 	index := mocks.BaselineReader(t)
 	codec := mocks.BaselineCodec(t)
+	tracer := trace.NewNoopTracer()
 
-	s := NewServer(index, codec)
+	s := NewServer(index, codec, tracer)
 
 	assert.NotNil(t, s)
 	assert.NotNil(t, s.codec)

@@ -371,7 +371,12 @@ func run() int {
 			logging.StreamServerInterceptor(interceptor, logOpts...),
 		),
 	)
-	server := api.NewServer(read, codec)
+	tracer, err := metrics.NewTracer(log, "archive")
+	if err != nil {
+		log.Error().Err(err).Msg("could not initialize tracer")
+		return failure
+	}
+	server := api.NewServer(read, codec, tracer)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
