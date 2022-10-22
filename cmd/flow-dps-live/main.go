@@ -74,15 +74,15 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAddress    string
-		flagBootstrap  string
-		flagBucket     string
-		flagCheckpoint string
-		flagData       string
-		flagIndex      string
-		flagLevel      string
-		flagMetrics    string
-		flagSkip       bool
+		flagAddress     string
+		flagBootstrap   string
+		flagBucket      string
+		flagCheckpoint  string
+		flagData        string
+		flagIndex       string
+		flagLevel       string
+		flagMetricsAddr string
+		flagSkip        bool
 
 		flagFlushInterval time.Duration
 		flagSeedAddress   string
@@ -97,7 +97,7 @@ func run() int {
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
+	pflag.StringVarP(&flagMetricsAddr, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
@@ -332,7 +332,7 @@ func run() int {
 	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
 	// use the regular one.
 	writer := dps.Writer(write)
-	metricsEnabled := flagMetrics != ""
+	metricsEnabled := flagMetricsAddr != ""
 	if metricsEnabled {
 		writer = metrics.NewMetricsWriter(write)
 	}
@@ -428,7 +428,7 @@ func run() int {
 		}
 
 		log.Info().Msg("metrics server starting")
-		server := metrics.NewServer(log, flagMetrics)
+		server := metrics.NewServer(log, flagMetricsAddr)
 		err := server.Start()
 		if err != nil {
 			log.Warn().Err(err).Msg("metrics server failed")
