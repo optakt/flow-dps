@@ -90,6 +90,10 @@ jobs:
       - name: Verify source code formatting
         run: go fmt ./... && git status && git --no-pager diff && git diff-index --quiet HEAD --
 
+      # This check makes sure that the lint has the same rules as flow-go
+      - name: Lint check
+        run: golangci-lint run -v --build-tags relic ./...
+
       # This check makes sure that we can compile the binary as a pure Go binary
       # without CGO support.
       - name: Verify compilation

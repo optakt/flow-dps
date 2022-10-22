@@ -87,6 +87,7 @@ func run() int {
 		flagFlushInterval time.Duration
 		flagSeedAddress   string
 		flagSeedKey       string
+		flagTracing       bool
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
@@ -102,6 +103,7 @@ func run() int {
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
+	pflag.BoolVarP(&flagTracing, "tracing", "t", false, "enable tracing for this instance")
 
 	pflag.Parse()
 
@@ -371,12 +373,17 @@ func run() int {
 			logging.StreamServerInterceptor(interceptor, logOpts...),
 		),
 	)
-	tracer, err := metrics.NewTracer(log, "archive")
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize tracer")
-		return failure
+	var server *api.Server
+	if flagTracing {
+		tracer, err := metrics.NewTracer(log, "archive")
+		if err != nil {
+			log.Error().Err(err).Msg("could not initialize tracer")
+			return failure
+		}
+		server = api.NewServer(read, codec, api.WithTracer(tracer))
+	} else {
+		server = api.NewServer(read, codec)
 	}
-	server := api.NewServer(read, codec, tracer)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

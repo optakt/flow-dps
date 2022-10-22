@@ -1245,12 +1245,6 @@ func withChain(chain dps.Chain) func(*Transitions) {
 	}
 }
 
-func withFeeder(feed Feeder) func(*Transitions) {
-	return func(tr *Transitions) {
-		tr.feed = feed
-	}
-}
-
 func withReader(read dps.Reader) func(*Transitions) {
 	return func(tr *Transitions) {
 		tr.read = read

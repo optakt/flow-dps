@@ -19,7 +19,6 @@ package dps_test
 
 import (
 	"context"
-	"github.com/onflow/flow-dps/service/trace"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,13 +47,12 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 		disk := storage.New(codec)
 		reader := index.NewReader(db, disk)
 		writer := index.NewWriter(db, disk)
-		tracer := trace.NewNoopTracer()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(mocks.GenericHeight))
 		require.NoError(t, writer.Close())
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetFirstRequest{}
 		resp, err := server.GetFirst(context.Background(), req)
@@ -74,9 +72,8 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
-		tracer := trace.NewNoopTracer()
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetFirstRequest{}
 		_, err := server.GetFirst(context.Background(), req)
@@ -98,13 +95,12 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 		disk := storage.New(codec)
 		reader := index.NewReader(db, disk)
 		writer := index.NewWriter(db, disk)
-		tracer := trace.NewNoopTracer()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Last(mocks.GenericHeight))
 		require.NoError(t, writer.Close())
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetLastRequest{}
 		resp, err := server.GetLast(context.Background(), req)
@@ -124,9 +120,8 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
-		tracer := trace.NewNoopTracer()
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetLastRequest{}
 		_, err := server.GetLast(context.Background(), req)
@@ -150,13 +145,12 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 		disk := storage.New(codec)
 		reader := index.NewReader(db, disk)
 		writer := index.NewWriter(db, disk)
-		tracer := trace.NewNoopTracer()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Height(blockID, height))
 		require.NoError(t, writer.Close())
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeightForBlockRequest{
 			BlockID: blockID[:],
@@ -178,9 +172,8 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
-		tracer := trace.NewNoopTracer()
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeightForBlockRequest{
 			BlockID: blockID[:],
@@ -206,13 +199,12 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 		disk := storage.New(codec)
 		reader := index.NewReader(db, disk)
 		writer := index.NewWriter(db, disk)
-		tracer := trace.NewNoopTracer()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Commit(height, commit))
 		require.NoError(t, writer.Close())
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetCommitRequest{
 			Height: height,
@@ -235,9 +227,8 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
-		tracer := trace.NewNoopTracer()
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetCommitRequest{
 			Height: height,
@@ -263,13 +254,12 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 		disk := storage.New(codec)
 		reader := index.NewReader(db, disk)
 		writer := index.NewWriter(db, disk)
-		tracer := trace.NewNoopTracer()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Header(height, header))
 		require.NoError(t, writer.Close())
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeaderRequest{
 			Height: height,
@@ -295,9 +285,8 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
-		tracer := trace.NewNoopTracer()
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeaderRequest{
 			Height: height,
@@ -328,7 +317,6 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		disk := storage.New(codec)
 		reader := index.NewReader(db, disk)
 		writer := index.NewWriter(db, disk)
-		tracer := trace.NewNoopTracer()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -336,7 +324,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		require.NoError(t, writer.Events(height, events))
 		require.NoError(t, writer.Close())
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetEventsRequest{
 			Height: height,
@@ -362,7 +350,6 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		disk := storage.New(codec)
 		reader := index.NewReader(db, disk)
 		writer := index.NewWriter(db, disk)
-		tracer := trace.NewNoopTracer()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -370,7 +357,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		require.NoError(t, writer.Events(height, events))
 		require.NoError(t, writer.Close())
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetEventsRequest{
 			Types:  []string{string(withdrawalType)},
@@ -397,9 +384,8 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
-		tracer := trace.NewNoopTracer()
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetEventsRequest{
 			Height: height,
@@ -426,7 +412,6 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		disk := storage.New(codec)
 		reader := index.NewReader(db, disk)
 		writer := index.NewWriter(db, disk)
-		tracer := trace.NewNoopTracer()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -434,7 +419,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		require.NoError(t, writer.Payloads(height, paths, payloads))
 		require.NoError(t, writer.Close())
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetRegisterValuesRequest{
 			Height: height,
@@ -463,7 +448,6 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		disk := storage.New(codec)
 		reader := index.NewReader(db, disk)
 		writer := index.NewWriter(db, disk)
-		tracer := trace.NewNoopTracer()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -471,7 +455,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		require.NoError(t, writer.Payloads(height, paths, payloads))
 		require.NoError(t, writer.Close())
 
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetRegisterValuesRequest{
 			Height: height,
@@ -493,8 +477,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetRegisterValuesRequest{
 			Height: height,
@@ -526,8 +509,7 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 		require.NoError(t, writer.Collections(mocks.GenericHeight, collections))
 		require.NoError(t, writer.Close())
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetCollectionRequest{
 			CollectionID: collID[:],
@@ -554,8 +536,7 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetCollectionRequest{
 			CollectionID: collID[:],
@@ -586,8 +567,7 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		require.NoError(t, writer.Collections(height, collections))
 		require.NoError(t, writer.Close())
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.ListCollectionsForHeightRequest{
 			Height: mocks.GenericHeight,
@@ -616,8 +596,7 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.ListCollectionsForHeightRequest{
 			Height: mocks.GenericHeight,
@@ -648,8 +627,7 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 		require.NoError(t, writer.Guarantees(mocks.GenericHeight, guarantees))
 		require.NoError(t, writer.Close())
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetGuaranteeRequest{
 			CollectionID: collID[:],
@@ -676,8 +654,7 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetGuaranteeRequest{
 			CollectionID: collID[:],
@@ -708,8 +685,7 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 		require.NoError(t, writer.Transactions(mocks.GenericHeight, transactions))
 		require.NoError(t, writer.Close())
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetTransactionRequest{
 			TransactionID: txID[:],
@@ -736,8 +712,7 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetTransactionRequest{
 			TransactionID: txID[:],
@@ -768,8 +743,7 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 		require.NoError(t, writer.Transactions(mocks.GenericHeight, transactions))
 		require.NoError(t, writer.Close())
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeightForTransactionRequest{
 			TransactionID: txID[:],
@@ -793,8 +767,7 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetHeightForTransactionRequest{
 			TransactionID: txID[:],
@@ -825,8 +798,7 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		require.NoError(t, writer.Transactions(height, transactions))
 		require.NoError(t, writer.Close())
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.ListTransactionsForHeightRequest{
 			Height: mocks.GenericHeight,
@@ -855,8 +827,7 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.ListTransactionsForHeightRequest{
 			Height: mocks.GenericHeight,
@@ -887,8 +858,7 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 		require.NoError(t, writer.Results(results))
 		require.NoError(t, writer.Close())
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetResultRequest{
 			TransactionID: txID[:],
@@ -915,8 +885,7 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetResultRequest{
 			TransactionID: txID[:],
@@ -947,8 +916,7 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 		require.NoError(t, writer.Seals(mocks.GenericHeight, seals))
 		require.NoError(t, writer.Close())
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetSealRequest{
 			SealID: sealID[:],
@@ -975,8 +943,7 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetSealRequest{
 			SealID: sealID[:],
@@ -1007,8 +974,7 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		require.NoError(t, writer.Seals(height, seals))
 		require.NoError(t, writer.Close())
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.ListSealsForHeightRequest{
 			Height: mocks.GenericHeight,
@@ -1037,8 +1003,7 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
 
-		tracer := trace.NewNoopTracer()
-		server := dps.NewServer(reader, codec, tracer)
+		server := dps.NewServer(reader, codec)
 
 		req := &dps.ListSealsForHeightRequest{
 			Height: mocks.GenericHeight,

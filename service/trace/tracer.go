@@ -19,5 +19,5 @@ type Tracer interface {
 		ctx context.Context,
 		operationName SpanName,
 		opts ...otelTrace.SpanStartOption,
-	) (otelTrace.Span, context.Context)
+	) (context.Context, otelTrace.Span)
 }

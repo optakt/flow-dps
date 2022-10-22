@@ -59,11 +59,13 @@ func run() int {
 		flagAddress string
 		flagLevel   string
 		flagIndex   string
+		flagTracing bool
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.BoolVarP(&flagTracing, "tracing", "t", false, "enable tracing for this instance")
 
 	pflag.Parse()
 
@@ -104,12 +106,17 @@ func run() int {
 		),
 	)
 	index := index.NewReader(db, storage)
-	tracer, err := metrics.NewTracer(log, "archive")
-	if err != nil {
-		log.Error().Err(err).Msg("could not initialize tracer")
-		return failure
+	var server *api.Server
+	if flagTracing {
+		tracer, err := metrics.NewTracer(log, "archive")
+		if err != nil {
+			log.Error().Err(err).Msg("could not initialize tracer")
+			return failure
+		}
+		server = api.NewServer(index, codec, api.WithTracer(tracer))
+	} else {
+		server = api.NewServer(index, codec)
 	}
-	server := api.NewServer(index, codec, tracer)
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an

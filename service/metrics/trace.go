@@ -84,7 +84,6 @@ func (t *Tracer) StartSpanFromContext(
 	ctx context.Context,
 	operationName archiveTrace.SpanName,
 	opts ...trace.SpanStartOption,
-) (trace.Span, context.Context) {
-	ctx, span := t.tracer.Start(ctx, string(operationName), opts...)
-	return span, ctx
+) (context.Context, trace.Span) {
+	return t.tracer.Start(ctx, string(operationName), opts...)
 }

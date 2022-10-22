@@ -16,13 +16,14 @@ package metrics
 
 import (
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 
 	_ "github.com/dgraph-io/badger/v2/y"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 func RegisterBadgerMetrics() error {
-	expvarCol := prometheus.NewExpvarCollector(map[string]*prometheus.Desc{
+	expvarCol := collectors.NewExpvarCollector(map[string]*prometheus.Desc{
 		"badger_v2_disk_reads_total":     prometheus.NewDesc("archive_badger_disk_reads_total", "cumulative number of reads", nil, nil),
 		"badger_v2_disk_writes_total":    prometheus.NewDesc("archive_badger_disk_writes_total", "cumulative number of writes", nil, nil),
 		"badger_v2_read_bytes":           prometheus.NewDesc("archive_badger_read_bytes", "cumulative number of bytes read", nil, nil),

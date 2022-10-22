@@ -134,5 +134,5 @@ func (w *Writer) Seals(height uint64, seals []*flow.Seal) error {
 }
 
 func (w *Writer) Close() error {
-	return w.Close()
+	return w.CloseFunc()
 }

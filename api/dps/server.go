@@ -17,7 +17,6 @@ package dps
 import (
 	"context"
 	"fmt"
-	"github.com/onflow/flow-dps/service/trace"
 
 	"github.com/go-playground/validator/v10"
 
@@ -25,6 +24,7 @@ import (
 
 	"github.com/onflow/flow-dps/models/convert"
 	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-dps/service/trace"
 )
 
 // Server is a simple implementation of the generated APIServer interface. It
@@ -34,19 +34,23 @@ import (
 type Server struct {
 	index    dps.Reader
 	codec    dps.Codec
-	tracer   trace.Tracer
+	cfg      Config
 	validate *validator.Validate
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index dps.Reader, codec dps.Codec, tracer trace.Tracer) *Server {
+func NewServer(index dps.Reader, codec dps.Codec, options ...Option) *Server {
+	cfg := DefaultConfig
+	for _, option := range options {
+		option(&cfg)
+	}
 
 	s := Server{
 		index:    index,
 		codec:    codec,
 		validate: validator.New(),
-		tracer:   tracer,
+		cfg:      cfg,
 	}
 
 	return &s
@@ -54,7 +58,8 @@ func NewServer(index dps.Reader, codec dps.Codec, tracer trace.Tracer) *Server {
 
 // GetFirst implements the `GetFirst` method of the generated GRPC server.
 func (s *Server) GetFirst(ctx context.Context, _ *GetFirstRequest) (*GetFirstResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetFirst)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetFirst)
+	defer tracer.End()
 	height, err := s.index.First()
 	if err != nil {
 		return nil, fmt.Errorf("could not get first height: %w", err)
@@ -69,7 +74,8 @@ func (s *Server) GetFirst(ctx context.Context, _ *GetFirstRequest) (*GetFirstRes
 
 // GetLast implements the `GetLast` method of the generated GRPC server.
 func (s *Server) GetLast(ctx context.Context, _ *GetLastRequest) (*GetLastResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetLast)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetLast)
+	defer tracer.End()
 	height, err := s.index.Last()
 	if err != nil {
 		return nil, fmt.Errorf("could not get last height: %w", err)
@@ -85,7 +91,8 @@ func (s *Server) GetLast(ctx context.Context, _ *GetLastRequest) (*GetLastRespon
 // GetHeightForBlock implements the `GetHeightForBlock` method of the generated GRPC
 // server.
 func (s *Server) GetHeightForBlock(ctx context.Context, req *GetHeightForBlockRequest) (*GetHeightForBlockResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetHeightForBlock)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetHeightForBlock)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -107,7 +114,8 @@ func (s *Server) GetHeightForBlock(ctx context.Context, req *GetHeightForBlockRe
 
 // GetCommit implements the `GetCommit` method of the generated GRPC server.
 func (s *Server) GetCommit(ctx context.Context, req *GetCommitRequest) (*GetCommitResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetCommit)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetCommit)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -128,7 +136,8 @@ func (s *Server) GetCommit(ctx context.Context, req *GetCommitRequest) (*GetComm
 
 // GetHeader implements the `GetHeader` method of the generated GRPC server.
 func (s *Server) GetHeader(ctx context.Context, req *GetHeaderRequest) (*GetHeaderResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetHeader)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetHeader)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -154,7 +163,8 @@ func (s *Server) GetHeader(ctx context.Context, req *GetHeaderRequest) (*GetHead
 
 // GetEvents implements the `GetEvents` method of the generated GRPC server.
 func (s *Server) GetEvents(ctx context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetEvents)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetEvents)
+	defer tracer.End()
 	types := convert.StringsToTypes(req.Types)
 	events, err := s.index.Events(req.Height, types...)
 	if err != nil {
@@ -178,7 +188,8 @@ func (s *Server) GetEvents(ctx context.Context, req *GetEventsRequest) (*GetEven
 // GetRegisterValues implements the `GetRegisterValues` method of the
 // generated GRPC server.
 func (s *Server) GetRegisterValues(ctx context.Context, req *GetRegisterValuesRequest) (*GetRegisterValuesResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetRegisterValues)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetRegisterValues)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -206,7 +217,8 @@ func (s *Server) GetRegisterValues(ctx context.Context, req *GetRegisterValuesRe
 // GetCollection implements the `GetCollection` method of the generated GRPC
 // server.
 func (s *Server) GetCollection(ctx context.Context, req *GetCollectionRequest) (*GetCollectionResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetCollection)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetCollection)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -234,7 +246,8 @@ func (s *Server) GetCollection(ctx context.Context, req *GetCollectionRequest) (
 // ListCollectionsForHeight implements the `ListCollectionsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListCollectionsForHeight(ctx context.Context, req *ListCollectionsForHeightRequest) (*ListCollectionsForHeightResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.ListCollectionsForHeight)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.ListCollectionsForHeight)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -260,7 +273,8 @@ func (s *Server) ListCollectionsForHeight(ctx context.Context, req *ListCollecti
 // GetGuarantee implements the `GetGuarantee` method of the generated GRPC
 // server.
 func (s *Server) GetGuarantee(ctx context.Context, req *GetGuaranteeRequest) (*GetGuaranteeResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetGuarantee)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetGuarantee)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -288,7 +302,8 @@ func (s *Server) GetGuarantee(ctx context.Context, req *GetGuaranteeRequest) (*G
 // GetTransaction implements the `GetTransaction` method of the generated GRPC
 // server.
 func (s *Server) GetTransaction(ctx context.Context, req *GetTransactionRequest) (*GetTransactionResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetTransaction)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetTransaction)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -316,7 +331,8 @@ func (s *Server) GetTransaction(ctx context.Context, req *GetTransactionRequest)
 // GetHeightForTransaction implements the `GetHeightForTransaction` method of the generated GRPC
 // server.
 func (s *Server) GetHeightForTransaction(ctx context.Context, req *GetHeightForTransactionRequest) (*GetHeightForTransactionResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetHeightForTransaction)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetHeightForTransaction)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -339,7 +355,8 @@ func (s *Server) GetHeightForTransaction(ctx context.Context, req *GetHeightForT
 // ListTransactionsForHeight implements the `ListTransactionsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListTransactionsForHeight(ctx context.Context, req *ListTransactionsForHeightRequest) (*ListTransactionsForHeightResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.ListTransactionsForHeight)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.ListTransactionsForHeight)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -366,7 +383,8 @@ func (s *Server) ListTransactionsForHeight(ctx context.Context, req *ListTransac
 // GetResult implements the `GetResult` method of the generated GRPC
 // server.
 func (s *Server) GetResult(ctx context.Context, req *GetResultRequest) (*GetResultResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetResult)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetResult)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -394,7 +412,8 @@ func (s *Server) GetResult(ctx context.Context, req *GetResultRequest) (*GetResu
 // GetSeal implements the `GetSeal` method of the generated GRPC
 // server.
 func (s *Server) GetSeal(ctx context.Context, req *GetSealRequest) (*GetSealResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.GetSeal)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.GetSeal)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
@@ -422,7 +441,8 @@ func (s *Server) GetSeal(ctx context.Context, req *GetSealRequest) (*GetSealResp
 // ListSealsForHeight implements the `ListSealsForHeight` method of the generated GRPC
 // server.
 func (s *Server) ListSealsForHeight(ctx context.Context, req *ListSealsForHeightRequest) (*ListSealsForHeightResponse, error) {
-	s.tracer.StartSpanFromContext(ctx, trace.ListSealsForHeight)
+	_, tracer := s.cfg.tracer.StartSpanFromContext(ctx, trace.ListSealsForHeight)
+	defer tracer.End()
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)

@@ -35,6 +35,6 @@ func (t *NoopTracer) StartSpanFromContext(
 	ctx context.Context,
 	operationName SpanName,
 	opts ...trace.SpanStartOption,
-) (trace.Span, context.Context) {
-	return NoopSpan, ctx
+) (context.Context, trace.Span) {
+	return ctx, NoopSpan
 }
