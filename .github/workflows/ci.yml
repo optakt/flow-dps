@@ -80,8 +80,7 @@ jobs:
         with:
           args: -v --build-tags relic
           working-directory: .
-          # https://github.com/golangci/golangci-lint-action/issues/244
-          skip-cache: true
+          ignore: flow-go
 
       # This check makes sure that the `go.mod` and `go.sum` files for Go
       # modules are always up-to-date.
