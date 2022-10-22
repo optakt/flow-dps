@@ -35,6 +35,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
+        version: v1.49
+        args: -v --build-tags relic
+        working-directory: ${{ matrix.dir }}
+        # https://github.com/golangci/golangci-lint-action/issues/244
+        skip-cache: true
+
       # Here, we simply print the exact go version, to have it as part of the
       # action's output, which might be convenient.
       - name: Print Go version
@@ -89,10 +99,6 @@ jobs:
       # Go standard `go fmt` formatting.
       - name: Verify source code formatting
         run: go fmt ./... && git status && git --no-pager diff && git diff-index --quiet HEAD --
-
-      # This check makes sure that the lint has the same rules as flow-go
-      - name: Lint check
-        run: golangci-lint run -v --build-tags relic ./...
 
       # This check makes sure that we can compile the binary as a pure Go binary
       # without CGO support.
