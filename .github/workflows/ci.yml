@@ -75,13 +75,6 @@ jobs:
           cd ./flow-go
           make crypto_setup_gopath
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          args: -v --build-tags relic --timeout=3m
-          working-directory: .
-          ignore: flow-go
-
       # This check makes sure that the `go.mod` and `go.sum` files for Go
       # modules are always up-to-date.
       - name: Verify Go modules
@@ -111,3 +104,10 @@ jobs:
       # that they pass successfully.
       - name: Verify integration tests
         run: go test -v -tags="relic integration" ./...
+
+      - name: Run golangci-lint
+          uses: golangci/golangci-lint-action@v3
+          with:
+            args: -v --build-tags relic --timeout=3m
+            working-directory: .
+            skip-pkg-cache: true
