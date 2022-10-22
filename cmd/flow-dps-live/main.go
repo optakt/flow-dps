@@ -53,6 +53,7 @@ import (
 	"github.com/onflow/flow-dps/service/loader"
 	"github.com/onflow/flow-dps/service/mapper"
 	"github.com/onflow/flow-dps/service/metrics"
+	"github.com/onflow/flow-dps/service/profiler"
 	"github.com/onflow/flow-dps/service/storage"
 	"github.com/onflow/flow-dps/service/tracker"
 )
@@ -82,6 +83,7 @@ func run() int {
 		flagIndex       string
 		flagLevel       string
 		flagMetricsAddr string
+		flagProfiling   string
 		flagSkip        bool
 
 		flagFlushInterval time.Duration
@@ -98,6 +100,7 @@ func run() int {
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagMetricsAddr, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
+	pflag.StringVarP(&flagProfiling, "profiler-address", "p", "", "address for net/http/pprof profiler (profiler is disabled if left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
@@ -434,6 +437,19 @@ func run() int {
 			log.Warn().Err(err).Msg("metrics server failed")
 		}
 		log.Info().Msg("metrics server stopped")
+	}()
+	go func() {
+		if flagProfiling == "" {
+			return
+		}
+
+		log.Info().Msg("profiler server starting")
+		server := profiler.NewServer(log, flagProfiling)
+		err := server.Start()
+		if err != nil {
+			log.Warn().Err(err).Msg("profiler server failed")
+		}
+		log.Info().Msg("profiler server stopped")
 	}()
 
 	// Here, we are waiting for a signal, or for one of the components to fail
