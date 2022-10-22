@@ -35,15 +35,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.49
-          args: -v --build-tags relic
-          # https://github.com/golangci/golangci-lint-action/issues/244
-          skip-cache: true
-
       # Here, we simply print the exact go version, to have it as part of the
       # action's output, which might be convenient.
       - name: Print Go version
@@ -83,6 +74,14 @@ jobs:
         run: |
           cd ./flow-go
           make crypto_setup_gopath
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          args: -v --build-tags relic
+          working-directory: .
+          # https://github.com/golangci/golangci-lint-action/issues/244
+          skip-cache: true
 
       # This check makes sure that the `go.mod` and `go.sum` files for Go
       # modules are always up-to-date.
