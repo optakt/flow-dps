@@ -36,14 +36,14 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-        version: v1.49
-        args: -v --build-tags relic
-        working-directory: ${{ matrix.dir }}
-        # https://github.com/golangci/golangci-lint-action/issues/244
-        skip-cache: true
+        uses: golangci/golangci-lint-action@v3
+        with:
+          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
+          version: v1.49
+          args: -v --build-tags relic
+          working-directory: ${{ matrix.dir }}
+          # https://github.com/golangci/golangci-lint-action/issues/244
+          skip-cache: true
 
       # Here, we simply print the exact go version, to have it as part of the
       # action's output, which might be convenient.
