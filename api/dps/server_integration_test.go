@@ -477,7 +477,6 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		disk := storage.New(codec)
 		// No data is written in the database, so the index should fail to retrieve anything.
 		reader := index.NewReader(db, disk)
-
 		server := dps.NewServer(reader, codec)
 
 		req := &dps.GetRegisterValuesRequest{

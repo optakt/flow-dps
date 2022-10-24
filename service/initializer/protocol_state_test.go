@@ -94,6 +94,7 @@ func TestProtocolState(t *testing.T) {
 
 		reader := bytes.NewBuffer(data)
 
-		err = initializer.ProtocolState(reader, db)
+		_ = initializer.ProtocolState(reader, db)
+
 	})
 }

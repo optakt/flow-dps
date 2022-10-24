@@ -94,7 +94,7 @@ func run() int {
 	}
 
 	// Initialize the API client.
-	conn, err := grpc.Dial(flagAPI, grpc.WithInsecure())
+	conn, err := grpc.Dial(flagAPI)
 	if err != nil {
 		log.Error().Str("api", flagAPI).Err(err).Msg("could not dial API host")
 		return failure

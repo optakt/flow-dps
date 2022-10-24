@@ -104,3 +104,10 @@ jobs:
       # that they pass successfully.
       - name: Verify integration tests
         run: go test -v -tags="relic integration" ./...
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          args: -v --build-tags relic --timeout=3m
+          working-directory: .
+          skip-pkg-cache: true

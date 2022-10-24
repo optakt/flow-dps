@@ -12,9 +12,10 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package index
+package metrics
 
 import (
+	"github.com/onflow/flow-dps/service/index"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -24,8 +25,7 @@ import (
 
 // MetricsWriter wraps the writer and records metrics for the data it writes.
 type MetricsWriter struct {
-	write *Writer
-
+	write       *index.Writer
 	block       prometheus.Counter
 	register    prometheus.Counter
 	collection  prometheus.Counter
@@ -36,46 +36,51 @@ type MetricsWriter struct {
 
 // NewMetricsWriter creates a counter that counts indexed elements and exposes this information
 // as prometheus counters.
-func NewMetricsWriter(write *Writer) *MetricsWriter {
+func NewMetricsWriter(write *index.Writer) *MetricsWriter {
 	blockOpts := prometheus.CounterOpts{
-		Name: "indexed_blocks",
-		Help: "number of indexed blocks",
+		Name:      "indexed_blocks",
+		Namespace: namespaceArchive,
+		Help:      "number of indexed blocks",
 	}
 	block := promauto.NewCounter(blockOpts)
 
 	registerOpts := prometheus.CounterOpts{
-		Name: "indexed_registers",
-		Help: "number of indexed registers",
+		Name:      "indexed_registers",
+		Namespace: namespaceArchive,
+		Help:      "number of indexed registers",
 	}
 	register := promauto.NewCounter(registerOpts)
 
 	collectionOpts := prometheus.CounterOpts{
-		Name: "indexed_collections",
-		Help: "number of indexed collections",
+		Name:      "indexed_collections",
+		Namespace: namespaceArchive,
+		Help:      "number of indexed collections",
 	}
 	collection := promauto.NewCounter(collectionOpts)
 
 	transactionsOpts := prometheus.CounterOpts{
-		Name: "indexed_transactions",
-		Help: "number of indexed transactions",
+		Name:      "indexed_transactions",
+		Namespace: namespaceArchive,
+		Help:      "number of indexed transactions",
 	}
 	transaction := promauto.NewCounter(transactionsOpts)
 
 	eventOpts := prometheus.CounterOpts{
-		Name: "indexed_events",
-		Help: "number of indexed events",
+		Name:      "indexed_events",
+		Namespace: namespaceArchive,
+		Help:      "number of indexed events",
 	}
 	event := promauto.NewCounter(eventOpts)
 
 	sealOpts := prometheus.CounterOpts{
-		Name: "indexed_seals",
-		Help: "number of indexed seals",
+		Name:      "indexed_seals",
+		Namespace: namespaceArchive,
+		Help:      "number of indexed seals",
 	}
 	seal := promauto.NewCounter(sealOpts)
 
 	w := MetricsWriter{
-		write: write,
-
+		write:       write,
 		block:       block,
 		register:    register,
 		collection:  collection,

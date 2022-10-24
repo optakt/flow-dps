@@ -75,20 +75,21 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAddress    string
-		flagBootstrap  string
-		flagBucket     string
-		flagCheckpoint string
-		flagData       string
-		flagIndex      string
-		flagLevel      string
-		flagMetrics    string
-		flagProfiling  string
-		flagSkip       bool
+		flagAddress     string
+		flagBootstrap   string
+		flagBucket      string
+		flagCheckpoint  string
+		flagData        string
+		flagIndex       string
+		flagLevel       string
+		flagMetricsAddr string
+		flagProfiling   string
+		flagSkip        bool
 
 		flagFlushInterval time.Duration
 		flagSeedAddress   string
 		flagSeedKey       string
+		flagTracing       bool
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
@@ -98,13 +99,14 @@ func run() int {
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagMetrics, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
+	pflag.StringVarP(&flagMetricsAddr, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.StringVarP(&flagProfiling, "profiler-address", "p", "", "address for net/http/pprof profiler (profiler is disabled if left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
 
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
+	pflag.BoolVarP(&flagTracing, "tracing", "t", false, "enable tracing for this instance")
 
 	pflag.Parse()
 
@@ -333,9 +335,9 @@ func run() int {
 	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
 	// use the regular one.
 	writer := dps.Writer(write)
-	metricsEnabled := flagMetrics != ""
+	metricsEnabled := flagMetricsAddr != ""
 	if metricsEnabled {
-		writer = index.NewMetricsWriter(write)
+		writer = metrics.NewMetricsWriter(write)
 	}
 
 	// At this point, we can initialize the core business logic of the indexer,
@@ -374,7 +376,17 @@ func run() int {
 			logging.StreamServerInterceptor(interceptor, logOpts...),
 		),
 	)
-	server := api.NewServer(read, codec)
+	var server *api.Server
+	if flagTracing {
+		tracer, err := metrics.NewTracer(log, "archive")
+		if err != nil {
+			log.Error().Err(err).Msg("could not initialize tracer")
+			return failure
+		}
+		server = api.NewServer(read, codec, api.WithTracer(tracer))
+	} else {
+		server = api.NewServer(read, codec)
+	}
 
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
@@ -419,7 +431,7 @@ func run() int {
 		}
 
 		log.Info().Msg("metrics server starting")
-		server := metrics.NewServer(log, flagMetrics)
+		server := metrics.NewServer(log, flagMetricsAddr)
 		err := server.Start()
 		if err != nil {
 			log.Warn().Err(err).Msg("metrics server failed")
