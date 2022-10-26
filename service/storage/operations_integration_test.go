@@ -27,10 +27,10 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/onflow/flow-dps/codec/zbor"
-	"github.com/onflow/flow-dps/service/storage"
-	"github.com/onflow/flow-dps/testing/helpers"
-	"github.com/onflow/flow-dps/testing/mocks"
+	"github.com/onflow/flow-archive/codec/zbor"
+	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/testing/helpers"
+	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestLibrary(t *testing.T) {

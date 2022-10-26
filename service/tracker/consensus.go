@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // Consensus is the DPS consensus follower, which uses a local protocol state
@@ -94,7 +94,7 @@ func (c *Consensus) Root() (uint64, error) {
 func (c *Consensus) Header(height uint64) (*flow.Header, error) {
 
 	if height > c.last {
-		return nil, dps.ErrUnavailable
+		return nil, archive.ErrUnavailable
 	}
 
 	var blockID flow.Identifier
@@ -116,7 +116,7 @@ func (c *Consensus) Header(height uint64) (*flow.Header, error) {
 func (c *Consensus) Guarantees(height uint64) ([]*flow.CollectionGuarantee, error) {
 
 	if height > c.last {
-		return nil, dps.ErrUnavailable
+		return nil, archive.ErrUnavailable
 	}
 
 	var blockID flow.Identifier
@@ -148,7 +148,7 @@ func (c *Consensus) Guarantees(height uint64) ([]*flow.CollectionGuarantee, erro
 func (c *Consensus) Seals(height uint64) ([]*flow.Seal, error) {
 
 	if height > c.last {
-		return nil, dps.ErrUnavailable
+		return nil, archive.ErrUnavailable
 	}
 
 	var blockID flow.Identifier
@@ -184,7 +184,7 @@ func (c *Consensus) Seals(height uint64) ([]*flow.Seal, error) {
 func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
 
 	if height > c.last {
-		return flow.DummyStateCommitment, dps.ErrUnavailable
+		return flow.DummyStateCommitment, archive.ErrUnavailable
 	}
 
 	var blockID flow.Identifier
@@ -206,7 +206,7 @@ func (c *Consensus) Commit(height uint64) (flow.StateCommitment, error) {
 func (c *Consensus) Collections(height uint64) ([]*flow.LightCollection, error) {
 
 	if height > c.last {
-		return nil, dps.ErrUnavailable
+		return nil, archive.ErrUnavailable
 	}
 
 	var blockID flow.Identifier
@@ -234,7 +234,7 @@ func (c *Consensus) Collections(height uint64) ([]*flow.LightCollection, error) 
 func (c *Consensus) Transactions(height uint64) ([]*flow.TransactionBody, error) {
 
 	if height > c.last {
-		return nil, dps.ErrUnavailable
+		return nil, archive.ErrUnavailable
 	}
 
 	var blockID flow.Identifier
@@ -261,7 +261,7 @@ func (c *Consensus) Transactions(height uint64) ([]*flow.TransactionBody, error)
 func (c *Consensus) Results(height uint64) ([]*flow.TransactionResult, error) {
 
 	if height > c.last {
-		return nil, dps.ErrUnavailable
+		return nil, archive.ErrUnavailable
 	}
 
 	var blockID flow.Identifier
@@ -283,7 +283,7 @@ func (c *Consensus) Results(height uint64) ([]*flow.TransactionResult, error) {
 func (c *Consensus) Events(height uint64) ([]flow.Event, error) {
 
 	if height > c.last {
-		return nil, dps.ErrUnavailable
+		return nil, archive.ErrUnavailable
 	}
 
 	var blockID flow.Identifier

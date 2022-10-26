@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 
-	"github.com/onflow/flow-dps/testing/mocks"
+	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestAllPaths(t *testing.T) {

@@ -22,8 +22,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/onflow/flow-dps/service/storage"
-	"github.com/onflow/flow-dps/testing/helpers"
+	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/testing/helpers"
 )
 
 func Test_Fallback(t *testing.T) {

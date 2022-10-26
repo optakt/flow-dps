@@ -24,10 +24,10 @@ import (
 	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
-func readRegister(index dps.Reader, cache Cache, height uint64) delta.GetRegisterFunc {
+func readRegister(index archive.Reader, cache Cache, height uint64) delta.GetRegisterFunc {
 	return func(owner string, key string) (flow.RegisterValue, error) {
 
 		cacheKey := fmt.Sprintf("%d/%x/%s", height, owner, key)

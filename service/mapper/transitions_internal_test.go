@@ -25,8 +25,8 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/onflow/flow-dps/models/dps"
-	"github.com/onflow/flow-dps/testing/mocks"
+	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestNewTransitions(t *testing.T) {
@@ -527,7 +527,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		feeder.UpdateFunc = func() (*ledger.TrieUpdate, error) {
 			if !updateCalled {
 				updateCalled = true
-				return nil, dps.ErrUnavailable
+				return nil, archive.ErrUnavailable
 			}
 			return mocks.GenericTrieUpdate(0), nil
 		}
@@ -1239,19 +1239,19 @@ func withLoader(load Loader) func(*Transitions) {
 	}
 }
 
-func withChain(chain dps.Chain) func(*Transitions) {
+func withChain(chain archive.Chain) func(*Transitions) {
 	return func(tr *Transitions) {
 		tr.chain = chain
 	}
 }
 
-func withReader(read dps.Reader) func(*Transitions) {
+func withReader(read archive.Reader) func(*Transitions) {
 	return func(tr *Transitions) {
 		tr.read = read
 	}
 }
 
-func withWriter(write dps.Writer) func(*Transitions) {
+func withWriter(write archive.Writer) func(*Transitions) {
 	return func(tr *Transitions) {
 		tr.write = write
 	}

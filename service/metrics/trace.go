@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"time"
 
-	archiveTrace "github.com/onflow/flow-dps/service/trace"
+	archiveTrace "github.com/onflow/flow-archive/service/trace"
 )
 
 // Tracer is a generic tracer implementation for the Archive API servers

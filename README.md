@@ -5,7 +5,7 @@
 [![Documentation](https://img.shields.io/badge/godoc-docs-blue.svg?label=&logo=go)](https://pkg.go.dev/github.com/optakt/flow-dps)
 [![Internal Documentation](https://img.shields.io/badge/-documentation-grey?logo=markdown)](./docs/introduction.md)
 
-The Flow Data Provisioning Service (DPS) aims at providing a scalable and efficient way to access the history of the Flow
+The Flow Archive aims at providing a scalable and efficient way to access the history of the Flow
 execution state, both for current live sporks and for past sporks.
 
 The state of past sporks is indexed by reading an execution node's protocol state and state trie write-ahead log.
@@ -26,21 +26,20 @@ which enables state retrieval at any point in history, overcoming the pruning li
 
 Below are links to the individual documentation for the binaries within this repository.
 
-* [`flow-dps-client`](./cmd/flow-dps-client/README.md)
-* [`flow-dps-indexer`](./cmd/flow-dps-indexer/README.md)
-* [`flow-dps-live`](./cmd/flow-dps-live/README.md)
-* [`flow-dps-server`](./cmd/flow-dps-server/README.md)
+* [`flow-archive-client`](cmd/flow-archive-client/README.md)
+* [`flow-archive-indexer`](cmd/flow-archive-indexer/README.md)
+* [`flow-archive-live`](cmd/flow-archive-live/README.md)
+* [`flow-archive-server`](cmd/flow-archive-server/README.md)
 
 ### APIs
 
-The DPS API gives access to historical data at any given height.
+The Archive API gives access to historical data at any given height.
 
-* [DPS API](./docs/dps-api.md)
+* [Archive API](./docs/dps-api.md)
 
 There are also additional API layers that can be run on top of the DPS API:
 
 * [Access API](https://github.com/optakt/flow-dps-access)
-* [Rosetta API](https://github.com/optakt/flow-dps-rosetta)
 
 ### Developer Documentation
 

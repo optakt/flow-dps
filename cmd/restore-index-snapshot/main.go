@@ -28,10 +28,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
-	"github.com/onflow/flow-dps/codec/zbor"
-	"github.com/onflow/flow-dps/models/dps"
-	"github.com/onflow/flow-dps/service/index"
-	"github.com/onflow/flow-dps/service/storage"
+	"github.com/onflow/flow-archive/codec/zbor"
+	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/service/index"
+	"github.com/onflow/flow-archive/service/storage"
 )
 
 const (
@@ -75,7 +75,7 @@ func run() int {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 
 	// Open the index database.
-	db, err := badger.Open(dps.DefaultOptions(flagIndex))
+	db, err := badger.Open(archive.DefaultOptions(flagIndex))
 	if err != nil {
 		log.Error().Str("index", flagIndex).Err(err).Msg("could not open badger db")
 		return failure

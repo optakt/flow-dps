@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // FSM is a finite state machine which is used to map block data from multiple sources into
@@ -65,7 +65,7 @@ func (f *FSM) Run() error {
 		}
 
 		err := transition(f.state)
-		if errors.Is(err, dps.ErrFinished) {
+		if errors.Is(err, archive.ErrFinished) {
 			return nil
 		}
 		if err != nil {

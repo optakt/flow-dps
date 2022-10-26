@@ -38,7 +38,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/mempool/entity"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // Offsets used to ensure different flow identifiers that do not overlap.
@@ -62,7 +62,7 @@ var (
 	GenericBytes = []byte(`test`)
 
 	GenericHeader = &flow.Header{
-		ChainID:   dps.FlowTestnet,
+		ChainID:   archive.FlowTestnet,
 		Height:    GenericHeight,
 		ParentID:  genericIdentifier(0, offsetBlock),
 		Timestamp: time.Date(1972, 11, 12, 13, 14, 15, 16, time.UTC),

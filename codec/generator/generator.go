@@ -23,8 +23,8 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 
-	"github.com/onflow/flow-dps/models/dps"
-	"github.com/onflow/flow-dps/service/storage"
+	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/service/storage"
 )
 
 // Generator generates optimized Zstandard dictionaries and turns them into Go files
@@ -33,11 +33,11 @@ type Generator struct {
 	cfg   Config
 	log   zerolog.Logger
 	db    *badger.DB
-	codec dps.Codec
+	codec archive.Codec
 }
 
 // New returns a new dictionary generator.
-func New(log zerolog.Logger, db *badger.DB, codec dps.Codec, opts ...Option) *Generator {
+func New(log zerolog.Logger, db *badger.DB, codec archive.Codec, opts ...Option) *Generator {
 
 	cfg := DefaultConfig
 	for _, opt := range opts {

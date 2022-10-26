@@ -20,7 +20,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // Feeder is a component that retrieves trie updates and feeds them to its consumer.
@@ -55,7 +55,7 @@ func (f *Feeder) Update() (*ledger.TrieUpdate, error) {
 			return nil, fmt.Errorf("could not read next record: %w", err)
 		}
 		if !next {
-			return nil, dps.ErrUnavailable
+			return nil, archive.ErrUnavailable
 		}
 		record := f.reader.Record()
 		operation, _, update, err := wal.Decode(record)

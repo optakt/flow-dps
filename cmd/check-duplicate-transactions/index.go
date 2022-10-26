@@ -23,9 +23,9 @@ import (
 
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/onflow/flow-dps/codec/zbor"
-	"github.com/onflow/flow-dps/models/dps"
-	"github.com/onflow/flow-dps/service/storage"
+	"github.com/onflow/flow-archive/codec/zbor"
+	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/service/storage"
 )
 
 func indexCheck(log zerolog.Logger, dir string) (map[uint64][]flow.Identifier, error) {
@@ -36,7 +36,7 @@ func indexCheck(log zerolog.Logger, dir string) (map[uint64][]flow.Identifier, e
 	log.Info().Str("index", dir).Msg("starting index state duplicate check")
 
 	// Open the index database.
-	index, err := badger.Open(dps.DefaultOptions(dir).WithReadOnly(true))
+	index, err := badger.Open(archive.DefaultOptions(dir).WithReadOnly(true))
 	if err != nil {
 		return nil, fmt.Errorf("could not open state index (dir: %s): %w", dir, err)
 	}

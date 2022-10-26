@@ -23,14 +23,14 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // Index implements an execution state trie loader on top of a DPS index,
 // able to restore an execution state trie from the index database.
 type Index struct {
 	log zerolog.Logger
-	lib dps.ReadLibrary
+	lib archive.ReadLibrary
 	db  *badger.DB
 	cfg Config
 }
@@ -38,7 +38,7 @@ type Index struct {
 // FromIndex creates a new index loader, which can restore the execution state
 // from the given index database, using the given library for decoding ledger
 // paths and payloads.
-func FromIndex(log zerolog.Logger, lib dps.ReadLibrary, db *badger.DB, options ...Option) *Index {
+func FromIndex(log zerolog.Logger, lib archive.ReadLibrary, db *badger.DB, options ...Option) *Index {
 
 	cfg := DefaultConfig
 	for _, option := range options {

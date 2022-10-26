@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // TransitionFunc is a function that is applied onto the state machine's
@@ -38,15 +38,15 @@ type Transitions struct {
 	cfg   Config
 	log   zerolog.Logger
 	load  Loader
-	chain dps.Chain
+	chain archive.Chain
 	feed  Feeder
-	read  dps.Reader
-	write dps.Writer
+	read  archive.Reader
+	write archive.Writer
 	once  *sync.Once
 }
 
 // NewTransitions returns a Transitions component using the given dependencies and using the given options
-func NewTransitions(log zerolog.Logger, load Loader, chain dps.Chain, feed Feeder, read dps.Reader, write dps.Writer, options ...Option) *Transitions {
+func NewTransitions(log zerolog.Logger, load Loader, chain archive.Chain, feed Feeder, read archive.Reader, write archive.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -211,7 +211,7 @@ func (t *Transitions) IndexChain(s *State) error {
 	// means all data coming from the protocol state is available after this
 	// point.
 	header, err := t.chain.Header(s.height)
-	if errors.Is(err, dps.ErrUnavailable) {
+	if errors.Is(err, archive.ErrUnavailable) {
 		log.Debug().Msg("waiting for next header")
 		time.Sleep(t.cfg.WaitInterval)
 		return nil
@@ -257,7 +257,7 @@ func (t *Transitions) IndexChain(s *State) error {
 	// at which point all the data coming from the execution data should be
 	// available.
 	commit, err := t.chain.Commit(s.height)
-	if errors.Is(err, dps.ErrUnavailable) {
+	if errors.Is(err, archive.ErrUnavailable) {
 		log.Debug().Msg("waiting for next state commitment")
 		time.Sleep(t.cfg.WaitInterval)
 		return nil
@@ -350,7 +350,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// it to in the forest. This usually means that it was meant for a pruned
 	// branch of the execution forest.
 	update, err := t.feed.Update()
-	if errors.Is(err, dps.ErrUnavailable) {
+	if errors.Is(err, archive.ErrUnavailable) {
 		time.Sleep(t.cfg.WaitInterval)
 		log.Debug().Msg("waiting for next trie update")
 		return nil
