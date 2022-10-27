@@ -46,7 +46,7 @@ jobs:
       - name: Install Protobuf compiler
         run: |
           PB_REL="https://github.com/protocolbuffers/protobuf/releases"
-          curl -LO $PB_REL/download/v3.21.8/protoc-3.21.8-linux-x86_64.zip
+          curl -LO $PB_REL/download/v21.8/protoc-21.8-linux-x86_64.zip
           unzip protoc-3.19.4-linux-x86_64.zip -d $HOME/.local
           export PATH="$PATH:$HOME/.local/bin"
           git clean -fd
