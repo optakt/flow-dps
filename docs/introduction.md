@@ -17,7 +17,7 @@ This document is aimed at introducing developers to the Flow Data Provisioning S
 
 ## Getting Started
 
-The Flow Data Provisioning Service (DPS) is a service that maintains and provides access to the history of the Flow execution state.
+The Flow Archive is a service that maintains and provides access to the history of the Flow execution state.
 
 The reason for this need is that the in-memory execution state is pruned after 300 chunks, which makes it impossible to access the state history.
 Also, script execution is currently proxied from the access nodes to execution nodes, which is not scalable.
@@ -66,15 +66,15 @@ It needs to connect to the Flow network by acting as an unstaked consensus follo
 The Live Indexer configures the unstaked consensus follower to create its protocol state database at the given location (specified using the `-d` option), and also reads from it to retrieve protocol state data.
 
 ```console
-$ ./flow-dps-live -u flow-block-data -i /var/flow/index -d /var/flow/data -c /var/flow/bootstrap/root.checkpoint -b /var/flow/bootstrap/public --seed-address access.canary.nodes.onflow.org:9000 --seed-key cfce845fa9b0fb38402640f997233546b10fec3f910bf866c43a0db58ab6a1e4
+$ ./flow-archive-live -u flow-block-data -i /var/flow/index -d /var/flow/data -c /var/flow/bootstrap/root.checkpoint -b /var/flow/bootstrap/public --seed-address access.canary.nodes.onflow.org:9000 --seed-key cfce845fa9b0fb38402640f997233546b10fec3f910bf866c43a0db58ab6a1e4
 ```
 
 ### Serving Other APIs
 
-When using the Live Indexer, the DPS API is already exposed parallel to the indexing. When using the `flow-dps-indexer` however, the indexing needs to be completed before the index can be used to start the DPS API using the `flow-dps-server` binary:
+When using the Live Indexer, the Archive API is already exposed parallel to the indexing. When using the `flow-dps-indexer` however, the indexing needs to be completed before the index can be used to start the DPS API using the `flow-dps-server` binary:
 
 ```console
-$ ./flow-dps-server -i /var/flow/data/index -a 172.17.0.1:5005
+$ ./flow-archive-server -i /var/flow/data/index -a 172.17.0.1:5005
 ```
 
 Once the API is running, it can be used to serve other APIs as well.

@@ -24,13 +24,13 @@ import (
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // CatchupBlocks will determine, based on what is in the protocol state and
 // index databases, which blocks we need to download the execution records for
 // in order to properly resume catching up with consensus.
-func CatchupBlocks(db *badger.DB, read dps.Reader) ([]flow.Identifier, error) {
+func CatchupBlocks(db *badger.DB, read archive.Reader) ([]flow.Identifier, error) {
 
 	// We need to know for which blocks we don't need the execution records
 	// anymore, which is basically up to the last indexed block.

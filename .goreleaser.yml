@@ -2,9 +2,9 @@
 # Windows builds. We also can only build on amd64 architectures since all others are also not
 # supported at the moment.
 builds:
-  - id: dps-client
-    binary: dps-client
-    main: ./cmd/flow-dps-client
+  - id: archive-client
+    binary: archive-client
+    main: ./cmd/flow-archive-client
     goos:
       - linux
     goarch:
@@ -12,9 +12,9 @@ builds:
     flags:
       - -tags=relic
 
-  - id: dps-indexer
-    binary: dps-indexer
-    main: ./cmd/flow-dps-indexer
+  - id: archive-indexer
+    binary: archive-indexer
+    main: ./cmd/flow-archive-indexer
     goos:
       - linux
     goarch:
@@ -22,9 +22,9 @@ builds:
     flags:
       - -tags=relic
 
-  - id: dps-server
-    binary: dps-server
-    main: ./cmd/flow-dps-server
+  - id: archive-server
+    binary: archive-server
+    main: ./cmd/flow-archive-server
     goos:
       - linux
     goarch:
@@ -32,9 +32,9 @@ builds:
     flags:
       - -tags=relic
 
-  - id: dps-live
-    binary: dps-live
-    main: ./cmd/flow-dps-live
+  - id: archive-live
+    binary: archive-live
+    main: ./cmd/flow-archive-live
     goos:
       - linux
     goarch:

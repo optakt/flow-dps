@@ -27,19 +27,19 @@ import (
 	"github.com/onflow/flow-go/fvm/programs"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // Invoker retrieves account information from and executes Cadence scripts against
 // the Flow virtual machine.
 type Invoker struct {
-	index dps.Reader
+	index archive.Reader
 	vm    VirtualMachine
 	cache Cache
 }
 
 // New returns a new Invoker with the given configuration.
-func New(index dps.Reader, options ...func(*Config)) (*Invoker, error) {
+func New(index archive.Reader, options ...func(*Config)) (*Invoker, error) {
 
 	// Initialize the invoker configuration with conservative default values.
 	cfg := Config{

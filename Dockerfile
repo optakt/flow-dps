@@ -6,7 +6,7 @@ RUN apt-get update \
 ENV FLOW_GO_REPO="https://github.com/onflow/flow-go"
 ENV FLOW_GO_BRANCH=v0.27.4
 
-RUN mkdir /dps /docker /flow-go
+RUN mkdir /archive /docker /flow-go
 
 WORKDIR /dps
 
@@ -14,7 +14,7 @@ WORKDIR /dps
 COPY . /dps
 RUN git clone --branch $FLOW_GO_BRANCH $FLOW_GO_REPO /flow-go
 
-RUN ln -s /flow-go /dps/flow-go
+RUN ln -s /flow-go /archive/flow-go
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build  \

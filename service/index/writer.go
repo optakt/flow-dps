@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // Writer implements the `index.Writer` interface to write indexing data to
@@ -36,7 +36,7 @@ import (
 type Writer struct {
 	sync.RWMutex
 	db   *badger.DB
-	lib  dps.WriteLibrary
+	lib  archive.WriteLibrary
 	cfg  Config
 	tx   *badger.Txn
 	sema *semaphore.Weighted
@@ -49,7 +49,7 @@ type Writer struct {
 
 // NewWriter creates a new index writer that writes new indexing data to the
 // given Badger database.
-func NewWriter(db *badger.DB, lib dps.WriteLibrary, options ...func(*Config)) *Writer {
+func NewWriter(db *badger.DB, lib archive.WriteLibrary, options ...func(*Config)) *Writer {
 
 	cfg := DefaultConfig
 	for _, option := range options {

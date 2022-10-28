@@ -24,8 +24,8 @@ import (
 
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/onflow/flow-dps/testing/helpers"
-	"github.com/onflow/flow-dps/testing/mocks"
+	"github.com/onflow/flow-archive/testing/helpers"
+	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestNewConsensus(t *testing.T) {

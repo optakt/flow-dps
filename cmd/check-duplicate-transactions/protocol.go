@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/flow-go/storage"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 func protocolCheck(log zerolog.Logger, dir string) error {
@@ -33,7 +33,7 @@ func protocolCheck(log zerolog.Logger, dir string) error {
 	log.Info().Str("data", dir).Msg("starting protocol state duplicate check")
 
 	// Open the protocol state database.
-	protocol, err := badger.Open(dps.DefaultOptions(dir).WithReadOnly(true))
+	protocol, err := badger.Open(archive.DefaultOptions(dir).WithReadOnly(true))
 	if err != nil {
 		return fmt.Errorf("could not open protocol state (dir: %s): %w", dir, err)
 	}

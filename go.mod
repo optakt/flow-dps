@@ -1,4 +1,4 @@
-module github.com/onflow/flow-dps
+module github.com/onflow/flow-archive
 
 go 1.18
 

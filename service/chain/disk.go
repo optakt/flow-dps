@@ -20,7 +20,7 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"math"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage"
@@ -79,7 +79,7 @@ func (d *Disk) Header(height uint64) (*flow.Header, error) {
 
 	blockID, err := d.block(height)
 	if errors.Is(err, storage.ErrNotFound) {
-		return nil, dps.ErrFinished
+		return nil, archive.ErrFinished
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not get block for height: %w", err)

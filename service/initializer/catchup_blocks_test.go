@@ -23,9 +23,9 @@ import (
 
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/onflow/flow-dps/service/initializer"
-	"github.com/onflow/flow-dps/testing/helpers"
-	"github.com/onflow/flow-dps/testing/mocks"
+	"github.com/onflow/flow-archive/service/initializer"
+	"github.com/onflow/flow-archive/testing/helpers"
+	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestCatchupBlocks(t *testing.T) {

@@ -25,8 +25,8 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 
-	"github.com/onflow/flow-dps/models/dps"
-	"github.com/onflow/flow-dps/testing/mocks"
+	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestFromWAL(t *testing.T) {
@@ -115,7 +115,7 @@ func TestFeeder_Update(t *testing.T) {
 		_, err := feeder.Update()
 
 		require.Error(t, err)
-		assert.Equal(t, dps.ErrUnavailable, err)
+		assert.Equal(t, archive.ErrUnavailable, err)
 	})
 
 	t.Run("handles badly encoded record", func(t *testing.T) {

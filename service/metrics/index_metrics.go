@@ -15,7 +15,7 @@
 package metrics
 
 import (
-	"github.com/onflow/flow-dps/service/index"
+	"github.com/onflow/flow-archive/service/index"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 

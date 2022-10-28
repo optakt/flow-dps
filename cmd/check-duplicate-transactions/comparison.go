@@ -23,9 +23,9 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/onflow/flow-dps/codec/zbor"
-	"github.com/onflow/flow-dps/models/dps"
-	"github.com/onflow/flow-dps/service/storage"
+	"github.com/onflow/flow-archive/codec/zbor"
+	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/service/storage"
 )
 
 func compareDuplicates(log zerolog.Logger, dataDir string, indexDir string, duplicates map[uint64][]flow.Identifier) error {
@@ -33,12 +33,12 @@ func compareDuplicates(log zerolog.Logger, dataDir string, indexDir string, dupl
 	log.Info().Msg("comparing duplicates between databases")
 
 	// Initialize the databases.
-	protocol, err := badger.Open(dps.DefaultOptions(dataDir).WithReadOnly(true))
+	protocol, err := badger.Open(archive.DefaultOptions(dataDir).WithReadOnly(true))
 	if err != nil {
 		return fmt.Errorf("could not open protocol state (dir: %s): %w", dataDir, err)
 	}
 	defer protocol.Close()
-	index, err := badger.Open(dps.DefaultOptions(indexDir).WithReadOnly(true))
+	index, err := badger.Open(archive.DefaultOptions(indexDir).WithReadOnly(true))
 	if err != nil {
 		return fmt.Errorf("could not open state index (dir: %s): %w", indexDir, err)
 	}

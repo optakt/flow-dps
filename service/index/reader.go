@@ -23,20 +23,20 @@ import (
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
-	"github.com/onflow/flow-dps/models/dps"
+	"github.com/onflow/flow-archive/models/archive"
 )
 
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
 type Reader struct {
 	db  *badger.DB
-	lib dps.ReadLibrary
+	lib archive.ReadLibrary
 }
 
 // NewReader creates a new index reader, using the given database as the
 // underlying state repository. It is recommended to provide a read-only Badger
 // database.
-func NewReader(db *badger.DB, lib dps.ReadLibrary) *Reader {
+func NewReader(db *badger.DB, lib archive.ReadLibrary) *Reader {
 
 	r := Reader{
 		db:  db,

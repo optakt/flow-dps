@@ -29,8 +29,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
 
-	"github.com/onflow/flow-dps/models/dps"
-	"github.com/onflow/flow-dps/testing/mocks"
+	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestNewGCPStreamer(t *testing.T) {
@@ -61,7 +61,7 @@ func TestNewGCPStreamer(t *testing.T) {
 func TestGCPStreamer_OnBlockFinalized(t *testing.T) {
 	block := mocks.GenericBlock
 	blockID := block.BlockID
-	queue := dps.NewDeque()
+	queue := archive.NewDeque()
 
 	streamer := &GCPStreamer{
 		log:   zerolog.Nop(),
@@ -100,8 +100,8 @@ func TestGCPStreamer_Next(t *testing.T) {
 			log:     zerolog.Nop(),
 			bucket:  bucket,
 			decoder: decoder,
-			queue:   dps.NewDeque(),
-			buffer:  dps.NewDeque(),
+			queue:   archive.NewDeque(),
+			buffer:  archive.NewDeque(),
 			limit:   999,
 		}
 
@@ -130,15 +130,15 @@ func TestGCPStreamer_Next(t *testing.T) {
 			log:     zerolog.Nop(),
 			bucket:  bucket,
 			decoder: decoder,
-			queue:   dps.NewDeque(),
-			buffer:  dps.NewDeque(),
+			queue:   archive.NewDeque(),
+			buffer:  archive.NewDeque(),
 			limit:   999,
 		}
 
 		_, err = streamer.Next()
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, dps.ErrUnavailable)
+		assert.ErrorIs(t, err, archive.ErrUnavailable)
 	})
 
 	t.Run("downloads records from queue when they are available", func(t *testing.T) {
@@ -160,8 +160,8 @@ func TestGCPStreamer_Next(t *testing.T) {
 			log:     zerolog.Nop(),
 			bucket:  bucket,
 			decoder: decoder,
-			queue:   dps.NewDeque(),
-			buffer:  dps.NewDeque(),
+			queue:   archive.NewDeque(),
+			buffer:  archive.NewDeque(),
 			limit:   999,
 		}
 
@@ -170,7 +170,7 @@ func TestGCPStreamer_Next(t *testing.T) {
 		_, err = streamer.Next()
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, dps.ErrUnavailable)
+		assert.ErrorIs(t, err, archive.ErrUnavailable)
 
 		select {
 		case <-time.After(100 * time.Millisecond):

@@ -23,10 +23,10 @@ import (
 
 	"github.com/onflow/flow-go/storage/badger/operation"
 
-	"github.com/onflow/flow-dps/models/dps"
-	"github.com/onflow/flow-dps/service/chain"
-	"github.com/onflow/flow-dps/testing/helpers"
-	"github.com/onflow/flow-dps/testing/mocks"
+	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/service/chain"
+	"github.com/onflow/flow-archive/testing/helpers"
+	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestDisk_Root(t *testing.T) {
@@ -76,7 +76,7 @@ func TestDisk_Header(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, header)
-		assert.Equal(t, dps.FlowTestnet, header.ChainID)
+		assert.Equal(t, archive.FlowTestnet, header.ChainID)
 
 		_, err = c.Header(math.MaxUint64)
 
@@ -123,7 +123,7 @@ func TestDisk_Header(t *testing.T) {
 
 		_, err := c.Header(mocks.GenericHeight)
 
-		assert.Equal(t, dps.ErrFinished, err)
+		assert.Equal(t, archive.ErrFinished, err)
 	})
 }
 
@@ -162,7 +162,7 @@ func TestDisk_Commit(t *testing.T) {
 		_, err := c.Commit(mocks.GenericHeight)
 
 		assert.Error(t, err)
-		assert.NotEqual(t, dps.ErrFinished, err)
+		assert.NotEqual(t, archive.ErrFinished, err)
 	})
 }
 
