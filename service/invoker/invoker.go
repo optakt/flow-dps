@@ -18,13 +18,10 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/rs/zerolog"
-
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
-	"github.com/onflow/flow-go/fvm/programs"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
@@ -52,8 +49,7 @@ func New(index archive.Reader, options ...func(*Config)) (*Invoker, error) {
 	}
 
 	// Initialize interpreter and virtual machine for execution.
-	rt := fvm.NewInterpreterRuntime()
-	vm := fvm.NewVirtualMachine(rt)
+	vm := fvm.NewVirtualMachine()
 
 	// Initialize the Ristretto cache with the size limit. Ristretto recommends
 	// keeping ten times as many counters as items in the cache when full.
@@ -112,7 +108,7 @@ func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, e
 		return nil, fmt.Errorf("could not get header: %w", err)
 	}
 
-	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
+	ctx := fvm.NewContext(fvm.WithBlockHeader(header))
 
 	// Initialize the read function. We use a shared cache between all heights
 	// here. It's a smart cache, which means that items that are accessed often
@@ -124,7 +120,7 @@ func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, e
 	// using the read function at a specific commit.
 	view := delta.NewView(read)
 
-	account, err := i.vm.GetAccount(ctx, address, view, programs.NewEmptyPrograms())
+	account, err := i.vm.GetAccount(ctx, address, view)
 	if err != nil {
 		return nil, fmt.Errorf("could not get account at height %d: %w", header.Height, err)
 	}
@@ -153,7 +149,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 
 	// Initialize the virtual machine context with the given block header so
 	// that parameters related to the block are available from within the script.
-	ctx := fvm.NewContext(zerolog.Nop(), fvm.WithBlockHeader(header))
+	ctx := fvm.NewContext(fvm.WithBlockHeader(header))
 
 	// Initialize the read function. We use a shared cache between all heights
 	// here. It's a smart cache, which means that items that are accessed often
@@ -169,12 +165,9 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	// Cadence parameters.
 	proc := fvm.Script(script).WithArguments(args...)
 
-	// Finally, we initialize an empty programs cache.
-	programs := programs.NewEmptyPrograms()
-
 	// The script procedure is then run using the Flow virtual machine and all
 	// the constructed contextual parameters.
-	err = i.vm.Run(ctx, proc, view, programs)
+	err = i.vm.Run(ctx, proc, view)
 	if err != nil {
 		return nil, fmt.Errorf("could not run script: %w", err)
 	}
