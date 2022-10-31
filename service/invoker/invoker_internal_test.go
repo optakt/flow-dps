@@ -21,9 +21,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/errors"
-	"github.com/onflow/flow-go/fvm/programs"
 	"github.com/onflow/flow-go/fvm/state"
 	"github.com/onflow/flow-go/model/flow"
 
@@ -70,11 +70,10 @@ func TestInvoker_Script(t *testing.T) {
 		}
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.RunFunc = func(ctx fvm.Context, proc fvm.Procedure, v state.View, programs *programs.Programs) error {
+		vm.RunFunc = func(ctx fvm.Context, proc fvm.Procedure, v state.View) error {
 			assert.NotNil(t, ctx)
 			assert.NotNil(t, proc)
 			assert.NotNil(t, v)
-			assert.NotNil(t, programs)
 
 			require.IsType(t, proc, &fvm.ScriptProcedure{})
 			p := proc.(*fvm.ScriptProcedure)
@@ -117,10 +116,10 @@ func TestInvoker_Script(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.RunFunc = func(ctx fvm.Context, proc fvm.Procedure, v state.View, programs *programs.Programs) error {
+		vm.RunFunc = func(ctx fvm.Context, proc fvm.Procedure, v state.View) error {
 			require.IsType(t, proc, &fvm.ScriptProcedure{})
 			p := proc.(*fvm.ScriptProcedure)
-			p.Err = errors.NewFVMInternalErrorf("dummy error")
+			p.Err = errors.NewCadenceRuntimeError(runtime.Error{})
 
 			return nil
 		}
@@ -137,7 +136,7 @@ func TestInvoker_Script(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.RunFunc = func(fvm.Context, fvm.Procedure, state.View, *programs.Programs) error {
+		vm.RunFunc = func(fvm.Context, fvm.Procedure, state.View) error {
 			return mocks.GenericError
 		}
 
@@ -155,10 +154,9 @@ func TestInvoker_Account(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error) {
+		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.View) (*flow.Account, error) {
 			assert.NotNil(t, ctx)
 			assert.NotNil(t, v)
-			assert.NotNil(t, programs)
 			assert.Equal(t, mocks.GenericAccount.Address, address)
 
 			return &mocks.GenericAccount, nil
@@ -201,7 +199,7 @@ func TestInvoker_Account(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.GetAccountFunc = func(fvm.Context, flow.Address, state.View, *programs.Programs) (*flow.Account, error) {
+		vm.GetAccountFunc = func(fvm.Context, flow.Address, state.View) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 

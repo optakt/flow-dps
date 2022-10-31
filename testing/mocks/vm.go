@@ -18,24 +18,23 @@ import (
 	"testing"
 
 	"github.com/onflow/flow-go/fvm"
-	"github.com/onflow/flow-go/fvm/programs"
 	"github.com/onflow/flow-go/fvm/state"
 	"github.com/onflow/flow-go/model/flow"
 )
 
 type VirtualMachine struct {
-	GetAccountFunc func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error)
-	RunFunc        func(ctx fvm.Context, proc fvm.Procedure, v state.View, programs *programs.Programs) error
+	GetAccountFunc func(ctx fvm.Context, address flow.Address, v state.View) (*flow.Account, error)
+	RunFunc        func(ctx fvm.Context, proc fvm.Procedure, v state.View) error
 }
 
 func BaselineVirtualMachine(t *testing.T) *VirtualMachine {
 	t.Helper()
 
 	vm := VirtualMachine{
-		GetAccountFunc: func(ctx fvm.Context, address flow.Address, v state.View, programs *programs.Programs) (*flow.Account, error) {
+		GetAccountFunc: func(ctx fvm.Context, address flow.Address, v state.View) (*flow.Account, error) {
 			return &GenericAccount, nil
 		},
-		RunFunc: func(ctx fvm.Context, proc fvm.Procedure, v state.View, programs *programs.Programs) error {
+		RunFunc: func(ctx fvm.Context, proc fvm.Procedure, v state.View) error {
 			return nil
 		},
 	}
@@ -43,10 +42,10 @@ func BaselineVirtualMachine(t *testing.T) *VirtualMachine {
 	return &vm
 }
 
-func (v *VirtualMachine) GetAccount(ctx fvm.Context, address flow.Address, view state.View, programs *programs.Programs) (*flow.Account, error) {
-	return v.GetAccountFunc(ctx, address, view, programs)
+func (v *VirtualMachine) GetAccount(ctx fvm.Context, address flow.Address, view state.View) (*flow.Account, error) {
+	return v.GetAccountFunc(ctx, address, view)
 }
 
-func (v *VirtualMachine) Run(ctx fvm.Context, proc fvm.Procedure, view state.View, programs *programs.Programs) error {
-	return v.RunFunc(ctx, proc, view, programs)
+func (v *VirtualMachine) Run(ctx fvm.Context, proc fvm.Procedure, view state.View) error {
+	return v.RunFunc(ctx, proc, view)
 }
