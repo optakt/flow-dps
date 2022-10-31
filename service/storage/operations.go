@@ -190,7 +190,7 @@ func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledg
 		key := EncodeKey(PrefixPayload, path, height)
 		it := tx.NewIterator(badger.IteratorOptions{
 			PrefetchSize:   0,
-			PrefetchValues: false,
+			PrefetchValues: true,
 			Reverse:        true,
 			AllVersions:    false,
 			InternalAccess: false,
