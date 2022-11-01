@@ -45,19 +45,19 @@ test: unittest integ-test
 
 .PHONY: docker-build-live
 docker-build-live:
-	 docker build --build-arg BINARY=flow-archive-live .
+	 docker build --build-arg BINARY=flow-archive-live . -t "$(CONTAINER_REGISTRY)/flow-archive-live:$(IMAGE_TAG)"
 
 .PHONY: docker-build-indexer
 docker-build-indexer:
-	docker build --build-arg BINARY=flow-archive-indexer .
+	docker build --build-arg BINARY=flow-archive-indexer . -t "$(CONTAINER_REGISTRY)/flow-archive-indexer:$(IMAGE_TAG)"
 
 .PHONY: docker-build-client
 docker-build-client:
-	docker build --build-arg BINARY=flow-archive-client .
+	docker build --build-arg BINARY=flow-archive-client . -t "$(CONTAINER_REGISTRY)/flow-archive-client:$(IMAGE_TAG)"
 
 .PHONY: docker-build-server
 docker-build-server:
-	docker build --build-arg BINARY=flow-archive-server .
+	docker build --build-arg BINARY=flow-archive-server . -t "$(CONTAINER_REGISTRY)/flow-archive-server:$(IMAGE_TAG)"
 
 .PHONY: docker-build-flow-archive
 docker-build: docker-build-live docker-build-indexer docker-build-client docker-build-server
