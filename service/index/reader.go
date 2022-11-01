@@ -17,6 +17,8 @@ package index
 import (
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-multierror"
+	"sync"
 
 	"github.com/dgraph-io/badger/v2"
 
@@ -87,6 +89,7 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
 func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+
 	first, err := r.First()
 	if err != nil {
 		return nil, fmt.Errorf("could not check first height: %w", err)
@@ -98,23 +101,31 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 	if height < first || height > last {
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
-	values := make([]ledger.Value, 0, len(paths))
-	err = r.db.View(func(tx *badger.Txn) error {
-		for _, path := range paths {
-			var payload ledger.Payload
-			err := r.lib.RetrievePayload(height, path, &payload)(tx)
-			if errors.Is(err, badger.ErrKeyNotFound) {
-				values = append(values, nil)
-				continue
-			}
-			if err != nil {
-				return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
-			}
-			values = append(values, payload.Value())
-		}
-		return nil
-	})
-	return values, err
+	values := make([]ledger.Value, len(paths))
+	var errs *multierror.Error
+	var wg sync.WaitGroup
+	wg.Add(len(paths))
+	for i, path := range paths {
+		go func(i int, pth ledger.Path) {
+			err = r.db.View(func(tx *badger.Txn) error {
+				var payload ledger.Payload
+				innerErr := r.lib.RetrievePayload(height, pth, &payload)(tx)
+				if errors.Is(innerErr, badger.ErrKeyNotFound) {
+					values[i] = nil
+					return nil
+				}
+				if err != nil {
+					return fmt.Errorf("could not retrieve payload (path: %x): %w", pth, err)
+				}
+				values[i] = payload.Value()
+				return nil
+			})
+			errs = multierror.Append(errs, err)
+			wg.Done()
+		}(i, path)
+	}
+	wg.Wait()
+	return values, errs.ErrorOrNil()
 }
 
 // Collection returns the collection with the given ID.
