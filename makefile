@@ -9,6 +9,8 @@ ifeq (${IMAGE_TAG},)
 IMAGE_TAG := ${VERSION}
 endif
 
+export DOCKER_BUILDKIT := 1
+
 ALL_PACKAGES := ./...
 
 # docker container registry
