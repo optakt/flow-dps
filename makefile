@@ -9,10 +9,6 @@ ifeq (${IMAGE_TAG},)
 IMAGE_TAG := ${VERSION}
 endif
 
-ifeq (${IMAGE_TAG},)
-IMAGE_TAG := ${SHORT_COMMIT}
-endif
-
 ALL_PACKAGES := ./...
 
 # docker container registry
@@ -23,19 +19,19 @@ export CONTAINER_REGISTRY := gcr.io/flow-container-registry
 
 .PHONY: generate
 generate:
-	go generate ./...
+	go generate $(ALL_PACKAGES)
 
 .PHONY: unittest
 unittest:
-	go test -tags relic -v ./...
+	go test -tags relic -v $(ALL_PACKAGES)
 
 .PHONY: compile
 compile:
-	go build -tags relic ./...
+	go build -tags relic $(ALL_PACKAGES)
 
 .PHONY: integ-test
 integ-test:
-	go test -v -tags="relic integration" ./...
+	go test -v -tags="relic integration" $(ALL_PACKAGES)
 
 .PHONY: test
 test: unittest integ-test

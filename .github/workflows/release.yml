@@ -100,21 +100,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-          uses: actions/checkout@v2
-          with:
-            fetch-depth: 0
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
       - name: Install Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.18
 
       - name: Cache Go modules
-          uses: actions/cache@v2
-          with:
-            path: ~/go/pkg/mod
-            key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-            restore-keys: |
-              ${{ runner.os }}-go-   
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Docker build
+        run: make docker-build-flow-archive
 
       # Provide Google Service Account credentials to Github Action, allowing interaction with the Google Container Registry
       # Logging in as github-actions@dl-flow.iam.gserviceaccount.com
@@ -124,7 +128,5 @@ jobs:
           registry: gcr.io
           username: _json_key
           password: ${{ secrets.GCR_SERVICE_KEY }}
-      - name: Docker build
-        run: make docker-build-flow-archive
       - name: Docker push
         run: make docker-push-flow-archive
