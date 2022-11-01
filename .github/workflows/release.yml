@@ -117,9 +117,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: Docker build
         run: make docker-build-flow-archive
 
