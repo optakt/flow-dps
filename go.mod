@@ -16,7 +16,7 @@ require (
 	github.com/klauspost/compress v1.15.1
 	github.com/labstack/echo/v4 v4.5.0
 	github.com/onflow/cadence v0.28.0
-	github.com/onflow/flow-go v0.28.5
+	github.com/onflow/flow-go v0.28.11
 	github.com/onflow/flow-go-sdk v0.29.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/tsdb v0.7.1
