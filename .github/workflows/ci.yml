@@ -111,3 +111,28 @@ jobs:
           args: -v --build-tags relic --timeout=3m
           working-directory: .
           skip-pkg-cache: true
+
+  docker-verify:
+    name: verify docker build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Docker build
+        run: make docker-build-flow-archive

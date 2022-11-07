@@ -8,19 +8,14 @@ on:
       - '*'
 
 jobs:
-  goreleaser:
+  docker-push:
+    name: Push to container registry
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
-      - name: Check out FlowGo
-        uses: actions/checkout@v2
-        with:
-          repository: onflow/flow-go
-          path: flow-go
 
       - name: Install Go
         uses: actions/setup-go@v2
@@ -35,62 +30,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      # Here, we simply print the exact go version, to have it as part of the
-      # action's output, which might be convenient.
-      - name: Print Go version
-        run: go version
+      - name: Docker build
+        run: make docker-build-flow-archive
 
-      # The protobuf steps uses the official instructions to install the
-      # pre-compiled binary, see:
-      # https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os
-      - name: Install Protobuf compiler
-        run: |
-          PB_REL="https://github.com/protocolbuffers/protobuf/releases"
-          curl -LO $PB_REL/download/v21.8/protoc-21.8-linux-x86_64.zip
-          unzip protoc-21.8-linux-x86_64.zip -d $HOME/.local
-          export PATH="$PATH:$HOME/.local/bin"
-          git clean -fd
-
-      # In order to be able to generate the protocol buffer and GRPC files, we
-      # need to install the related Go modules.
-      - name: Install Protobuf dependencies
-        run: |
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
-          go install github.com/srikrsna/protoc-gen-gotag@v0.6.1
-
-      # In order to be able to build with flow-go and the relic tag, we need to
-      # run its go generate target.
-      - name: Install Flow Go's crypto
-        run: |
-          cd ./flow-go/crypto
-          go generate .
-
-      # This check makes sure that the `go.mod` and `go.sum` files for Go
-      # modules are always up-to-date.
-      - name: Verify Go modules
-        run: go mod tidy && git status && git --no-pager diff && git diff-index --quiet HEAD --
-
-      # This check makes sure that the generated protocol buffer files in Go
-      # have been updated in case there was a change in the definitions.
-      - name: Generate files
-        run: go generate ./... && git status && git --no-pager diff && git diff-index --quiet HEAD --
-
-      # Install GoReleaser and print its version before running.
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+      # Provide Google Service Account credentials to Github Action, allowing interaction with the Google Container Registry
+      # Logging in as github-actions@dl-flow.iam.gserviceaccount.com
+      - name: Docker login
+        uses: docker/login-action@v1
         with:
-          install-only: true
-
-      - name: Show GoReleaser version
-        run: goreleaser -v
-
-      # Run GoReleaser.
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --rm-dist
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          registry: gcr.io
+          username: _json_key
+          password: ${{ secrets.GCR_SERVICE_KEY }}
+      - name: Docker push
+        run: make docker-push-flow-archive
