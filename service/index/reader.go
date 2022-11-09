@@ -15,16 +15,21 @@
 package index
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
-	"github.com/dgraph-io/badger/v2"
+	"golang.org/x/sync/errgroup"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
 )
+
+// ConcurrentPathReadLimit sets the number of concurrent paths in the Values lookup
+const ConcurrentPathReadLimit int = 5000
 
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
@@ -87,6 +92,7 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
 func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+
 	first, err := r.First()
 	if err != nil {
 		return nil, fmt.Errorf("could not check first height: %w", err)
@@ -98,22 +104,29 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 	if height < first || height > last {
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
-	values := make([]ledger.Value, 0, len(paths))
-	err = r.db.View(func(tx *badger.Txn) error {
-		for _, path := range paths {
-			var payload ledger.Payload
-			err := r.lib.RetrievePayload(height, path, &payload)(tx)
-			if errors.Is(err, badger.ErrKeyNotFound) {
-				values = append(values, nil)
-				continue
-			}
-			if err != nil {
-				return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
-			}
-			values = append(values, payload.Value())
-		}
-		return nil
-	})
+	values := make([]ledger.Value, len(paths))
+	g, _ := errgroup.WithContext(context.Background())
+	g.SetLimit(ConcurrentPathReadLimit)
+	for i, path := range paths {
+		i, path := i, path
+		g.Go(func() error {
+			err = r.db.View(func(tx *badger.Txn) error {
+				var payload ledger.Payload
+				err := r.lib.RetrievePayload(height, path, &payload)(tx)
+				if errors.Is(err, badger.ErrKeyNotFound) {
+					values[i] = nil
+					return nil
+				}
+				if err != nil {
+					return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
+				}
+				values[i] = payload.Value()
+				return nil
+			})
+			return err
+		})
+	}
+	err = g.Wait()
 	return values, err
 }
 
