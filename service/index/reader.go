@@ -15,18 +15,21 @@
 package index
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-multierror"
-	"sync"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/dgraph-io/badger/v2"
-
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
 )
+
+// ConcurrentPathReadLimit sets the number of concurrent paths in the Values lookup
+const ConcurrentPathReadLimit int = 5000
 
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
@@ -102,30 +105,29 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
 	values := make([]ledger.Value, len(paths))
-	var errs *multierror.Error
-	var wg sync.WaitGroup
-	wg.Add(len(paths))
+	g, _ := errgroup.WithContext(context.Background())
+	g.SetLimit(ConcurrentPathReadLimit)
 	for i, path := range paths {
-		go func(i int, pth ledger.Path) {
+		i, path := i, path
+		g.Go(func() error {
 			err = r.db.View(func(tx *badger.Txn) error {
 				var payload ledger.Payload
-				innerErr := r.lib.RetrievePayload(height, pth, &payload)(tx)
-				if errors.Is(innerErr, badger.ErrKeyNotFound) {
+				err := r.lib.RetrievePayload(height, path, &payload)(tx)
+				if errors.Is(err, badger.ErrKeyNotFound) {
 					values[i] = nil
 					return nil
 				}
 				if err != nil {
-					return fmt.Errorf("could not retrieve payload (path: %x): %w", pth, err)
+					return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
 				}
 				values[i] = payload.Value()
 				return nil
 			})
-			errs = multierror.Append(errs, err)
-			wg.Done()
-		}(i, path)
+			return err
+		})
 	}
-	wg.Wait()
-	return values, errs.ErrorOrNil()
+	err = g.Wait()
+	return values, err
 }
 
 // Collection returns the collection with the given ID.
