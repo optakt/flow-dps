@@ -29,7 +29,7 @@ import (
 )
 
 // ConcurrentPathReadLimit sets the number of concurrent paths in the Values lookup
-const ConcurrentPathReadLimit int = 5000
+const ConcurrentPathReadLimit int = 128
 
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
