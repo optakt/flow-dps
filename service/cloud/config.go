@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	cborMaxArrayElements int = math.MaxInt64 / 2 // MaxInt64 / 2 (half of max capacity allowed by cbor)
+	cborMaxArrayElements int = math.MaxInt64 / 2 // max capacity allowed by cbor
 )
 
 // DefaultConfig is the default configuration for the Google Cloud Streamer.
