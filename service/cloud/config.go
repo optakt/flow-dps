@@ -16,6 +16,11 @@ package cloud
 
 import (
 	"github.com/onflow/flow-go/model/flow"
+	"math"
+)
+
+const (
+	cborMaxArrayElements int = math.MaxInt64 // max capacity allowed by cbor
 )
 
 // DefaultConfig is the default configuration for the Google Cloud Streamer.

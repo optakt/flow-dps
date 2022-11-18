@@ -54,9 +54,9 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ..
 	for _, option := range options {
 		option(&cfg)
 	}
-
 	decOptions := cbor.DecOptions{
 		ExtraReturnErrors: cbor.ExtraDecErrorUnknownField,
+		MaxArrayElements:  cborMaxArrayElements,
 	}
 	decoder, err := decOptions.DecMode()
 	if err != nil {
