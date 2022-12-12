@@ -25,13 +25,14 @@ import (
 
 // MetricsWriter wraps the writer and records metrics for the data it writes.
 type MetricsWriter struct {
-	write       *index.Writer
-	block       prometheus.Counter
-	register    prometheus.Counter
-	collection  prometheus.Counter
-	transaction prometheus.Counter
-	event       prometheus.Counter
-	seal        prometheus.Counter
+	write          *index.Writer
+	block          prometheus.Counter
+	consensusBlock prometheus.Gauge
+	register       prometheus.Counter
+	collection     prometheus.Counter
+	transaction    prometheus.Counter
+	event          prometheus.Counter
+	seal           prometheus.Counter
 }
 
 // NewMetricsWriter creates a counter that counts indexed elements and exposes this information
@@ -43,6 +44,13 @@ func NewMetricsWriter(write *index.Writer) *MetricsWriter {
 		Help:      "number of indexed blocks",
 	}
 	block := promauto.NewCounter(blockOpts)
+
+	consensusBlockOpts := prometheus.GaugeOpts{
+		Name:      "consensus_block_height",
+		Namespace: namespaceArchive,
+		Help:      "latest block synced by consensus follower",
+	}
+	consensusBlock := promauto.NewGauge(consensusBlockOpts)
 
 	registerOpts := prometheus.CounterOpts{
 		Name:      "indexed_registers",
@@ -80,13 +88,14 @@ func NewMetricsWriter(write *index.Writer) *MetricsWriter {
 	seal := promauto.NewCounter(sealOpts)
 
 	w := MetricsWriter{
-		write:       write,
-		block:       block,
-		register:    register,
-		collection:  collection,
-		transaction: transaction,
-		event:       event,
-		seal:        seal,
+		write:          write,
+		block:          block,
+		consensusBlock: consensusBlock,
+		register:       register,
+		collection:     collection,
+		transaction:    transaction,
+		event:          event,
+		seal:           seal,
 	}
 
 	return &w
@@ -94,6 +103,7 @@ func NewMetricsWriter(write *index.Writer) *MetricsWriter {
 
 func (w *MetricsWriter) Header(height uint64, header *flow.Header) error {
 	w.block.Inc()
+	w.consensusBlock.Set(float64(height))
 	return w.write.Header(height, header)
 }
 
