@@ -6,6 +6,7 @@ managed:
     default: github.com/onflow/archive/api/archive
     except:
       - buf.build/googleapis/googleapis
+      - buf.build/srikrsna/protoc-gen-gotag
 
 plugins:
   # renovate: datasource=github-releases depName=protocolbuffers/protobuf-go
