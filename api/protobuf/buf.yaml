@@ -1,6 +1,7 @@
 version: v1
 deps:
   - buf.build/googleapis/googleapis
+  - buf.build/srikrsna/protoc-gen-gotag
 lint:
   use:
     - DEFAULT
