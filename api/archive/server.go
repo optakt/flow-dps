@@ -36,6 +36,7 @@ type Server struct {
 	codec    archive.Codec
 	cfg      Config
 	validate *validator.Validate
+	UnimplementedAPIServer
 }
 
 // NewServer creates a new server, using the provided index reader as a backend

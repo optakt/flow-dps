@@ -22,7 +22,6 @@ require (
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/pflag v1.0.5
-	github.com/srikrsna/protoc-gen-gotag v0.6.1
 	github.com/stretchr/testify v1.8.0
 	github.com/ziflex/lecho/v2 v2.5.1
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
@@ -33,6 +32,7 @@ require (
 require (
 	github.com/onflow/flow-go/crypto v0.24.4
 	github.com/optakt/flow-dps-rosetta v1.0.0
+	github.com/srikrsna/protoc-gen-gotag v0.6.2
 	go.opentelemetry.io/otel v1.11.1
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.8.0
 	go.opentelemetry.io/otel/sdk v1.8.0
