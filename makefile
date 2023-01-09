@@ -21,7 +21,7 @@ export CONTAINER_REGISTRY := gcr.io/flow-container-registry
 
 .PHONY: generate
 generate:
-	go generate $(ALL_PACKAGES)
+	cd api/protobuf && buf generate .
 
 .PHONY: unittest
 unittest:
