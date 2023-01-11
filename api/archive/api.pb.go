@@ -78,7 +78,7 @@ type GetFirstResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty" validate:"required"`
 }
 
 func (x *GetFirstResponse) Reset() {
@@ -210,7 +210,7 @@ type GetHeightForBlockRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockID []byte `protobuf:"bytes,1,opt,name=blockID,proto3" json:"blockID,omitempty"`
+	BlockID []byte `protobuf:"bytes,1,opt,name=blockID,proto3" json:"blockID,omitempty" validate:"required,len=32"`
 }
 
 func (x *GetHeightForBlockRequest) Reset() {
@@ -312,7 +312,7 @@ type GetCommitRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty" validate:"required"`
 }
 
 func (x *GetCommitRequest) Reset() {
@@ -414,7 +414,7 @@ type GetHeaderRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty" validate:"required"`
 }
 
 func (x *GetHeaderRequest) Reset() {
@@ -516,7 +516,7 @@ type GetEventsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Height uint64   `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Height uint64   `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty" validate:"required"`
 	Types  []string `protobuf:"bytes,2,rep,name=types,proto3" json:"types,omitempty"`
 }
 
@@ -634,8 +634,8 @@ type GetRegisterValuesRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Height uint64   `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
-	Paths  [][]byte `protobuf:"bytes,2,rep,name=paths,proto3" json:"paths,omitempty"`
+	Height uint64   `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty" validate:"required"`
+	Paths  [][]byte `protobuf:"bytes,2,rep,name=paths,proto3" json:"paths,omitempty" validate:"required,dive,len=32"`
 }
 
 func (x *GetRegisterValuesRequest) Reset() {
@@ -752,7 +752,7 @@ type GetCollectionRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	CollectionID []byte `protobuf:"bytes,1,opt,name=collectionID,proto3" json:"collectionID,omitempty"`
+	CollectionID []byte `protobuf:"bytes,1,opt,name=collectionID,proto3" json:"collectionID,omitempty" validate:"required,len=32"`
 }
 
 func (x *GetCollectionRequest) Reset() {
@@ -854,7 +854,7 @@ type ListCollectionsForHeightRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty" validate:"required"`
 }
 
 func (x *ListCollectionsForHeightRequest) Reset() {
@@ -956,7 +956,7 @@ type GetGuaranteeRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	CollectionID []byte `protobuf:"bytes,1,opt,name=collectionID,proto3" json:"collectionID,omitempty"`
+	CollectionID []byte `protobuf:"bytes,1,opt,name=collectionID,proto3" json:"collectionID,omitempty" validate:"required,len=32"`
 }
 
 func (x *GetGuaranteeRequest) Reset() {
@@ -1058,7 +1058,7 @@ type GetTransactionRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TransactionID []byte `protobuf:"bytes,1,opt,name=transactionID,proto3" json:"transactionID,omitempty"`
+	TransactionID []byte `protobuf:"bytes,1,opt,name=transactionID,proto3" json:"transactionID,omitempty" validate:"required,len=32"`
 }
 
 func (x *GetTransactionRequest) Reset() {
@@ -1160,7 +1160,7 @@ type GetHeightForTransactionRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TransactionID []byte `protobuf:"bytes,1,opt,name=transactionID,proto3" json:"transactionID,omitempty"`
+	TransactionID []byte `protobuf:"bytes,1,opt,name=transactionID,proto3" json:"transactionID,omitempty" validate:"required,len=32"`
 }
 
 func (x *GetHeightForTransactionRequest) Reset() {
@@ -1262,7 +1262,7 @@ type ListTransactionsForHeightRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty" validate:"required"`
 }
 
 func (x *ListTransactionsForHeightRequest) Reset() {
@@ -1364,7 +1364,7 @@ type GetResultRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TransactionID []byte `protobuf:"bytes,1,opt,name=transactionID,proto3" json:"transactionID,omitempty"`
+	TransactionID []byte `protobuf:"bytes,1,opt,name=transactionID,proto3" json:"transactionID,omitempty" validate:"required,len=32"`
 }
 
 func (x *GetResultRequest) Reset() {
@@ -1466,7 +1466,7 @@ type GetSealRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SealID []byte `protobuf:"bytes,1,opt,name=sealID,proto3" json:"sealID,omitempty"`
+	SealID []byte `protobuf:"bytes,1,opt,name=sealID,proto3" json:"sealID,omitempty" validate:"required,len=32"`
 }
 
 func (x *GetSealRequest) Reset() {
@@ -1568,7 +1568,7 @@ type ListSealsForHeightRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Height uint64 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty" validate:"required"`
 }
 
 func (x *ListSealsForHeightRequest) Reset() {

@@ -59,7 +59,7 @@ If you want to make changes to the GRPC API, the following dependencies are requ
 * [`protoc`](https://grpc.io/docs/protoc-installation/) version `3.17.3`
 * `go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26`
 * `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1`
-* `go install github.com/srikrsna/protoc-gen-gotag@v0.6.1`
+* `go install github.com/srikrsna/protoc-gen-gotag@v0.6.2`
 
 Once they are installed, you can run `go generate ./...` from the root of this repository to update the generated protobuf files.
 
