@@ -20,8 +20,7 @@ export CONTAINER_REGISTRY := gcr.io/flow-container-registry
 #############################################################################################################
 
 .PHONY: generate
-generate:
-	go generate $(ALL_PACKAGES)
+generate: buf-generate generate-tags
 
 .PHONY: unittest
 unittest:
@@ -37,6 +36,14 @@ integ-test:
 
 .PHONY: test
 test: unittest integ-test
+
+.PHONY: generate-tags
+generate-tags:
+	cd api/protobuf && protoc -I . -I ../archive -I $(GOPATH)/pkg/mod/github.com/srikrsna/protoc-gen-gotag@v0.6.2 --gotag_out=outdir="../archive":../archive --gotag_opt=paths=source_relative ./api.proto
+
+.PHONY: buf-generate
+buf-generate:
+	cd api/protobuf && buf generate .
 
 # Docker Utilities! Do not delete these targets
 #############################################################################################################
