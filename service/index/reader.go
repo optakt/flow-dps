@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"golang.org/x/sync/errgroup"
 
 	"github.com/dgraph-io/badger/v2"
@@ -35,6 +37,7 @@ const ConcurrentPathReadLimit int = 128
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
 type Reader struct {
+	log zerolog.Logger
 	db  *badger.DB
 	lib archive.ReadLibrary
 }
@@ -42,9 +45,10 @@ type Reader struct {
 // NewReader creates a new index reader, using the given database as the
 // underlying state repository. It is recommended to provide a read-only Badger
 // database.
-func NewReader(db *badger.DB, lib archive.ReadLibrary) *Reader {
+func NewReader(log zerolog.Logger, db *badger.DB, lib archive.ReadLibrary) *Reader {
 
 	r := Reader{
+		log: log.With().Str("component", "index_reader").Logger(),
 		db:  db,
 		lib: lib,
 	}

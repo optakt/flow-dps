@@ -83,7 +83,7 @@ func run() int {
 	defer db.Close()
 
 	// Check if the database is empty.
-	index := index.NewReader(db, storage.New(zbor.NewCodec()))
+	index := index.NewReader(log, db, storage.New(zbor.NewCodec()))
 	_, err = index.First()
 	if err == nil {
 		log.Error().Msg("database directory already contains index database")
