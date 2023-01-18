@@ -136,7 +136,7 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 	err = g.Wait()
 
 	// Temporary log line to compare execution times of individual GetRegisterValues calls
-	fmt.Printf("index reader values processing time: %s\n", time.Since(t))
+	r.log.Info().Dur("duration", time.Since(t)).Int("paths", len(paths)).Uint64("height", height).Msg("index reader values fetched from db")
 
 	return values, err
 }
