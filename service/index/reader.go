@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -92,6 +93,7 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
 func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+	t := time.Now()
 
 	first, err := r.First()
 	if err != nil {
@@ -120,6 +122,7 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 				if err != nil {
 					return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
 				}
+
 				values[i] = payload.Value()
 				return nil
 			})
@@ -127,6 +130,10 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 		})
 	}
 	err = g.Wait()
+
+	// Temporary log line to compare execution times of individual GetRegisterValues calls
+	fmt.Printf("index reader values processing time: %s\n", time.Since(t))
+
 	return values, err
 }
 
