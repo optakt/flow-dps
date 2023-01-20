@@ -18,6 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/rs/zerolog"
 
 	"golang.org/x/sync/errgroup"
 
@@ -34,6 +37,7 @@ const ConcurrentPathReadLimit int = 128
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
 type Reader struct {
+	log zerolog.Logger
 	db  *badger.DB
 	lib archive.ReadLibrary
 }
@@ -41,9 +45,10 @@ type Reader struct {
 // NewReader creates a new index reader, using the given database as the
 // underlying state repository. It is recommended to provide a read-only Badger
 // database.
-func NewReader(db *badger.DB, lib archive.ReadLibrary) *Reader {
+func NewReader(log zerolog.Logger, db *badger.DB, lib archive.ReadLibrary) *Reader {
 
 	r := Reader{
+		log: log.With().Str("component", "index_reader").Logger(),
 		db:  db,
 		lib: lib,
 	}
@@ -92,6 +97,7 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
 func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+	t := time.Now()
 
 	first, err := r.First()
 	if err != nil {
@@ -120,6 +126,7 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 				if err != nil {
 					return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
 				}
+
 				values[i] = payload.Value()
 				return nil
 			})
@@ -127,6 +134,10 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 		})
 	}
 	err = g.Wait()
+
+	// Temporary log line to compare execution times of individual GetRegisterValues calls
+	r.log.Info().Dur("duration", time.Since(t)).Int("paths", len(paths)).Uint64("height", height).Msg("index reader values fetched from db")
+
 	return values, err
 }
 

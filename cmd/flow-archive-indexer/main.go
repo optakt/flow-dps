@@ -116,7 +116,7 @@ func run() int {
 	storage := storage.New(codec)
 
 	// Check if index already exists.
-	read := index.NewReader(indexDB, storage)
+	read := index.NewReader(log, indexDB, storage)
 	first, err := read.First()
 	empty := errors.Is(err, badger.ErrKeyNotFound)
 	if err != nil && !empty {

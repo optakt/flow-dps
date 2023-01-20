@@ -16,12 +16,13 @@ package main
 
 import (
 	"errors"
-	"github.com/onflow/flow-archive/service/metrics"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/onflow/flow-archive/service/metrics"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
@@ -105,7 +106,7 @@ func run() int {
 			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
 		),
 	)
-	index := index.NewReader(db, storage)
+	index := index.NewReader(log, db, storage)
 	var server *api.Server
 	if flagTracing {
 		tracer, err := metrics.NewTracer(log, "archive")

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -328,7 +329,9 @@ func setupIndex(t *testing.T) (*index.Reader, *index.Writer, *badger.DB) {
 
 	lib := storage.New(codec)
 
-	reader := index.NewReader(db, lib)
+	log := zerolog.Nop()
+
+	reader := index.NewReader(log, db, lib)
 	writer := index.NewWriter(db, lib, index.WithConcurrentTransactions(4))
 
 	return reader, writer, db

@@ -159,7 +159,7 @@ func run() int {
 	// shutting down.
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
-	read := index.NewReader(indexDB, storage)
+	read := index.NewReader(log, indexDB, storage)
 	first, err := read.First()
 	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 		log.Error().Err(err).Msg("could not get first height from index reader")
