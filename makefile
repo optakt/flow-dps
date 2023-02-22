@@ -5,7 +5,6 @@ VERSION := $(shell git describe --tags --abbrev=2 --match "v*")
 SHORT_COMMIT := $(shell git rev-parse --short HEAD)
 
 # Image tag: if image tag is not set, set it with version (or short commit if empty)
-IMAGE_TAG := v0.29.6
 
 ifeq (${IMAGE_TAG},)
 IMAGE_TAG := ${VERSION}
