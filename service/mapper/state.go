@@ -18,16 +18,14 @@ import (
 	"math"
 
 	"github.com/onflow/flow-go/ledger"
-	//"github.com/onflow/flow-go/model/flow"
 )
 
 // State is the state machine's state.
 type State struct {
-	forest Forest
-	status Status
-	height uint64
-	//last      flow.StateCommitment
-	//next      flow.StateCommitment
+	forest    Forest
+	status    Status
+	height    uint64
+	updates   []*ledger.TrieUpdate
 	registers map[ledger.Path]*ledger.Payload
 	done      chan struct{}
 }
@@ -36,11 +34,9 @@ type State struct {
 func EmptyState(forest Forest) *State {
 
 	s := State{
-		forest: forest,
-		status: StatusInitialize,
-		height: math.MaxUint64,
-		//last:      flow.DummyStateCommitment,
-		//next:      flow.DummyStateCommitment,
+		forest:    forest,
+		status:    StatusInitialize,
+		height:    math.MaxUint64,
 		registers: make(map[ledger.Path]*ledger.Payload),
 		done:      make(chan struct{}),
 	}

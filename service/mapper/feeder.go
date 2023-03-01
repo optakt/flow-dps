@@ -19,7 +19,7 @@ import (
 )
 
 // Feeder represents something that can be consumed to get trie updates
-// in chronological order.
+// in block-height order.
 type Feeder interface {
-	Update() (*ledger.TrieUpdate, error)
+	Updates() ([]*ledger.TrieUpdate, error)
 }

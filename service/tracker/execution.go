@@ -104,16 +104,14 @@ func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Ex
 	return &e, nil
 }
 
-// Update provides the next trie update from the stream of block records. Trie
-// updates are returned sequentially without regard for the boundary between
-// blocks.
-func (e *Execution) Update() (*ledger.TrieUpdate, error) {
+// Updates provides all trie updates in the execution record of the next block in the queue
+func (e *Execution) Updates() ([]*ledger.TrieUpdate, error) {
 
 	// If we have updates available in the queue, let's get the oldest one and
 	// feed it to the indexer.
 	if e.queue.Len() != 0 {
 		update := e.queue.PopBack()
-		return update.(*ledger.TrieUpdate), nil
+		return update.([]*ledger.TrieUpdate), nil
 	}
 
 	// We should then also index the block data by block ID, so we can provide
@@ -126,7 +124,7 @@ func (e *Execution) Update() (*ledger.TrieUpdate, error) {
 	// This is a recursive function call. It allows us to skip past blocks which
 	// don't contain trie updates. It will stop recursing once a block has
 	// trie updates or when no more blocks are available from the streamer.
-	return e.Update()
+	return e.Updates()
 }
 
 // Record returns the block record for the given block ID, if it is available.
@@ -175,17 +173,8 @@ func (e *Execution) processNext() error {
 	// Dump the block execution record into our cache and push all trie updates
 	// into our update queue.
 	e.records[blockID] = record
-	for _, update := range record.TrieUpdates {
 
-		// The Flow execution node includes `nil` updates in the slice, instead
-		// of empty updates. We could fix this here, but we don't have the root
-		// hash to apply against, so we just skip.
-		if update == nil {
-			continue
-		}
-
-		e.queue.PushFront(update)
-	}
+	e.queue.PushFront(record.TrieUpdates)
 
 	e.log.Debug().
 		Hex("block", blockID[:]).
