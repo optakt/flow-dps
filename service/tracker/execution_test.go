@@ -29,7 +29,7 @@ import (
 
 func TestExecution_Update(t *testing.T) {
 	record := mocks.GenericRecord()
-	update := mocks.GenericTrieUpdate(5)
+	update := record.TrieUpdates
 
 	t.Run("nominal case with nothing in queue", func(t *testing.T) {
 		t.Parallel()
@@ -41,10 +41,10 @@ func TestExecution_Update(t *testing.T) {
 
 		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
-		got, err := exec.Update()
+		got, err := exec.Updates()
 
 		require.NoError(t, err)
-		assert.Equal(t, record.TrieUpdates[0], got)
+		assert.Equal(t, record.TrieUpdates, got)
 	})
 
 	t.Run("nominal case with queue already filled", func(t *testing.T) {
@@ -65,7 +65,7 @@ func TestExecution_Update(t *testing.T) {
 			tracker.WithStreamer(streamer),
 		)
 
-		got, err := exec.Update()
+		got, err := exec.Updates()
 
 		require.NoError(t, err)
 		assert.Equal(t, update, got)
@@ -81,7 +81,7 @@ func TestExecution_Update(t *testing.T) {
 
 		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
-		_, err := exec.Update()
+		_, err := exec.Updates()
 
 		assert.Error(t, err)
 	})
@@ -101,12 +101,12 @@ func TestExecution_Update(t *testing.T) {
 		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
 		// The first call loads our "small block" with only one trie update and consumes it.
-		_, err := exec.Update()
+		_, err := exec.Updates()
 
 		assert.NoError(t, err)
 
 		// The next call loads the same block, realizes something is wrong and returns an error.
-		_, err = exec.Update()
+		_, err = exec.Updates()
 
 		assert.Error(t, err)
 	})

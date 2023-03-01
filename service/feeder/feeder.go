@@ -38,8 +38,8 @@ func FromWAL(reader WALReader) *Feeder {
 	return &f
 }
 
-// Update returns the next trie update.
-func (f *Feeder) Updates() (*ledger.TrieUpdate, error) {
+// Updates returns all updates in wal.
+func (f *Feeder) Updates() ([]*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip

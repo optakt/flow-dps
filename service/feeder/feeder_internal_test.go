@@ -74,7 +74,7 @@ func TestFeeder_Update(t *testing.T) {
 			reader: reader,
 		}
 
-		got, err := feeder.Update()
+		got, err := feeder.Updates()
 
 		require.NoError(t, err)
 		assert.Equal(t, update, got)
@@ -95,7 +95,7 @@ func TestFeeder_Update(t *testing.T) {
 			reader: reader,
 		}
 
-		_, err := feeder.Update()
+		_, err := feeder.Updates()
 
 		assert.Error(t, err)
 	})
@@ -112,7 +112,7 @@ func TestFeeder_Update(t *testing.T) {
 			reader: reader,
 		}
 
-		_, err := feeder.Update()
+		_, err := feeder.Updates()
 
 		require.Error(t, err)
 		assert.Equal(t, archive.ErrUnavailable, err)
@@ -130,7 +130,7 @@ func TestFeeder_Update(t *testing.T) {
 			reader: reader,
 		}
 
-		_, err := feeder.Update()
+		_, err := feeder.Updates()
 
 		assert.Error(t, err)
 	})

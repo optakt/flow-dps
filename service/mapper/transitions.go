@@ -83,6 +83,22 @@ func (t *Transitions) InitializeMapper(s *State) error {
 	return nil
 }
 
+// writeRegisterValuesFromTrie is a helper function for BootstrapState
+// to collect the initial register values from the bootstrapped Trie, as the TrieUpdates for the root block is empty.
+func (t *Transitions) writeRegisterValuesFromTrie(s *State, tree *trie.MTrie, paths []ledger.Path) {
+	// collect register values
+	for _, path := range paths {
+		_, ok := s.registers[path]
+		if ok {
+			continue
+		}
+		payloads := tree.UnsafeRead([]ledger.Path{path})
+		s.registers[path] = payloads[0]
+	}
+	// delete the Trie!
+	s.forest.Reset(flow.DummyStateCommitment)
+}
+
 // BootstrapState bootstraps the state by loading the checkpoint if there is one
 // and initializing the elements subsequently used by the FSM.
 func (t *Transitions) BootstrapState(s *State) error {
@@ -122,6 +138,9 @@ func (t *Transitions) BootstrapState(s *State) error {
 	second := tree.RootHash()
 	t.log.Info().Uint64("height", s.height).Hex("commit", second[:]).Int("registers", len(paths)).Msg("added checkpoint tree to forest")
 
+	// collect register values from bootstrap
+	t.writeRegisterValuesFromTrie(s, tree, paths)
+
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
 	// forwarded the state to this height, so we go straight to the chain data
@@ -160,29 +179,8 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 		return fmt.Errorf("could not get last height: %w", err)
 	}
 
-	// When resuming, the loader injected into the mapper rebuilds the trie from
-	// the paths and payloads stored in the index database.
-	tree, err := t.load.Trie()
-	if err != nil {
-		return fmt.Errorf("could not restore index trie: %w", err)
-	}
-
-	// After loading the trie, we should do a sanity check on its hash against
-	// the commit we indexed for it.
-	hash := flow.StateCommitment(tree.RootHash())
-	commit, err := t.read.Commit(last)
-	if err != nil {
-		return fmt.Errorf("could not get last commit: %w", err)
-	}
-	if hash != commit {
-		return fmt.Errorf("restored trie hash does not match last commit (hash: %x, commit: %x)", hash, commit)
-	}
-
-	s.forest.Save(tree, nil, flow.DummyStateCommitment)
-
-	// Lastly, we just need to point to the next height. The chain indexing will
-	// then proceed with the first non-indexed block and forward the state
-	// commitments accordingly.
+	// We just need to point to the next height. The chain indexing will
+	// then proceed with the first non-indexed block and index values
 	s.height = last + 1
 
 	// At this point, we should be able to start indexing the chain data for
@@ -315,7 +313,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	// grab updates and move on to next state
 	updates, err := t.feed.Updates()
 	if err != nil {
-
+		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
 	}
 	s.updates = updates
 	log.Info().Uint64("height", s.height).Msg("Collected Trie Updates to be mapped")
@@ -326,7 +324,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 // CollectRegisters reads the payloads for the next block to be indexed from the state's forest, unless payload
 // indexing is disabled.
 func (t *Transitions) CollectRegisters(s *State) error {
-	log := t.log.With().Uint64("height", s.height).Hex("commit", s.next[:]).Logger()
+	log := t.log.With().Uint64("height", s.height).Logger()
 	if s.status != StatusCollect {
 		return fmt.Errorf("invalid status for collecting registers (%s)", s.status)
 	}
@@ -338,11 +336,12 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		s.status = StatusForward
 		return nil
 	}
-	// map register values to paths
-	for i, update := range s.updates {
-
-		// map register values
-		s.registers[]
+	// collect to de-duped paths/payload combinations
+	for _, update := range s.updates {
+		paths, payloads := pathsPayloads(update)
+		for i := range paths {
+			s.registers[paths[i]] = &payloads[i]
+		}
 	}
 
 	log.Info().Int("registers", len(s.registers)).Msg("collected all registers for finalized block")
