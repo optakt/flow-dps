@@ -38,6 +38,7 @@ func EmptyState(forest Forest) *State {
 		status:    StatusInitialize,
 		height:    math.MaxUint64,
 		registers: make(map[ledger.Path]*ledger.Payload),
+		updates:   make([]*ledger.TrieUpdate, 1),
 		done:      make(chan struct{}),
 	}
 

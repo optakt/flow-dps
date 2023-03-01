@@ -44,18 +44,15 @@ func (f *Feeder) Updates() ([]*ledger.TrieUpdate, error) {
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip
 	// them until we find a trie update.
-	for {
+	updates := make([]*ledger.TrieUpdate, 1000)
+	for next := f.reader.Next(); next; next = f.reader.Next() {
 
 		// This part reads the next entry from the WAL, makes sure we didn't
 		// encounter an error when reading or decoding and ensures that it's a
 		// trie update.
-		next := f.reader.Next()
 		err := f.reader.Err()
-		if !next && err != nil {
+		if err != nil {
 			return nil, fmt.Errorf("could not read next record: %w", err)
-		}
-		if !next {
-			return nil, archive.ErrUnavailable
 		}
 		record := f.reader.Record()
 		operation, _, update, err := wal.Decode(record)
@@ -81,7 +78,10 @@ func (f *Feeder) Updates() ([]*ledger.TrieUpdate, error) {
 		// However, we need to make sure that all slices are copied, because the
 		// decode function will reuse the underlying slices later.
 		update = clone(update)
-
-		return update, nil
+		updates = append(updates, update)
 	}
+	if len(updates) == 0 {
+		return nil, archive.ErrUnavailable
+	}
+	return updates, nil
 }

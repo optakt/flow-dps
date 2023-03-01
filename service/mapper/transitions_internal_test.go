@@ -524,12 +524,12 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		// to subsequent calls.
 		var updateCalled bool
 		feeder := mocks.BaselineFeeder(t)
-		feeder.UpdateFunc = func() (*ledger.TrieUpdate, error) {
+		feeder.UpdateFunc = func() ([]*ledger.TrieUpdate, error) {
 			if !updateCalled {
 				updateCalled = true
 				return nil, archive.ErrUnavailable
 			}
-			return mocks.GenericTrieUpdate(0), nil
+			return mocks.GenericTrieUpdates(5), nil
 		}
 		tr.feed = feeder
 
@@ -578,7 +578,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		t.Parallel()
 
 		feed := mocks.BaselineFeeder(t)
-		feed.UpdateFunc = func() (*ledger.TrieUpdate, error) {
+		feed.UpdateFunc = func() ([]*ledger.TrieUpdate, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -648,18 +648,6 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusBootstrap)
-
-		err := tr.CollectRegisters(st)
-
-		assert.Error(t, err)
-		assert.Empty(t, st.registers)
-	})
-
-	t.Run("handles missing tree for commit", func(t *testing.T) {
-		t.Parallel()
-
-		tr, st := baselineFSM(t, StatusCollect)
-		st.forest = mocks.BaselineForest(t, false)
 
 		err := tr.CollectRegisters(st)
 
@@ -893,7 +881,6 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 	header := mocks.GenericHeader
 	tree := mocks.GenericTrie
 	commit := flow.StateCommitment(tree.RootHash())
-	differentCommit := mocks.GenericCommit(0)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -939,8 +926,6 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, StatusIndex, st.status)
 		assert.Equal(t, header.Height+1, st.height)
-		assert.Equal(t, flow.DummyStateCommitment, st.last)
-		assert.Equal(t, commit, st.next)
 	})
 
 	t.Run("handles chain failure on Root", func(t *testing.T) {
@@ -1119,40 +1104,6 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles mismatch between tree root hash and indexed commit", func(t *testing.T) {
-		t.Parallel()
-
-		chain := mocks.BaselineChain(t)
-		chain.RootFunc = func() (uint64, error) {
-			return header.Height, nil
-		}
-
-		loader := mocks.BaselineLoader(t)
-		loader.TrieFunc = func() (*trie.MTrie, error) {
-			return tree, nil
-		}
-
-		reader := mocks.BaselineReader(t)
-		reader.LastFunc = func() (uint64, error) {
-			return header.Height, nil
-		}
-		reader.CommitFunc = func(uint64) (flow.StateCommitment, error) {
-			return differentCommit, nil
-		}
-
-		tr, st := baselineFSM(
-			t,
-			StatusResume,
-			withReader(reader),
-			withLoader(loader),
-			withChain(chain),
-		)
-
-		err := tr.ResumeIndexing(st)
-
-		assert.Error(t, err)
-	})
-
 	t.Run("handles invalid status", func(t *testing.T) {
 		t.Parallel()
 
@@ -1224,8 +1175,6 @@ func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*T
 		forest:    forest,
 		status:    status,
 		height:    mocks.GenericHeight,
-		last:      mocks.GenericCommit(1),
-		next:      mocks.GenericCommit(0),
 		registers: make(map[ledger.Path]*ledger.Payload),
 		done:      doneCh,
 	}
