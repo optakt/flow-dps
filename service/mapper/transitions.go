@@ -100,9 +100,6 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// The chain indexing will forward last to next and next to current height,
 	// which will be the one for the checkpoint.
 	first := flow.StateCommitment(empty.RootHash())
-	s.last = flow.DummyStateCommitment
-	s.next = first
-
 	t.log.Info().Hex("commit", first[:]).Msg("added empty tree to forest")
 
 	// Then, we can load the root height and apply it to the state. That
@@ -181,11 +178,6 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 		return fmt.Errorf("restored trie hash does not match last commit (hash: %x, commit: %x)", hash, commit)
 	}
 
-	// At this point, we can store the restored trie in our forest, as the trie
-	// for the last finalized block. We do not need to care about the parent
-	// state commitment or the paths, as they should not be used.
-	s.last = flow.DummyStateCommitment
-	s.next = commit
 	s.forest.Save(tree, nil, flow.DummyStateCommitment)
 
 	// Lastly, we just need to point to the next height. The chain indexing will
@@ -305,18 +297,6 @@ func (t *Transitions) IndexChain(s *State) error {
 		return fmt.Errorf("could not index events: %w", err)
 	}
 
-	// At this point, we need to forward the `last` state commitment to
-	// `next`, so we know what the state commitment was at the last finalized
-	// block we processed. This will allow us to know when to stop when
-	// walking back through the forest to collect trie updates.
-	s.last = s.next
-
-	// Last but not least, we need to update `next` to point to the commit we
-	// have just retrieved for the new block height. This is the sentinel that
-	// tells us when we have collected enough trie updates for the forest to
-	// have reached the next finalized block.
-	s.next = commit
-
 	log.Info().Msg("indexed blockchain data for finalized block")
 
 	// After indexing the blockchain data, we can go back to updating the state
@@ -333,7 +313,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return fmt.Errorf("invalid status for updating tree (%s)", s.status)
 	}
 
-	log := t.log.With().Uint64("height", s.height).Hex("last", s.last[:]).Hex("next", s.next[:]).Logger()
+	log := t.log.With().Uint64("height", s.height).Logger()
 
 	// If the forest contains a tree for the commit of the next finalized block,
 	// we have reached our goal, and we can go to the next step in order to
@@ -405,14 +385,6 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	// changed payloads at each step.
 	commit := s.next
 	for commit != s.last {
-
-		// We do this check only once, so that we don't need to do it for
-		// each item we retrieve. The tree should always be there, but we
-		// should check just to not fail silently.
-		ok := s.forest.Has(commit)
-		if !ok {
-			return fmt.Errorf("could not load tree (commit: %x)", commit)
-		}
 
 		// For each path, we retrieve the payload and add it to the registers we
 		// will index later. If we already have a payload for the path, it is
@@ -512,7 +484,6 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	// Now that we have indexed the heights, we can forward to the next height,
 	// and reset the forest to free up memory.
 	s.height++
-	s.forest.Reset(s.next)
 
 	t.log.Info().Uint64("height", s.height).Msg("forwarded finalized block to next height")
 
