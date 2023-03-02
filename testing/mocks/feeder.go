@@ -21,14 +21,14 @@ import (
 )
 
 type Feeder struct {
-	UpdateFunc func() ([]*ledger.TrieUpdate, error)
+	UpdatesFunc func() ([]*ledger.TrieUpdate, error)
 }
 
 func BaselineFeeder(t *testing.T) *Feeder {
 	t.Helper()
 
 	f := Feeder{
-		UpdateFunc: func() ([]*ledger.TrieUpdate, error) {
+		UpdatesFunc: func() ([]*ledger.TrieUpdate, error) {
 			return GenericTrieUpdates(4), nil
 		},
 	}
@@ -37,5 +37,5 @@ func BaselineFeeder(t *testing.T) *Feeder {
 }
 
 func (f *Feeder) Updates() ([]*ledger.TrieUpdate, error) {
-	return f.UpdateFunc()
+	return f.UpdatesFunc()
 }

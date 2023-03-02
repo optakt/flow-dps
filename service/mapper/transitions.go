@@ -312,6 +312,11 @@ func (t *Transitions) UpdateTree(s *State) error {
 	log := t.log.With().Uint64("height", s.height).Logger()
 	// grab updates and move on to next state
 	updates, err := t.feed.Updates()
+	if errors.Is(err, archive.ErrUnavailable) {
+		time.Sleep(t.cfg.WaitInterval)
+		log.Debug().Msg("waiting for next trie update")
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
 	}
