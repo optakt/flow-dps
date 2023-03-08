@@ -650,6 +650,47 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		assert.Error(t, err)
 		assert.Empty(t, st.registers)
 	})
+
+	t.Run("no updates, empty trie", func(t *testing.T) {
+		t.Parallel()
+
+		forest := mocks.EmptyForest(t, true)
+
+		tr, st := baselineFSM(t, StatusCollect)
+		st.forest = forest
+		st.updates = make([]*ledger.TrieUpdate, 0)
+
+		err := tr.CollectRegisters(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusMap, st.status)
+		assert.Len(t, st.updates, 0)
+	})
+
+	t.Run("bootstrap case", func(t *testing.T) {
+		t.Parallel()
+
+		forest := mocks.EmptyForest(t, true)
+
+		tr, st := baselineFSM(t, StatusCollect)
+		st.forest = forest
+		updates := mocks.GenericTrieUpdates(5)
+		// write ahead to registers, just like in the bootstrap
+		for _, update := range updates {
+			for i, path := range update.Paths {
+				st.registers[path] = update.Payloads[i]
+			}
+		}
+
+		// should be idempotent
+		err := tr.CollectRegisters(st)
+
+		require.NoError(t, err)
+		assert.Equal(t, StatusMap, st.status)
+		for _, wantPath := range mocks.GenericLedgerPaths(5) {
+			assert.Contains(t, st.registers, wantPath)
+		}
+	})
 }
 
 func TestTransitions_MapRegisters(t *testing.T) {

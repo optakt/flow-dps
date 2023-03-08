@@ -95,6 +95,10 @@ func (t *Transitions) writeRegisterValuesFromTrie(s *State, tree *trie.MTrie, pa
 		payloads := tree.UnsafeRead([]ledger.Path{path})
 		s.registers[path] = payloads[0]
 	}
+	t.log.Info().Uint64("height", s.height).
+		Int("registers", len(s.registers)).
+		Msg("added registers from bootstrap")
+
 	// delete the Trie!
 	s.forest.Reset(flow.DummyStateCommitment)
 }
@@ -321,7 +325,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
 	}
 	s.updates = updates
-	log.Info().Uint64("height", s.height).Msg("Collected Trie Updates to be mapped")
+	log.Info().Msg("Collected Trie Updates to be mapped")
 	s.status = StatusCollect
 	return nil
 }
@@ -342,9 +346,12 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		return nil
 	}
 	// collect paths/payload combinations
+	log.Info().Int("registers", len(s.updates)).Msg("collecting registers to state")
 	for _, update := range s.updates {
-		for i, path := range update.Paths {
-			s.registers[path] = update.Payloads[i]
+		if update.Paths != nil {
+			for i, path := range update.Paths {
+				s.registers[path] = update.Payloads[i]
+			}
 		}
 	}
 
