@@ -98,9 +98,6 @@ func (t *Transitions) writeRegisterValuesFromTrie(s *State, tree *trie.MTrie, pa
 	t.log.Info().Uint64("height", s.height).
 		Int("registers", len(s.registers)).
 		Msg("added registers from bootstrap")
-
-	// delete the Trie!
-	s.forest.Reset(flow.DummyStateCommitment)
 }
 
 // BootstrapState bootstraps the state by loading the checkpoint if there is one
@@ -144,6 +141,9 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 	// collect register values from bootstrap
 	t.writeRegisterValuesFromTrie(s, tree, paths)
+
+	// delete the Trie!
+	s.forest.Reset(flow.DummyStateCommitment)
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
@@ -325,7 +325,10 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
 	}
 	s.updates = updates
-	log.Info().Msg("Collected Trie Updates to be mapped")
+	log.Info().Int("updates", len(s.updates)).Msg("Collected Trie Updates to be mapped")
+
+	// Now that we have collected TrieUpdates for the current block,
+	// we can create a path -> payload mapping that we will use to index to the local storage
 	s.status = StatusCollect
 	return nil
 }
@@ -348,6 +351,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	// collect paths/payload combinations
 	log.Info().Int("registers", len(s.updates)).Msg("collecting registers to state")
 	for _, update := range s.updates {
+		// guard for bootstrap case where t.updates.AllUpdates() returns nil as the queue is empty
 		if update != nil {
 			for i, path := range update.Paths {
 				s.registers[path] = update.Payloads[i]

@@ -38,14 +38,14 @@ func FromWAL(reader WALReader) *WalParser {
 	return &f
 }
 
-// AllUpdates returns all updates in wal.
+// AllUpdates returns all updates for the entire spork in wal.
 func (f *WalParser) AllUpdates() ([]*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip
 	// them until we find a trie update.
 	updates := make([]*ledger.TrieUpdate, 0)
-	for next := f.reader.Next(); next; next = f.reader.Next() {
+	for f.reader.Next() {
 
 		// This part reads the next entry from the WAL, makes sure we didn't
 		// encounter an error when reading or decoding and ensures that it's a

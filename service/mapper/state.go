@@ -20,7 +20,7 @@ import (
 	"github.com/onflow/flow-go/ledger"
 )
 
-// State is the state machine's state.
+// State is the state machine's state for the current block being processed
 type State struct {
 	forest    Forest
 	status    Status

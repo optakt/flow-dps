@@ -545,7 +545,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, StatusCollect, st.status)
-		assert.Equal(t, st.updates, trieUpdates)
+		assert.Equal(t, trieUpdates, st.updates)
 	})
 
 	t.Run("nominal case with match", func(t *testing.T) {
@@ -651,7 +651,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 		assert.Empty(t, st.registers)
 	})
 
-	t.Run("no updates, empty trie", func(t *testing.T) {
+	t.Run("no updates empty trie", func(t *testing.T) {
 		t.Parallel()
 
 		forest := mocks.EmptyForest(t, true)
