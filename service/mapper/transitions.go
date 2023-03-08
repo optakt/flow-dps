@@ -24,8 +24,8 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-	"github.com/onflow/flow-go/model/flow"
 
+	"github.com/onflow/flow-archive/ledgertmp"
 	"github.com/onflow/flow-archive/models/archive"
 )
 
@@ -107,43 +107,36 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("invalid status for bootstrapping state (%s)", s.status)
 	}
 
-	// We always need at least one step in our forest, which is used as the
-	// stopping point when indexing the payloads since the last finalized
-	// block. We thus introduce an empty tree, with no paths and an
-	// irrelevant previous commit.
-	empty := trie.NewEmptyMTrie()
-	s.forest.Save(empty, nil, flow.DummyStateCommitment)
-
-	// The chain indexing will forward last to next and next to current height,
-	// which will be the one for the checkpoint.
-	first := flow.StateCommitment(empty.RootHash())
-	t.log.Info().Hex("commit", first[:]).Msg("added empty tree to forest")
-
-	// Then, we can load the root height and apply it to the state. That
-	// will allow us to load the root blockchain data in the next step.
-	height, err := t.chain.Root()
+	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
+	// enough, which also help limit the amount of memory being used for holding unprocessed
+	// leaf nodes.
+	resultCh, err := ledgertmp.ReadLeafNodeFromCheckpoint(s.checkpointDir, s.checkpointFileName, &t.log)
 	if err != nil {
-		return fmt.Errorf("could not get root height: %w", err)
+		return fmt.Errorf("could not read leaf node from checkpoint file: %v/%v: %w", s.checkpointDir, s.checkpointFileName, err)
 	}
-	s.height = height
 
-	// When bootstrapping, the loader injected into the mapper loads the root
-	// checkpoint.
-	tree, err := t.load.Trie()
-	if err != nil {
-		return fmt.Errorf("could not load root trie: %w", err)
+	batch := make([]*ledgertmp.LeafNode, 0, 1000)
+	for result := range resultCh {
+		if result.Err != nil {
+			return result.Err
+		}
+
+		batch = append(batch, result.LeafNode)
+		if len(batch) > 1000 {
+			err := t.write.Registers(s.height, batch)
+			if err != nil {
+				return err
+			}
+			batch = make([]*ledgertmp.LeafNode, 0, 1000)
+		}
 	}
-	paths := allPaths(tree)
-	s.forest.Save(tree, paths, first)
 
-	second := tree.RootHash()
-	t.log.Info().Uint64("height", s.height).Hex("commit", second[:]).Int("registers", len(paths)).Msg("added checkpoint tree to forest")
-
-	// collect register values from bootstrap
-	t.writeRegisterValuesFromTrie(s, tree, paths)
-
-	// delete the Trie!
-	s.forest.Reset(flow.DummyStateCommitment)
+	if len(batch) > 0 {
+		err := t.write.Registers(s.height, batch)
+		if err != nil {
+			return err
+		}
+	}
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just

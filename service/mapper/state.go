@@ -22,12 +22,14 @@ import (
 
 // State is the state machine's state for the current block being processed
 type State struct {
-	forest    Forest
-	status    Status
-	height    uint64
-	updates   []*ledger.TrieUpdate
-	registers map[ledger.Path]*ledger.Payload
-	done      chan struct{}
+	forest             Forest
+	status             Status
+	height             uint64 // the height to be indexed
+	updates            []*ledger.TrieUpdate
+	registers          map[ledger.Path]*ledger.Payload
+	checkpointDir      string // the checkpoint file for bootstrapping
+	checkpointFileName string // TODO: read these values from flagCheckpoint
+	done               chan struct{}
 }
 
 // EmptyState returns a new empty state that uses the given forest.
