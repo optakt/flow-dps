@@ -41,7 +41,7 @@ func TestExecution_Update(t *testing.T) {
 
 		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
-		got, err := exec.Updates()
+		got, err := exec.AllUpdates()
 
 		require.NoError(t, err)
 		assert.Equal(t, record.TrieUpdates, got)
@@ -65,7 +65,7 @@ func TestExecution_Update(t *testing.T) {
 			tracker.WithStreamer(streamer),
 		)
 
-		got, err := exec.Updates()
+		got, err := exec.AllUpdates()
 
 		require.NoError(t, err)
 		assert.Equal(t, update, got)
@@ -81,7 +81,7 @@ func TestExecution_Update(t *testing.T) {
 
 		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
-		_, err := exec.Updates()
+		_, err := exec.AllUpdates()
 
 		assert.Error(t, err)
 	})
@@ -101,12 +101,12 @@ func TestExecution_Update(t *testing.T) {
 		exec := tracker.BaselineExecution(t, tracker.WithStreamer(streamer))
 
 		// The first call loads our "small block" with only one trie update and consumes it.
-		_, err := exec.Updates()
+		_, err := exec.AllUpdates()
 
 		assert.NoError(t, err)
 
 		// The next call loads the same block, realizes something is wrong and returns an error.
-		_, err = exec.Updates()
+		_, err = exec.AllUpdates()
 
 		assert.Error(t, err)
 	})

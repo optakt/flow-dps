@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package feeder
+package triereader
 
 import (
 	"encoding/binary"
@@ -70,11 +70,11 @@ func TestFeeder_Update(t *testing.T) {
 			return []byte(builder.String())
 		}
 
-		feeder := &Feeder{
+		updates := &WalParser{
 			reader: reader,
 		}
 
-		got, err := feeder.Updates()
+		got, err := updates.AllUpdates()
 
 		require.NoError(t, err)
 		assert.Equal(t, update, got)
@@ -91,11 +91,11 @@ func TestFeeder_Update(t *testing.T) {
 			return mocks.GenericError
 		}
 
-		feeder := &Feeder{
+		updates := &WalParser{
 			reader: reader,
 		}
 
-		_, err := feeder.Updates()
+		_, err := updates.AllUpdates()
 
 		assert.Error(t, err)
 	})
@@ -108,11 +108,11 @@ func TestFeeder_Update(t *testing.T) {
 			return false
 		}
 
-		feeder := &Feeder{
+		updates := &WalParser{
 			reader: reader,
 		}
 
-		_, err := feeder.Updates()
+		_, err := updates.AllUpdates()
 
 		require.Error(t, err)
 		assert.Equal(t, archive.ErrUnavailable, err)
@@ -126,11 +126,11 @@ func TestFeeder_Update(t *testing.T) {
 			return mocks.GenericBytes
 		}
 
-		feeder := &Feeder{
+		updates := &WalParser{
 			reader: reader,
 		}
 
-		_, err := feeder.Updates()
+		_, err := updates.AllUpdates()
 
 		assert.Error(t, err)
 	})

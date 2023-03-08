@@ -104,8 +104,8 @@ func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Ex
 	return &e, nil
 }
 
-// Updates provides all trie updates in the execution record of the next block in the queue
-func (e *Execution) Updates() ([]*ledger.TrieUpdate, error) {
+// AllUpdates provides all trie updates in the execution record of the next block in the queue
+func (e *Execution) AllUpdates() ([]*ledger.TrieUpdate, error) {
 
 	// If we have updates available in the queue, let's get the oldest one and
 	// feed it to the indexer.
@@ -124,7 +124,7 @@ func (e *Execution) Updates() ([]*ledger.TrieUpdate, error) {
 	// This is a recursive function call. It allows us to skip past blocks which
 	// don't contain trie updates. It will stop recursing once a block has
 	// trie updates or when no more blocks are available from the streamer.
-	return e.Updates()
+	return e.AllUpdates()
 }
 
 // Record returns the block record for the given block ID, if it is available.

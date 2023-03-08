@@ -12,14 +12,11 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package triereader
 
-import (
-	"github.com/onflow/flow-go/ledger"
-)
-
-// Feeder represents something that can be consumed to get trie updates
-// in block-height order.
-type Feeder interface {
-	Updates() ([]*ledger.TrieUpdate, error)
+// WALReader represents something that can read write-ahead log records.
+type WALReader interface {
+	Next() bool
+	Err() error
+	Record() []byte
 }

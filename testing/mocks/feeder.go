@@ -20,14 +20,14 @@ import (
 	"github.com/onflow/flow-go/ledger"
 )
 
-type Feeder struct {
+type Parser struct {
 	UpdatesFunc func() ([]*ledger.TrieUpdate, error)
 }
 
-func BaselineFeeder(t *testing.T) *Feeder {
+func BaselineParser(t *testing.T) *Parser {
 	t.Helper()
 
-	f := Feeder{
+	f := Parser{
 		UpdatesFunc: func() ([]*ledger.TrieUpdate, error) {
 			return GenericTrieUpdates(4), nil
 		},
@@ -36,6 +36,6 @@ func BaselineFeeder(t *testing.T) *Feeder {
 	return &f
 }
 
-func (f *Feeder) Updates() ([]*ledger.TrieUpdate, error) {
+func (f *Parser) AllUpdates() ([]*ledger.TrieUpdate, error) {
 	return f.UpdatesFunc()
 }

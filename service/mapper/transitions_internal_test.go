@@ -33,15 +33,15 @@ func TestNewTransitions(t *testing.T) {
 	t.Run("nominal case, without options", func(t *testing.T) {
 		load := mocks.BaselineLoader(t)
 		chain := mocks.BaselineChain(t)
-		feed := mocks.BaselineFeeder(t)
+		updates := mocks.BaselineParser(t)
 		read := mocks.BaselineReader(t)
 		write := mocks.BaselineWriter(t)
 
-		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, read, write)
+		tr := NewTransitions(mocks.NoopLogger, load, chain, updates, read, write)
 
 		assert.NotNil(t, tr)
 		assert.Equal(t, chain, tr.chain)
-		assert.Equal(t, feed, tr.feed)
+		assert.Equal(t, updates, tr.updates)
 		assert.Equal(t, write, tr.write)
 		assert.NotNil(t, tr.once)
 		assert.Equal(t, DefaultConfig, tr.cfg)
@@ -50,18 +50,18 @@ func TestNewTransitions(t *testing.T) {
 	t.Run("nominal case, with option", func(t *testing.T) {
 		load := mocks.BaselineLoader(t)
 		chain := mocks.BaselineChain(t)
-		feed := mocks.BaselineFeeder(t)
+		updates := mocks.BaselineParser(t)
 		read := mocks.BaselineReader(t)
 		write := mocks.BaselineWriter(t)
 
 		skip := true
-		tr := NewTransitions(mocks.NoopLogger, load, chain, feed, read, write,
+		tr := NewTransitions(mocks.NoopLogger, load, chain, updates, read, write,
 			WithSkipRegisters(skip),
 		)
 
 		assert.NotNil(t, tr)
 		assert.Equal(t, chain, tr.chain)
-		assert.Equal(t, feed, tr.feed)
+		assert.Equal(t, updates, tr.updates)
 		assert.Equal(t, write, tr.write)
 		assert.NotNil(t, tr.once)
 
@@ -489,17 +489,17 @@ func TestTransitions_IndexChain(t *testing.T) {
 }
 
 func TestTransitions_UpdateTree(t *testing.T) {
-	updates := mocks.GenericTrieUpdates(5)
+	trieUpdates := mocks.GenericTrieUpdates(5)
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusUpdate)
 		tu := mocks.GenericTrieUpdates(3)
-		feeder := mocks.BaselineFeeder(t)
-		feeder.UpdatesFunc = func() ([]*ledger.TrieUpdate, error) {
+		updates := mocks.BaselineParser(t)
+		updates.UpdatesFunc = func() ([]*ledger.TrieUpdate, error) {
 			return tu, nil
 		}
-		tr.feed = feeder
+		tr.updates = updates
 
 		err := tr.UpdateTree(st)
 
@@ -514,18 +514,18 @@ func TestTransitions_UpdateTree(t *testing.T) {
 
 		tr, st := baselineFSM(t, StatusUpdate)
 
-		// Set up the mock feeder to return an unavailable error on the first call and return successfully
+		// Set up the mock triereader to return an unavailable error on the first call and return successfully
 		// to subsequent calls.
 		var updateCalled bool
-		feeder := mocks.BaselineFeeder(t)
-		feeder.UpdatesFunc = func() ([]*ledger.TrieUpdate, error) {
+		updates := mocks.BaselineParser(t)
+		updates.UpdatesFunc = func() ([]*ledger.TrieUpdate, error) {
 			if !updateCalled {
 				updateCalled = true
 				return nil, archive.ErrUnavailable
 			}
-			return updates, nil
+			return trieUpdates, nil
 		}
-		tr.feed = feeder
+		tr.updates = updates
 
 		forest := mocks.BaselineForest(t, true)
 		forest.HasFunc = func(flow.StateCommitment) bool {
@@ -545,7 +545,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, StatusCollect, st.status)
-		assert.Equal(t, st.updates, updates)
+		assert.Equal(t, st.updates, trieUpdates)
 	})
 
 	t.Run("nominal case with match", func(t *testing.T) {
@@ -569,17 +569,17 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles feeder update failure", func(t *testing.T) {
+	t.Run("handles triereader update failure", func(t *testing.T) {
 		t.Parallel()
 
-		feed := mocks.BaselineFeeder(t)
-		feed.UpdatesFunc = func() ([]*ledger.TrieUpdate, error) {
+		updates := mocks.BaselineParser(t)
+		updates.UpdatesFunc = func() ([]*ledger.TrieUpdate, error) {
 			return nil, mocks.GenericError
 		}
 
 		tr, st := baselineFSM(t, StatusUpdate)
 		st.forest = mocks.BaselineForest(t, false)
-		tr.feed = feed
+		tr.updates = updates
 
 		err := tr.UpdateTree(st)
 
@@ -1072,7 +1072,7 @@ func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*T
 
 	load := mocks.BaselineLoader(t)
 	chain := mocks.BaselineChain(t)
-	feeder := mocks.BaselineFeeder(t)
+	updates := mocks.BaselineParser(t)
 	read := mocks.BaselineReader(t)
 	write := mocks.BaselineWriter(t)
 	forest := mocks.BaselineForest(t, true)
@@ -1086,13 +1086,13 @@ func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*T
 			SkipRegisters:  false,
 			WaitInterval:   0,
 		},
-		log:   mocks.NoopLogger,
-		load:  load,
-		chain: chain,
-		feed:  feeder,
-		read:  read,
-		write: write,
-		once:  once,
+		log:     mocks.NoopLogger,
+		load:    load,
+		chain:   chain,
+		updates: updates,
+		read:    read,
+		write:   write,
+		once:    once,
 	}
 
 	for _, opt := range opts {

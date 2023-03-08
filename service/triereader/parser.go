@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package feeder
+package triereader
 
 import (
 	"fmt"
@@ -23,28 +23,28 @@ import (
 	"github.com/onflow/flow-archive/models/archive"
 )
 
-// Feeder is a component that retrieves trie updates and feeds them to its consumer.
-type Feeder struct {
+// WalParser is a component that retrieves trie updates and feeds them to its consumer.
+type WalParser struct {
 	reader WALReader
 }
 
-// FromWAL creates a trie update feeder that sources state deltas from a WAL reader.
-func FromWAL(reader WALReader) *Feeder {
+// FromWAL creates a trie update triereader that sources state deltas from a WAL reader.
+func FromWAL(reader WALReader) *WalParser {
 
-	f := Feeder{
+	f := WalParser{
 		reader: reader,
 	}
 
 	return &f
 }
 
-// Updates returns all updates in wal.
-func (f *Feeder) Updates() ([]*ledger.TrieUpdate, error) {
+// AllUpdates returns all updates in wal.
+func (f *WalParser) AllUpdates() ([]*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip
 	// them until we find a trie update.
-	updates := make([]*ledger.TrieUpdate, 1000)
+	updates := make([]*ledger.TrieUpdate, 0)
 	for next := f.reader.Next(); next; next = f.reader.Next() {
 
 		// This part reads the next entry from the WAL, makes sure we didn't

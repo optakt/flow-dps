@@ -12,11 +12,13 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package feeder
+package mapper
 
-// WALReader represents something that can read write-ahead log records.
-type WALReader interface {
-	Next() bool
-	Err() error
-	Record() []byte
+import (
+	"github.com/onflow/flow-go/ledger"
+)
+
+// TrieUpdates represents something to get trie updates in block-height order.
+type TrieUpdates interface {
+	AllUpdates() ([]*ledger.TrieUpdate, error)
 }

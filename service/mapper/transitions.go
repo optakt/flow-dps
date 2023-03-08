@@ -35,18 +35,18 @@ type TransitionFunc func(*State) error
 
 // Transitions is what applies transitions to the state of an FSM.
 type Transitions struct {
-	cfg   Config
-	log   zerolog.Logger
-	load  Loader
-	chain archive.Chain
-	feed  Feeder
-	read  archive.Reader
-	write archive.Writer
-	once  *sync.Once
+	cfg     Config
+	log     zerolog.Logger
+	load    Loader
+	chain   archive.Chain
+	updates TrieUpdates
+	read    archive.Reader
+	write   archive.Writer
+	once    *sync.Once
 }
 
 // NewTransitions returns a Transitions component using the given dependencies and using the given options
-func NewTransitions(log zerolog.Logger, load Loader, chain archive.Chain, feed Feeder, read archive.Reader, write archive.Writer, options ...Option) *Transitions {
+func NewTransitions(log zerolog.Logger, load Loader, chain archive.Chain, updates TrieUpdates, read archive.Reader, write archive.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -54,14 +54,14 @@ func NewTransitions(log zerolog.Logger, load Loader, chain archive.Chain, feed F
 	}
 
 	t := Transitions{
-		log:   log.With().Str("component", "mapper_transitions").Logger(),
-		cfg:   cfg,
-		load:  load,
-		chain: chain,
-		feed:  feed,
-		read:  read,
-		write: write,
-		once:  &sync.Once{},
+		log:     log.With().Str("component", "mapper_transitions").Logger(),
+		cfg:     cfg,
+		load:    load,
+		chain:   chain,
+		updates: updates,
+		read:    read,
+		write:   write,
+		once:    &sync.Once{},
 	}
 
 	return &t
@@ -311,7 +311,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 	}
 	log := t.log.With().Uint64("height", s.height).Logger()
 	// grab updates and move on to next state
-	updates, err := t.feed.Updates()
+	updates, err := t.updates.AllUpdates()
 	if errors.Is(err, archive.ErrUnavailable) {
 		time.Sleep(t.cfg.WaitInterval)
 		log.Debug().Msg("waiting for next trie update")
@@ -341,11 +341,10 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		s.status = StatusForward
 		return nil
 	}
-	// collect to de-duped paths/payload combinations
+	// collect paths/payload combinations
 	for _, update := range s.updates {
-		paths, payloads := pathsPayloads(update)
-		for i := range paths {
-			s.registers[paths[i]] = &payloads[i]
+		for i, path := range update.Paths {
+			s.registers[path] = update.Payloads[i]
 		}
 	}
 
