@@ -69,6 +69,7 @@ type WriteLibrary interface {
 	SaveCommit(height uint64, commit flow.StateCommitment) func(*badger.Txn) error
 	SaveHeader(height uint64, header *flow.Header) func(*badger.Txn) error
 	SaveEvents(height uint64, typ flow.EventType, events []flow.Event) func(*badger.Txn) error
+	// TODO: SavePayload will be replaced by BatchSavePayload
 	SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error
 	BatchSavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*storage.Batch) error
 

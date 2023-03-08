@@ -107,6 +107,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("invalid status for bootstrapping state (%s)", s.status)
 	}
 
+	log := t.log.With().Uint64("height", s.height).Logger()
+
 	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
 	// enough, which also help limit the amount of memory being used for holding unprocessed
 	// leaf nodes.
@@ -143,6 +145,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 			return err
 		}
 	}
+
+	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
