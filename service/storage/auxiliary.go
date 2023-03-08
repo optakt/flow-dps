@@ -87,3 +87,19 @@ func (l *Library) save(key []byte, value interface{}) func(*badger.Txn) error {
 		return nil
 	}
 }
+
+func (l *Library) batchWrite(key []byte, value interface{}) func(*badger.WriteBatch) error {
+	return func(writeBatch *badger.WriteBatch) error {
+		val, err := l.codec.Marshal(value)
+		if err != nil {
+			return fmt.Errorf("could not encode value (key: %x): %w", key, err)
+		}
+
+		err = writeBatch.Set(key, val)
+		if err != nil {
+			return fmt.Errorf("could not set value (key: %x): %w", key, err)
+		}
+
+		return nil
+	}
+}
