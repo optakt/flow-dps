@@ -348,7 +348,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	// collect paths/payload combinations
 	log.Info().Int("registers", len(s.updates)).Msg("collecting registers to state")
 	for _, update := range s.updates {
-		if update.Paths != nil {
+		if update != nil {
 			for i, path := range update.Paths {
 				s.registers[path] = update.Payloads[i]
 			}
