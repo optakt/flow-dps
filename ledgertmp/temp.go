@@ -137,10 +137,10 @@ func readLeafNodes(dir string, fileName string, result chan<- *ReadingResult, lo
 	// if a file is missing
 	err = allPartFileExist(dir, fileName, len(subtrieChecksums))
 	if err != nil {
-		return nil, fmt.Errorf("fail to check all checkpoint part file exist: %w", err)
+		return fmt.Errorf("fail to check all checkpoint part file exist: %w", err)
 	}
 
-	err := readNodesFromSubTriesConcurrently(dir, fileName, subtrieChecksums, &lg)
+	err = readNodesFromSubTriesConcurrently(dir, fileName, result, subtrieChecksums, &lg)
 	if err != nil {
 		return fmt.Errorf("could not read subtrie from dir: %w", err)
 	}
@@ -168,7 +168,6 @@ func readNodesFromSubTriesConcurrently(
 	}
 	close(jobs)
 
-	// TODO: make nWorker configable
 	nWorker := numOfSubTries // use as many worker as the jobs to read subtries concurrently
 	for i := 0; i < nWorker; i++ {
 		go func() {
@@ -241,6 +240,7 @@ func readLeafNodeFromCheckpointSubtrie(dir string, fileName string, index int, c
 
 	leafNodes = make([]*LeafNode, 0, nodesCount+1)
 	for i := uint64(1); i <= nodesCount; i++ {
+		// TODO fix this
 		node, err := flattener.ReadNode(reader, scratch, func(nodeIndex uint64) (*node.Node, error) {
 			if nodeIndex >= i {
 				return nil, fmt.Errorf("sequence of serialized nodes does not satisfy Descendents-First-Relationship")
