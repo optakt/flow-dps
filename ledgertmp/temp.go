@@ -158,11 +158,9 @@ func readNodesFromSubTriesConcurrently(
 
 	numOfSubTries := len(subtrieChecksums)
 	jobs := make(chan jobReadSubtrieLeaf, numOfSubTries)
-	resultChs := make([]<-chan *ReadingResult, numOfSubTries)
 
 	// push all jobs into the channel
 	for i, checksum := range subtrieChecksums {
-		resultCh := make(chan *ReadingResult)
 		jobs <- jobReadSubtrieLeaf{
 			Index:    i,
 			Checksum: checksum,
