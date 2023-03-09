@@ -22,11 +22,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-
 	"github.com/onflow/flow-archive/ledgertmp"
 	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-go/ledger"
 )
 
 // TransitionFunc is a function that is applied onto the state machine's
@@ -81,23 +79,6 @@ func (t *Transitions) InitializeMapper(s *State) error {
 
 	s.status = StatusResume
 	return nil
-}
-
-// writeRegisterValuesFromTrie is a helper function for BootstrapState
-// to collect the initial register values from the bootstrapped Trie, as the TrieUpdates for the root block is empty.
-func (t *Transitions) writeRegisterValuesFromTrie(s *State, tree *trie.MTrie, paths []ledger.Path) {
-	// collect register values
-	for _, path := range paths {
-		_, ok := s.registers[path]
-		if ok {
-			continue
-		}
-		payloads := tree.UnsafeRead([]ledger.Path{path})
-		s.registers[path] = payloads[0]
-	}
-	t.log.Info().Uint64("height", s.height).
-		Int("registers", len(s.registers)).
-		Msg("added registers from bootstrap")
 }
 
 // BootstrapState bootstraps the state by loading the checkpoint if there is one
