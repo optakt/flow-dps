@@ -19,8 +19,6 @@ import (
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
-
-	"github.com/onflow/flow-archive/models/archive"
 )
 
 // WalParser is a component that retrieves trie updates and feeds them to its consumer.
@@ -79,9 +77,6 @@ func (f *WalParser) AllUpdates() ([]*ledger.TrieUpdate, error) {
 		// decode function will reuse the underlying slices later.
 		update = clone(update)
 		updates = append(updates, update)
-	}
-	if len(updates) == 0 {
-		return nil, archive.ErrUnavailable
 	}
 	return updates, nil
 }
