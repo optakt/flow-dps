@@ -53,7 +53,8 @@ func ReadLeafNodeFromCheckpoint(dir string, fileName string, logger *zerolog.Log
 	resultChan := make(chan *ReadingResult)
 	err := readLeafNodes(dir, fileName, resultChan, logger)
 	if err != nil {
-		return nil, err
+		logger.Err(err).Msg("failed to read leaf nodes from checkpoint file")
+		return nil, fmt.Errorf("failed to read leaf nodes from checkpoint file: %w", err)
 	}
 	return resultChan, nil
 }
@@ -79,6 +80,11 @@ func readCheckpointHeader(filepath string, logger *zerolog.Logger) (
 
 	var bufReader io.Reader = bufio.NewReaderSize(closable, defaultBufioReadSize)
 	reader := wal.NewCRC32Reader(bufReader)
+	// read the magic bytes and check version
+	err = validateFileHeader(wal.MagicBytesCheckpointHeader, wal.VersionV6, reader)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// read the subtrie count
 	subtrieCount, err := readSubtrieCount(reader)
@@ -174,7 +180,7 @@ func readNodesFromSubTriesConcurrently(
 			for job := range jobs {
 				nodes, err := readLeafNodeFromCheckpointSubtrie(dir, fileName, job.Index, job.Checksum, logger)
 				for _, leafNode := range nodes {
-					// does this work just as well?
+					//TODO does this work just as well?
 					result <- &ReadingResult{
 						LeafNode: leafNode,
 						Err:      err,
