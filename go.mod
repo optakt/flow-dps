@@ -16,7 +16,6 @@ require (
 	github.com/klauspost/compress v1.15.10
 	github.com/labstack/echo/v4 v4.6.1
 	github.com/onflow/cadence v0.31.5
-	github.com/onflow/flow-go v0.29.17-0.20230310204528-e275f096c535
 	github.com/onflow/flow-go-sdk v0.31.3
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/tsdb v0.7.1
@@ -199,6 +198,7 @@ require (
 	github.com/onflow/flow-core-contracts/lib/go/contracts v0.11.2-0.20221216161720-c1b31d5a4722 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v0.11.2-0.20221216161720-c1b31d5a4722 // indirect
 	github.com/onflow/flow-ft/lib/go/contracts v0.5.0 // indirect
+	github.com/onflow/flow-go v0.29.17-0.20230310210355-db70bc2a0c62 // indirect
 	github.com/onflow/flow/protobuf/go/flow v0.3.2-0.20221202093946-932d1c70e288 // indirect
 	github.com/onflow/go-bitswap v0.0.0-20221017184039-808c5791a8a8 // indirect
 	github.com/onflow/sdks v0.4.4 // indirect
