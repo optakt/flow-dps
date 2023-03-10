@@ -20,6 +20,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -110,6 +111,11 @@ func (w *MetricsWriter) Header(height uint64, header *flow.Header) error {
 func (w *MetricsWriter) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
 	w.register.Add(float64(len(paths)))
 	return w.write.Payloads(height, paths, payloads)
+}
+
+func (w *MetricsWriter) Registers(height uint64, registers []*wal.LeafNode) error {
+	w.register.Add(float64(len(registers)))
+	return w.write.Registers(height, registers)
 }
 
 func (w *MetricsWriter) Collections(height uint64, collections []*flow.LightCollection) error {
