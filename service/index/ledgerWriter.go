@@ -9,7 +9,8 @@ import (
 
 // Registers writes the given registers in a batch to database
 func (w *Writer) Registers(height uint64, registers []*wal.LeafNode) error {
-	writeBatch := util.NewBatch(w.db)
+	batch := util.NewBatch(w.db)
+	writeBatch := batch.GetWriter()
 
 	for _, register := range registers {
 		op := w.lib.BatchSavePayload(height, register.Path, register.Payload)

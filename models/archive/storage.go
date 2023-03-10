@@ -17,7 +17,6 @@ package archive
 import (
 	"github.com/dgraph-io/badger/v2"
 
-	"github.com/onflow/flow-archive/util"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
@@ -71,7 +70,7 @@ type WriteLibrary interface {
 	SaveEvents(height uint64, typ flow.EventType, events []flow.Event) func(*badger.Txn) error
 	// TODO: SavePayload will be replaced by BatchSavePayload
 	SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error
-	BatchSavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*util.Batch) error
+	BatchSavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.WriteBatch) error
 
 	IndexTransactionsForHeight(height uint64, txIDs []flow.Identifier) func(*badger.Txn) error
 	IndexTransactionsForCollection(collID flow.Identifier, txIDs []flow.Identifier) func(*badger.Txn) error
