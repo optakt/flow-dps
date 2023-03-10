@@ -22,9 +22,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/onflow/flow-archive/ledgertmp"
 	"github.com/onflow/flow-archive/models/archive"
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
 // TransitionFunc is a function that is applied onto the state machine's
@@ -93,14 +93,14 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
 	// enough, which also help limit the amount of memory being used for holding unprocessed
 	// leaf nodes.
-	resultCh, err := ledgertmp.ReadLeafNodeFromCheckpoint(s.checkpointDir, s.checkpointFileName, &t.log)
+	resultCh, err := wal.ReadLeafNodeFromCheckpoint(s.checkpointDir, s.checkpointFileName, &t.log)
 	if err != nil {
 		return fmt.Errorf("could not read leaf node from checkpoint file: %v/%v: %w", s.checkpointDir, s.checkpointFileName, err)
 	}
 
 	batchSize := 1000
 
-	batch := make([]*ledgertmp.LeafNode, 0, batchSize)
+	batch := make([]*wal.LeafNode, 0, batchSize)
 	total := 0
 	for result := range resultCh {
 		if result.Err != nil {
@@ -116,7 +116,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 			if err != nil {
 				return err
 			}
-			batch = make([]*ledgertmp.LeafNode, 0, batchSize)
+			batch = make([]*wal.LeafNode, 0, batchSize)
 		}
 	}
 

@@ -3,12 +3,12 @@ package index
 import (
 	"fmt"
 
-	"github.com/onflow/flow-archive/ledgertmp"
 	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
 // Registers writes the given registers in a batch to database
-func (w *Writer) Registers(height uint64, registers []*ledgertmp.LeafNode) error {
+func (w *Writer) Registers(height uint64, registers []*wal.LeafNode) error {
 	writeBatch := storage.NewBatch(w.db)
 
 	for _, register := range registers {
