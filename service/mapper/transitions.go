@@ -88,6 +88,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("invalid status for bootstrapping state (%s)", s.status)
 	}
 
+	log := t.log.With().Uint64("height", s.height).Logger()
+
 	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
 	// enough, which also help limit the amount of memory being used for holding unprocessed
 	// leaf nodes.
@@ -96,19 +98,25 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("could not read leaf node from checkpoint file: %v/%v: %w", s.checkpointDir, s.checkpointFileName, err)
 	}
 
-	batch := make([]*ledgertmp.LeafNode, 0, 1000)
+	batchSize := 1000
+
+	batch := make([]*ledgertmp.LeafNode, 0, batchSize)
+	total := 0
 	for result := range resultCh {
 		if result.Err != nil {
-			return result.Err
+			return fmt.Errorf("fail to read leaf node: %w", result.Err)
 		}
 
+		total++
 		batch = append(batch, result.LeafNode)
-		if len(batch) > 1000 {
+
+		// save registers in batch, which could result better speed
+		if len(batch) >= batchSize {
 			err := t.write.Registers(s.height, batch)
 			if err != nil {
 				return err
 			}
-			batch = make([]*ledgertmp.LeafNode, 0, 1000)
+			batch = make([]*ledgertmp.LeafNode, 0, batchSize)
 		}
 	}
 
@@ -119,11 +127,19 @@ func (t *Transitions) BootstrapState(s *State) error {
 		}
 	}
 
+	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
+
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
 	// forwarded the state to this height, so we go straight to the chain data
 	// indexing.
 	s.status = StatusIndex
+
+	// we have imported all payloads, we can skip the StatusCollect and StatusMap
+	// status which is only needed after the bootstrap
+	// since t.updates.AllUpdates() returns nil for bootstrap case, we will do nothing
+	// in the StatusCollect and StatusMap status, which is equivilent to skipping
+
 	return nil
 }
 
