@@ -132,7 +132,6 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 	if s.status != StatusResume {
 		return fmt.Errorf("invalid status for resuming indexing (%s)", s.status)
 	}
-
 	// When resuming, we want to avoid overwriting the `first` height in the
 	// index with the height we are resuming from. Theoretically, all that would
 	// be needed would be to execute a no-op on `once`, which would subsequently
@@ -174,7 +173,7 @@ func (t *Transitions) IndexChain(s *State) error {
 	}
 
 	log := t.log.With().Uint64("height", s.height).Logger()
-
+	log.Info().Msg("indexing chain data")
 	// We try to retrieve the next header until it becomes available, which
 	// means all data coming from the protocol state is available after this
 	// point.
@@ -299,11 +298,12 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
 	}
 	s.updates = updates
-	log.Info().Int("updates", len(s.updates)).Msg("Collected Trie Updates to be mapped")
+	log.Info().Int("updates", len(s.updates)).Msg("collected trie updates to be mapped")
 
 	// Now that we have collected TrieUpdates for the current block,
 	// we can create a path -> payload mapping that we will use to index to the local storage
 	s.status = StatusCollect
+	log.Info().Str("status", s.status.String()).Msg("updateTree complete")
 	return nil
 }
 
@@ -314,6 +314,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	if s.status != StatusCollect {
 		return fmt.Errorf("invalid status for collecting registers (%s)", s.status)
 	}
+	log.Info().Str("status", s.status.String()).Msg("collecting registers")
 
 	// If indexing payloads is disabled, we can bypass collection and indexing
 	// of payloads and just go straight to forwarding the height to the next
@@ -338,6 +339,7 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	// At this point, we have collected all the payloads, so we go to the next
 	// step, where we will index them.
 	s.status = StatusMap
+	log.Info().Str("status", s.status.String()).Msg("indexing registers after collecting")
 	return nil
 }
 
@@ -348,12 +350,13 @@ func (t *Transitions) MapRegisters(s *State) error {
 	}
 
 	log := t.log.With().Uint64("height", s.height).Logger()
-
+	log.Info().Str("status", s.status.String()).Msg("beginning indexer")
 	// If there are no registers left to be indexed, we can go to the next step,
 	// which is about forwarding the height to the next finalized block.
 	if len(s.registers) == 0 {
 		log.Info().Msg("indexed all registers for finalized block")
 		s.status = StatusForward
+		log.Info().Str("status", s.status.String())
 		return nil
 	}
 
@@ -390,6 +393,8 @@ func (t *Transitions) ForwardHeight(s *State) error {
 		return fmt.Errorf("invalid status for forwarding height (%s)", s.status)
 	}
 
+	t.log.Info().Str("status", s.status.String()).Msg("forwarding height")
+
 	// After finishing the indexing of the payloads for a finalized block, or
 	// skipping it, we should document the last indexed height. On the first
 	// pass, we will also index the first indexed height here.
@@ -412,5 +417,6 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	// Once the height is forwarded, we can set the status so that we index
 	// the blockchain data next.
 	s.status = StatusIndex
+	t.log.Info().Str("status", s.status.String()).Msg("processing next block height")
 	return nil
 }
