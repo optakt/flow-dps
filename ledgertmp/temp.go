@@ -5,10 +5,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/flattener"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
 	"github.com/rs/zerolog/log"
-	"hash"
 	"io"
 	"os"
 	"path"
@@ -188,13 +188,13 @@ func readNodesFromSubTriesConcurrently(
 }
 
 func readLeafNodeFromCheckpointSubtrie(dir string, fileName string, index int, checksum uint32, logger *zerolog.Logger) (leafNodes []*LeafNode, errToReturn error) {
-	filepath, _, err := filePathSubTries(dir, fileName, index)
+	filePath, _, err := filePathSubTries(dir, fileName, index)
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.Open(filepath)
+	f, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("could not open file %v: %w", filepath, err)
+		return nil, fmt.Errorf("could not open file %v: %w", filePath, err)
 	}
 	defer func(file *os.File) {
 		err := file.Close()
@@ -239,23 +239,23 @@ func readLeafNodeFromCheckpointSubtrie(dir string, fileName string, index int, c
 	logging := logProgress(fmt.Sprintf("reading %v-th sub trie roots", index), int(nodesCount), logger)
 
 	leafNodes = make([]*LeafNode, 0, nodesCount+1)
+	nodes := make([]*node.Node, nodesCount+1)
 	for i := uint64(1); i <= nodesCount; i++ {
-		// TODO fix this
-		node, err := flattener.ReadNode(reader, scratch, func(nodeIndex uint64) (*node.Node, error) {
+		readNode, err := flattener.ReadNode(reader, scratch, func(nodeIndex uint64) (*node.Node, error) {
 			if nodeIndex >= i {
 				return nil, fmt.Errorf("sequence of serialized nodes does not satisfy Descendents-First-Relationship")
 			}
-			return node, nil
+			return nodes[i], nil
 		})
 		if err != nil {
-			return nil, fmt.Errorf("cannot read node %d: %w", i, err)
+			return nil, fmt.Errorf("cannot read readNode %d: %w", i, err)
 		}
-		if node.IsLeaf() {
+		if readNode.IsLeaf() {
 			leafNodes = append(leafNodes,
 				&LeafNode{
-					Hash:    node.Hash(),
-					Path:    node.Path(),
-					Payload: node.Payload(),
+					Hash:    readNode.Hash(),
+					Path:    *readNode.Path(),
+					Payload: readNode.Payload(),
 				})
 		}
 		logging(i)
