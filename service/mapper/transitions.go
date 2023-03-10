@@ -93,7 +93,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
 	// enough, which also help limit the amount of memory being used for holding unprocessed
 	// leaf nodes.
-	resultCh, err := wal.ReadLeafNodeFromCheckpoint(s.checkpointDir, s.checkpointFileName, &t.log)
+	resultCh, err := wal.OpenAndReadLeafNodesFromCheckpointV6(s.checkpointDir, s.checkpointFileName, &t.log)
 	if err != nil {
 		return fmt.Errorf("could not read leaf node from checkpoint file: %v/%v: %w", s.checkpointDir, s.checkpointFileName, err)
 	}
