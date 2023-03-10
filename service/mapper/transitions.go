@@ -90,6 +90,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 	log := t.log.With().Uint64("height", s.height).Logger()
 
+	log.Info().Msgf("bootstrap with checkpoint file %v/%v", s.checkpointDir, s.checkpointFileName)
+
 	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
 	// enough, which also help limit the amount of memory being used for holding unprocessed
 	// leaf nodes.
@@ -102,6 +104,9 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 	batch := make([]*wal.LeafNode, 0, batchSize)
 	total := 0
+
+	log.Info().Msgf("start processing leaf nodes with batchSize: %v", batchSize)
+
 	for result := range resultCh {
 		if result.Err != nil {
 			return fmt.Errorf("fail to read leaf node: %w", result.Err)
@@ -109,6 +114,11 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 		total++
 		batch = append(batch, result.LeafNode)
+
+		// print log to know leaf node are processed, and saved
+		if total == 1 || total == batchSize+1 {
+			log.Info().Msgf("processed %v num of leaf nodes", total)
+		}
 
 		// save registers in batch, which could result better speed
 		if len(batch) >= batchSize {
