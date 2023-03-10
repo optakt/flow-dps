@@ -3,16 +3,17 @@ package index
 import (
 	"fmt"
 
-	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/util"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
 // Registers writes the given registers in a batch to database
 func (w *Writer) Registers(height uint64, registers []*wal.LeafNode) error {
-	writeBatch := storage.NewBatch(w.db)
+	writeBatch := util.NewBatch(w.db)
 
 	for _, register := range registers {
-		err := w.lib.BatchSavePayload(height, register.Path, register.Payload)(writeBatch)
+		op := w.lib.BatchSavePayload(height, register.Path, register.Payload)
+		err := op(writeBatch)
 		if err != nil {
 			return fmt.Errorf("could not batch write registers to database at height %v: %w", height, err)
 		}
