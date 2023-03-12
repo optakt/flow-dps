@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -189,7 +190,12 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 	// indexing.
 	last, err := t.read.Last()
 	if err != nil {
-		return fmt.Errorf("could not get last height: %w", err)
+		// TODO: save root height as the last after bootstrapped
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			last = first
+		} else {
+			return fmt.Errorf("could not get last height: %w", err)
+		}
 	}
 
 	// We just need to point to the next height. The chain indexing will

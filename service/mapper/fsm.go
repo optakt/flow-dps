@@ -67,9 +67,9 @@ func (f *FSM) Run() error {
 			return fmt.Errorf("could not find transition for status (%d)", f.state.status)
 		}
 
-		lg := log.With().Uint64("height", f.state.height).Str("state", f.state.status.String()).Logger()
+		lg := log.With().Str("module", "FSM").Uint64("height", f.state.height).Str("state", f.state.status.String()).Logger()
 
-		lg.Info().Msgf("FSM start transition state")
+		lg.Info().Msgf("start transition state")
 
 		err := transition(f.state)
 		if errors.Is(err, archive.ErrFinished) {
