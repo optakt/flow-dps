@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/onflow/flow-archive/models/archive"
 	"github.com/onflow/flow-go/ledger"
@@ -88,6 +89,13 @@ func (t *Transitions) InitializeMapper(s *State) error {
 func (t *Transitions) BootstrapState(s *State) error {
 	if s.status != StatusBootstrap {
 		return fmt.Errorf("invalid status for bootstrapping state (%s)", s.status)
+	}
+
+	skipBoostrap := true
+	if skipBoostrap {
+		log.Info().Msgf("skip bootstrap")
+		s.status = StatusResume // StatusResume will save the height
+		return nil
 	}
 
 	log := t.log.With().Uint64("height", s.height).Logger()
