@@ -74,6 +74,8 @@ func (t *Transitions) InitializeMapper(s *State) error {
 
 	if t.cfg.BootstrapState {
 		s.status = StatusBootstrap
+
+		// TODO: set the height with chain.Root()
 		return nil
 	}
 
@@ -143,7 +145,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// block has been indexed yet. This is why we "pretend" that we just
 	// forwarded the state to this height, so we go straight to the chain data
 	// indexing.
-	s.status = StatusIndex
+	s.status = StatusResume // StatusResume will save the height
 
 	// we have imported all payloads, we can skip the StatusCollect and StatusMap
 	// status which is only needed after the bootstrap
