@@ -15,10 +15,13 @@
 package mapper
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
+
+	"go.uber.org/atomic"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
@@ -112,37 +115,76 @@ func (t *Transitions) BootstrapState(s *State) error {
 	}
 
 	batchSize := 1000
+	nBatch := atomic.NewInt32(0)
 
 	batch := make([]*wal.LeafNode, 0, batchSize)
 	total := 0
 
 	log.Info().Msgf("start processing leaf nodes with batchSize: %v", batchSize)
 
-	for result := range resultCh {
-		if result.Err != nil {
-			return fmt.Errorf("fail to read leaf node: %w", result.Err)
-		}
+	nWorker := 10
+	jobs := make(chan []*wal.LeafNode, nWorker)
 
-		total++
-		batch = append(batch, result.LeafNode)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		// print log to know leaf node are processed, and saved
-		if total == 1 || total == batchSize+1 {
-			log.Info().Msgf("processed %v num of leaf nodes", total)
-		}
-
-		// save registers in batch, which could result better speed
-		if len(batch) >= batchSize {
-			err := t.write.Registers(s.height, batch)
-			if err != nil {
-				return err
+	go func() {
+		for result := range resultCh {
+			if result.Err != nil {
+				cancel()
+				close(jobs)
+				return
 			}
-			batch = make([]*wal.LeafNode, 0, batchSize)
+
+			total++
+			batch = append(batch, result.LeafNode)
+
+			// save registers in batch, which could result better speed
+			if len(batch) >= batchSize {
+				nBatch.Inc()
+				jobs <- batch
+				batch = make([]*wal.LeafNode, 0, batchSize)
+			}
 		}
+
+		if len(batch) > 0 {
+			nBatch.Inc()
+			jobs <- batch
+		}
+		close(jobs)
+	}()
+
+	results := make(chan error)
+	for w := 0; w < nWorker; w++ {
+		go func() {
+			left := int32(1)
+			for batch := range jobs {
+				err := t.write.Registers(s.height, batch)
+				results <- err
+				if err != nil {
+					cancel()
+					return
+				}
+
+				left = nBatch.Dec()
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+			}
+
+			// no more jobs
+			// TODO: fix error handling
+			// only one worker will finish the last nBatch
+			if left == 0 {
+				log.Info().Msgf("finished processing all payloads")
+				close(results)
+			}
+		}()
 	}
 
-	if len(batch) > 0 {
-		err := t.write.Registers(s.height, batch)
+	for err := range results {
 		if err != nil {
 			return err
 		}
