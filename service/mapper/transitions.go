@@ -25,7 +25,6 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/onflow/flow-archive/models/archive"
 	"github.com/onflow/flow-go/ledger"
@@ -95,16 +94,34 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("invalid status for bootstrapping state (%s)", s.status)
 	}
 
-	skipBoostrap := true
-	if skipBoostrap {
-		log.Info().Msgf("skip bootstrap")
-		s.status = StatusResume // StatusResume will save the height
-		return nil
+	first, err := t.chain.Root()
+	if err != nil {
+		return fmt.Errorf("could not get root height: %w", err)
 	}
+	t.once.Do(func() { err = t.write.First(first) })
+	if err != nil {
+		return fmt.Errorf("could not write first: %w", err)
+	}
+
+	// We need to know what the last indexed height was at the point we stopped
+	// indexing.
+	last, err := t.read.Last()
+	if err != nil {
+		// TODO: save root height as the last after bootstrapped
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			last = first
+		} else {
+			return fmt.Errorf("could not get last height: %w", err)
+		}
+	}
+
+	// We just need to point to the next height. The chain indexing will
+	// then proceed with the first non-indexed block and index values
+	s.height = last + 1
 
 	log := t.log.With().Uint64("height", s.height).Logger()
 
-	log.Info().Msgf("bootstrap with checkpoint file %v/%v", s.checkpointDir, s.checkpointFileName)
+	log.Info().Msgf("bootstrap with checkpoint file %v%v", s.checkpointDir, s.checkpointFileName)
 
 	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
 	// enough, which also help limit the amount of memory being used for holding unprocessed
