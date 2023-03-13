@@ -703,7 +703,6 @@ func TestTransitions_MapRegisters(t *testing.T) {
 			mocks.GenericLedgerPath(0): mocks.GenericLedgerPayload(0),
 			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(1),
 			mocks.GenericLedgerPath(2): mocks.GenericLedgerPayload(2),
-			mocks.GenericLedgerPath(1): mocks.GenericLedgerPayload(3),
 			mocks.GenericLedgerPath(4): mocks.GenericLedgerPayload(4),
 			mocks.GenericLedgerPath(5): mocks.GenericLedgerPayload(5),
 		}
@@ -726,9 +725,9 @@ func TestTransitions_MapRegisters(t *testing.T) {
 
 		require.NoError(t, err)
 
-		// Should not be StateIndexed because registers map was not empty.
+		// Should be StatusForward because registers map was written
 		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusMap, st.status)
+		assert.Equal(t, StatusForward, st.status)
 	})
 
 	t.Run("nominal case no more registers left to write", func(t *testing.T) {
