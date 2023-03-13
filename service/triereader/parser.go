@@ -44,14 +44,6 @@ func (f *WalParser) AllUpdates() ([]*ledger.TrieUpdate, error) {
 	// them until we find a trie update.
 	updates := make([]*ledger.TrieUpdate, 0)
 	for f.reader.Next() {
-
-		// This part reads the next entry from the WAL, makes sure we didn't
-		// encounter an error when reading or decoding and ensures that it's a
-		// trie update.
-		err := f.reader.Err()
-		if err != nil {
-			return nil, fmt.Errorf("could not read next record: %w", err)
-		}
 		record := f.reader.Record()
 		operation, _, update, err := wal.Decode(record)
 		if err != nil {
@@ -77,6 +69,10 @@ func (f *WalParser) AllUpdates() ([]*ledger.TrieUpdate, error) {
 		// decode function will reuse the underlying slices later.
 		update = clone(update)
 		updates = append(updates, update)
+	}
+	err := f.reader.Err()
+	if err != nil {
+		return nil, fmt.Errorf("could not read next record: %w", err)
 	}
 	return updates, nil
 }
