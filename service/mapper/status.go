@@ -14,6 +14,8 @@
 
 package mapper
 
+import "fmt"
+
 // Status is a representation of the state machine's status.
 type Status uint8
 
@@ -33,6 +35,8 @@ const (
 // String implements the Stringer interface.
 func (s Status) String() string {
 	switch s {
+	case StatusInitialize:
+		return "initialize"
 	case StatusBootstrap:
 		return "bootstrap"
 	case StatusResume:
@@ -48,6 +52,6 @@ func (s Status) String() string {
 	case StatusForward:
 		return "forward"
 	default:
-		return "invalid"
+		return fmt.Sprintf("invalid status %d", s)
 	}
 }

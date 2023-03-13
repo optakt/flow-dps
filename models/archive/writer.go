@@ -16,6 +16,7 @@ package archive
 
 import (
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -30,6 +31,7 @@ type Writer interface {
 	Header(height uint64, header *flow.Header) error
 	Events(height uint64, events []flow.Event) error
 	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
+	Registers(height uint64, registers []*wal.LeafNode) error
 
 	Collections(height uint64, collections []*flow.LightCollection) error
 	Guarantees(height uint64, guarantees []*flow.CollectionGuarantee) error

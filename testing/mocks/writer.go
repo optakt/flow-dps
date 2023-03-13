@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -27,6 +28,7 @@ type Writer struct {
 	HeaderFunc       func(height uint64, header *flow.Header) error
 	CommitFunc       func(height uint64, commit flow.StateCommitment) error
 	PayloadsFunc     func(height uint64, paths []ledger.Path, value []*ledger.Payload) error
+	RegistersFunc    func(height uint64, registers []*wal.LeafNode) error
 	HeightFunc       func(blockID flow.Identifier, height uint64) error
 	CollectionsFunc  func(height uint64, collections []*flow.LightCollection) error
 	GuaranteesFunc   func(height uint64, guarantees []*flow.CollectionGuarantee) error
@@ -54,6 +56,9 @@ func BaselineWriter(t *testing.T) *Writer {
 			return nil
 		},
 		PayloadsFunc: func(height uint64, paths []ledger.Path, value []*ledger.Payload) error {
+			return nil
+		},
+		RegistersFunc: func(height uint64, registers []*wal.LeafNode) error {
 			return nil
 		},
 		HeightFunc: func(blockID flow.Identifier, height uint64) error {
@@ -103,6 +108,10 @@ func (w *Writer) Commit(height uint64, commit flow.StateCommitment) error {
 
 func (w *Writer) Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error {
 	return w.PayloadsFunc(height, paths, values)
+}
+
+func (w *Writer) Registers(height uint64, registers []*wal.LeafNode) error {
+	return w.RegistersFunc(height, registers)
 }
 
 func (w *Writer) Height(blockID flow.Identifier, height uint64) error {

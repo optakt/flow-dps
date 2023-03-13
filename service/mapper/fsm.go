@@ -20,6 +20,8 @@ import (
 	"sync"
 
 	"github.com/onflow/flow-archive/models/archive"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // FSM is a finite state machine which is used to map block data from multiple sources into
@@ -28,6 +30,7 @@ type FSM struct {
 	state       *State
 	transitions map[Status]TransitionFunc
 	wg          *sync.WaitGroup
+	log         zerolog.Logger
 }
 
 // NewFSM returns a new FSM using the given state and options.
@@ -64,13 +67,21 @@ func (f *FSM) Run() error {
 			return fmt.Errorf("could not find transition for status (%d)", f.state.status)
 		}
 
+		lg := log.With().Str("module", "FSM").Uint64("height", f.state.height).Str("state", f.state.status.String()).Logger()
+
+		lg.Info().Msgf("start transition state")
+
 		err := transition(f.state)
 		if errors.Is(err, archive.ErrFinished) {
+			lg.Info().Msgf("finished state transition")
 			return nil
 		}
 		if err != nil {
+			lg.Error().Err(err).Msgf("failed state transition")
 			return fmt.Errorf("could not apply transition to state: %w", err)
 		}
+
+		lg.Info().Msgf("successfully transit state")
 	}
 }
 
