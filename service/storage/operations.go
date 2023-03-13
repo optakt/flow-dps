@@ -63,6 +63,11 @@ func (l *Library) SavePayload(height uint64, path ledger.Path, payload *ledger.P
 	return l.save(EncodeKey(PrefixPayload, path, height), payload)
 }
 
+// BatchSavePayload is an operation that writes the height of a slice of paths and a slice of payloads.
+func (l *Library) BatchSavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.WriteBatch) error {
+	return l.batchWrite(EncodeKey(PrefixPayload, path, height), payload)
+}
+
 // SaveTransaction is an operation that writes the given transaction.
 func (l *Library) SaveTransaction(transaction *flow.TransactionBody) func(*badger.Txn) error {
 	return l.save(EncodeKey(PrefixTransaction, transaction.ID()), transaction)

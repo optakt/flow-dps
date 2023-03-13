@@ -15,18 +15,20 @@
 package mapper
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"go.uber.org/atomic"
+
+	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
-	"github.com/onflow/flow-go/model/flow"
-
 	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/complete/wal"
 )
 
 // TransitionFunc is a function that is applied onto the state machine's
@@ -76,28 +78,13 @@ func (t *Transitions) InitializeMapper(s *State) error {
 
 	if t.cfg.BootstrapState {
 		s.status = StatusBootstrap
+
+		// TODO: set the height with chain.Root()
 		return nil
 	}
 
 	s.status = StatusResume
 	return nil
-}
-
-// writeRegisterValuesFromTrie is a helper function for BootstrapState
-// to collect the initial register values from the bootstrapped Trie, as the TrieUpdates for the root block is empty.
-func (t *Transitions) writeRegisterValuesFromTrie(s *State, tree *trie.MTrie, paths []ledger.Path) {
-	// collect register values
-	for _, path := range paths {
-		_, ok := s.registers[path]
-		if ok {
-			continue
-		}
-		payloads := tree.UnsafeRead([]ledger.Path{path})
-		s.registers[path] = payloads[0]
-	}
-	t.log.Info().Uint64("height", s.height).
-		Int("registers", len(s.registers)).
-		Msg("added registers from bootstrap")
 }
 
 // BootstrapState bootstraps the state by loading the checkpoint if there is one
@@ -107,49 +94,132 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("invalid status for bootstrapping state (%s)", s.status)
 	}
 
-	// We always need at least one step in our forest, which is used as the
-	// stopping point when indexing the payloads since the last finalized
-	// block. We thus introduce an empty tree, with no paths and an
-	// irrelevant previous commit.
-	empty := trie.NewEmptyMTrie()
-	s.forest.Save(empty, nil, flow.DummyStateCommitment)
-
-	// The chain indexing will forward last to next and next to current height,
-	// which will be the one for the checkpoint.
-	first := flow.StateCommitment(empty.RootHash())
-	t.log.Info().Hex("commit", first[:]).Msg("added empty tree to forest")
-
-	// Then, we can load the root height and apply it to the state. That
-	// will allow us to load the root blockchain data in the next step.
-	height, err := t.chain.Root()
+	first, err := t.chain.Root()
 	if err != nil {
 		return fmt.Errorf("could not get root height: %w", err)
 	}
-	s.height = height
-
-	// When bootstrapping, the loader injected into the mapper loads the root
-	// checkpoint.
-	tree, err := t.load.Trie()
+	t.once.Do(func() { err = t.write.First(first) })
 	if err != nil {
-		return fmt.Errorf("could not load root trie: %w", err)
+		return fmt.Errorf("could not write first: %w", err)
 	}
-	paths := allPaths(tree)
-	s.forest.Save(tree, paths, first)
 
-	second := tree.RootHash()
-	t.log.Info().Uint64("height", s.height).Hex("commit", second[:]).Int("registers", len(paths)).Msg("added checkpoint tree to forest")
+	// We need to know what the last indexed height was at the point we stopped
+	// indexing.
+	last, err := t.read.Last()
+	if err != nil {
+		// TODO: save root height as the last after bootstrapped
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			last = first
+		} else {
+			return fmt.Errorf("could not get last height: %w", err)
+		}
+	}
 
-	// collect register values from bootstrap
-	t.writeRegisterValuesFromTrie(s, tree, paths)
+	// We just need to point to the next height. The chain indexing will
+	// then proceed with the first non-indexed block and index values
+	s.height = last + 1
 
-	// delete the Trie!
-	s.forest.Reset(flow.DummyStateCommitment)
+	log := t.log.With().Uint64("height", s.height).Logger()
+
+	log.Info().Msgf("bootstrap with checkpoint file %v%v", s.checkpointDir, s.checkpointFileName)
+
+	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
+	// enough, which also help limit the amount of memory being used for holding unprocessed
+	// leaf nodes.
+	resultCh, err := wal.OpenAndReadLeafNodesFromCheckpointV6(s.checkpointDir, s.checkpointFileName, &t.log)
+	if err != nil {
+		return fmt.Errorf("could not read leaf node from checkpoint file: %v/%v: %w", s.checkpointDir, s.checkpointFileName, err)
+	}
+
+	batchSize := 1000
+	nBatch := atomic.NewInt32(0)
+
+	batch := make([]*wal.LeafNode, 0, batchSize)
+	total := 0
+
+	log.Info().Msgf("start processing leaf nodes with batchSize: %v", batchSize)
+
+	nWorker := 10
+	jobs := make(chan []*wal.LeafNode, nWorker)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		for result := range resultCh {
+			if result.Err != nil {
+				cancel()
+				close(jobs)
+				return
+			}
+
+			total++
+			batch = append(batch, result.LeafNode)
+
+			// save registers in batch, which could result better speed
+			if len(batch) >= batchSize {
+				nBatch.Inc()
+				jobs <- batch
+				batch = make([]*wal.LeafNode, 0, batchSize)
+			}
+		}
+
+		if len(batch) > 0 {
+			nBatch.Inc()
+			jobs <- batch
+		}
+		close(jobs)
+	}()
+
+	results := make(chan error)
+	for w := 0; w < nWorker; w++ {
+		go func() {
+			left := int32(1)
+			for batch := range jobs {
+				err := t.write.Registers(s.height, batch)
+				results <- err
+				if err != nil {
+					cancel()
+					return
+				}
+
+				left = nBatch.Dec()
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+			}
+
+			// no more jobs
+			// TODO: fix error handling
+			// only one worker will finish the last nBatch
+			if left == 0 {
+				log.Info().Msgf("finished processing all payloads")
+				close(results)
+			}
+		}()
+	}
+
+	for err := range results {
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
 	// forwarded the state to this height, so we go straight to the chain data
 	// indexing.
-	s.status = StatusIndex
+	s.status = StatusResume // StatusResume will save the height
+
+	// we have imported all payloads, we can skip the StatusCollect and StatusMap
+	// status which is only needed after the bootstrap
+	// since t.updates.AllUpdates() returns nil for bootstrap case, we will do nothing
+	// in the StatusCollect and StatusMap status, which is equivilent to skipping
+
 	return nil
 }
 
@@ -179,7 +249,12 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 	// indexing.
 	last, err := t.read.Last()
 	if err != nil {
-		return fmt.Errorf("could not get last height: %w", err)
+		// TODO: save root height as the last after bootstrapped
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			last = first
+		} else {
+			return fmt.Errorf("could not get last height: %w", err)
+		}
 	}
 
 	// We just need to point to the next height. The chain indexing will
@@ -199,7 +274,6 @@ func (t *Transitions) IndexChain(s *State) error {
 	}
 
 	log := t.log.With().Uint64("height", s.height).Logger()
-	log.Info().Msg("indexing chain data")
 	// We try to retrieve the next header until it becomes available, which
 	// means all data coming from the protocol state is available after this
 	// point.
@@ -298,7 +372,17 @@ func (t *Transitions) IndexChain(s *State) error {
 		return fmt.Errorf("could not index events: %w", err)
 	}
 
-	log.Info().Msg("indexed blockchain data for finalized block")
+	t.log.Info().
+		Uint64("height", s.height).
+		Str("block_id", blockID.String()).
+		Int("n_guarantees", len(guarantees)).
+		Int("n_seals", len(seals)).
+		Hex("commit", commit[:]).
+		Int("n_col", len(collections)).
+		Int("n_tx", len(transactions)).
+		Int("n_result", len(results)).
+		Int("n_events", len(events)).
+		Msgf("successfully indexed block")
 
 	// After indexing the blockchain data, we can go back to updating the state
 	// tree until we find the commit of the finalized block. This will allow us
@@ -324,23 +408,20 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
 	}
 	s.updates = updates
-	log.Info().Int("updates", len(s.updates)).Msg("collected trie updates to be mapped")
+	log.Info().Int("updates", len(s.updates)).Msg("collected trie updates (registers) to be mapped")
 
 	// Now that we have collected TrieUpdates for the current block,
 	// we can create a path -> payload mapping that we will use to index to the local storage
 	s.status = StatusCollect
-	log.Info().Str("status", s.status.String()).Msg("updateTree complete")
 	return nil
 }
 
 // CollectRegisters reads the payloads for the next block to be indexed from the state's forest, unless payload
 // indexing is disabled.
 func (t *Transitions) CollectRegisters(s *State) error {
-	log := t.log.With().Uint64("height", s.height).Logger()
 	if s.status != StatusCollect {
 		return fmt.Errorf("invalid status for collecting registers (%s)", s.status)
 	}
-	log.Info().Str("status", s.status.String()).Msg("collecting registers")
 
 	// If indexing payloads is disabled, we can bypass collection and indexing
 	// of payloads and just go straight to forwarding the height to the next
@@ -350,7 +431,6 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		return nil
 	}
 	// collect paths/payload combinations
-	log.Info().Int("registers", len(s.updates)).Msg("collecting registers to state")
 	for _, update := range s.updates {
 		// guard for bootstrap case where t.updates.AllUpdates() returns nil as the queue is empty
 		if update != nil {
@@ -360,12 +440,9 @@ func (t *Transitions) CollectRegisters(s *State) error {
 		}
 	}
 
-	log.Info().Int("registers", len(s.registers)).Msg("collected all registers for finalized block")
-
 	// At this point, we have collected all the payloads, so we go to the next
 	// step, where we will index them.
 	s.status = StatusMap
-	log.Info().Str("status", s.status.String()).Msg("indexing registers after collecting")
 	return nil
 }
 
@@ -376,13 +453,10 @@ func (t *Transitions) MapRegisters(s *State) error {
 	}
 
 	log := t.log.With().Uint64("height", s.height).Logger()
-	log.Info().Str("status", s.status.String()).Msg("beginning indexer")
 	// If there are no registers left to be indexed, we can go to the next step,
 	// which is about forwarding the height to the next finalized block.
 	if len(s.registers) == 0 {
-		log.Info().Msg("indexed all registers for finalized block")
 		s.status = StatusForward
-		log.Info().Str("status", s.status.String())
 		return nil
 	}
 
@@ -408,6 +482,12 @@ func (t *Transitions) MapRegisters(s *State) error {
 		return fmt.Errorf("could not index registers: %w", err)
 	}
 
+	// skip the map status again, and its log
+	if len(s.registers) == 0 {
+		s.status = StatusForward
+		return nil
+	}
+
 	log.Debug().Int("batch", len(paths)).Int("remaining", len(s.registers)).Msg("indexed register batch for finalized block")
 
 	return nil
@@ -418,8 +498,6 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	if s.status != StatusForward {
 		return fmt.Errorf("invalid status for forwarding height (%s)", s.status)
 	}
-
-	t.log.Info().Str("status", s.status.String()).Msg("forwarding height")
 
 	// After finishing the indexing of the payloads for a finalized block, or
 	// skipping it, we should document the last indexed height. On the first
@@ -438,11 +516,8 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	// and reset the forest to free up memory.
 	s.height++
 
-	t.log.Info().Uint64("height", s.height).Msg("forwarded finalized block to next height")
-
 	// Once the height is forwarded, we can set the status so that we index
 	// the blockchain data next.
 	s.status = StatusIndex
-	t.log.Info().Str("status", s.status.String()).Msg("processing next block height")
 	return nil
 }

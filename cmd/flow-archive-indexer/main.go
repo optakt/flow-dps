@@ -183,7 +183,7 @@ func run() int {
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
-	state := mapper.EmptyState(forest)
+	state := mapper.EmptyState(forest, flagCheckpoint)
 	fsm := mapper.NewFSM(state,
 		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),

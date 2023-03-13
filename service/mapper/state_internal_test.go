@@ -25,7 +25,7 @@ import (
 
 func TestEmptyState(t *testing.T) {
 	f := mocks.BaselineForest(t, true)
-	s := EmptyState(f)
+	s := EmptyState(f, "root.checkpoint")
 
 	assert.Equal(t, f, s.forest)
 	assert.Equal(t, StatusInitialize, s.status)
