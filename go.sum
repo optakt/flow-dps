@@ -1217,6 +1217,8 @@ github.com/onflow/flow-go v0.29.17-0.20230310204528-e275f096c535 h1:3u0cAS+idtim
 github.com/onflow/flow-go v0.29.17-0.20230310204528-e275f096c535/go.mod h1:wViK/NM04W4VR1SocWd7gwE1+BK4fHzLABGf60vaA10=
 github.com/onflow/flow-go v0.29.17-0.20230310210355-db70bc2a0c62 h1:B9rx0fis2JD4rz9TL+f+VIskLCkseA0joYWWdYYhqd4=
 github.com/onflow/flow-go v0.29.17-0.20230310210355-db70bc2a0c62/go.mod h1:wViK/NM04W4VR1SocWd7gwE1+BK4fHzLABGf60vaA10=
+github.com/onflow/flow-go v0.29.17-0.20230312064148-6d650d78a2be h1:so7LokepWYAqrHxD07A27BWLflaSNIPR3+8URonnnVw=
+github.com/onflow/flow-go v0.29.17-0.20230312064148-6d650d78a2be/go.mod h1:wViK/NM04W4VR1SocWd7gwE1+BK4fHzLABGf60vaA10=
 github.com/onflow/flow-go-sdk v0.31.3 h1:CytMRiTayXRlkRNXQ9Cw6ZcKoOIK6+QtXk4iUb8f0zQ=
 github.com/onflow/flow-go-sdk v0.31.3/go.mod h1:cqj2QShwC4DqxWzrg0+U7KxE2k7OJDGBxh8XZrJ4v5E=
 github.com/onflow/flow-go/crypto v0.24.4 h1:SwEtoVS2TidCIHYCZMgQ7U2YsqhI9upnw94fhdHTubM=
