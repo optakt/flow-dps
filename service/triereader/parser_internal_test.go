@@ -12,14 +12,19 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package triereader
 
 import (
-	"github.com/onflow/flow-go/ledger"
+	"testing"
+
+	"github.com/onflow/flow-archive/testing/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
-// Feeder represents something that can be consumed to get trie updates
-// in chronological order.
-type Feeder interface {
-	Update() (*ledger.TrieUpdate, error)
+func TestFromWAL(t *testing.T) {
+	reader := mocks.BaselineWALReader(t)
+
+	feeder := FromWAL(reader)
+
+	assert.Equal(t, reader, feeder.reader)
 }

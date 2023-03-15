@@ -12,30 +12,35 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mocks
+package triereader
 
 import (
-	"testing"
-
 	"github.com/onflow/flow-go/ledger"
 )
 
-type Feeder struct {
-	UpdateFunc func() (*ledger.TrieUpdate, error)
-}
+func clone(update *ledger.TrieUpdate) *ledger.TrieUpdate {
 
-func BaselineFeeder(t *testing.T) *Feeder {
-	t.Helper()
+	var hash ledger.RootHash
+	copy(hash[:], update.RootHash[:])
 
-	f := Feeder{
-		UpdateFunc: func() (*ledger.TrieUpdate, error) {
-			return GenericTrieUpdate(0), nil
-		},
+	paths := make([]ledger.Path, 0, len(update.Paths))
+	for _, path := range update.Paths {
+		var dup ledger.Path
+		copy(dup[:], path[:])
+		paths = append(paths, dup)
 	}
 
-	return &f
-}
+	payloads := make([]*ledger.Payload, 0, len(update.Payloads))
+	for _, payload := range update.Payloads {
+		dup := payload.DeepCopy()
+		payloads = append(payloads, dup)
+	}
 
-func (f *Feeder) Update() (*ledger.TrieUpdate, error) {
-	return f.UpdateFunc()
+	dup := ledger.TrieUpdate{
+		RootHash: hash,
+		Paths:    paths,
+		Payloads: payloads,
+	}
+
+	return &dup
 }

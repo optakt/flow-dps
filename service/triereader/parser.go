@@ -12,51 +12,38 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package feeder
+package triereader
 
 import (
 	"fmt"
 
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/complete/wal"
-
-	"github.com/onflow/flow-archive/models/archive"
 )
 
-// Feeder is a component that retrieves trie updates and feeds them to its consumer.
-type Feeder struct {
+// WalParser is a component that retrieves trie updates and feeds them to its consumer.
+type WalParser struct {
 	reader WALReader
 }
 
-// FromWAL creates a trie update feeder that sources state deltas from a WAL reader.
-func FromWAL(reader WALReader) *Feeder {
+// FromWAL creates a trie update triereader that sources state deltas from a WAL reader.
+func FromWAL(reader WALReader) *WalParser {
 
-	f := Feeder{
+	f := WalParser{
 		reader: reader,
 	}
 
 	return &f
 }
 
-// Update returns the next trie update.
-func (f *Feeder) Update() (*ledger.TrieUpdate, error) {
+// AllUpdates returns all updates for the entire spork in wal.
+func (f *WalParser) AllUpdates() ([]*ledger.TrieUpdate, error) {
 
 	// We read in a loop because the WAL contains entries that are not trie
 	// updates; we don't really need to care about them, so we can just skip
 	// them until we find a trie update.
-	for {
-
-		// This part reads the next entry from the WAL, makes sure we didn't
-		// encounter an error when reading or decoding and ensures that it's a
-		// trie update.
-		next := f.reader.Next()
-		err := f.reader.Err()
-		if !next && err != nil {
-			return nil, fmt.Errorf("could not read next record: %w", err)
-		}
-		if !next {
-			return nil, archive.ErrUnavailable
-		}
+	updates := make([]*ledger.TrieUpdate, 0)
+	for f.reader.Next() {
 		record := f.reader.Record()
 		operation, _, update, err := wal.Decode(record)
 		if err != nil {
@@ -81,7 +68,11 @@ func (f *Feeder) Update() (*ledger.TrieUpdate, error) {
 		// However, we need to make sure that all slices are copied, because the
 		// decode function will reuse the underlying slices later.
 		update = clone(update)
-
-		return update, nil
+		updates = append(updates, update)
 	}
+	err := f.reader.Err()
+	if err != nil {
+		return nil, fmt.Errorf("could not read next record: %w", err)
+	}
+	return updates, nil
 }

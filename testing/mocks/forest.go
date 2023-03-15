@@ -58,6 +58,31 @@ func BaselineForest(t *testing.T, hasCommit bool) *Forest {
 	return &f
 }
 
+func EmptyForest(t *testing.T, hasCommit bool) *Forest {
+	emptyTrie := trie.NewEmptyMTrie()
+	f := Forest{
+		SaveFunc: func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {},
+		HasFunc: func(commit flow.StateCommitment) bool {
+			return hasCommit
+		},
+		TreeFunc: func(commit flow.StateCommitment) (*trie.MTrie, bool) {
+			return emptyTrie, true
+		},
+		PathsFunc: func(commit flow.StateCommitment) ([]ledger.Path, bool) {
+			return nil, true
+		},
+		ParentFunc: func(commit flow.StateCommitment) (flow.StateCommitment, bool) {
+			return flow.DummyStateCommitment, true
+		},
+		ResetFunc: func(finalized flow.StateCommitment) {},
+		SizeFunc: func() uint {
+			return 0
+		},
+	}
+
+	return &f
+}
+
 func (f *Forest) Save(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
 	f.SaveFunc(tree, paths, parent)
 }

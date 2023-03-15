@@ -12,27 +12,11 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-package mapper
+package triereader
 
-import (
-	"math"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/onflow/flow-archive/testing/mocks"
-)
-
-func TestEmptyState(t *testing.T) {
-	f := mocks.BaselineForest(t, true)
-	s := EmptyState(f, "root.checkpoint")
-
-	assert.Equal(t, f, s.forest)
-	assert.Equal(t, StatusInitialize, s.status)
-	assert.Equal(t, s.height, uint64(math.MaxUint64))
-	assert.NotNil(t, s.registers)
-	assert.Empty(t, s.registers)
-	assert.NotNil(t, s.updates)
-	assert.Empty(t, s.updates)
-	assert.NotNil(t, s.done)
+// WALReader represents something that can read write-ahead log records.
+type WALReader interface {
+	Next() bool
+	Err() error
+	Record() []byte
 }

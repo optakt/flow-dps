@@ -29,12 +29,12 @@ import (
 	"github.com/onflow/flow-archive/codec/zbor"
 	"github.com/onflow/flow-archive/models/archive"
 	"github.com/onflow/flow-archive/service/chain"
-	"github.com/onflow/flow-archive/service/feeder"
 	"github.com/onflow/flow-archive/service/forest"
 	"github.com/onflow/flow-archive/service/index"
 	"github.com/onflow/flow-archive/service/loader"
 	"github.com/onflow/flow-archive/service/mapper"
 	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/service/triereader"
 )
 
 const (
@@ -137,7 +137,7 @@ func run() int {
 		log.Error().Str("trie", flagTrie).Err(err).Msg("could not open segments reader")
 		return failure
 	}
-	feed := feeder.FromWAL(wal.NewReader(segments))
+	feed := triereader.FromWAL(wal.NewReader(segments))
 
 	// Writer is responsible for writing the index data to the index database.
 	// We explicitly disable flushing at regular intervals to improve throughput
@@ -183,7 +183,7 @@ func run() int {
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	forest := forest.New()
-	state := mapper.EmptyState(forest)
+	state := mapper.EmptyState(forest, flagCheckpoint)
 	fsm := mapper.NewFSM(state,
 		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),
