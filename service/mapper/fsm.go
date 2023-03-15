@@ -20,7 +20,6 @@ import (
 	"sync"
 
 	"github.com/onflow/flow-archive/models/archive"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -30,7 +29,6 @@ type FSM struct {
 	state       *State
 	transitions map[Status]TransitionFunc
 	wg          *sync.WaitGroup
-	log         zerolog.Logger
 }
 
 // NewFSM returns a new FSM using the given state and options.
