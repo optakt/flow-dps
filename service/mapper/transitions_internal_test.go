@@ -15,6 +15,9 @@
 package mapper
 
 import (
+	"github.com/onflow/flow-go/ledger/common/testutils"
+	"github.com/onflow/flow-go/ledger/complete/wal"
+	"github.com/onflow/flow-go/utils/unittest"
 	"sync"
 	"testing"
 
@@ -73,32 +76,17 @@ func TestNewTransitions(t *testing.T) {
 
 func TestTransitions_BootstrapState(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
-		// t.Parallel()
-		t.Skip("fix later")
-
-		tr, st := baselineFSM(t, StatusBootstrap)
-
-		// Copy state in local scope so that we can override its SaveFunc without impacting other
-		// tests running in parallel.
-		var saveCalled bool
-		forest := mocks.BaselineForest(t, true)
-		forest.SaveFunc = func(tree *trie.MTrie, paths []ledger.Path, parent flow.StateCommitment) {
-			if !saveCalled {
-				assert.True(t, tree.IsEmpty())
-				assert.Nil(t, paths)
-				assert.Zero(t, parent)
-				saveCalled = true
-				return
-			}
-			assert.False(t, tree.IsEmpty())
-			assert.Len(t, tree.AllPayloads(), len(paths))
-			assert.Len(t, paths, 3) // Expect the three paths from leaves.
-			assert.NotZero(t, parent)
-		}
-
-		err := tr.BootstrapState(st)
-		assert.NoError(t, err)
-		assert.Len(t, st.registers, 3) // same number of registers as paths
+		t.Parallel()
+		unittest.RunWithTempDir(t, func(dir string) {
+			logger := unittest.Logger()
+			tries := createSimpleTrie(t)
+			fileName := "test_checkpoint_file"
+			require.NoErrorf(t, wal.StoreCheckpointV6Concurrently(tries, dir, fileName, &logger), "fail to store checkpoint")
+			tr, st := baselineFSM(t, StatusBootstrap)
+			st.checkpointFileName = fileName
+			st.checkpointDir = dir
+			require.NoError(t, tr.BootstrapState(st))
+		})
 	})
 
 	t.Run("invalid state", func(t *testing.T) {
@@ -528,12 +516,6 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		}
 		tr.updates = updates
 
-		forest := mocks.BaselineForest(t, true)
-		forest.HasFunc = func(flow.StateCommitment) bool {
-			return updateCalled
-		}
-		st.forest = forest
-
 		// The first call should not error but should not change the status of the FSM to updating. It should
 		// instead remain Updating until a match is found.
 		err := tr.UpdateTree(st)
@@ -579,43 +561,17 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		}
 
 		tr, st := baselineFSM(t, StatusUpdate)
-		st.forest = mocks.BaselineForest(t, false)
 		tr.updates = updates
 
 		err := tr.UpdateTree(st)
 
 		assert.Error(t, err)
 	})
-
-	t.Run("handles forest parent tree not found", func(t *testing.T) {
-		t.Parallel()
-
-		forest := mocks.BaselineForest(t, false)
-		forest.TreeFunc = func(_ flow.StateCommitment) (*trie.MTrie, bool) {
-			return nil, false
-		}
-
-		tr, st := baselineFSM(t, StatusUpdate)
-		st.forest = forest
-
-		err := tr.UpdateTree(st)
-
-		assert.NoError(t, err)
-	})
 }
 
 func TestTransitions_CollectRegisters(t *testing.T) {
-	// todo: update this test to check TrieUpdates being populated
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
-
-		forest := mocks.BaselineForest(t, true)
-		forest.ParentFunc = func(commit flow.StateCommitment) (flow.StateCommitment, bool) {
-			assert.Equal(t, mocks.GenericCommit(0), commit)
-
-			return mocks.GenericCommit(1), true
-		}
-
 		tr, st := baselineFSM(t, StatusCollect)
 		st.updates = mocks.GenericTrieUpdates(5)
 
@@ -654,11 +610,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 
 	t.Run("no updates empty trie", func(t *testing.T) {
 		t.Parallel()
-
-		forest := mocks.EmptyForest(t, true)
-
 		tr, st := baselineFSM(t, StatusCollect)
-		st.forest = forest
 		st.updates = make([]*ledger.TrieUpdate, 0)
 
 		err := tr.CollectRegisters(st)
@@ -670,11 +622,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 
 	t.Run("bootstrap case", func(t *testing.T) {
 		t.Parallel()
-
-		forest := mocks.EmptyForest(t, true)
-
 		tr, st := baselineFSM(t, StatusCollect)
-		st.forest = forest
 		updates := mocks.GenericTrieUpdates(5)
 		// write ahead to registers, just like in the bootstrap
 		for _, update := range updates {
@@ -805,14 +753,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 			lastCalled++
 			return nil
 		}
-
-		forest := mocks.BaselineForest(t, true)
-		forest.ResetFunc = func(finalized flow.StateCommitment) {
-			assert.Equal(t, mocks.GenericCommit(0), finalized)
-		}
-
 		tr, st := baselineFSM(t, StatusForward)
-		st.forest = forest
 		tr.write = write
 
 		err := tr.ForwardHeight(st)
@@ -1108,6 +1049,24 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 	})
 }
 
+func createSimpleTrie(t *testing.T) []*trie.MTrie {
+	emptyTrie := trie.NewEmptyMTrie()
+
+	p1 := testutils.PathByUint8(0)
+	v1 := testutils.LightPayload8('A', 'a')
+
+	p2 := testutils.PathByUint8(1)
+	v2 := testutils.LightPayload8('B', 'b')
+
+	paths := []ledger.Path{p1, p2}
+	payloads := []ledger.Payload{*v1, *v2}
+
+	updatedTrie, _, err := trie.NewTrieWithUpdatedRegisters(emptyTrie, paths, payloads, true)
+	require.NoError(t, err)
+	tries := []*trie.MTrie{emptyTrie, updatedTrie}
+	return tries
+}
+
 func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*Transitions, *State) {
 	t.Helper()
 
@@ -1116,7 +1075,6 @@ func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*T
 	updates := mocks.BaselineParser(t)
 	read := mocks.BaselineReader(t)
 	write := mocks.BaselineWriter(t)
-	forest := mocks.BaselineForest(t, true)
 
 	once := &sync.Once{}
 	doneCh := make(chan struct{})
@@ -1141,7 +1099,6 @@ func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*T
 	}
 
 	st := State{
-		forest:    forest,
 		status:    status,
 		height:    mocks.GenericHeight,
 		updates:   make([]*ledger.TrieUpdate, 0),

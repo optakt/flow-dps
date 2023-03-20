@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/flow-archive/codec/zbor"
 	"github.com/onflow/flow-archive/models/archive"
 	"github.com/onflow/flow-archive/service/chain"
-	"github.com/onflow/flow-archive/service/forest"
 	"github.com/onflow/flow-archive/service/index"
 	"github.com/onflow/flow-archive/service/loader"
 	"github.com/onflow/flow-archive/service/mapper"
@@ -182,8 +181,7 @@ func run() int {
 		mapper.WithBootstrapState(bootstrap),
 		mapper.WithSkipRegisters(flagSkip),
 	)
-	forest := forest.New()
-	state := mapper.EmptyState(forest, flagCheckpoint)
+	state := mapper.EmptyState(flagCheckpoint)
 	fsm := mapper.NewFSM(state,
 		mapper.WithTransition(mapper.StatusInitialize, transitions.InitializeMapper),
 		mapper.WithTransition(mapper.StatusBootstrap, transitions.BootstrapState),

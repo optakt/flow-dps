@@ -512,8 +512,7 @@ func (t *Transitions) ForwardHeight(s *State) error {
 		return fmt.Errorf("could not index last height: %w", err)
 	}
 
-	// Now that we have indexed the heights, we can forward to the next height,
-	// and reset the forest to free up memory.
+	// Now that we have indexed the heights, we can forward to the next height
 	s.height++
 
 	// Once the height is forwarded, we can set the status so that we index
