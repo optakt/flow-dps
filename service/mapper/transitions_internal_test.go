@@ -15,11 +15,12 @@
 package mapper
 
 import (
+	"sync"
+	"testing"
+
 	"github.com/onflow/flow-go/ledger/common/testutils"
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/utils/unittest"
-	"sync"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -83,6 +84,31 @@ func TestTransitions_BootstrapState(t *testing.T) {
 			fileName := "test_checkpoint_file"
 			require.NoErrorf(t, wal.StoreCheckpointV6Concurrently(tries, dir, fileName, &logger), "fail to store checkpoint")
 			tr, st := baselineFSM(t, StatusBootstrap)
+			st.checkpointFileName = fileName
+			st.checkpointDir = dir
+			require.NoError(t, tr.BootstrapState(st))
+		})
+	})
+
+	t.Run("check last height db updates", func(t *testing.T) {
+		t.Parallel()
+		unittest.RunWithTempDir(t, func(dir string) {
+			logger := unittest.Logger()
+			tries := createSimpleTrie(t)
+			fileName := "test_checkpoint_file"
+			require.NoErrorf(t, wal.StoreCheckpointV6Concurrently(tries, dir, fileName, &logger), "fail to store checkpoint")
+			sporkHeight := uint64(10)
+			writer := mocks.BaselineWriter(t)
+			// spork height gets written as last height
+			writer.LastFunc = func(height uint64) error {
+				assert.Equal(t, height, sporkHeight)
+				return nil
+			}
+			root := mocks.BaselineChain(t)
+			root.RootFunc = func() (uint64, error) {
+				return uint64(sporkHeight), nil
+			}
+			tr, st := baselineFSM(t, StatusBootstrap, withWriter(writer), withChain(root))
 			st.checkpointFileName = fileName
 			st.checkpointDir = dir
 			require.NoError(t, tr.BootstrapState(st))
