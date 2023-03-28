@@ -23,8 +23,6 @@ import (
 
 // State is the state machine's state for the current block being processed
 type State struct {
-	// TODO: remove forest
-	forest             Forest
 	status             Status
 	height             uint64 // the height to be indexed
 	updates            []*ledger.TrieUpdate
@@ -34,14 +32,12 @@ type State struct {
 	done               chan struct{}
 }
 
-// EmptyState returns a new empty state that uses the given forest.
-// TODO: remove forest
-func EmptyState(forest Forest, checkpointFile string) *State {
+// EmptyState returns a new empty state
+func EmptyState(checkpointFile string) *State {
 
 	dir, fileName := filepath.Split(checkpointFile)
 
 	s := State{
-		forest:             forest,
 		status:             StatusInitialize,
 		height:             math.MaxUint64,
 		registers:          make(map[ledger.Path]*ledger.Payload),

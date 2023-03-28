@@ -19,15 +19,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestEmptyState(t *testing.T) {
-	f := mocks.BaselineForest(t, true)
-	s := EmptyState(f, "root.checkpoint")
+	s := EmptyState("root.checkpoint")
 
-	assert.Equal(t, f, s.forest)
 	assert.Equal(t, StatusInitialize, s.status)
 	assert.Equal(t, s.height, uint64(math.MaxUint64))
 	assert.NotNil(t, s.registers)

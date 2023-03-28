@@ -78,8 +78,11 @@ func (t *Transitions) InitializeMapper(s *State) error {
 
 	if t.cfg.BootstrapState {
 		s.status = StatusBootstrap
-
-		// TODO: set the height with chain.Root()
+		height, err := t.chain.Root()
+		if err != nil {
+			return fmt.Errorf("could not get root height: %w", err)
+		}
+		s.height = height
 		return nil
 	}
 
@@ -107,7 +110,6 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// indexing.
 	last, err := t.read.Last()
 	if err != nil {
-		// TODO: save root height as the last after bootstrapped
 		if errors.Is(err, badger.ErrKeyNotFound) {
 			last = first
 		} else {
@@ -209,6 +211,9 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
 
+	// save root height as last as bootstrap is complete
+	t.write.Last(first)
+
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
 	// forwarded the state to this height, so we go straight to the chain data
@@ -249,7 +254,6 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 	// indexing.
 	last, err := t.read.Last()
 	if err != nil {
-		// TODO: save root height as the last after bootstrapped
 		if errors.Is(err, badger.ErrKeyNotFound) {
 			last = first
 		} else {
@@ -512,8 +516,7 @@ func (t *Transitions) ForwardHeight(s *State) error {
 		return fmt.Errorf("could not index last height: %w", err)
 	}
 
-	// Now that we have indexed the heights, we can forward to the next height,
-	// and reset the forest to free up memory.
+	// Now that we have indexed the heights, we can forward to the next height
 	s.height++
 
 	// Once the height is forwarded, we can set the status so that we index
