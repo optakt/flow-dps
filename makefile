@@ -46,6 +46,10 @@ generate-tags:
 buf-generate:
 	cd api/protobuf && buf generate .
 
+.PHONY: crypto_setup
+crypto_setup:
+	bash crypto_build.sh
+
 # Docker Utilities! Do not delete these targets
 #############################################################################################################
 
