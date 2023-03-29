@@ -15,6 +15,7 @@
 package mapper
 
 import (
+	"math"
 	"sync"
 	"testing"
 
@@ -109,6 +110,21 @@ func TestTransitions_BootstrapState(t *testing.T) {
 				return uint64(sporkHeight), nil
 			}
 			tr, st := baselineFSM(t, StatusBootstrap, withWriter(writer), withChain(root))
+			st.checkpointFileName = fileName
+			st.checkpointDir = dir
+			require.NoError(t, tr.BootstrapState(st))
+		})
+	})
+
+	t.Run("multiple batchs", func(t *testing.T) {
+		t.Parallel()
+		unittest.RunWithTempDir(t, func(dir string) {
+			logger := unittest.Logger()
+			trie1 := createTrieWithNPayloads(t, 3001) // 3001 payloads would require 4 batchs
+			tries := []*trie.MTrie{trie1}
+			fileName := "test_checkpoint_file"
+			require.NoErrorf(t, wal.StoreCheckpointV6Concurrently(tries, dir, fileName, &logger), "fail to store checkpoint")
+			tr, st := baselineFSM(t, StatusBootstrap)
 			st.checkpointFileName = fileName
 			st.checkpointDir = dir
 			require.NoError(t, tr.BootstrapState(st))
@@ -1091,6 +1107,27 @@ func createSimpleTrie(t *testing.T) []*trie.MTrie {
 	require.NoError(t, err)
 	tries := []*trie.MTrie{emptyTrie, updatedTrie}
 	return tries
+}
+
+func createTrieWithNPayloads(t *testing.T, n int) *trie.MTrie {
+	require.True(t, n <= math.MaxUint16, "invalid n")
+
+	emptyTrie := trie.NewEmptyMTrie()
+
+	paths := make([]ledger.Path, 0, n)
+	payloads := make([]ledger.Payload, 0, n)
+
+	for i := 0; i < n; i++ {
+		p := testutils.PathByUint16(uint16(i))
+		v := testutils.LightPayload8('A', 'a')
+
+		paths = append(paths, p)
+		payloads = append(payloads, *v)
+
+	}
+	updatedTrie, _, err := trie.NewTrieWithUpdatedRegisters(emptyTrie, paths, payloads, true)
+	require.NoError(t, err)
+	return updatedTrie
 }
 
 func baselineFSM(t *testing.T, status Status, opts ...func(tr *Transitions)) (*Transitions, *State) {

@@ -21,8 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
-
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
 
@@ -134,7 +132,6 @@ func (t *Transitions) BootstrapState(s *State) error {
 	}
 
 	batchSize := 1000
-	nBatch := atomic.NewInt32(0)
 
 	batch := make([]*wal.LeafNode, 0, batchSize)
 	total := 0
@@ -148,10 +145,11 @@ func (t *Transitions) BootstrapState(s *State) error {
 	defer cancel()
 
 	go func() {
+		defer close(jobs)
+
 		for result := range resultCh {
 			if result.Err != nil {
 				cancel()
-				close(jobs)
 				return
 			}
 
@@ -160,50 +158,54 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 			// save registers in batch, which could result better speed
 			if len(batch) >= batchSize {
-				nBatch.Inc()
 				jobs <- batch
 				batch = make([]*wal.LeafNode, 0, batchSize)
 			}
 		}
 
 		if len(batch) > 0 {
-			nBatch.Inc()
 			jobs <- batch
 		}
-		close(jobs)
 	}()
 
-	results := make(chan error)
+	// wait for all workers to finish in order to close the results channel
+	var wg sync.WaitGroup
+	wg.Add(nWorker)
+
+	// create enough buffer to hold the max number of errors,
+	// there will be at most nWorker number of errors, because a worker
+	// will stop as soon as hitting an error
+	workerErrors := make(chan error, nWorker)
+	// create nWorker number of workers to process jobs.
+	// each worker will save a batch of registers to storage
 	for w := 0; w < nWorker; w++ {
 		go func() {
-			left := int32(1)
+			defer wg.Done()
+
+			// process batches from jobs channel
 			for batch := range jobs {
 				err := t.write.Registers(s.height, batch)
-				results <- err
+
 				if err != nil {
+					workerErrors <- err
 					cancel()
 					return
 				}
 
-				left = nBatch.Dec()
 				select {
 				case <-ctx.Done():
 					return
 				default:
 				}
 			}
-
-			// no more jobs
-			// TODO: fix error handling
-			// only one worker will finish the last nBatch
-			if left == 0 {
-				log.Info().Msgf("finished processing all payloads")
-				close(results)
-			}
 		}()
 	}
 
-	for err := range results {
+	wg.Wait()
+	close(workerErrors)
+
+	// read from results channel and check for errors
+	for err := range workerErrors {
 		if err != nil {
 			return err
 		}
