@@ -71,9 +71,7 @@ jobs:
       # In order to be able to build with flow-go and the relic tag, we need to
       # run its go generate target.
       - name: Make Flow Go's crypto
-        run: |
-          cd ./flow-go
-          make crypto_setup_gopath
+        run: make crypto_setup
 
       # This check makes sure that the `go.mod` and `go.sum` files for Go
       # modules are always up-to-date.
