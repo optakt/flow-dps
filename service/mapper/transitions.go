@@ -212,7 +212,10 @@ func (t *Transitions) BootstrapState(s *State) error {
 	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
 
 	// save root height as last as bootstrap is complete
-	t.write.Last(first)
+	err = t.write.Last(first)
+	if err != nil {
+		return fmt.Errorf("could not index last height: %w", err)
+	}
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
