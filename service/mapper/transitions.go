@@ -126,13 +126,10 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
 	// enough, which also help limit the amount of memory being used for holding unprocessed
 	// leaf nodes.
-	resultCh, err := wal.OpenAndReadLeafNodesFromCheckpointV6(s.checkpointDir, s.checkpointFileName, &t.log)
-	if err != nil {
-		return fmt.Errorf("could not read leaf node from checkpoint file: %v/%v: %w", s.checkpointDir, s.checkpointFileName, err)
-	}
+	bufSize := 1000
+	leafNodesCh := make(chan *wal.LeafNode, bufSize)
 
 	batchSize := 1000
-
 	batch := make([]*wal.LeafNode, 0, batchSize)
 	total := 0
 
@@ -147,14 +144,9 @@ func (t *Transitions) BootstrapState(s *State) error {
 	go func() {
 		defer close(jobs)
 
-		for result := range resultCh {
-			if result.Err != nil {
-				cancel()
-				return
-			}
-
+		for leafNode := range leafNodesCh {
 			total++
-			batch = append(batch, result.LeafNode)
+			batch = append(batch, leafNode)
 
 			// save registers in batch, which could result better speed
 			if len(batch) >= batchSize {
@@ -166,6 +158,17 @@ func (t *Transitions) BootstrapState(s *State) error {
 		if len(batch) > 0 {
 			jobs <- batch
 		}
+	}()
+
+	// reading the leaf nodes on a goroutine
+	// and use a doneRead channel to report if running into any error
+	doneRead := make(chan error, 1)
+	go func() {
+		err := wal.OpenAndReadLeafNodesFromCheckpointV6(leafNodesCh, s.checkpointDir, s.checkpointFileName, &t.log)
+		log.Error().Err(err).Msg("fail to read leaf nodes")
+		cancel()
+		doneRead <- err
+		close(doneRead)
 	}()
 
 	// wait for all workers to finish in order to close the results channel
@@ -208,6 +211,13 @@ func (t *Transitions) BootstrapState(s *State) error {
 	for err := range workerErrors {
 		if err != nil {
 			return err
+		}
+	}
+
+	// make sure there is error from reading the leaf node
+	for err := range doneRead {
+		if err != nil {
+			return fmt.Errorf("fail to read leaf node: %w", err)
 		}
 	}
 
