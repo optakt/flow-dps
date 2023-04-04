@@ -74,6 +74,8 @@ func (t *Transitions) InitializeMapper(s *State) error {
 		return fmt.Errorf("invalid status for initializing mapper (%s)", s.status)
 	}
 
+	log := t.log.With().Uint64("height", s.height).Logger()
+	log.Info().Bool("empty", t.cfg.BootstrapState).Msg("bootstrap DB found")
 	if t.cfg.BootstrapState {
 		s.status = StatusBootstrap
 		height, err := t.chain.Root()
