@@ -76,17 +76,29 @@ func (t *Transitions) InitializeMapper(s *State) error {
 
 	log := t.log.With().Uint64("height", s.height).Logger()
 	log.Info().Bool("empty", t.cfg.BootstrapState).Msg("bootstrap DB found")
-	if t.cfg.BootstrapState {
-		s.status = StatusBootstrap
-		height, err := t.chain.Root()
-		if err != nil {
-			return fmt.Errorf("could not get root height: %w", err)
-		}
-		s.height = height
+
+	isBootstrapped := false // default
+
+	first, err := t.chain.Root()
+	if err != nil {
+		return fmt.Errorf("could not get root height: %w", err)
+	}
+
+	last, err := t.read.Last()
+	if err == nil {
+		isBootstrapped = last >= first
+	} else if !errors.Is(err, badger.ErrKeyNotFound) {
+		return fmt.Errorf("could not get last height: %w", err)
+	}
+
+	if isBootstrapped {
+		// we have bootstrapped
+		s.status = StatusResume
 		return nil
 	}
 
-	s.status = StatusResume
+	s.status = StatusBootstrap
+	s.height = first
 	return nil
 }
 
@@ -105,21 +117,6 @@ func (t *Transitions) BootstrapState(s *State) error {
 	if err != nil {
 		return fmt.Errorf("could not write first: %w", err)
 	}
-
-	// We need to know what the last indexed height was at the point we stopped
-	// indexing.
-	last, err := t.read.Last()
-	if err != nil {
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			last = first
-		} else {
-			return fmt.Errorf("could not get last height: %w", err)
-		}
-	}
-
-	// We just need to point to the next height. The chain indexing will
-	// then proceed with the first non-indexed block and index values
-	s.height = last + 1
 
 	log := t.log.With().Uint64("height", s.height).Logger()
 
@@ -224,9 +221,6 @@ func (t *Transitions) BootstrapState(s *State) error {
 	}
 
 	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
-
-	// save root height as last as bootstrap is complete
-	t.write.Last(first)
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just

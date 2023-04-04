@@ -319,18 +319,7 @@ func run() int {
 	// If we have an empty database, we want a loader to bootstrap from the
 	// checkpoint; if we don't, we can optionally use the root checkpoint to
 	// speed up the restart/restoration.
-	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
-	if empty {
-		load = loader.FromCheckpointFile(flagCheckpoint, &log)
-	} else if flagCheckpoint != "" {
-		initialize := loader.FromCheckpointFile(flagCheckpoint, &log)
-		load = loader.FromIndex(log, storage, indexDB,
-			loader.WithInitializer(initialize),
-			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
-		)
-	}
-
+	load := loader.FromIndex(log, storage, indexDB)
 	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
 	// use the regular one.
 	writer := archive.Writer(write)
