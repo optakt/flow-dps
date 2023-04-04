@@ -20,7 +20,7 @@ import (
 
 // DefaultConfig is the default configuration for the Mapper.
 var DefaultConfig = Config{
-	BootstrapState: false,
+	BootstrapState: false, // TODO to be removed
 	SkipRegisters:  false,
 	WaitInterval:   100 * time.Millisecond,
 }
