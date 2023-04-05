@@ -90,7 +90,11 @@ func (t *Transitions) InitializeMapper(s *State) error {
 		return fmt.Errorf("could not get last height: %w", err)
 	}
 
-	log.Info().Bool("is_bootstrapped", isBootstrapped).Msg("initializing")
+	log.Info().
+		Bool("is_bootstrapped", isBootstrapped).
+		Uint64("first", first).
+		Uint64("last", last).
+		Msg("initializing")
 
 	if isBootstrapped {
 		// we have bootstrapped
@@ -164,15 +168,12 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// and use a doneRead channel to report if running into any error
 	doneRead := make(chan error, 1)
 	go func() {
-		// err := wal.OpenAndReadLeafNodesFromCheckpointV6(leafNodesCh, s.checkpointDir, s.checkpointFileName, &t.log)
-		// log.Error().Err(err).Msg("fail to read leaf nodes")
-		// if err != nil {
-		// 	cancel()
-		// }
-		// doneRead <- err
-		// TODO: testing
-		close(leafNodesCh)
-		doneRead <- nil
+		err := wal.OpenAndReadLeafNodesFromCheckpointV6(leafNodesCh, s.checkpointDir, s.checkpointFileName, &t.log)
+		log.Error().Err(err).Msg("fail to read leaf nodes")
+		if err != nil {
+			cancel()
+		}
+		doneRead <- err
 		close(doneRead)
 	}()
 
