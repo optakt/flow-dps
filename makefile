@@ -20,6 +20,19 @@ export CONTAINER_REGISTRY := gcr.io/flow-container-registry
 # Dev Utilities
 #############################################################################################################
 
+.PHONY: tidy
+tidy:
+	go mod tidy -v
+	git diff --exit-code
+
+.PHONY: lint
+lint: tidy
+	golangci-lint run -v --build-tags relic ./...
+
+.PHONY: fix-lint
+fix-lint:
+	golangci-lint run -v --build-tags relic --fix ./...
+
 .PHONY: generate
 generate: buf-generate generate-tags
 

@@ -29,7 +29,7 @@ require (
 )
 
 require (
-	github.com/onflow/flow-go v0.29.17-0.20230312064148-6d650d78a2be
+	github.com/onflow/flow-go v0.29.17-read-leaf-nodes
 	github.com/onflow/flow-go/crypto v0.24.4
 	github.com/optakt/flow-dps-rosetta v1.0.0
 	github.com/srikrsna/protoc-gen-gotag v0.6.2

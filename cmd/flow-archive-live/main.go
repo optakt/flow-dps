@@ -159,16 +159,6 @@ func run() int {
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
 	read := index.NewReader(log, indexDB, storage)
-	first, err := read.First()
-	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-		log.Error().Err(err).Msg("could not get first height from index reader")
-		return failure
-	}
-	empty := errors.Is(err, badger.ErrKeyNotFound)
-	if empty && flagCheckpoint == "" {
-		log.Error().Msg("index database is empty, please provide root checkpoint (-c, --checkpoint) to bootstrap")
-		return failure
-	}
 
 	// We initialize the writer with a flush interval, which will make sure that
 	// Badger transactions are committed to the database, even if they don't
@@ -319,18 +309,7 @@ func run() int {
 	// If we have an empty database, we want a loader to bootstrap from the
 	// checkpoint; if we don't, we can optionally use the root checkpoint to
 	// speed up the restart/restoration.
-	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
-	if empty {
-		load = loader.FromCheckpointFile(flagCheckpoint, &log)
-	} else if flagCheckpoint != "" {
-		initialize := loader.FromCheckpointFile(flagCheckpoint, &log)
-		load = loader.FromIndex(log, storage, indexDB,
-			loader.WithInitializer(initialize),
-			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
-		)
-	}
-
+	load := loader.FromIndex(log, storage, indexDB)
 	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
 	// use the regular one.
 	writer := archive.Writer(write)
@@ -343,7 +322,6 @@ func run() int {
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
 	transitions := mapper.NewTransitions(log, load, consensus, execution, read, writer,
-		mapper.WithBootstrapState(empty),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	state := mapper.EmptyState(flagCheckpoint)
