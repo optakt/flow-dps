@@ -164,12 +164,15 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// and use a doneRead channel to report if running into any error
 	doneRead := make(chan error, 1)
 	go func() {
-		err := wal.OpenAndReadLeafNodesFromCheckpointV6(leafNodesCh, s.checkpointDir, s.checkpointFileName, &t.log)
-		log.Error().Err(err).Msg("fail to read leaf nodes")
-		if err != nil {
-			cancel()
-		}
-		doneRead <- err
+		// err := wal.OpenAndReadLeafNodesFromCheckpointV6(leafNodesCh, s.checkpointDir, s.checkpointFileName, &t.log)
+		// log.Error().Err(err).Msg("fail to read leaf nodes")
+		// if err != nil {
+		// 	cancel()
+		// }
+		// doneRead <- err
+		// TODO: testing
+		close(leafNodesCh)
+		doneRead <- nil
 		close(doneRead)
 	}()
 
@@ -294,7 +297,7 @@ func (t *Transitions) IndexChain(s *State) error {
 	// point.
 	header, err := t.chain.Header(s.height)
 	if errors.Is(err, archive.ErrUnavailable) {
-		log.Debug().Msg("waiting for next header")
+		log.Info().Msgf("header is not available, sleep for %s", t.cfg.WaitInterval)
 		time.Sleep(t.cfg.WaitInterval)
 		return nil
 	}

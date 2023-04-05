@@ -21,7 +21,7 @@ import (
 // DefaultConfig is the default configuration for the Mapper.
 var DefaultConfig = Config{
 	SkipRegisters: false,
-	WaitInterval:  100 * time.Millisecond,
+	WaitInterval:  250 * time.Millisecond,
 }
 
 // Config contains optional parameters for the Mapper.
