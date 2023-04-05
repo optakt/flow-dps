@@ -178,7 +178,6 @@ func run() int {
 	}
 
 	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
-		mapper.WithBootstrapState(bootstrap),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	state := mapper.EmptyState(flagCheckpoint)
