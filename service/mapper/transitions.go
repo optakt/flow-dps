@@ -37,7 +37,6 @@ type TransitionFunc func(*State) error
 type Transitions struct {
 	cfg     Config
 	log     zerolog.Logger
-	load    Loader
 	chain   archive.Chain
 	updates TrieUpdates
 	read    archive.Reader
@@ -46,7 +45,7 @@ type Transitions struct {
 }
 
 // NewTransitions returns a Transitions component using the given dependencies and using the given options
-func NewTransitions(log zerolog.Logger, load Loader, chain archive.Chain, updates TrieUpdates, read archive.Reader, write archive.Writer, options ...Option) *Transitions {
+func NewTransitions(log zerolog.Logger, chain archive.Chain, updates TrieUpdates, read archive.Reader, write archive.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -56,7 +55,6 @@ func NewTransitions(log zerolog.Logger, load Loader, chain archive.Chain, update
 	t := Transitions{
 		log:     log.With().Str("component", "mapper_transitions").Logger(),
 		cfg:     cfg,
-		load:    load,
 		chain:   chain,
 		updates: updates,
 		read:    read,
