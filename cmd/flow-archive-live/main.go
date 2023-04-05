@@ -49,7 +49,6 @@ import (
 	"github.com/onflow/flow-archive/service/cloud"
 	"github.com/onflow/flow-archive/service/index"
 	"github.com/onflow/flow-archive/service/initializer"
-	"github.com/onflow/flow-archive/service/loader"
 	"github.com/onflow/flow-archive/service/mapper"
 	"github.com/onflow/flow-archive/service/metrics"
 	"github.com/onflow/flow-archive/service/profiler"
@@ -306,10 +305,6 @@ func run() int {
 	follow.AddOnBlockFinalizedConsumer(stream.OnBlockFinalized)
 	follow.AddOnBlockFinalizedConsumer(consensus.OnBlockFinalized)
 
-	// If we have an empty database, we want a loader to bootstrap from the
-	// checkpoint; if we don't, we can optionally use the root checkpoint to
-	// speed up the restart/restoration.
-	load := loader.FromIndex(log, storage, indexDB)
 	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
 	// use the regular one.
 	writer := archive.Writer(write)
@@ -321,7 +316,7 @@ func run() int {
 	// At this point, we can initialize the core business logic of the indexer,
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
-	transitions := mapper.NewTransitions(log, load, consensus, execution, read, writer,
+	transitions := mapper.NewTransitions(log, consensus, execution, read, writer,
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	state := mapper.EmptyState(flagCheckpoint)
