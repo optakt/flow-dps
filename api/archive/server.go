@@ -195,7 +195,10 @@ func (s *Server) GetRegisterValues(ctx context.Context, req *GetRegisterValuesRe
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
-
+	err = s.validateHeightIndexed(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("data unavailable for block height: %w", err)
+	}
 	paths, err := convert.BytesToPaths(req.Paths)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert paths: %w", err)
@@ -449,6 +452,11 @@ func (s *Server) ListSealsForHeight(ctx context.Context, req *ListSealsForHeight
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
 
+	err = s.validateHeightIndexed(req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("data unavailable for block height: %w", err)
+	}
+
 	sealIDs, err := s.index.SealsByHeight(req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("could not list seals by height: %w", err)
@@ -465,4 +473,15 @@ func (s *Server) ListSealsForHeight(ctx context.Context, req *ListSealsForHeight
 	}
 
 	return &res, nil
+}
+
+func (s *Server) validateHeightIndexed(height uint64) error {
+	h, err := s.index.Last()
+	if err != nil {
+		return fmt.Errorf("could not get last indexed height for Archive node")
+	}
+	if h < height {
+		return fmt.Errorf("current indexed height(%d) lower than requested height", h)
+	}
+	return nil
 }

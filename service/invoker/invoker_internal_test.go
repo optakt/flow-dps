@@ -112,6 +112,22 @@ func TestInvoker_Script(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("handles unavailable block data", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.LastFunc = func() (uint64, error) {
+			return mocks.GenericHeight - 1, nil
+		}
+
+		invoke := baselineInvoker(t)
+		invoke.index = index
+
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+
+		assert.Error(t, err)
+	})
+
 	t.Run("handles vm failure on Run", func(t *testing.T) {
 		t.Parallel()
 
@@ -191,6 +207,22 @@ func TestInvoker_Account(t *testing.T) {
 		invoke.index = index
 
 		_, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles unavailable block data", func(t *testing.T) {
+		t.Parallel()
+
+		index := mocks.BaselineReader(t)
+		index.LastFunc = func() (uint64, error) {
+			return mocks.GenericHeight - 1, nil
+		}
+
+		invoke := baselineInvoker(t)
+		invoke.index = index
+
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
 
 		assert.Error(t, err)
 	})
