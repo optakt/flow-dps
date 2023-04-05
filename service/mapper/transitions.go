@@ -75,7 +75,6 @@ func (t *Transitions) InitializeMapper(s *State) error {
 	}
 
 	log := t.log.With().Uint64("height", s.height).Logger()
-	log.Info().Bool("empty", t.cfg.BootstrapState).Msg("bootstrap DB found")
 
 	isBootstrapped := false // default
 
@@ -90,6 +89,8 @@ func (t *Transitions) InitializeMapper(s *State) error {
 	} else if !errors.Is(err, badger.ErrKeyNotFound) {
 		return fmt.Errorf("could not get last height: %w", err)
 	}
+
+	log.Info().Bool("is_bootstrapped", isBootstrapped).Msg("initializing")
 
 	if isBootstrapped {
 		// we have bootstrapped
@@ -165,7 +166,9 @@ func (t *Transitions) BootstrapState(s *State) error {
 	go func() {
 		err := wal.OpenAndReadLeafNodesFromCheckpointV6(leafNodesCh, s.checkpointDir, s.checkpointFileName, &t.log)
 		log.Error().Err(err).Msg("fail to read leaf nodes")
-		cancel()
+		if err != nil {
+			cancel()
+		}
 		doneRead <- err
 		close(doneRead)
 	}()
@@ -196,6 +199,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 				select {
 				case <-ctx.Done():
+					workerErrors <- ctx.Err()
 					return
 				default:
 				}
@@ -214,10 +218,9 @@ func (t *Transitions) BootstrapState(s *State) error {
 	}
 
 	// make sure there is error from reading the leaf node
-	for err := range doneRead {
-		if err != nil {
-			return fmt.Errorf("fail to read leaf node: %w", err)
-		}
+	err = <-doneRead
+	if err != nil {
+		return fmt.Errorf("fail to read leaf node: %w", err)
 	}
 
 	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
