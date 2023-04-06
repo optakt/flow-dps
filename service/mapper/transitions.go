@@ -169,8 +169,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 	doneRead := make(chan error, 1)
 	go func() {
 		err := wal.OpenAndReadLeafNodesFromCheckpointV6(leafNodesCh, s.checkpointDir, s.checkpointFileName, &t.log)
-		log.Error().Err(err).Msg("fail to read leaf nodes")
 		if err != nil {
+			log.Error().Err(err).Msg("fail to read leaf nodes")
 			cancel()
 		}
 		doneRead <- err
