@@ -74,16 +74,17 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAddress     string
-		flagBootstrap   string
-		flagBucket      string
-		flagCheckpoint  string
-		flagData        string
-		flagIndex       string
-		flagLevel       string
-		flagMetricsAddr string
-		flagProfiling   string
-		flagSkip        bool
+		flagAddress          string
+		flagBootstrap        string
+		flagBucket           string
+		flagCheckpoint       string
+		flagData             string
+		flagIndex            string
+		flagLevel            string
+		flagFollowerLogLevel string
+		flagMetricsAddr      string
+		flagProfiling        string
+		flagSkip             bool
 
 		flagFlushInterval time.Duration
 		flagSeedAddress   string
@@ -98,6 +99,7 @@ func run() int {
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.StringVarP(&flagFollowerLogLevel, "follower-level", "l", "warn", "log output level for follower engine")
 	pflag.StringVarP(&flagMetricsAddr, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.StringVarP(&flagProfiling, "profiler-address", "p", "", "address for net/http/pprof profiler (profiler is disabled if left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
@@ -225,7 +227,7 @@ func run() int {
 		seedNodes,
 		unstaked.WithBootstrapDir(flagBootstrap),
 		unstaked.WithDB(protocolDB),
-		unstaked.WithLogLevel(flagLevel),
+		unstaked.WithLogLevel(flagFollowerLogLevel),
 	)
 	if err != nil {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
