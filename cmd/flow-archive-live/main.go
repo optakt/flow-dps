@@ -184,9 +184,9 @@ func run() int {
 	// is a network key, used to secure the peer-to-peer communication. However,
 	// as we do not need any specific key, we choose to just initialize a new
 	// key on each start of the live indexer.
-	seed := make([]byte, crypto.KeyGenSeedMinLenECDSASecp256k1)
+	seed := make([]byte, crypto.PrKeyLenECDSASecp256k1)
 	n, err := rand.Read(seed)
-	if err != nil || n != crypto.KeyGenSeedMinLenECDSASecp256k1 {
+	if err != nil || n != crypto.PrKeyLenECDSASecp256k1 {
 		log.Error().Err(err).Msg("could not generate private key seed")
 		return failure
 	}
