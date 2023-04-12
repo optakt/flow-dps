@@ -176,9 +176,10 @@ func (e *Execution) processNext() error {
 
 	e.queue.PushFront(record.TrieUpdates)
 
-	e.log.Debug().
+	e.log.Info().
 		Hex("block", blockID[:]).
-		Int("updates", len(record.TrieUpdates)).
+		Uint64("height", record.Block.Header.Height).
+		Int("trie_updates", len(record.TrieUpdates)).
 		Msg("next execution record processed")
 
 	return nil
@@ -186,9 +187,12 @@ func (e *Execution) processNext() error {
 
 // purge deletes all records that are below the specified height threshold.
 func (e *Execution) purge(threshold uint64) {
+	purged := uint64(0)
 	for blockID, record := range e.records {
 		if record.Block.Header.Height < threshold {
 			delete(e.records, blockID)
+			purged++
 		}
 	}
+	e.log.Info().Uint64("threshold", threshold).Uint64("purged", purged).Msgf("finish purge")
 }

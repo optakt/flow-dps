@@ -21,17 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWithBootstrapState(t *testing.T) {
-	c := Config{
-		BootstrapState: false,
-	}
-	bootstrap := true
-
-	WithBootstrapState(bootstrap)(&c)
-
-	assert.Equal(t, bootstrap, c.BootstrapState)
-}
-
 func TestWithSkipRegisters(t *testing.T) {
 	c := Config{
 		SkipRegisters: false,
