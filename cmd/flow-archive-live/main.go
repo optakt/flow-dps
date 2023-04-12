@@ -74,16 +74,17 @@ func run() int {
 
 	// Command line parameter initialization.
 	var (
-		flagAddress     string
-		flagBootstrap   string
-		flagBucket      string
-		flagCheckpoint  string
-		flagData        string
-		flagIndex       string
-		flagLevel       string
-		flagMetricsAddr string
-		flagProfiling   string
-		flagSkip        bool
+		flagAddress          string
+		flagBootstrap        string
+		flagBucket           string
+		flagCheckpoint       string
+		flagData             string
+		flagIndex            string
+		flagLevel            string
+		flagFollowerLogLevel string
+		flagMetricsAddr      string
+		flagProfiling        string
+		flagSkip             bool
 
 		flagFlushInterval time.Duration
 		flagSeedAddress   string
@@ -98,6 +99,7 @@ func run() int {
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
+	pflag.StringVarP(&flagFollowerLogLevel, "follower-level", "l", "warn", "log output level for follower engine")
 	pflag.StringVarP(&flagMetricsAddr, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.StringVarP(&flagProfiling, "profiler-address", "p", "", "address for net/http/pprof profiler (profiler is disabled if left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
@@ -159,16 +161,6 @@ func run() int {
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
 	read := index.NewReader(log, indexDB, storage)
-	first, err := read.First()
-	if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-		log.Error().Err(err).Msg("could not get first height from index reader")
-		return failure
-	}
-	empty := errors.Is(err, badger.ErrKeyNotFound)
-	if empty && flagCheckpoint == "" {
-		log.Error().Msg("index database is empty, please provide root checkpoint (-c, --checkpoint) to bootstrap")
-		return failure
-	}
 
 	// We initialize the writer with a flush interval, which will make sure that
 	// Badger transactions are committed to the database, even if they don't
@@ -235,7 +227,7 @@ func run() int {
 		seedNodes,
 		unstaked.WithBootstrapDir(flagBootstrap),
 		unstaked.WithDB(protocolDB),
-		unstaked.WithLogLevel(flagLevel),
+		unstaked.WithLogLevel(flagFollowerLogLevel),
 	)
 	if err != nil {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
@@ -319,18 +311,7 @@ func run() int {
 	// If we have an empty database, we want a loader to bootstrap from the
 	// checkpoint; if we don't, we can optionally use the root checkpoint to
 	// speed up the restart/restoration.
-	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
-	if empty {
-		load = loader.FromCheckpointFile(flagCheckpoint, &log)
-	} else if flagCheckpoint != "" {
-		initialize := loader.FromCheckpointFile(flagCheckpoint, &log)
-		load = loader.FromIndex(log, storage, indexDB,
-			loader.WithInitializer(initialize),
-			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
-		)
-	}
-
+	load := loader.FromIndex(log, storage, indexDB)
 	// If metrics are enabled, the mapper should use the metrics writer. Otherwise, it can
 	// use the regular one.
 	writer := archive.Writer(write)
@@ -343,7 +324,6 @@ func run() int {
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
 	transitions := mapper.NewTransitions(log, load, consensus, execution, read, writer,
-		mapper.WithBootstrapState(empty),
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	state := mapper.EmptyState(flagCheckpoint)

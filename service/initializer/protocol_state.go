@@ -33,6 +33,7 @@ import (
 // ProtocolState initializes the Flow protocol state in the given database. The
 // code is inspired by the related unexported code in the Flow Go code base:
 // https://github.com/onflow/flow-go/blob/v0.21.0/cmd/bootstrap/cmd/finalize.go#L452
+// TODO(leo): use the code from flow-go
 func ProtocolState(file io.Reader, db *badger.DB) error {
 
 	// If we already have a root height, skip bootstrapping.
