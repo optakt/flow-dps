@@ -24,5 +24,5 @@ import (
 // retrieve accounts.
 type VirtualMachine interface {
 	Run(ctx fvm.Context, proc fvm.Procedure, v state.View) error
-	GetAccount(ctx fvm.Context, address flow.Address, v state.View) (*flow.Account, error)
+	GetAccount(ctx fvm.Context, address flow.Address, v state.StorageSnapshot) (*flow.Account, error)
 }

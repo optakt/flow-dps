@@ -18,8 +18,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/onflow/flow-go/consensus/hotstuff/model"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"io"
 	"math/rand"
 	"time"
@@ -29,12 +27,14 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/flow-go/consensus/hotstuff/model"
 	"github.com/onflow/flow-go/crypto"
 	chash "github.com/onflow/flow-go/crypto/hash"
-	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
+	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/mempool/entity"
 
@@ -117,7 +117,7 @@ var (
 				Index:     0,
 				SeqNumber: 42,
 				HashAlgo:  chash.SHA2_256,
-				PublicKey: crypto.NeutralBLSPublicKey(),
+				PublicKey: crypto.IdentityBLSPublicKey(),
 			},
 		},
 	}

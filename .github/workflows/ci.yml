@@ -76,17 +76,17 @@ jobs:
       # This check makes sure that we can compile the binary as a pure Go binary
       # without CGO support.
       - name: Verify compilation
-        run: make crypto_setup && go build -tags relic ./...
+        run: go build -tags relic ./...
 
       # This check runs all unit tests with verbose output and ensures that all
       # of the tests pass successfully.
       - name: Verify unit tests
-        run: make crypto_setup && go test -tags relic -v ./...
+        run: go test -tags relic -v ./...
 
       # This check runs all integration tests with verbose output and ensures
       # that they pass successfully.
       - name: Verify integration tests
-        run: make crypto_setup && go test -v -tags="relic integration" ./...
+        run: go test -v -tags="relic integration" ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
