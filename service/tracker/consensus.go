@@ -16,6 +16,7 @@ package tracker
 
 import (
 	"fmt"
+
 	"github.com/onflow/flow-go/consensus/hotstuff/model"
 
 	"github.com/dgraph-io/badger/v2"
@@ -73,7 +74,7 @@ func (c *Consensus) OnBlockFinalized(block *model.Block) {
 		return
 	}
 	c.last = header.Height
-	c.log.Debug().Hex("block", blockID[:]).Uint64("height", header.Height).Msg("block finalization processed")
+	c.log.Info().Hex("block", blockID[:]).Uint64("height", header.Height).Msg("block finalization processed")
 }
 
 // Root returns the root height from the underlying protocol state.
