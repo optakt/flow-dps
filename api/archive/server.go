@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/onflow/flow-archive/util"
 
 	"github.com/onflow/flow-go/model/flow"
 
@@ -195,7 +196,7 @@ func (s *Server) GetRegisterValues(ctx context.Context, req *GetRegisterValuesRe
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
-	err = s.validateHeightIndexed(req.Height)
+	err = util.ValidateHeightIndexed(s.index, req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("data unavailable for block height: %w", err)
 	}
@@ -452,7 +453,7 @@ func (s *Server) ListSealsForHeight(ctx context.Context, req *ListSealsForHeight
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
 
-	err = s.validateHeightIndexed(req.Height)
+	err = util.ValidateHeightIndexed(s.index, req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("data unavailable for block height: %w", err)
 	}
@@ -473,15 +474,4 @@ func (s *Server) ListSealsForHeight(ctx context.Context, req *ListSealsForHeight
 	}
 
 	return &res, nil
-}
-
-func (s *Server) validateHeightIndexed(height uint64) error {
-	h, err := s.index.Last()
-	if err != nil {
-		return fmt.Errorf("could not get last indexed height for Archive node")
-	}
-	if h < height {
-		return fmt.Errorf("current indexed height(%d) lower than requested height", h)
-	}
-	return nil
 }
