@@ -118,7 +118,7 @@ var (
 				Index:     0,
 				SeqNumber: 42,
 				HashAlgo:  chash.SHA2_256,
-				PublicKey: crypto.NeutralBLSPublicKey(),
+				PublicKey: crypto.IdentityBLSPublicKey(),
 			},
 		},
 	}
