@@ -18,11 +18,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/onflow/flow-go/consensus/hotstuff/model"
-	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 	"io"
 	"math/rand"
 	"time"
+
+	"github.com/onflow/flow-go/consensus/hotstuff/model"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
 
 	"github.com/rs/zerolog"
 
@@ -31,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/onflow/flow-go/crypto"
 	chash "github.com/onflow/flow-go/crypto/hash"
-	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
+	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/hash"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/node"
