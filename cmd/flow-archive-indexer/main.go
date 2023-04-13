@@ -30,7 +30,6 @@ import (
 	"github.com/onflow/flow-archive/models/archive"
 	"github.com/onflow/flow-archive/service/chain"
 	"github.com/onflow/flow-archive/service/index"
-	"github.com/onflow/flow-archive/service/loader"
 	"github.com/onflow/flow-archive/service/mapper"
 	"github.com/onflow/flow-archive/service/storage"
 	"github.com/onflow/flow-archive/service/triereader"
@@ -116,7 +115,6 @@ func run() int {
 
 	// Check if index already exists.
 	read := index.NewReader(log, indexDB, storage)
-	first, err := read.First()
 	empty := errors.Is(err, badger.ErrKeyNotFound)
 	if err != nil && !empty {
 		log.Error().Err(err).Msg("could not get first height from index reader")
@@ -152,8 +150,6 @@ func run() int {
 	}()
 
 	// Initialize the transitions with the dependencies and add them to the FSM.
-	var load mapper.Loader
-	load = loader.FromIndex(log, storage, indexDB)
 	bootstrap := flagCheckpoint != ""
 	if empty {
 		file, err := os.Open(flagCheckpoint)
@@ -162,7 +158,6 @@ func run() int {
 			return failure
 		}
 		file.Close()
-		load = loader.FromCheckpointFile(flagCheckpoint, &log)
 	} else if bootstrap {
 		file, err := os.Open(flagCheckpoint)
 		if err != nil {
@@ -170,14 +165,9 @@ func run() int {
 			return failure
 		}
 		file.Close()
-		initialize := loader.FromCheckpointFile(flagCheckpoint, &log)
-		load = loader.FromIndex(log, storage, indexDB,
-			loader.WithInitializer(initialize),
-			loader.WithExclude(loader.ExcludeAtOrBelow(first)),
-		)
 	}
 
-	transitions := mapper.NewTransitions(log, load, disk, feed, read, write,
+	transitions := mapper.NewTransitions(log, disk, feed, read, write,
 		mapper.WithSkipRegisters(flagSkip),
 	)
 	state := mapper.EmptyState(flagCheckpoint)
