@@ -3,7 +3,7 @@
 # crypto package
 PKG_NAME="github.com/onflow/flow-go/crypto"
 
-VERSION="v0.24.4"
+VERSION="v0.24.7"
 
 # go get the package
 go get ${PKG_NAME}@${VERSION}
