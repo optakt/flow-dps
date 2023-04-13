@@ -74,6 +74,7 @@ func ProtocolState(file io.Reader, db *badger.DB) error {
 		seals,
 		results,
 		cache.NewBlocks(db, headers, payloads),
+		cache.NewQuorumCertificates(collector, db, cache.DefaultCacheSize),
 		cache.NewEpochSetups(collector, db),
 		cache.NewEpochCommits(collector, db),
 		cache.NewEpochStatuses(collector, db),
