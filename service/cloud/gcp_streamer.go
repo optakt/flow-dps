@@ -18,14 +18,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/onflow/flow-go/consensus/hotstuff/model"
 	"io"
 	"sync/atomic"
+
+	"github.com/onflow/flow-go/consensus/hotstuff/model"
 
 	"cloud.google.com/go/storage"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/rs/zerolog"
 
-	"github.com/onflow/flow-go/consensus/hotstuff/model"
 	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 	"github.com/onflow/flow-go/model/flow"
 

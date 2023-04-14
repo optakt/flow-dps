@@ -20,6 +20,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/flow-archive/util"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/model/flow"
@@ -74,6 +75,10 @@ func New(index archive.Reader, options ...func(*Config)) (*Invoker, error) {
 
 // Key returns the public key of the account with the given address.
 func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
+	err := util.ValidateHeightIndexed(i.index, height)
+	if err != nil {
+		return nil, fmt.Errorf("data unavailable for block height: %w", err)
+	}
 
 	// Retrieve the account at the specified block height.
 	account, err := i.Account(height, address)
@@ -101,7 +106,10 @@ func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.Acc
 
 // Account returns the account with the given address.
 func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, error) {
-
+	err := util.ValidateHeightIndexed(i.index, height)
+	if err != nil {
+		return nil, fmt.Errorf("data unavailable for block height: %w", err)
+	}
 	// Look up the current block and commit for the block.
 	header, err := i.index.Header(height)
 	if err != nil {
@@ -140,7 +148,10 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 		}
 		args = append(args, arg)
 	}
-
+	err := util.ValidateHeightIndexed(i.index, height)
+	if err != nil {
+		return nil, fmt.Errorf("data unavailable for block height: %w", err)
+	}
 	// Look up the current block and commit for the block.
 	header, err := i.index.Header(height)
 	if err != nil {

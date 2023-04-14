@@ -18,9 +18,10 @@ import (
 	"testing"
 
 	"github.com/gammazero/deque"
-	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 
 	"github.com/onflow/flow-archive/service/tracker"
 	"github.com/onflow/flow-archive/testing/mocks"

@@ -22,6 +22,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/onflow/flow-go/consensus/hotstuff/model"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/cadence"

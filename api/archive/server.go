@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/onflow/flow-archive/util"
 
 	"github.com/onflow/flow-go/model/flow"
 
@@ -195,7 +196,10 @@ func (s *Server) GetRegisterValues(ctx context.Context, req *GetRegisterValuesRe
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
-
+	err = util.ValidateHeightIndexed(s.index, req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("data unavailable for block height: %w", err)
+	}
 	paths, err := convert.BytesToPaths(req.Paths)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert paths: %w", err)
@@ -447,6 +451,11 @@ func (s *Server) ListSealsForHeight(ctx context.Context, req *ListSealsForHeight
 	err := s.validate.Struct(req)
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
+	}
+
+	err = util.ValidateHeightIndexed(s.index, req.Height)
+	if err != nil {
+		return nil, fmt.Errorf("data unavailable for block height: %w", err)
 	}
 
 	sealIDs, err := s.index.SealsByHeight(req.Height)

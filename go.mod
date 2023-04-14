@@ -27,7 +27,7 @@ require (
 )
 
 require (
-	github.com/onflow/flow-go v0.30.3
+	github.com/onflow/flow-go v0.30.3-fix-read-leaf-nodes
 	github.com/onflow/flow-go/crypto v0.24.7
 	github.com/srikrsna/protoc-gen-gotag v0.6.2
 	go.opentelemetry.io/otel v1.11.1
@@ -269,3 +269,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
+
+// replace github.com/onflow/flow-go/crypto => /flow-go/crypto
