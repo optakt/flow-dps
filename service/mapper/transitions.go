@@ -74,36 +74,17 @@ func (t *Transitions) InitializeMapper(s *State) error {
 		return fmt.Errorf("invalid status for initializing mapper (%s)", s.status)
 	}
 
-	log := t.log.With().Uint64("height", s.height).Logger()
-
-	isBootstrapped := false // default
-
-	first, err := t.chain.Root()
-	if err != nil {
-		return fmt.Errorf("could not get root height: %w", err)
-	}
-
-	last, err := t.read.Last()
-	if err == nil {
-		isBootstrapped = last >= first
-	} else if !errors.Is(err, badger.ErrKeyNotFound) {
-		return fmt.Errorf("could not get last height: %w", err)
-	}
-
-	log.Info().
-		Bool("is_bootstrapped", isBootstrapped).
-		Uint64("first", first).
-		Uint64("last", last).
-		Msg("initializing")
-
-	if isBootstrapped {
-		// we have bootstrapped
-		s.status = StatusResume
+	if t.cfg.BootstrapState {
+		s.status = StatusBootstrap
+		height, err := t.chain.Root()
+		if err != nil {
+			return fmt.Errorf("could not get root height: %w", err)
+		}
+		s.height = height
 		return nil
 	}
 
-	s.status = StatusBootstrap
-	s.height = first
+	s.status = StatusResume
 	return nil
 }
 
@@ -123,23 +104,35 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("could not write first: %w", err)
 	}
 
+	// We need to know what the last indexed height was at the point we stopped
+	// indexing.
+	last, err := t.read.Last()
+	if err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			last = first
+		} else {
+			return fmt.Errorf("could not get last height: %w", err)
+		}
+	}
+
+	// We just need to point to the next height. The chain indexing will
+	// then proceed with the first non-indexed block and index values
+	s.height = last + 1
+
 	log := t.log.With().Uint64("height", s.height).Logger()
 
 	log.Info().Msgf("bootstrap with checkpoint file %v%v", s.checkpointDir, s.checkpointFileName)
 
-	// reading the leaf nodes on a goroutine
-	// and use a doneRead channel to report if running into any error
-	doneRead := make(chan error, 1)
-
 	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
 	// enough, which also help limit the amount of memory being used for holding unprocessed
 	// leaf nodes.
-	leafNodesCh, err := wal.OpenAndReadLeafNodesFromCheckpointV6(s.checkpointDir, s.checkpointFileName, &t.log)
+	resultCh, err := wal.OpenAndReadLeafNodesFromCheckpointV6(s.checkpointDir, s.checkpointFileName, &t.log)
 	if err != nil {
-		log.Error().Err(err).Msg("fail to read leaf nodes")
+		return fmt.Errorf("could not read leaf node from checkpoint file: %v/%v: %w", s.checkpointDir, s.checkpointFileName, err)
 	}
-	doneRead <- err
+
 	batchSize := 1000
+
 	batch := make([]*wal.LeafNode, 0, batchSize)
 	total := 0
 
@@ -154,15 +147,14 @@ func (t *Transitions) BootstrapState(s *State) error {
 	go func() {
 		defer close(jobs)
 
-		for leafNode := range leafNodesCh {
-			if leafNode.Err != nil {
-				log.Error().Err(err).Msg("fail to read leaf nodes")
-				doneRead <- leafNode.Err
-				close(doneRead)
+		for result := range resultCh {
+			if result.Err != nil {
 				cancel()
+				return
 			}
+
 			total++
-			batch = append(batch, leafNode.LeafNode)
+			batch = append(batch, result.LeafNode)
 
 			// save registers in batch, which could result better speed
 			if len(batch) >= batchSize {
@@ -175,8 +167,6 @@ func (t *Transitions) BootstrapState(s *State) error {
 			jobs <- batch
 		}
 	}()
-
-	close(doneRead)
 
 	// wait for all workers to finish in order to close the results channel
 	var wg sync.WaitGroup
@@ -204,7 +194,6 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 				select {
 				case <-ctx.Done():
-					workerErrors <- ctx.Err()
 					return
 				default:
 				}
@@ -222,13 +211,10 @@ func (t *Transitions) BootstrapState(s *State) error {
 		}
 	}
 
-	// make sure there is error from reading the leaf node
-	err = <-doneRead
-	if err != nil {
-		return fmt.Errorf("fail to read leaf node: %w", err)
-	}
-
 	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
+
+	// save root height as last as bootstrap is complete
+	t.write.Last(first)
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
@@ -299,7 +285,7 @@ func (t *Transitions) IndexChain(s *State) error {
 	// point.
 	header, err := t.chain.Header(s.height)
 	if errors.Is(err, archive.ErrUnavailable) {
-		log.Info().Msgf("header is not available, sleep for %s", t.cfg.WaitInterval)
+		log.Debug().Msg("waiting for next header")
 		time.Sleep(t.cfg.WaitInterval)
 		return nil
 	}
