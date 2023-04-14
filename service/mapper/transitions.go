@@ -140,8 +140,8 @@ func (t *Transitions) BootstrapState(s *State) error {
 	nWorker := 10
 	jobs := make(chan []*wal.LeafNode, nWorker)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
 
 	go func() {
 		defer close(jobs)
@@ -168,8 +168,9 @@ func (t *Transitions) BootstrapState(s *State) error {
 	go func() {
 		err := wal.OpenAndReadLeafNodesFromCheckpointV6(leafNodesCh, s.checkpointDir, s.checkpointFileName, &t.log)
 		if err != nil {
-			log.Error().Err(err).Msg("fail to read leaf nodes")
-			cancel()
+			log.Error().Err(err).Msg("fail to read leaf node")
+			// if running into error, then cancel the context to stop all workers
+			workerCancel()
 		}
 		doneRead <- err
 		close(doneRead)
@@ -195,13 +196,17 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 				if err != nil {
 					workerErrors <- err
-					cancel()
+					// if worker is running into exception, then
+					// cancel the context to stop other workers.
+					workerCancel()
 					return
 				}
 
 				select {
-				case <-ctx.Done():
-					workerErrors <- ctx.Err()
+				case <-workerCtx.Done():
+					// we don't want to push workerCancel.Err() to workerErrors because,
+					// that would print the context cancelled error
+					// instead of the root cause error from the job creator.
 					return
 				default:
 				}
@@ -219,7 +224,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 		}
 	}
 
-	// make sure there is error from reading the leaf node
+	// make sure there is no error from reading the leaf node
 	err = <-doneRead
 	if err != nil {
 		return fmt.Errorf("fail to read leaf node: %w", err)
