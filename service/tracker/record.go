@@ -15,7 +15,7 @@
 package tracker
 
 import (
-	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
+	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 	"github.com/onflow/flow-go/model/flow"
 )
 

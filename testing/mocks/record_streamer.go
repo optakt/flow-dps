@@ -17,7 +17,7 @@ package mocks
 import (
 	"testing"
 
-	"github.com/onflow/flow-go/engine/execution/computation/computer/uploader"
+	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 )
 
 type RecordStreamer struct {
