@@ -3,25 +3,12 @@ FROM golang:1.18-buster AS build-setup
 RUN apt-get update \
  && apt-get -y install cmake zip sudo git
 
-ENV FLOW_GO_REPO="https://github.com/onflow/flow-go"
-ENV FLOW_GO_BRANCH=v0.29.16
-
-RUN mkdir /archive /docker /flow-go
-
+RUN mkdir /archive
 WORKDIR /archive
-
-# clone repos
 COPY . /archive
-RUN git clone --branch $FLOW_GO_BRANCH $FLOW_GO_REPO /flow-go
-
-RUN ln -s /flow-go /archive/flow-go
-
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build  \
-    make -C /flow-go crypto_setup_gopath #prebuild crypto dependency \
-    bash crypto_setup.sh
-
-RUN ls -la /flow-go/crypto/
+    bash crypto_build.sh
 
 FROM build-setup AS build-binary
 

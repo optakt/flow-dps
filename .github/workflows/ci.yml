@@ -16,12 +16,6 @@ jobs:
       - name: Check out source code
         uses: actions/checkout@v2
 
-      - name: Check out FlowGo
-        uses: actions/checkout@v2
-        with:
-          repository: onflow/flow-go
-          path: flow-go
-
       - name: Install Go
         uses: actions/setup-go@v2
         with:
@@ -59,21 +53,10 @@ jobs:
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
           go install github.com/srikrsna/protoc-gen-gotag@v0.6.2
 
-      # Since building relic takes some time, we want to cache it.
-      - name: Cache Crypto package
-        uses: actions/cache@v2
-        with:
-          path: ./flow-go/crypto
-          key: ${{ runner.os }}-crypto
-          restore-keys: |
-            ${{ runner.os }}-crypto
-
       # In order to be able to build with flow-go and the relic tag, we need to
       # run its go generate target.
       - name: Make Flow Go's crypto
-        run: |
-          cd ./flow-go
-          make crypto_setup_gopath
+        run: make crypto_setup
 
       # This check makes sure that the `go.mod` and `go.sum` files for Go
       # modules are always up-to-date.
