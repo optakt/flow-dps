@@ -72,17 +72,36 @@ func (t *Transitions) InitializeMapper(s *State) error {
 		return fmt.Errorf("invalid status for initializing mapper (%s)", s.status)
 	}
 
-	if t.cfg.BootstrapState {
-		s.status = StatusBootstrap
-		height, err := t.chain.Root()
-		if err != nil {
-			return fmt.Errorf("could not get root height: %w", err)
-		}
-		s.height = height
+	log := t.log.With().Uint64("height", s.height).Logger()
+
+	isBootstrapped := false // default
+
+	first, err := t.chain.Root()
+	if err != nil {
+		return fmt.Errorf("could not get root height: %w", err)
+	}
+
+	last, err := t.read.Last()
+	if err == nil {
+		isBootstrapped = last >= first
+	} else if !errors.Is(err, badger.ErrKeyNotFound) {
+		return fmt.Errorf("could not get last height: %w", err)
+	}
+
+	log.Info().
+		Bool("is_bootstrapped", isBootstrapped).
+		Uint64("first", first).
+		Uint64("last", last).
+		Msg("initializing")
+
+	if isBootstrapped {
+		// we have bootstrapped
+		s.status = StatusResume
 		return nil
 	}
 
-	s.status = StatusResume
+	s.status = StatusBootstrap
+	s.height = first
 	return nil
 }
 
@@ -102,21 +121,6 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("could not write first: %w", err)
 	}
 
-	// We need to know what the last indexed height was at the point we stopped
-	// indexing.
-	last, err := t.read.Last()
-	if err != nil {
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			last = first
-		} else {
-			return fmt.Errorf("could not get last height: %w", err)
-		}
-	}
-
-	// We just need to point to the next height. The chain indexing will
-	// then proceed with the first non-indexed block and index values
-	s.height = last + 1
-
 	log := t.log.With().Uint64("height", s.height).Logger()
 
 	log.Info().Msgf("bootstrap with checkpoint file %v%v", s.checkpointDir, s.checkpointFileName)
@@ -124,13 +128,10 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// read leaf will be blocked if the consumer is not processing the leaf nodes fast
 	// enough, which also help limit the amount of memory being used for holding unprocessed
 	// leaf nodes.
-	resultCh, err := wal.OpenAndReadLeafNodesFromCheckpointV6(s.checkpointDir, s.checkpointFileName, &t.log)
-	if err != nil {
-		return fmt.Errorf("could not read leaf node from checkpoint file: %v/%v: %w", s.checkpointDir, s.checkpointFileName, err)
-	}
+	bufSize := 1000
+	leafNodesCh := make(chan *wal.LeafNode, bufSize)
 
 	batchSize := 1000
-
 	batch := make([]*wal.LeafNode, 0, batchSize)
 	total := 0
 
@@ -145,14 +146,9 @@ func (t *Transitions) BootstrapState(s *State) error {
 	go func() {
 		defer close(jobs)
 
-		for result := range resultCh {
-			if result.Err != nil {
-				cancel()
-				return
-			}
-
+		for leafNode := range leafNodesCh {
 			total++
-			batch = append(batch, result.LeafNode)
+			batch = append(batch, leafNode)
 
 			// save registers in batch, which could result better speed
 			if len(batch) >= batchSize {
@@ -164,6 +160,19 @@ func (t *Transitions) BootstrapState(s *State) error {
 		if len(batch) > 0 {
 			jobs <- batch
 		}
+	}()
+
+	// reading the leaf nodes on a goroutine
+	// and use a doneRead channel to report if running into any error
+	doneRead := make(chan error, 1)
+	go func() {
+		err := wal.OpenAndReadLeafNodesFromCheckpointV6(leafNodesCh, s.checkpointDir, s.checkpointFileName, &t.log)
+		if err != nil {
+			log.Error().Err(err).Msg("fail to read leaf nodes")
+			cancel()
+		}
+		doneRead <- err
+		close(doneRead)
 	}()
 
 	// wait for all workers to finish in order to close the results channel
@@ -192,6 +201,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 
 				select {
 				case <-ctx.Done():
+					workerErrors <- ctx.Err()
 					return
 				default:
 				}
@@ -209,10 +219,13 @@ func (t *Transitions) BootstrapState(s *State) error {
 		}
 	}
 
-	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
+	// make sure there is error from reading the leaf node
+	err = <-doneRead
+	if err != nil {
+		return fmt.Errorf("fail to read leaf node: %w", err)
+	}
 
-	// save root height as last as bootstrap is complete
-	t.write.Last(first)
+	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
@@ -283,7 +296,7 @@ func (t *Transitions) IndexChain(s *State) error {
 	// point.
 	header, err := t.chain.Header(s.height)
 	if errors.Is(err, archive.ErrUnavailable) {
-		log.Debug().Msg("waiting for next header")
+		log.Info().Msgf("header is not available, sleep for %s", t.cfg.WaitInterval)
 		time.Sleep(t.cfg.WaitInterval)
 		return nil
 	}

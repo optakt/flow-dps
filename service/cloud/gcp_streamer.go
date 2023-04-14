@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/onflow/flow-go/consensus/hotstuff/model"
 	"io"
 	"sync/atomic"
 
