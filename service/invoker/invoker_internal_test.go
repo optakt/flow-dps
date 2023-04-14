@@ -173,7 +173,7 @@ func TestInvoker_Account(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.View) (*flow.Account, error) {
+		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.StorageSnapshot) (*flow.Account, error) {
 			assert.NotNil(t, ctx)
 			assert.NotNil(t, v)
 			assert.Equal(t, mocks.GenericAccount.Address, address)
@@ -234,7 +234,7 @@ func TestInvoker_Account(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.GetAccountFunc = func(fvm.Context, flow.Address, state.View) (*flow.Account, error) {
+		vm.GetAccountFunc = func(fvm.Context, flow.Address, state.StorageSnapshot) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
