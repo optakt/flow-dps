@@ -84,6 +84,7 @@ func run() int {
 		flagMetricsAddr      string
 		flagProfiling        string
 		flagSkip             bool
+		flagWaitInterval     time.Duration
 
 		flagFlushInterval time.Duration
 		flagSeedAddress   string
@@ -101,7 +102,8 @@ func run() int {
 	pflag.StringVarP(&flagFollowerLogLevel, "follower-level", "l", "warn", "log output level for follower engine")
 	pflag.StringVarP(&flagMetricsAddr, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.StringVarP(&flagProfiling, "profiler-address", "p", "", "address for net/http/pprof profiler (profiler is disabled if left empty)")
-	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
+	pflag.BoolVarP(&flagSkip, "skip", "s", mapper.DefaultConfig.SkipRegisters, "skip indexing of execution state ledger registers")
+	pflag.DurationVarP(&flagWaitInterval, "wait-interval", "", mapper.DefaultConfig.WaitInterval, "wait interval for polling execution data for the next block (default: 250ms), useful to set a longer duration after fully synced for historical spork")
 
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
@@ -320,6 +322,7 @@ func run() int {
 	// load and inject the root checkpoint if it is given as a parameter.
 	transitions := mapper.NewTransitions(log, consensus, execution, read, writer,
 		mapper.WithSkipRegisters(flagSkip),
+		mapper.WithWaitInterval(flagWaitInterval),
 	)
 	state := mapper.EmptyState(flagCheckpoint)
 	fsm := mapper.NewFSM(state,
