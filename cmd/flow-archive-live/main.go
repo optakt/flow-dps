@@ -217,6 +217,7 @@ func run() int {
 		log.Error().Err(err).Str("key", flagSeedKey).Msg("could not parse seed node network public key")
 		return failure
 	}
+	log.Info().Msgf("syncing block data from  seed node: %v:%v with key: %v", seedHost, seedPort, seedKey)
 	seedNodes := []unstaked.BootstrapNodeInfo{{
 		Host:             seedHost,
 		Port:             uint(seedPort),
