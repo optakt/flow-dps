@@ -256,6 +256,7 @@ func run() int {
 		return failure
 	}
 
+	log.Info().Msgf("initialized protocol state database from path: %v", path)
 	// If we are resuming, and the consensus follower has already finalized some
 	// blocks that were not yet indexed, we need to download them again in the
 	// cloud streamer. Here, we figure out which blocks these are.
@@ -265,6 +266,7 @@ func run() int {
 		return failure
 	}
 
+	log.Info().Msgf("%v blocks to catchup", len(blockIDs))
 	// On the other side, we also need access to the execution data. The cloud
 	// streamer is responsible for retrieving block execution records from a
 	// Google Cloud Storage bucket. This component plays the role of what would
@@ -318,6 +320,7 @@ func run() int {
 		writer = metrics.NewMetricsWriter(write)
 	}
 
+	log.Info().Msgf("creating FSM with flags: (flagSkip: %v, flagWaitInterval: %v)", flagSkip, flagWaitInterval)
 	// At this point, we can initialize the core business logic of the indexer,
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
@@ -368,11 +371,14 @@ func run() int {
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the shutdown.
+	log.Info().Msgf("creating server at address: %v", flagAddress)
 	listener, err := net.Listen("tcp", flagAddress)
 	if err != nil {
 		log.Error().Str("address", flagAddress).Err(err).Msg("could not create listener")
 		return failure
 	}
+	log.Info().Msgf("server created at address: %v", flagAddress)
+
 	done := make(chan struct{})
 	failed := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
