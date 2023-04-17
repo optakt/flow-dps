@@ -223,6 +223,8 @@ func run() int {
 		Port:             uint(seedPort),
 		NetworkPublicKey: seedKey,
 	}}
+	log.Info().Msgf("creating consensus follower with %v seedNodes, bootstrap: %v, followerLogLevel: %v",
+		len(seedNodes), flagBootstrap, flagFollowerLogLevel)
 	follow, err := unstaked.NewConsensusFollower(
 		privKey,
 		"0.0.0.0:0", // automatically choose port, listen on all IPs
@@ -235,6 +237,7 @@ func run() int {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
 		return failure
 	}
+	log.Info().Msg("consensus follower created succesfully")
 
 	// There is a problem with the Flow consensus follower API which makes it
 	// impossible to use it to bootstrap the protocol state. The consensus
@@ -250,13 +253,15 @@ func run() int {
 		return failure
 	}
 	defer file.Close()
+
+	log.Info().Msgf("initializing protocol state database from path: %v", path)
 	err = initializer.ProtocolState(file, protocolDB)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize protocol state")
 		return failure
 	}
 
-	log.Info().Msgf("initialized protocol state database from path: %v", path)
+	log.Info().Msgf("initialized protocol state database from path: %v. start catching block blocks", path)
 	// If we are resuming, and the consensus follower has already finalized some
 	// blocks that were not yet indexed, we need to download them again in the
 	// cloud streamer. Here, we figure out which blocks these are.
