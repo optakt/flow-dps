@@ -99,7 +99,7 @@ func run() int {
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
 	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagFollowerLogLevel, "follower-level", "l", "warn", "log output level for follower engine")
+	pflag.StringVarP(&flagFollowerLogLevel, "follower-level", "", "info", "log output level for follower engine")
 	pflag.StringVarP(&flagMetricsAddr, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
 	pflag.StringVarP(&flagProfiling, "profiler-address", "p", "", "address for net/http/pprof profiler (profiler is disabled if left empty)")
 	pflag.BoolVarP(&flagSkip, "skip", "s", mapper.DefaultConfig.SkipRegisters, "skip indexing of execution state ledger registers")
@@ -217,11 +217,14 @@ func run() int {
 		log.Error().Err(err).Str("key", flagSeedKey).Msg("could not parse seed node network public key")
 		return failure
 	}
+	log.Info().Msgf("syncing block data from  seed node: %v:%v with key: %v", seedHost, seedPort, seedKey)
 	seedNodes := []unstaked.BootstrapNodeInfo{{
 		Host:             seedHost,
 		Port:             uint(seedPort),
 		NetworkPublicKey: seedKey,
 	}}
+	log.Info().Msgf("creating consensus follower with %v seedNodes, bootstrap: %v, followerLogLevel: %v",
+		len(seedNodes), flagBootstrap, flagFollowerLogLevel)
 	follow, err := unstaked.NewConsensusFollower(
 		privKey,
 		"0.0.0.0:0", // automatically choose port, listen on all IPs
@@ -234,6 +237,7 @@ func run() int {
 		log.Error().Err(err).Str("bucket", flagBucket).Msg("could not create consensus follower")
 		return failure
 	}
+	log.Info().Msg("consensus follower created succesfully")
 
 	// There is a problem with the Flow consensus follower API which makes it
 	// impossible to use it to bootstrap the protocol state. The consensus
@@ -249,12 +253,15 @@ func run() int {
 		return failure
 	}
 	defer file.Close()
+
+	log.Info().Msgf("initializing protocol state database from path: %v", path)
 	err = initializer.ProtocolState(file, protocolDB)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize protocol state")
 		return failure
 	}
 
+	log.Info().Msgf("initialized protocol state database from path: %v. start catching block blocks", path)
 	// If we are resuming, and the consensus follower has already finalized some
 	// blocks that were not yet indexed, we need to download them again in the
 	// cloud streamer. Here, we figure out which blocks these are.
@@ -264,6 +271,7 @@ func run() int {
 		return failure
 	}
 
+	log.Info().Msgf("%v blocks to catchup", len(blockIDs))
 	// On the other side, we also need access to the execution data. The cloud
 	// streamer is responsible for retrieving block execution records from a
 	// Google Cloud Storage bucket. This component plays the role of what would
@@ -317,6 +325,7 @@ func run() int {
 		writer = metrics.NewMetricsWriter(write)
 	}
 
+	log.Info().Msgf("creating FSM with flags: (flagSkip: %v, flagWaitInterval: %v)", flagSkip, flagWaitInterval)
 	// At this point, we can initialize the core business logic of the indexer,
 	// with the mapper's finite state machine and transitions. We also want to
 	// load and inject the root checkpoint if it is given as a parameter.
@@ -367,11 +376,14 @@ func run() int {
 	// This section launches the main executing components in their own
 	// goroutine, so they can run concurrently. Afterwards, we wait for an
 	// interrupt signal in order to proceed with the shutdown.
+	log.Info().Msgf("creating server at address: %v", flagAddress)
 	listener, err := net.Listen("tcp", flagAddress)
 	if err != nil {
 		log.Error().Str("address", flagAddress).Err(err).Msg("could not create listener")
 		return failure
 	}
+	log.Info().Msgf("server created at address: %v", flagAddress)
+
 	done := make(chan struct{})
 	failed := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
