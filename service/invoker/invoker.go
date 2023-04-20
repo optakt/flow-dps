@@ -23,6 +23,7 @@ import (
 	"github.com/onflow/flow-archive/util"
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
+	"github.com/onflow/flow-go/fvm/environment"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
@@ -35,6 +36,8 @@ type Invoker struct {
 	vm    VirtualMachine
 	cache Cache
 }
+
+var _ environment.Blocks = (*Invoker)(nil)
 
 // New returns a new Invoker with the given configuration.
 func New(index archive.Reader, options ...func(*Config)) (*Invoker, error) {
@@ -116,7 +119,7 @@ func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, e
 		return nil, fmt.Errorf("could not get header: %w", err)
 	}
 
-	ctx := fvm.NewContext(fvm.WithBlockHeader(header))
+	ctx := fvm.NewContext(fvm.WithBlockHeader(header), fvm.WithBlocks(i))
 
 	// Initialize the read function. We use a shared cache between all heights
 	// here. It's a smart cache, which means that items that are accessed often
@@ -187,4 +190,8 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	}
 
 	return proc.Value, nil
+}
+
+func (i *Invoker) ByHeightFrom(height uint64, header *flow.Header) (*flow.Header, error) {
+	return header, nil
 }
