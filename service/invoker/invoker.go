@@ -37,6 +37,7 @@ type Invoker struct {
 	cache Cache
 }
 
+// ensure Invoker implemented this interface
 var _ environment.Blocks = (*Invoker)(nil)
 
 // New returns a new Invoker with the given configuration.
@@ -193,5 +194,9 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 }
 
 func (i *Invoker) ByHeightFrom(height uint64, header *flow.Header) (*flow.Header, error) {
-	return header, nil
+	if header.Height == height {
+		return header, nil
+	}
+
+	return nil, fmt.Errorf("not implemented to get non-current block")
 }
