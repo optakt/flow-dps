@@ -49,8 +49,6 @@ There are also additional API layers that can be run on top of the DPS API:
 * [Snapshots](./docs/snapshots.md)
 
 ## Dependencies
-
-Go `v1.16` or higher is required to compile `flow-dps`.
 Only Linux amd64 builds are supported, because of the dependency to the [`flow-go/crypto`](https://github.com/onflow/flow-go/tree/master/crypto) package.
 Please note that it is also required to make sure that your `GOPATH` is exported in your environment in order to generate the DPS API.
 
