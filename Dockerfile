@@ -1,7 +1,7 @@
-FROM golang:1.18-buster AS build-setup
+FROM golang:1.19-buster AS build-setup
 
 RUN apt-get update \
- && apt-get -y install cmake zip sudo git
+    && apt-get -y install cmake zip sudo git
 
 RUN mkdir /archive
 WORKDIR /archive
