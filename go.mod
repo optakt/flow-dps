@@ -9,7 +9,6 @@ require (
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/fxamacker/cbor/v2 v2.4.1-0.20220515183430-ad2eae63303f
 	github.com/gammazero/deque v0.1.0
-	github.com/go-playground/validator/v10 v10.9.0
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2 v2.0.0-rc.2
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.2
 	github.com/hashicorp/go-multierror v1.1.1
@@ -27,9 +26,9 @@ require (
 )
 
 require (
+	github.com/envoyproxy/protoc-gen-validate v0.9.1
 	github.com/onflow/flow-go v0.30.3-fix-read-leaf-nodes
 	github.com/onflow/flow-go/crypto v0.24.7
-	github.com/srikrsna/protoc-gen-gotag v0.6.2
 	go.opentelemetry.io/otel v1.11.1
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.8.0
 	go.opentelemetry.io/otel/sdk v1.8.0
@@ -90,8 +89,6 @@ require (
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-playground/locales v0.14.0 // indirect
-	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/go-test/deep v1.0.8 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
@@ -145,7 +142,6 @@ require (
 	github.com/kevinburke/go-bindata v3.23.0+incompatible // indirect
 	github.com/klauspost/cpuid/v2 v2.2.2 // indirect
 	github.com/koron/go-ssdp v0.0.3 // indirect
-	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
@@ -216,13 +212,14 @@ require (
 	github.com/psiemens/sconfig v0.1.0 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a // indirect
+	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/schollz/progressbar/v3 v3.8.3 // indirect
 	github.com/sethvargo/go-retry v0.2.3 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.2 // indirect
 	github.com/slok/go-http-metrics v0.10.0 // indirect
 	github.com/spacemonkeygo/spacelog v0.0.0-20180420211403-2296661a0572 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/spf13/afero v1.9.0 // indirect
+	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.6.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect

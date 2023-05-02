@@ -34,7 +34,7 @@ fix-lint:
 	golangci-lint run -v --build-tags relic --fix ./...
 
 .PHONY: generate
-generate: buf-generate generate-tags
+generate: buf-generate
 
 .PHONY: unittest
 unittest:
@@ -50,10 +50,6 @@ integ-test:
 
 .PHONY: test
 test: unittest integ-test
-
-.PHONY: generate-tags
-generate-tags:
-	cd api/protobuf && protoc -I . -I ../archive -I $(GOPATH)/pkg/mod/github.com/srikrsna/protoc-gen-gotag@v0.6.2 --gotag_out=outdir="../archive":../archive --gotag_opt=paths=source_relative ./api.proto
 
 .PHONY: buf-generate
 buf-generate:
