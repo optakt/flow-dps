@@ -61,7 +61,6 @@ var (
 
 	GenericLedgerKey = ledger.NewKey([]ledger.KeyPart{
 		ledger.NewKeyPart(0, []byte(`owner`)),
-		ledger.NewKeyPart(1, []byte(`controller`)),
 		ledger.NewKeyPart(2, []byte(`key`)),
 	})
 
@@ -187,32 +186,67 @@ func GenericLedgerPath(index int) ledger.Path {
 	return GenericLedgerPaths(index + 1)[index]
 }
 
-func GenericLedgerValues(number int) []ledger.Value {
+func GenericRegisterEntries(number int) flow.RegisterEntries {
+	registers := make(flow.RegisterEntries, 0, number)
+	for i := 0; i < number; i++ {
+		registers = append(registers,
+			flow.RegisterEntry{
+				Key:   GenericRegister(i),
+				Value: GenericRegisterValue(i),
+			})
+	}
+
+	return registers
+}
+
+func GenericRegisterEntry(index int) flow.RegisterEntry {
+	return GenericRegisterEntries(index + 1)[index]
+}
+
+func GenericRegisters(number int) flow.RegisterIDs {
 	// Ensure consistent deterministic results.
 	random := rand.New(rand.NewSource(3))
 
-	var values []ledger.Value
+	registers := make(flow.RegisterIDs, 0, number)
 	for i := 0; i < number; i++ {
-		value := make(ledger.Value, 32)
-		binary.BigEndian.PutUint64(value[0:], random.Uint64())
-		binary.BigEndian.PutUint64(value[8:], random.Uint64())
-		binary.BigEndian.PutUint64(value[16:], random.Uint64())
-		binary.BigEndian.PutUint64(value[24:], random.Uint64())
+		registers = append(registers, flow.RegisterID{
+			Owner: GenericAddress(i).String(),
+			Key:   fmt.Sprintf("key-%d", random.Uint64()),
+		})
+	}
 
-		values = append(values, value)
+	return registers
+}
+
+func GenericRegister(index int) flow.RegisterID {
+	return GenericRegisters(index + 1)[index]
+}
+
+func GenericRegisterValues(number int) []flow.RegisterValue {
+	// Ensure consistent deterministic results.
+	random := rand.New(rand.NewSource(3))
+
+	values := make([]flow.RegisterValue, 0, number)
+	for i := 0; i < number; i++ {
+		values = append(values, []byte(fmt.Sprintf("value-%d", random.Uint64())))
 	}
 
 	return values
 }
 
-func GenericLedgerValue(index int) ledger.Value {
-	return GenericLedgerValues(index + 1)[index]
+func GenericRegisterValue(index int) flow.RegisterValue {
+	return GenericRegisterValues(index + 1)[index]
 }
 
 func GenericLedgerPayloads(number int) []*ledger.Payload {
 	var payloads []*ledger.Payload
 	for i := 0; i < number; i++ {
-		payloads = append(payloads, ledger.NewPayload(GenericLedgerKey, GenericLedgerValue(i)))
+		reg := GenericRegister(i)
+		key := ledger.NewKey([]ledger.KeyPart{
+			ledger.NewKeyPart(0, []byte(reg.Owner)),
+			ledger.NewKeyPart(2, []byte(reg.Key)),
+		})
+		payloads = append(payloads, ledger.NewPayload(key, GenericRegisterValue(i)))
 	}
 
 	return payloads

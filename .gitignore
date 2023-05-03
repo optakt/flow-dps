@@ -16,3 +16,4 @@
 *.checkpoint
 *.log
 .idea
+.vscode

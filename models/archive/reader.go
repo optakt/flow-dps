@@ -1,7 +1,6 @@
 package archive
 
 import (
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -16,7 +15,7 @@ type Reader interface {
 	Commit(height uint64) (flow.StateCommitment, error)
 	Header(height uint64) (*flow.Header, error)
 	Events(height uint64, types ...flow.EventType) ([]flow.Event, error)
-	Values(height uint64, paths []ledger.Path) ([]ledger.Value, error)
+	Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterValue, error)
 
 	Collection(collID flow.Identifier) (*flow.LightCollection, error)
 	Guarantee(collID flow.Identifier) (*flow.CollectionGuarantee, error)

@@ -16,7 +16,7 @@ type Writer interface {
 	Commit(height uint64, commit flow.StateCommitment) error
 	Header(height uint64, header *flow.Header) error
 	Events(height uint64, events []flow.Event) error
-	Payloads(height uint64, paths []ledger.Path, values []*ledger.Payload) error
+	Payloads(height uint64, payloads []*ledger.Payload) error
 	Registers(height uint64, registers []*wal.LeafNode) error
 
 	Collections(height uint64, collections []*flow.LightCollection) error

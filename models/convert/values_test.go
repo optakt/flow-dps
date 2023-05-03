@@ -10,7 +10,7 @@ import (
 )
 
 func TestValuesToBytes(t *testing.T) {
-	values := mocks.GenericLedgerValues(4)
+	values := mocks.GenericRegisterValues(4)
 
 	var bb [][]byte
 	for _, val := range values {
@@ -23,7 +23,7 @@ func TestValuesToBytes(t *testing.T) {
 }
 
 func TestBytesToValues(t *testing.T) {
-	values := mocks.GenericLedgerValues(4)
+	values := mocks.GenericRegisterValues(4)
 
 	var bb [][]byte
 	for _, val := range values {

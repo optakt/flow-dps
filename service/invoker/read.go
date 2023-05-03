@@ -3,10 +3,6 @@ package invoker
 import (
 	"fmt"
 
-	"github.com/onflow/flow-go/engine/execution/state"
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/pathfinder"
-	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
@@ -24,19 +20,15 @@ func readRegister(
 			return cacheValue.(flow.RegisterValue), nil
 		}
 
-		path, err := pathfinder.KeyToPath(
-			state.RegisterIDToKey(regID),
-			complete.DefaultPathFinderVersion)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert key to path: %w", err)
-		}
-
-		values, err := index.Values(height, []ledger.Path{path})
+		values, err := index.Values(height, flow.RegisterIDs{regID})
 		if err != nil {
 			return nil, fmt.Errorf("could not read register: %w", err)
 		}
+		if len(values) != 1 {
+			return nil, fmt.Errorf("wrong number of register values: %d", len(values))
+		}
 
-		value := flow.RegisterValue(values[0])
+		value := values[0]
 		_ = cache.Set(cacheKey, value, int64(len(value)))
 
 		return value, nil

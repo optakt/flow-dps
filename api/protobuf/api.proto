@@ -88,16 +88,18 @@ message GetEventsResponse {
 }
 
 message GetRegisterValuesRequest {
+  reserved 2;
+  reserved "paths";
+
   uint64 height = 1 [(validate.rules).uint64.gt = 0];
-  repeated bytes paths = 2 [
-    (validate.rules).repeated.min_items = 1,
-    (validate.rules).repeated.items.bytes.len = 32
-  ];
+  repeated bytes registers = 3 [(validate.rules).repeated.min_items = 1];
 }
 
 message GetRegisterValuesResponse {
-  uint64 height = 1;
-  repeated bytes paths = 2;
+  reserved 1, 2;
+  reserved "paths";
+  reserved "height";
+
   repeated bytes values = 3;
 }
 

@@ -108,18 +108,17 @@ func TestIndex(t *testing.T) {
 		reader, writer, db := setupIndex(t)
 		defer db.Close()
 
-		paths := mocks.GenericLedgerPaths(4)
 		payloads := mocks.GenericLedgerPayloads(4)
-		values := mocks.GenericLedgerValues(4)
+		regs := mocks.GenericRegisters(4)
+		values := mocks.GenericRegisterValues(4)
 
 		assert.NoError(t, writer.First(mocks.GenericHeight))
 		assert.NoError(t, writer.Last(mocks.GenericHeight))
-		assert.NoError(t, writer.Payloads(mocks.GenericHeight, paths, payloads))
+		assert.NoError(t, writer.Payloads(mocks.GenericHeight, payloads))
 		// Close the writer to make it commit its transactions.
 		require.NoError(t, writer.Close())
 
-		got, err := reader.Values(mocks.GenericHeight, paths)
-
+		got, err := reader.Values(mocks.GenericHeight, regs)
 		require.NoError(t, err)
 		assert.ElementsMatch(t, values, got)
 	})

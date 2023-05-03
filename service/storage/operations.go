@@ -7,8 +7,6 @@ import (
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
 
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -43,14 +41,9 @@ func (l *Library) SaveEvents(height uint64, typ flow.EventType, events []flow.Ev
 	return l.save(EncodeKey(PrefixEvents, height, hash), events)
 }
 
-// SavePayload is an operation that writes the height of a slice of paths and a slice of payloads.
-func (l *Library) SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
-	return l.save(EncodeKey(PrefixPayload, path, height), payload)
-}
-
 // BatchSavePayload is an operation that writes the height of a slice of paths and a slice of payloads.
-func (l *Library) BatchSavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.WriteBatch) error {
-	return l.batchWrite(EncodeKey(PrefixPayload, path, height), payload)
+func (l *Library) BatchSavePayload(height uint64, payload flow.RegisterEntry) func(*badger.WriteBatch) error {
+	return l.batchWrite(EncodeKey(PrefixPayload, payload.Key, height), payload.Value)
 }
 
 // SaveTransaction is an operation that writes the given transaction.
@@ -173,18 +166,17 @@ func (l *Library) RetrieveEvents(height uint64, types []flow.EventType, events *
 	}
 }
 
-// RetrievePayload retrieves the ledger payloads at the given height that match the given path.
-func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
+// RetrievePayload retrieves the ledger payloads at the given height that match the given registerID.
+func (l *Library) RetrievePayload(height uint64, register flow.RegisterID, payload *flow.RegisterValue) func(*badger.Txn) error {
 	return func(tx *badger.Txn) error {
-
-		key := EncodeKey(PrefixPayload, path, height)
+		key := EncodeKey(PrefixPayload, register, height)
 		it := tx.NewIterator(badger.IteratorOptions{
 			PrefetchSize:   0,
 			PrefetchValues: false,
 			Reverse:        true,
 			AllVersions:    false,
 			InternalAccess: false,
-			Prefix:         key[:1+pathfinder.PathByteSize],
+			Prefix:         key[:len(key)-8],
 		})
 		defer it.Close()
 

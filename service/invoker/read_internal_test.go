@@ -8,7 +8,6 @@ import (
 
 	"github.com/onflow/flow-archive/testing/mocks"
 
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -31,7 +30,7 @@ func TestReadRegister(t *testing.T) {
 
 		var indexCalled bool
 		index := mocks.BaselineReader(t)
-		index.ValuesFunc = func(uint64, []ledger.Path) ([]ledger.Value, error) {
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
 			indexCalled = true
 			return nil, nil
 		}
@@ -55,9 +54,9 @@ func TestReadRegister(t *testing.T) {
 
 		var indexCalled bool
 		index := mocks.BaselineReader(t)
-		index.ValuesFunc = func(uint64, []ledger.Path) ([]ledger.Value, error) {
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
 			indexCalled = true
-			return []ledger.Value{mocks.GenericBytes}, nil
+			return []flow.RegisterValue{mocks.GenericBytes}, nil
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
@@ -78,7 +77,7 @@ func TestReadRegister(t *testing.T) {
 		}
 
 		index := mocks.BaselineReader(t)
-		index.ValuesFunc = func(uint64, []ledger.Path) ([]ledger.Value, error) {
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
 			return nil, mocks.GenericError
 		}
 

@@ -94,9 +94,9 @@ func (w *MetricsWriter) Header(height uint64, header *flow.Header) error {
 	return w.write.Header(height, header)
 }
 
-func (w *MetricsWriter) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
-	w.register.Add(float64(len(paths)))
-	return w.write.Payloads(height, paths, payloads)
+func (w *MetricsWriter) Payloads(height uint64, payloads []*ledger.Payload) error {
+	w.register.Add(float64(len(payloads)))
+	return w.write.Payloads(height, payloads)
 }
 
 func (w *MetricsWriter) Registers(height uint64, registers []*wal.LeafNode) error {
