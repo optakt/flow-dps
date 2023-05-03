@@ -38,6 +38,9 @@ func DefaultPebbleOptions(cache *pebble.Cache, comparer *pebble.Comparer) *pebbl
 		l.IndexBlockSize = 256 << 10 // 256 KB
 
 		// 10 bits per key yields a filter with <1% false positive rate.
+		//
+		// The bloom filter is speedsup our SeekPrefixGE by skipping
+		// sstables that do not contain the prefix.
 		l.FilterPolicy = bloom.FilterPolicy(10)
 		l.FilterType = pebble.TableFilter
 
