@@ -1,7 +1,7 @@
 version: v1
 deps:
-  - buf.build/googleapis/googleapis
-  - buf.build/srikrsna/protoc-gen-gotag
+  - buf.build/googleapis/googleapis:cc916c31859748a68fd229a3c8d7a2e8
+  - buf.build/envoyproxy/protoc-gen-validate:6607b10f00ed4a3d98f906807131c44a
 lint:
   use:
     - DEFAULT

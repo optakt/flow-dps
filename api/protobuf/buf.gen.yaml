@@ -6,19 +6,21 @@ managed:
     default: github.com/onflow/archive/api/archive
     except:
       - buf.build/googleapis/googleapis
-      - buf.build/srikrsna/protoc-gen-gotag
+      - buf.build/envoyproxy/protoc-gen-validate
 
 plugins:
-  # renovate: datasource=github-releases depName=protocolbuffers/protobuf-go
-  - remote: buf.build/protocolbuffers/plugins/go:v1.28.1-1
+  - plugin: buf.build/bufbuild/validate-go:v1.0.0
+    out: ../archive
+    opt:
+      - paths=source_relative
+
+  - plugin: buf.build/protocolbuffers/go:v1.28.1
     out: ../archive
     opt:
       - paths=source_relative
 
   # Faster protobuf implementation for gRPC.
   # See: https://github.com/planetscale/vtprotobuf
-  #
-  # # renovate: datasource=github-releases depName=planetscale/vtprotobuf
   - remote: buf.build/planetscale/plugins/vtproto:v0.3.0
     out: ../archive
     opt:

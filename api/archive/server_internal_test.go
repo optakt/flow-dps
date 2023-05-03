@@ -18,7 +18,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -39,7 +38,6 @@ func TestNewServer(t *testing.T) {
 	assert.NotNil(t, s.codec)
 	assert.Equal(t, index, s.index)
 	assert.Equal(t, codec, s.codec)
-	assert.NotNil(t, s.validate)
 }
 
 func TestServer_GetFirst(t *testing.T) {
@@ -85,9 +83,8 @@ func TestServer_GetFirst(t *testing.T) {
 			}
 
 			s := Server{
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			req := &GetFirstRequest{}
@@ -146,9 +143,8 @@ func TestServer_GetLast(t *testing.T) {
 			}
 
 			s := Server{
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			req := &GetLastRequest{}
@@ -220,9 +216,8 @@ func TestServer_GetHeightForBlock(t *testing.T) {
 			}
 
 			s := Server{
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			gotRes, gotErr := s.GetHeightForBlock(context.Background(), test.req)
@@ -295,9 +290,8 @@ func TestServer_GetCommit(t *testing.T) {
 			}
 
 			s := Server{
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			gotRes, gotErr := s.GetCommit(context.Background(), test.req)
@@ -374,10 +368,9 @@ func TestServer_GetHeader(t *testing.T) {
 			}
 
 			s := Server{
-				codec:    codec,
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				codec: codec,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			req := &GetHeaderRequest{
@@ -467,10 +460,9 @@ func TestServer_GetEvents(t *testing.T) {
 			}
 
 			s := Server{
-				codec:    codec,
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				codec: codec,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			req := &GetEventsRequest{
@@ -572,9 +564,8 @@ func TestServer_GetRegisterValues(t *testing.T) {
 			}
 
 			s := Server{
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			gotRes, gotErr := s.GetRegisterValues(context.Background(), test.req)
@@ -653,10 +644,9 @@ func TestServer_GetCollection(t *testing.T) {
 			}
 
 			s := Server{
-				codec:    mocks.BaselineCodec(t),
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				codec: mocks.BaselineCodec(t),
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			wantID := test.mockCollection.ID()
@@ -714,9 +704,8 @@ func TestServer_ListCollectionsForHeight(t *testing.T) {
 			}
 
 			s := Server{
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			req := &ListCollectionsForHeightRequest{
@@ -792,10 +781,9 @@ func TestServer_GetGuarantee(t *testing.T) {
 			}
 
 			s := Server{
-				codec:    mocks.BaselineCodec(t),
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				codec: mocks.BaselineCodec(t),
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			gotRes, gotErr := s.GetGuarantee(context.Background(), test.req)
@@ -865,10 +853,9 @@ func TestServer_GetTransaction(t *testing.T) {
 			}
 
 			s := Server{
-				codec:    mocks.BaselineCodec(t),
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				codec: mocks.BaselineCodec(t),
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			gotRes, gotErr := s.GetTransaction(context.Background(), test.req)
@@ -942,9 +929,8 @@ func TestServer_GetHeightForTransaction(t *testing.T) {
 			}
 
 			s := Server{
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			gotRes, gotErr := s.GetHeightForTransaction(context.Background(), test.req)
@@ -1000,9 +986,8 @@ func TestServer_ListTransactionsForHeight(t *testing.T) {
 			}
 
 			s := Server{
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			req := &ListTransactionsForHeightRequest{
@@ -1078,10 +1063,9 @@ func TestServer_GetResult(t *testing.T) {
 			}
 
 			s := Server{
-				codec:    mocks.BaselineCodec(t),
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				codec: mocks.BaselineCodec(t),
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			gotRes, gotErr := s.GetResult(context.Background(), test.req)
@@ -1150,10 +1134,9 @@ func TestServer_GetSeal(t *testing.T) {
 			}
 
 			s := Server{
-				codec:    mocks.BaselineCodec(t),
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				codec: mocks.BaselineCodec(t),
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			gotRes, gotErr := s.GetSeal(context.Background(), test.req)
@@ -1211,10 +1194,9 @@ func TestServer_ListSealsForHeight(t *testing.T) {
 			}
 
 			s := Server{
-				codec:    mocks.BaselineCodec(t),
-				index:    index,
-				validate: validator.New(),
-				cfg:      DefaultConfig,
+				codec: mocks.BaselineCodec(t),
+				index: index,
+				cfg:   DefaultConfig,
 			}
 
 			req := ListSealsForHeightRequest{
