@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/errors"
-	"github.com/onflow/flow-go/fvm/state"
+	"github.com/onflow/flow-go/fvm/storage/snapshot"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/testing/mocks"
@@ -71,16 +71,24 @@ func TestInvoker_Script(t *testing.T) {
 		}
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.RunFunc = func(ctx fvm.Context, proc fvm.Procedure, v state.View) error {
+		vm.RunFunc = func(
+			ctx fvm.Context,
+			proc fvm.Procedure,
+			v snapshot.StorageSnapshot,
+		) (
+			*snapshot.ExecutionSnapshot,
+			fvm.ProcedureOutput,
+			error,
+		) {
 			assert.NotNil(t, ctx)
 			assert.NotNil(t, proc)
 			assert.NotNil(t, v)
 
 			require.IsType(t, proc, &fvm.ScriptProcedure{})
-			p := proc.(*fvm.ScriptProcedure)
-			p.Value = testValue
 
-			return nil
+			output := fvm.ProcedureOutput{Value: testValue}
+
+			return &snapshot.ExecutionSnapshot{}, output, nil
 		}
 
 		invoke := baselineInvoker(t)
@@ -135,12 +143,22 @@ func TestInvoker_Script(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.RunFunc = func(ctx fvm.Context, proc fvm.Procedure, v state.View) error {
+		vm.RunFunc = func(
+			ctx fvm.Context,
+			proc fvm.Procedure,
+			v snapshot.StorageSnapshot,
+		) (
+			*snapshot.ExecutionSnapshot,
+			fvm.ProcedureOutput,
+			error,
+		) {
 			require.IsType(t, proc, &fvm.ScriptProcedure{})
-			p := proc.(*fvm.ScriptProcedure)
-			p.Err = errors.NewCadenceRuntimeError(runtime.Error{})
 
-			return nil
+			output := fvm.ProcedureOutput{
+				Err: errors.NewCadenceRuntimeError(runtime.Error{}),
+			}
+
+			return &snapshot.ExecutionSnapshot{}, output, nil
 		}
 
 		invoke := baselineInvoker(t)
@@ -155,8 +173,16 @@ func TestInvoker_Script(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.RunFunc = func(fvm.Context, fvm.Procedure, state.View) error {
-			return mocks.GenericError
+		vm.RunFunc = func(
+			ctx fvm.Context,
+			proc fvm.Procedure,
+			v snapshot.StorageSnapshot,
+		) (
+			*snapshot.ExecutionSnapshot,
+			fvm.ProcedureOutput,
+			error,
+		) {
+			return nil, fvm.ProcedureOutput{}, mocks.GenericError
 		}
 
 		invoke := baselineInvoker(t)
@@ -173,7 +199,14 @@ func TestInvoker_Account(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.GetAccountFunc = func(ctx fvm.Context, address flow.Address, v state.StorageSnapshot) (*flow.Account, error) {
+		vm.GetAccountFunc = func(
+			ctx fvm.Context,
+			address flow.Address,
+			v snapshot.StorageSnapshot,
+		) (
+			*flow.Account,
+			error,
+		) {
 			assert.NotNil(t, ctx)
 			assert.NotNil(t, v)
 			assert.Equal(t, mocks.GenericAccount.Address, address)
@@ -234,7 +267,14 @@ func TestInvoker_Account(t *testing.T) {
 		t.Parallel()
 
 		vm := mocks.BaselineVirtualMachine(t)
-		vm.GetAccountFunc = func(fvm.Context, flow.Address, state.StorageSnapshot) (*flow.Account, error) {
+		vm.GetAccountFunc = func(
+			fvm.Context,
+			flow.Address,
+			snapshot.StorageSnapshot,
+		) (
+			*flow.Account,
+			error,
+		) {
 			return nil, mocks.GenericError
 		}
 

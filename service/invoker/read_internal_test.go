@@ -23,11 +23,16 @@ import (
 	"github.com/onflow/flow-archive/testing/mocks"
 
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
 )
 
 func TestReadRegister(t *testing.T) {
 	owner := string(mocks.GenericLedgerKey.KeyParts[0].Value)
 	key := string(mocks.GenericLedgerKey.KeyParts[1].Value)
+	registerId := flow.RegisterID{
+		Owner: owner,
+		Key:   key,
+	}
 
 	t.Run("nominal case with cached register", func(t *testing.T) {
 		t.Parallel()
@@ -46,7 +51,7 @@ func TestReadRegister(t *testing.T) {
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
-		value, err := readFunc(owner, key)
+		value, err := readFunc(registerId)
 
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericBytes, value[:])
@@ -70,7 +75,7 @@ func TestReadRegister(t *testing.T) {
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
-		value, err := readFunc(owner, key)
+		value, err := readFunc(registerId)
 
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericBytes, value[:])
@@ -92,7 +97,7 @@ func TestReadRegister(t *testing.T) {
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
-		_, err := readFunc(owner, key)
+		_, err := readFunc(registerId)
 
 		assert.Error(t, err)
 	})

@@ -26,17 +26,21 @@ import (
 	"github.com/onflow/flow-archive/models/archive"
 )
 
-func readRegister(index archive.Reader, cache Cache, height uint64) func(owner string, key string) (flow.RegisterValue, error) {
-	return func(owner string, key string) (flow.RegisterValue, error) {
-
-		cacheKey := fmt.Sprintf("%d/%x/%s", height, owner, key)
+func readRegister(
+	index archive.Reader,
+	cache Cache,
+	height uint64,
+) func(flow.RegisterID) (flow.RegisterValue, error) {
+	return func(regID flow.RegisterID) (flow.RegisterValue, error) {
+		cacheKey := fmt.Sprintf("%d/%s", height, regID)
 		cacheValue, ok := cache.Get(cacheKey)
 		if ok {
 			return cacheValue.(flow.RegisterValue), nil
 		}
 
-		regID := flow.NewRegisterID(owner, key)
-		path, err := pathfinder.KeyToPath(state.RegisterIDToKey(regID), complete.DefaultPathFinderVersion)
+		path, err := pathfinder.KeyToPath(
+			state.RegisterIDToKey(regID),
+			complete.DefaultPathFinderVersion)
 		if err != nil {
 			return nil, fmt.Errorf("could not convert key to path: %w", err)
 		}
