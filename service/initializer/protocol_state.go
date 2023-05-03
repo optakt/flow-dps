@@ -60,24 +60,20 @@ func ProtocolState(file io.Reader, db *badger.DB) error {
 
 	// Initialize the protocol state with the snapshot.
 	collector := metrics.NewNoopCollector()
-	headers := cache.NewHeaders(collector, db)
-	index := cache.NewIndex(collector, db)
-	guarantees := cache.NewGuarantees(collector, db, 1)
-	seals := cache.NewSeals(collector, db)
-	results := cache.NewExecutionResults(collector, db)
-	receipts := cache.NewExecutionReceipts(collector, db, results, 1)
-	payloads := cache.NewPayloads(db, index, guarantees, seals, receipts, results)
+	all := cache.InitAll(collector, db)
+
 	_, err = protocol.Bootstrap(
 		collector,
 		db,
-		headers,
-		seals,
-		results,
-		cache.NewBlocks(db, headers, payloads),
-		cache.NewQuorumCertificates(collector, db, cache.DefaultCacheSize),
-		cache.NewEpochSetups(collector, db),
-		cache.NewEpochCommits(collector, db),
-		cache.NewEpochStatuses(collector, db),
+		all.Headers,
+		all.Seals,
+		all.Results,
+		all.Blocks,
+		all.QuorumCertificates,
+		all.Setups,
+		all.EpochCommits,
+		all.Statuses,
+		all.VersionBeacons,
 		snapshot,
 	)
 	if err != nil {
