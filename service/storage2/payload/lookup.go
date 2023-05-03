@@ -17,9 +17,9 @@ func newLookupKey(height uint64, reg flow.RegisterID) *lookupKey {
 	}
 
 	key.encoded = append(key.encoded, []byte(reg.Owner)...)
-	key.encoded = append(key.encoded, 0x00)
+	key.encoded = append(key.encoded, '/')
 	key.encoded = append(key.encoded, []byte(reg.Key)...)
-	key.encoded = append(key.encoded, 0x00)
+	key.encoded = append(key.encoded, '/')
 
 	// Encode the height getting it to 1s compliment and switching byte order.
 	// (Prefix iteration in pebble does not support reverse iteration.)
