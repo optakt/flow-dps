@@ -109,6 +109,10 @@ var (
 	}
 )
 
+func newRandomFromIndex(index int) *rand.Rand {
+	return rand.New(rand.NewSource(int64(index)))
+}
+
 func GenericBlockIDs(number int) []flow.Identifier {
 	return genericIdentifiers(number, offsetBlock)
 }
@@ -204,38 +208,35 @@ func GenericRegisterEntry(index int) flow.RegisterEntry {
 }
 
 func GenericRegisters(number int) flow.RegisterIDs {
-	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(3))
-
 	registers := make(flow.RegisterIDs, 0, number)
 	for i := 0; i < number; i++ {
-		registers = append(registers, flow.RegisterID{
-			Owner: GenericAddress(i).String(),
-			Key:   fmt.Sprintf("key-%d", random.Uint64()),
-		})
+		registers = append(registers, GenericRegister(i))
 	}
 
 	return registers
 }
 
 func GenericRegister(index int) flow.RegisterID {
-	return GenericRegisters(index + 1)[index]
+	random := newRandomFromIndex(index)
+
+	return flow.RegisterID{
+		Owner: GenericAddress(index).String(),
+		Key:   fmt.Sprintf("key-%d", +random.Uint64()),
+	}
 }
 
 func GenericRegisterValues(number int) []flow.RegisterValue {
-	// Ensure consistent deterministic results.
-	random := rand.New(rand.NewSource(3))
-
 	values := make([]flow.RegisterValue, 0, number)
 	for i := 0; i < number; i++ {
-		values = append(values, []byte(fmt.Sprintf("value-%d", random.Uint64())))
+		values = append(values, GenericRegisterValue(i))
 	}
 
 	return values
 }
 
 func GenericRegisterValue(index int) flow.RegisterValue {
-	return GenericRegisterValues(index + 1)[index]
+	random := newRandomFromIndex(index)
+	return []byte(fmt.Sprintf("value-%d", random.Uint64()))
 }
 
 func GenericLedgerPayloads(number int) []*ledger.Payload {
