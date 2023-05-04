@@ -10,6 +10,10 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+const (
+	heightBinarySize = 8
+)
+
 // SaveFirst is an operation that writes the height of the first indexed block.
 func (l *Library) SaveFirst(height uint64) func(*badger.Txn) error {
 	return l.save(EncodeKey(PrefixFirst), height)
@@ -176,7 +180,7 @@ func (l *Library) RetrievePayload(height uint64, register flow.RegisterID, paylo
 			Reverse:        true,
 			AllVersions:    false,
 			InternalAccess: false,
-			Prefix:         key[:len(key)-8],
+			Prefix:         key[:len(key)-heightBinarySize],
 		})
 		defer it.Close()
 

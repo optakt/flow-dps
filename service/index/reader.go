@@ -102,7 +102,7 @@ func (r *Reader) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterVa
 	for i, reg := range regs {
 		i, reg := i, reg
 		g.Go(func() error {
-			err := r.db.View(func(tx *badger.Txn) error {
+			return r.db.View(func(tx *badger.Txn) error {
 				var payload flow.RegisterValue
 				err := r.lib.RetrievePayload(height, reg, &payload)(tx)
 				if errors.Is(err, badger.ErrKeyNotFound) {
@@ -116,7 +116,6 @@ func (r *Reader) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterVa
 				values[i] = payload
 				return nil
 			})
-			return err
 		})
 	}
 	err = g.Wait()

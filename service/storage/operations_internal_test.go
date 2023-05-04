@@ -664,7 +664,8 @@ func TestLibrary_SaveAndRetrievePayload(t *testing.T) {
 		}
 
 		var got flow.RegisterValue
-		err = db.View(l.RetrievePayload(mocks.GenericHeight, mocks.GenericRegister(10), &got))
+		unknownId := mocks.GenericRegister(2)
+		err = db.View(l.RetrievePayload(mocks.GenericHeight, unknownId, &got))
 
 		assert.Error(t, err)
 		assert.Equal(t, 0, decodeCallCount) // Should never be called since key does not match anything.
