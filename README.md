@@ -33,13 +33,25 @@ Below are links to the individual documentation for the binaries within this rep
 
 ### APIs
 
+## Archive API
+
 The Archive API gives access to historical data at any given height.
 
 * [Archive API](./docs/dps-api.md)
 
 There are also additional API layers that can be run on top of the DPS API:
 
-* [Access API](https://github.com/optakt/flow-dps-access)
+## Access API
+
+Flow DPS implements the [Flow Access API Specification](https://developers.flow.com/nodes/access-api), except for the following endpoints:
+
+* `SendTransaction`
+* `GetLatestProtocolStateSnapshot`
+* `GetExecutionResultForBlockID`
+
+It exposes Flow-specific resources such as [`flow.Block`](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#Block), [`flow.Event`](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#Event), [`flow.Transaction`](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#Transaction) and many others.
+
+For more information on the various endpoints of this API, please consult the [official Flow documentation](https://docs.onflow.org/access-api).
 
 ### Developer Documentation
 
