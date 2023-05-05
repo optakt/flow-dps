@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/codec/zbor"
@@ -160,14 +159,18 @@ func TestLibrary(t *testing.T) {
 
 		db, lib := setupLibrary(t)
 
-		err := db.Update(lib.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0)))
+		batch := db.NewWriteBatch()
+		defer batch.Cancel()
+		err := lib.BatchSavePayload(mocks.GenericHeight, mocks.GenericRegisterEntry(0))(batch)
+		assert.NoError(t, err)
+		err = batch.Flush()
 		assert.NoError(t, err)
 
-		var got ledger.Payload
-		err = db.View(lib.RetrievePayload(mocks.GenericHeight, mocks.GenericLedgerPath(0), &got))
+		var got flow.RegisterValue
+		err = db.View(lib.RetrievePayload(mocks.GenericHeight, mocks.GenericRegister(0), &got))
 
 		require.NoError(t, err)
-		assert.Equal(t, *mocks.GenericLedgerPayload(0), got)
+		assert.Equal(t, mocks.GenericRegisterValue(0), got)
 	})
 
 	t.Run("transaction", func(t *testing.T) {

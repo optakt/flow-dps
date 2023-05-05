@@ -1351,31 +1351,15 @@ func (m *GetRegisterValuesRequest) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
-	if len(m.GetPaths()) < 1 {
+	if len(m.GetRegisters()) < 1 {
 		err := GetRegisterValuesRequestValidationError{
-			field:  "Paths",
+			field:  "Registers",
 			reason: "value must contain at least 1 item(s)",
 		}
 		if !all {
 			return err
 		}
 		errors = append(errors, err)
-	}
-
-	for idx, item := range m.GetPaths() {
-		_, _ = idx, item
-
-		if len(item) != 32 {
-			err := GetRegisterValuesRequestValidationError{
-				field:  fmt.Sprintf("Paths[%v]", idx),
-				reason: "value length must be 32 bytes",
-			}
-			if !all {
-				return err
-			}
-			errors = append(errors, err)
-		}
-
 	}
 
 	if len(errors) > 0 {
@@ -1479,8 +1463,6 @@ func (m *GetRegisterValuesResponse) validate(all bool) error {
 	}
 
 	var errors []error
-
-	// no validation rules for Height
 
 	if len(errors) > 0 {
 		return GetRegisterValuesResponseMultiError(errors)

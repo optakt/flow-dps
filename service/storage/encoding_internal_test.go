@@ -13,6 +13,7 @@ func TestEncodeKey(t *testing.T) {
 	id := mocks.GenericHeader.ID()
 	path := mocks.GenericLedgerPath(0)
 	commit := mocks.GenericCommit(0)
+	reg := mocks.GenericRegister(0)
 	fullKey := bytes.Join([][]byte{
 		{
 			0x1,                                     // prefix
@@ -21,6 +22,10 @@ func TestEncodeKey(t *testing.T) {
 		id[:],
 		path[:],
 		commit[:],
+		[]byte(reg.Owner),
+		{'/'},
+		[]byte(reg.Key),
+		{'/'},
 	}, nil)
 
 	tests := []struct {
@@ -39,6 +44,7 @@ func TestEncodeKey(t *testing.T) {
 				id,
 				path,
 				commit,
+				reg,
 			},
 
 			wantPanic: false,

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/convert"
@@ -483,16 +482,14 @@ func TestServer_GetRegisterValues(t *testing.T) {
 			name: "nominal case",
 
 			req: &GetRegisterValuesRequest{
-				Height: mocks.GenericHeight,
-				Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
+				Height:    mocks.GenericHeight,
+				Registers: convert.RegistersToBytes(mocks.GenericRegisters(6)),
 			},
 
 			mockErr: nil,
 
 			want: &GetRegisterValuesResponse{
-				Height: mocks.GenericHeight,
-				Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
-				Values: convert.ValuesToBytes(mocks.GenericLedgerValues(6)),
+				Values: convert.ValuesToBytes(mocks.GenericRegisterValues(6)),
 			},
 
 			checkErr: require.NoError,
@@ -512,8 +509,8 @@ func TestServer_GetRegisterValues(t *testing.T) {
 			name: "handles paths with invalid lengths",
 
 			req: &GetRegisterValuesRequest{
-				Height: mocks.GenericHeight,
-				Paths:  [][]byte{mocks.GenericBytes},
+				Height:    mocks.GenericHeight,
+				Registers: [][]byte{mocks.GenericBytes},
 			},
 
 			want: nil,
@@ -524,8 +521,8 @@ func TestServer_GetRegisterValues(t *testing.T) {
 			name: "error case",
 
 			req: &GetRegisterValuesRequest{
-				Height: mocks.GenericHeight,
-				Paths:  convert.PathsToBytes(mocks.GenericLedgerPaths(6)),
+				Height:    mocks.GenericHeight,
+				Registers: convert.RegistersToBytes(mocks.GenericRegisters(6)),
 			},
 			mockErr: mocks.GenericError,
 
@@ -540,13 +537,9 @@ func TestServer_GetRegisterValues(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			var gotHeight uint64
-			var gotPaths []ledger.Path
 			index := mocks.BaselineReader(t)
-			index.ValuesFunc = func(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
-				gotHeight = height
-				gotPaths = paths
-				return mocks.GenericLedgerValues(6), test.mockErr
+			index.ValuesFunc = func(height uint64, regs flow.RegisterIDs) ([]flow.RegisterValue, error) {
+				return mocks.GenericRegisterValues(6), test.mockErr
 			}
 
 			s := Server{
@@ -558,13 +551,8 @@ func TestServer_GetRegisterValues(t *testing.T) {
 
 			test.checkErr(t, gotErr)
 			if test.want != nil {
-				assert.Equal(t, test.want.Height, gotHeight)
-				assert.ElementsMatch(t, test.want.Paths, convert.PathsToBytes(gotPaths))
-
 				require.NotNil(t, gotRes)
-				assert.Equal(t, test.want.Height, gotRes.Height)
 				assert.ElementsMatch(t, test.want.Values, gotRes.Values)
-				assert.ElementsMatch(t, test.want.Paths, gotRes.Paths)
 			}
 		})
 	}

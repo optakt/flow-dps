@@ -682,11 +682,10 @@ func TestTransitions_MapRegisters(t *testing.T) {
 		}
 
 		write := mocks.BaselineWriter(t)
-		write.PayloadsFunc = func(height uint64, paths []ledger.Path, value []*ledger.Payload) error {
+		write.PayloadsFunc = func(height uint64, value []*ledger.Payload) error {
 			assert.Equal(t, mocks.GenericHeight, height)
 
 			// Expect the 5 entries from the map.
-			assert.Len(t, paths, 5)
 			assert.Len(t, value, 5)
 			return nil
 		}
@@ -748,7 +747,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 		}
 
 		write := mocks.BaselineWriter(t)
-		write.PayloadsFunc = func(uint64, []ledger.Path, []*ledger.Payload) error { return mocks.GenericError }
+		write.PayloadsFunc = func(uint64, []*ledger.Payload) error { return mocks.GenericError }
 
 		tr, st := baselineFSM(t, StatusMap)
 		tr.write = write

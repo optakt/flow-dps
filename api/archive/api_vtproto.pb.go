@@ -1177,13 +1177,13 @@ func (m *GetRegisterValuesRequest) MarshalToSizedBufferVT(dAtA []byte) (int, err
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.Paths) > 0 {
-		for iNdEx := len(m.Paths) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Paths[iNdEx])
-			copy(dAtA[i:], m.Paths[iNdEx])
-			i = encodeVarint(dAtA, i, uint64(len(m.Paths[iNdEx])))
+	if len(m.Registers) > 0 {
+		for iNdEx := len(m.Registers) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Registers[iNdEx])
+			copy(dAtA[i:], m.Registers[iNdEx])
+			i = encodeVarint(dAtA, i, uint64(len(m.Registers[iNdEx])))
 			i--
-			dAtA[i] = 0x12
+			dAtA[i] = 0x1a
 		}
 	}
 	if m.Height != 0 {
@@ -1232,20 +1232,6 @@ func (m *GetRegisterValuesResponse) MarshalToSizedBufferVT(dAtA []byte) (int, er
 			i--
 			dAtA[i] = 0x1a
 		}
-	}
-	if len(m.Paths) > 0 {
-		for iNdEx := len(m.Paths) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Paths[iNdEx])
-			copy(dAtA[i:], m.Paths[iNdEx])
-			i = encodeVarint(dAtA, i, uint64(len(m.Paths[iNdEx])))
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if m.Height != 0 {
-		i = encodeVarint(dAtA, i, uint64(m.Height))
-		i--
-		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -2248,8 +2234,8 @@ func (m *GetRegisterValuesRequest) SizeVT() (n int) {
 	if m.Height != 0 {
 		n += 1 + sov(uint64(m.Height))
 	}
-	if len(m.Paths) > 0 {
-		for _, b := range m.Paths {
+	if len(m.Registers) > 0 {
+		for _, b := range m.Registers {
 			l = len(b)
 			n += 1 + l + sov(uint64(l))
 		}
@@ -2266,15 +2252,6 @@ func (m *GetRegisterValuesResponse) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Height != 0 {
-		n += 1 + sov(uint64(m.Height))
-	}
-	if len(m.Paths) > 0 {
-		for _, b := range m.Paths {
-			l = len(b)
-			n += 1 + l + sov(uint64(l))
-		}
-	}
 	if len(m.Values) > 0 {
 		for _, b := range m.Values {
 			l = len(b)
@@ -3681,9 +3658,9 @@ func (m *GetRegisterValuesRequest) UnmarshalVT(dAtA []byte) error {
 					break
 				}
 			}
-		case 2:
+		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Paths", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Registers", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -3710,8 +3687,8 @@ func (m *GetRegisterValuesRequest) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Paths = append(m.Paths, make([]byte, postIndex-iNdEx))
-			copy(m.Paths[len(m.Paths)-1], dAtA[iNdEx:postIndex])
+			m.Registers = append(m.Registers, make([]byte, postIndex-iNdEx))
+			copy(m.Registers[len(m.Registers)-1], dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3764,57 +3741,6 @@ func (m *GetRegisterValuesResponse) UnmarshalVT(dAtA []byte) error {
 			return fmt.Errorf("proto: GetRegisterValuesResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Height", wireType)
-			}
-			m.Height = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Height |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Paths", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLength
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Paths = append(m.Paths, make([]byte, postIndex-iNdEx))
-			copy(m.Paths[len(m.Paths)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Values", wireType)

@@ -183,19 +183,17 @@ func (s *Server) GetRegisterValues(ctx context.Context, req *GetRegisterValuesRe
 	if err != nil {
 		return nil, fmt.Errorf("data unavailable for block height: %w", err)
 	}
-	paths, err := convert.BytesToPaths(req.Paths)
+	registers, err := convert.BytesToRegisters(req.Registers)
 	if err != nil {
-		return nil, fmt.Errorf("could not convert paths: %w", err)
+		return nil, fmt.Errorf("could not convert registers: %w", err)
 	}
 
-	values, err := s.index.Values(req.Height, paths)
+	values, err := s.index.Values(req.Height, registers)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve values: %w", err)
 	}
 
 	res := GetRegisterValuesResponse{
-		Height: req.Height,
-		Paths:  req.Paths,
 		Values: convert.ValuesToBytes(values),
 	}
 

@@ -11,7 +11,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
@@ -82,7 +81,7 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 // as they were after the execution of the finalized block at the given height.
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
-func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+func (r *Reader) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterValue, error) {
 	t := time.Now()
 
 	first, err := r.First()
@@ -96,33 +95,37 @@ func (r *Reader) Values(height uint64, paths []ledger.Path) ([]ledger.Value, err
 	if height < first || height > last {
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
-	values := make([]ledger.Value, len(paths))
+
+	values := make([]flow.RegisterValue, len(regs))
 	g, _ := errgroup.WithContext(context.Background())
 	g.SetLimit(ConcurrentPathReadLimit)
-	for i, path := range paths {
-		i, path := i, path
+	for i, reg := range regs {
+		i, reg := i, reg
 		g.Go(func() error {
-			err = r.db.View(func(tx *badger.Txn) error {
-				var payload ledger.Payload
-				err := r.lib.RetrievePayload(height, path, &payload)(tx)
+			return r.db.View(func(tx *badger.Txn) error {
+				var payload flow.RegisterValue
+				err := r.lib.RetrievePayload(height, reg, &payload)(tx)
 				if errors.Is(err, badger.ErrKeyNotFound) {
 					values[i] = nil
 					return nil
 				}
 				if err != nil {
-					return fmt.Errorf("could not retrieve payload (path: %x): %w", path, err)
+					return fmt.Errorf("could not retrieve payload (register: %x): %w", reg, err)
 				}
 
-				values[i] = payload.Value()
+				values[i] = payload
 				return nil
 			})
-			return err
 		})
 	}
 	err = g.Wait()
 
 	// Temporary log line to compare execution times of individual GetRegisterValues calls
-	r.log.Info().Dur("duration", time.Since(t)).Int("paths", len(paths)).Uint64("height", height).Msg("index reader values fetched from db")
+	r.log.Info().
+		Dur("duration", time.Since(t)).
+		Int("paths", len(regs)).
+		Uint64("height", height).
+		Msg("index reader values fetched from db")
 
 	return values, err
 }

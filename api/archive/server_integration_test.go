@@ -397,7 +397,7 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 }
 
 func TestIntegrationServer_GetRegisterValues(t *testing.T) {
-	paths := mocks.GenericLedgerPaths(4)
+	regs := mocks.GenericRegisters(4)
 	payloads := mocks.GenericLedgerPayloads(4)
 	height := mocks.GenericHeight
 
@@ -417,25 +417,23 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
 		require.NoError(t, writer.Last(height))
-		require.NoError(t, writer.Payloads(height, paths, payloads))
+		require.NoError(t, writer.Payloads(height, payloads))
 		require.NoError(t, writer.Close())
 
 		server := archive.NewServer(reader, codec)
 
 		req := &archive.GetRegisterValuesRequest{
-			Height: height,
-			Paths:  convert.PathsToBytes(paths),
+			Height:    height,
+			Registers: convert.RegistersToBytes(regs),
 		}
 		resp, err := server.GetRegisterValues(context.Background(), req)
 
 		require.NoError(t, err)
-		assert.Equal(t, height, resp.Height)
 
-		assert.Len(t, resp.Values, len(paths))
+		assert.Len(t, resp.Values, len(regs))
 		for _, payload := range payloads {
 			assert.Contains(t, resp.Values, []byte(payload.Value()))
 		}
-		assert.Equal(t, convert.PathsToBytes(paths), resp.Paths)
 	})
 
 	t.Run("handles conversion error", func(t *testing.T) {
@@ -454,14 +452,14 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
 		require.NoError(t, writer.Last(height))
-		require.NoError(t, writer.Payloads(height, paths, payloads))
+		require.NoError(t, writer.Payloads(height, payloads))
 		require.NoError(t, writer.Close())
 
 		server := archive.NewServer(reader, codec)
 
 		req := &archive.GetRegisterValuesRequest{
-			Height: height,
-			Paths:  [][]byte{mocks.GenericBytes},
+			Height:    height,
+			Registers: [][]byte{mocks.GenericBytes},
 		}
 		_, err := server.GetRegisterValues(context.Background(), req)
 
@@ -483,8 +481,8 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		server := archive.NewServer(reader, codec)
 
 		req := &archive.GetRegisterValuesRequest{
-			Height: height,
-			Paths:  [][]byte{mocks.GenericBytes},
+			Height:    height,
+			Registers: [][]byte{mocks.GenericBytes},
 		}
 		_, err := server.GetRegisterValues(context.Background(), req)
 

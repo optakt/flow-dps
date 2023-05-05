@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
@@ -114,11 +113,11 @@ func (i *Index) Header(height uint64) (*flow.Header, error) {
 // as they were after the execution of the finalized block at the given height.
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
-func (i *Index) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+func (i *Index) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterValue, error) {
 
 	req := GetRegisterValuesRequest{
-		Height: height,
-		Paths:  convert.PathsToBytes(paths),
+		Height:    height,
+		Registers: convert.RegistersToBytes(regs),
 	}
 	res, err := i.client.GetRegisterValues(context.Background(), &req)
 	if err != nil {
