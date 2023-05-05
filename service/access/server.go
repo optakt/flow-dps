@@ -27,16 +27,14 @@ import (
 // well, in which case there is a double redirection.
 type Server struct {
 	index   archive.Reader
-	codec   archive.Codec
 	invoker accessModel.Invoker
 }
 
 // NewServer creates a new server, using the provided index reader as a backend
 // for data retrieval.
-func NewServer(index archive.Reader, codec archive.Codec, invoker accessModel.Invoker) *Server {
+func NewServer(index archive.Reader, invoker accessModel.Invoker) *Server {
 	s := Server{
 		index:   index,
-		codec:   codec,
 		invoker: invoker,
 	}
 

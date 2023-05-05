@@ -2,14 +2,23 @@
 
 ## Description
 
+### DPS API
 The Flow DPS Live binary implements the core functionality to create the index for live sporks.
 It needs access to a Google Cloud Storage bucket containing the execution state in the form of block data files, as well as access to the Flow network as an unstaked consensus follower.
 The index is generated in the form of a Badger database that allows random access to any ledger register at any block height.
+
+### Access API
+The Flow Access Server runs on top of a DPS index to implement the [Flow Access API](https://developers.flow.com/nodes/access-api).
+Both the Flow DPS Indexer and the Flow DPS Live tool can create such an index.
+In the case of the indexer, the index is static and built from a previous spork's state.
+For the live tool, the index is dynamic and updated on an ongoing basis from the data sent from a Flow execution node.
+
 
 ## Usage
 
 ```sh
 Usage of flow-archive-live:
+  -A, --address-access string     address to serve Access GRPC API on (default "127.0.0.1:9000")
   -a, --address string            bind address for serving DPS API (default "127.0.0.1:5005")
   -b, --bootstrap string          path to directory with bootstrap information for spork (default "bootstrap")
   -u, --bucket string             Google Cloude Storage bucket with block data records
