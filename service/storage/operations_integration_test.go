@@ -154,25 +154,6 @@ func TestLibrary(t *testing.T) {
 		})
 	})
 
-	t.Run("payload", func(t *testing.T) {
-		t.Parallel()
-
-		db, lib := setupLibrary(t)
-
-		batch := db.NewWriteBatch()
-		defer batch.Cancel()
-		err := lib.BatchSavePayload(mocks.GenericHeight, mocks.GenericRegisterEntry(0))(batch)
-		assert.NoError(t, err)
-		err = batch.Flush()
-		assert.NoError(t, err)
-
-		var got flow.RegisterValue
-		err = db.View(lib.RetrievePayload(mocks.GenericHeight, mocks.GenericRegister(0), &got))
-
-		require.NoError(t, err)
-		assert.Equal(t, mocks.GenericRegisterValue(0), got)
-	})
-
 	t.Run("transaction", func(t *testing.T) {
 		t.Parallel()
 

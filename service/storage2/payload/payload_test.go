@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/cockroachdb/pebble"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/stretchr/testify/require"
 )
@@ -16,8 +17,11 @@ import (
 func Test_PayloadStorage_RoundTrip(t *testing.T) {
 	t.Parallel()
 
+	cache := pebble.NewCache(1 << 20)
+	defer cache.Unref()
+
 	dbpath := path.Join(t.TempDir(), "roundtrip.db")
-	s, err := NewStorage(dbpath, 1<<20)
+	s, err := NewStorage(dbpath, cache)
 	require.NoError(t, err)
 	require.NotNil(t, s)
 
@@ -50,8 +54,11 @@ func Test_PayloadStorage_RoundTrip(t *testing.T) {
 func Test_PayloadStorage_Versioning(t *testing.T) {
 	t.Parallel()
 
+	cache := pebble.NewCache(1 << 20)
+	defer cache.Unref()
+
 	dbpath := path.Join(t.TempDir(), "versionning.db")
-	s, err := NewStorage(dbpath, 1<<20)
+	s, err := NewStorage(dbpath, cache)
 	require.NoError(t, err)
 	require.NotNil(t, s)
 
@@ -109,8 +116,11 @@ func Test_PayloadStorage_Versioning(t *testing.T) {
 
 // Benchmark_PayloadStorage benchmarks the SetBatch method.
 func Benchmark_PayloadStorage(b *testing.B) {
+	cache := pebble.NewCache(32 << 20)
+	defer cache.Unref()
+
 	dbpath := path.Join(b.TempDir(), "benchmark1.db")
-	s, err := NewStorage(dbpath, 32<<20)
+	s, err := NewStorage(dbpath, cache)
 	require.NoError(b, err)
 	require.NotNil(b, s)
 

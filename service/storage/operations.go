@@ -45,11 +45,6 @@ func (l *Library) SaveEvents(height uint64, typ flow.EventType, events []flow.Ev
 	return l.save(EncodeKey(PrefixEvents, height, hash), events)
 }
 
-// BatchSavePayload is an operation that writes the height of a slice of paths and a slice of payloads.
-func (l *Library) BatchSavePayload(height uint64, payload flow.RegisterEntry) func(*badger.WriteBatch) error {
-	return l.batchWrite(EncodeKey(PrefixPayload, payload.Key, height), payload.Value)
-}
-
 // SaveTransaction is an operation that writes the given transaction.
 func (l *Library) SaveTransaction(transaction *flow.TransactionBody) func(*badger.Txn) error {
 	return l.save(EncodeKey(PrefixTransaction, transaction.ID()), transaction)
@@ -167,33 +162,6 @@ func (l *Library) RetrieveEvents(height uint64, types []flow.EventType, events *
 		}
 
 		return nil
-	}
-}
-
-// RetrievePayload retrieves the ledger payloads at the given height that match the given registerID.
-func (l *Library) RetrievePayload(height uint64, register flow.RegisterID, payload *flow.RegisterValue) func(*badger.Txn) error {
-	return func(tx *badger.Txn) error {
-		key := EncodeKey(PrefixPayload, register, height)
-		it := tx.NewIterator(badger.IteratorOptions{
-			PrefetchSize:   0,
-			PrefetchValues: false,
-			Reverse:        true,
-			AllVersions:    false,
-			InternalAccess: false,
-			Prefix:         key[:len(key)-heightBinarySize],
-		})
-		defer it.Close()
-
-		it.Seek(key)
-		if !it.Valid() {
-			return badger.ErrKeyNotFound
-		}
-
-		err := it.Item().Value(func(val []byte) error {
-			return l.codec.Unmarshal(val, payload)
-		})
-
-		return err
 	}
 }
 

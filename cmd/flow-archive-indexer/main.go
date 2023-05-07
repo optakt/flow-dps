@@ -18,6 +18,7 @@ import (
 	"github.com/onflow/flow-archive/service/index"
 	"github.com/onflow/flow-archive/service/mapper"
 	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/service/storage2"
 	"github.com/onflow/flow-archive/service/triereader"
 )
 
@@ -44,6 +45,9 @@ func run() int {
 		flagLevel      string
 		flagTrie       string
 		flagSkip       bool
+
+		flagIndex2         string
+		flagBlockCacheSize int64
 	)
 
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to checkpoint root file, ensure the directory contains all partitions of checkpoint files for execution state trie")
@@ -52,6 +56,9 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagTrie, "trie", "t", "", "path to data directory for execution state ledger")
 	pflag.BoolVarP(&flagSkip, "skip", "s", false, "skip indexing of execution state ledger registers")
+
+	pflag.StringVarP(&flagIndex2, "index2", "I", "index2", "path to the pebble-based index database directory")
+	pflag.Int64Var(&flagBlockCacheSize, "block-cache-size", 1<<30, "size of the pebble block cache in bytes.")
 
 	pflag.Parse()
 
@@ -98,9 +105,20 @@ func run() int {
 	// transparently.
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
+	storage2, err := storage2.NewLibrary2(flagIndex2, flagBlockCacheSize)
+	if err != nil {
+		log.Error().Str("index2", flagIndex2).Err(err).Msg("could not open storage2")
+		return failure
+	}
+	defer func() {
+		err := storage2.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close storage2")
+		}
+	}()
 
 	// Check if index already exists.
-	read := index.NewReader(log, indexDB, storage)
+	read := index.NewReader(log, indexDB, storage, storage2)
 	empty := errors.Is(err, badger.ErrKeyNotFound)
 	if err != nil && !empty {
 		log.Error().Err(err).Msg("could not get first height from index reader")
@@ -125,7 +143,10 @@ func run() int {
 	// Writer is responsible for writing the index data to the index database.
 	// We explicitly disable flushing at regular intervals to improve throughput
 	// of badger transactions when indexing from static on-disk data.
-	write := index.NewWriter(indexDB, storage,
+	write := index.NewWriter(
+		indexDB,
+		storage,
+		storage2,
 		index.WithFlushInterval(0),
 	)
 	defer func() {

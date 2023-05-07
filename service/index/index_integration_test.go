@@ -16,6 +16,7 @@ import (
 	"github.com/onflow/flow-archive/codec/zbor"
 	"github.com/onflow/flow-archive/service/index"
 	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/service/storage2"
 	"github.com/onflow/flow-archive/testing/helpers"
 	"github.com/onflow/flow-archive/testing/mocks"
 )
@@ -314,10 +315,13 @@ func setupIndex(t *testing.T) (*index.Reader, *index.Writer, *badger.DB) {
 
 	lib := storage.New(codec)
 
+	lib2, err := storage2.NewLibrary2(t.TempDir(), 1<<20)
+	require.NoError(t, err)
+
 	log := zerolog.Nop()
 
-	reader := index.NewReader(log, db, lib)
-	writer := index.NewWriter(db, lib, index.WithConcurrentTransactions(4))
+	reader := index.NewReader(log, db, lib, lib2)
+	writer := index.NewWriter(db, lib, lib2, index.WithConcurrentTransactions(4))
 
 	return reader, writer, db
 }
