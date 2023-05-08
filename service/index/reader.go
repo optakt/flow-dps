@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/rs/zerolog"
 
@@ -82,8 +81,6 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
 func (r *Reader) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterValue, error) {
-	t := time.Now()
-
 	first, err := r.First()
 	if err != nil {
 		return nil, fmt.Errorf("could not check first height: %w", err)
@@ -119,13 +116,6 @@ func (r *Reader) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterVa
 		})
 	}
 	err = g.Wait()
-
-	// Temporary log line to compare execution times of individual GetRegisterValues calls
-	r.log.Info().
-		Dur("duration", time.Since(t)).
-		Int("paths", len(regs)).
-		Uint64("height", height).
-		Msg("index reader values fetched from db")
 
 	return values, err
 }
