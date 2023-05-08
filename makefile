@@ -78,12 +78,8 @@ docker-build-client:
 docker-build-server:
 	docker build --build-arg BINARY=flow-archive-server . -t "$(CONTAINER_REGISTRY)/flow-archive-server:$(IMAGE_TAG)"
 
-.PHONY: docker-build-flow-archive-access
-docker-build-flow-archive-access:
-	 docker build --build-arg BINARY=flow-archive-access . -t "$(CONTAINER_REGISTRY)/flow-archive-access:$(IMAGE_TAG)"
-
 .PHONY: docker-build-flow-archive
-docker-build-flow-archive: docker-build-live docker-build-indexer docker-build-client docker-build-server docker-build-flow-archive-access
+docker-build-flow-archive: docker-build-live docker-build-indexer docker-build-client docker-build-server
 
 .PHONY: docker-push-live
 docker-push-live:
@@ -101,10 +97,6 @@ docker-push-client:
 docker-push-server:
 	docker push "$(CONTAINER_REGISTRY)/flow-archive-server:$(IMAGE_TAG)"
 
-.PHONY: docker-push-flow-archive-access
-docker-push-flow-archive-access:
-	docker push "$(CONTAINER_REGISTRY)/flow-archive-access:$(IMAGE_TAG)"
-
 .PHONY: docker-push-flow-archive
-docker-push-flow-archive: docker-push-live docker-push-indexer docker-push-client docker-push-server docker-push-flow-archive-access
+docker-push-flow-archive: docker-push-live docker-push-indexer docker-push-client docker-push-server
 

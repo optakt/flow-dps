@@ -20,15 +20,12 @@ import (
 
 func TestNewServer(t *testing.T) {
 	index := mocks.BaselineReader(t)
-	codec := mocks.BaselineCodec(t)
 	invoker := mocks.BaselineInvoker(t)
 
-	s := NewServer(index, codec, invoker)
+	s := NewServer(index, invoker)
 
 	assert.NotNil(t, s)
-	assert.NotNil(t, s.codec)
 	assert.Equal(t, index, s.index)
-	assert.Equal(t, codec, s.codec)
 	assert.Equal(t, invoker, s.invoker)
 }
 
@@ -1690,7 +1687,6 @@ func baselineServer(t *testing.T) *Server {
 	t.Helper()
 
 	s := Server{
-		codec:   mocks.BaselineCodec(t),
 		index:   mocks.BaselineReader(t),
 		invoker: mocks.BaselineInvoker(t),
 	}
