@@ -99,10 +99,16 @@ func (r *Reader) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterVa
 	if err != nil {
 		return nil, fmt.Errorf("could not check last height: %w", err)
 	}
+
+	// TODO(rbtz): on average we execute 3 queries for each register fetch:
+	//   first height, last height, and the register value itself.
+	// We should cache the first and last heights in memory to avoid the overhead.
 	if height < first || height > last {
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
 
+	// TODO(rbtz): on average we fetch only a single register, hence parallelism adds more overhead.
+	// We should have a separate specialization for fetching a single register.
 	values := make([]flow.RegisterValue, len(regs))
 	g, _ := errgroup.WithContext(context.Background())
 	g.SetLimit(ConcurrentPathReadLimit)
