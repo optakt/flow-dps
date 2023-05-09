@@ -1057,7 +1057,7 @@ func TestServer_ExecuteScriptAtBlockHeight(t *testing.T) {
 			Script:      mocks.GenericBytes,
 			Arguments:   [][]byte{cadenceValueBytes},
 		}
-		_, err = s.ExecuteScriptAtBlockHeight(context.Background(), req)
+		_, err := s.ExecuteScriptAtBlockHeight(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -1123,7 +1123,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 			Script:    mocks.GenericBytes,
 			Arguments: [][]byte{cadenceValueBytes},
 		}
-		_, err = s.ExecuteScriptAtBlockID(context.Background(), req)
+		_, err := s.ExecuteScriptAtBlockID(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -1144,7 +1144,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 			Script:    mocks.GenericBytes,
 			Arguments: [][]byte{cadenceValueBytes},
 		}
-		_, err = s.ExecuteScriptAtBlockID(context.Background(), req)
+		_, err := s.ExecuteScriptAtBlockID(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -1199,7 +1199,7 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 			Script:    mocks.GenericBytes,
 			Arguments: [][]byte{cadenceValueBytes},
 		}
-		_, err = s.ExecuteScriptAtLatestBlock(context.Background(), req)
+		_, err := s.ExecuteScriptAtLatestBlock(context.Background(), req)
 
 		assert.Error(t, err)
 	})
@@ -1219,7 +1219,7 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 			Script:    mocks.GenericBytes,
 			Arguments: [][]byte{cadenceValueBytes},
 		}
-		_, err = s.ExecuteScriptAtLatestBlock(context.Background(), req)
+		_, err := s.ExecuteScriptAtLatestBlock(context.Background(), req)
 
 		assert.Error(t, err)
 	})

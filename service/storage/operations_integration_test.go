@@ -117,7 +117,7 @@ func TestLibrary(t *testing.T) {
 			t.Parallel()
 
 			var got []flow.Event
-			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(1), &got))
+			err := db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(1), &got))
 
 			require.NoError(t, err)
 			assert.ElementsMatch(t, events1, got)
@@ -127,7 +127,7 @@ func TestLibrary(t *testing.T) {
 			t.Parallel()
 
 			var got []flow.Event
-			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{}, &got))
+			err := db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{}, &got))
 
 			require.NoError(t, err)
 			assert.ElementsMatch(t, allEvents, got)
@@ -137,7 +137,7 @@ func TestLibrary(t *testing.T) {
 			t.Parallel()
 
 			var got []flow.Event
-			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(4), &got))
+			err := db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(4), &got))
 
 			require.NoError(t, err)
 			assert.ElementsMatch(t, allEvents, got)
@@ -147,7 +147,7 @@ func TestLibrary(t *testing.T) {
 			t.Parallel()
 
 			var got []flow.Event
-			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{mocks.GenericEventType(2)}, &got))
+			err := db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{mocks.GenericEventType(2)}, &got))
 
 			require.NoError(t, err)
 			assert.Empty(t, got)
