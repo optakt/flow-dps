@@ -23,7 +23,9 @@ type Reader struct {
 	log zerolog.Logger
 	db  *badger.DB
 
-	lib  archive.ReadLibrary
+	// Old badger-based index. Eventually all methods from here would migrate to lib2.
+	lib archive.ReadLibrary
+	// New pebble-based index.  Would likely consist of multiple separate pebble databases underneath.
 	lib2 archive.ReadLibrary2
 }
 

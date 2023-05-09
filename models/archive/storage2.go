@@ -6,6 +6,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
+// New pebble-based database interface.
 type Library2 interface {
 	ReadLibrary2
 	WriteLibrary2

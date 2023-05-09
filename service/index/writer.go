@@ -30,7 +30,9 @@ type Writer struct {
 	sema *semaphore.Weighted
 	err  chan error
 
-	lib  archive.WriteLibrary
+	// Old badger-based index. Eventually all methods from here would migrate to lib2.
+	lib archive.WriteLibrary
+	// New pebble-based index.  Would likely consist of multiple separate pebble databases underneath.
 	lib2 archive.WriteLibrary2
 
 	done  chan struct{}   // signals when no more new operations will be added

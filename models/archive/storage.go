@@ -8,6 +8,8 @@ import (
 
 // Library represents something that produces operations to read/write
 // from/on a DPS index database.
+//
+// DEPRECATED: please move methods to Library2.
 type Library interface {
 	ReadLibrary
 	WriteLibrary
@@ -15,6 +17,8 @@ type Library interface {
 
 // ReadLibrary represents something that produces operations to read from
 // a DPS index database.
+//
+// DEPRECATED: please move methods to ReadLibrary2.
 type ReadLibrary interface {
 	RetrieveFirst(height *uint64) func(*badger.Txn) error
 	RetrieveLast(height *uint64) func(*badger.Txn) error
@@ -40,6 +44,8 @@ type ReadLibrary interface {
 
 // WriteLibrary represents something that produces operations to write on
 // a DPS index database.
+//
+// DEPRECATED: please move methods to WriteLibrary2.
 type WriteLibrary interface {
 	SaveFirst(height uint64) func(*badger.Txn) error
 	SaveLast(height uint64) func(*badger.Txn) error
