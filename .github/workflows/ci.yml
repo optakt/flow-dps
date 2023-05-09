@@ -62,12 +62,12 @@ jobs:
       # This check runs all unit tests with verbose output and ensures that all
       # of the tests pass successfully.
       - name: Verify unit tests
-        run: go test -tags relic -v ./...
+        run: go test -race -tags relic -v ./...
 
       # This check runs all integration tests with verbose output and ensures
       # that they pass successfully.
       - name: Verify integration tests
-        run: go test -v -tags="relic integration" ./...
+        run: go test -v -race -tags="relic integration" ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
