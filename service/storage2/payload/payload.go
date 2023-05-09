@@ -65,6 +65,7 @@ func (s *payloadStorage) GetPayload(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get value: %w", err)
 	}
+	// preventing caller from modifying the iterator's value slices
 	valueCopy := make([]byte, len(binaryValue))
 	copy(valueCopy, binaryValue)
 
