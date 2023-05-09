@@ -1,7 +1,6 @@
 package index
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/rs/zerolog"
@@ -86,6 +85,33 @@ func (r *Reader) Header(height uint64) (*flow.Header, error) {
 	return &header, err
 }
 
+func (r *Reader) getValue(height uint64, reg flow.RegisterID) ([]byte, error) {
+	payload, err := r.lib2.GetPayload(height, reg)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve payload (register: %x): %w", reg, err)
+	}
+	return payload, nil
+}
+
+func (r *Reader) getValues(height uint64, regs flow.RegisterIDs) ([][]byte, error) {
+	values := make([]flow.RegisterValue, len(regs))
+	g := errgroup.Group{}
+	g.SetLimit(ConcurrentPathReadLimit)
+	for i, reg := range regs {
+		i, reg := i, reg
+		g.Go(func() error {
+			payload, err := r.getValue(height, reg)
+			if err != nil {
+				return fmt.Errorf("failed to getValue for %d/%d: %w", i, len(regs), err)
+			}
+
+			values[i] = payload
+			return nil
+		})
+	}
+	return values, g.Wait()
+}
+
 // Values returns the Ledger values of the execution state at the given paths
 // as they were after the execution of the finalized block at the given height.
 // For compatibility with existing Flow execution node code, a path that is not
@@ -107,26 +133,16 @@ func (r *Reader) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterVa
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
 
-	// TODO(rbtz): on average we fetch only a single register, hence parallelism adds more overhead.
-	// We should have a separate specialization for fetching a single register.
-	values := make([]flow.RegisterValue, len(regs))
-	g, _ := errgroup.WithContext(context.Background())
-	g.SetLimit(ConcurrentPathReadLimit)
-	for i, reg := range regs {
-		i, reg := i, reg
-		g.Go(func() error {
-			payload, err := r.lib2.GetPayload(height, reg)
-			if err != nil {
-				return fmt.Errorf("could not retrieve payload (register: %x): %w", reg, err)
-			}
-
-			values[i] = payload
-			return nil
-		})
+	// fast-path for fetching a single register
+	if len(regs) == 1 {
+		value, err := r.getValue(height, regs[0])
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve value: %w", err)
+		}
+		return []flow.RegisterValue{value}, nil
 	}
-	err = g.Wait()
 
-	return values, err
+	return r.getValues(height, regs)
 }
 
 // Collection returns the collection with the given ID.
