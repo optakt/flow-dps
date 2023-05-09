@@ -25,11 +25,15 @@ import (
 type Writer struct {
 	sync.RWMutex
 	db   *badger.DB
-	lib  archive.WriteLibrary
 	cfg  Config
 	tx   *badger.Txn
 	sema *semaphore.Weighted
 	err  chan error
+
+	// Old badger-based index. Eventually all methods from here would migrate to lib2.
+	lib archive.WriteLibrary
+	// New pebble-based index.  Would likely consist of multiple separate pebble databases underneath.
+	lib2 archive.WriteLibrary2
 
 	done  chan struct{}   // signals when no more new operations will be added
 	mutex *sync.Mutex     // guards the current transaction against concurrent access
@@ -38,7 +42,12 @@ type Writer struct {
 
 // NewWriter creates a new index writer that writes new indexing data to the
 // given Badger database.
-func NewWriter(db *badger.DB, lib archive.WriteLibrary, options ...func(*Config)) *Writer {
+func NewWriter(
+	db *badger.DB,
+	lib archive.WriteLibrary,
+	lib2 archive.WriteLibrary2,
+	options ...func(*Config),
+) *Writer {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -47,11 +56,13 @@ func NewWriter(db *badger.DB, lib archive.WriteLibrary, options ...func(*Config)
 
 	w := Writer{
 		db:   db,
-		lib:  lib,
 		cfg:  cfg,
 		tx:   db.NewTransaction(true),
 		sema: semaphore.NewWeighted(int64(cfg.ConcurrentTransactions)),
 		err:  make(chan error, cfg.ConcurrentTransactions),
+
+		lib:  lib,
+		lib2: lib2,
 
 		done:  make(chan struct{}),
 		mutex: &sync.Mutex{},
@@ -103,18 +114,11 @@ func (w *Writer) batch(height uint64, entries flow.RegisterEntries) error {
 	writeBatch := batch.GetWriter()
 	defer writeBatch.Cancel()
 
-	for _, entry := range entries {
-		op := w.lib.BatchSavePayload(height, entry)
-		err := op(writeBatch)
-		if err != nil {
-			return fmt.Errorf("could not batch write registers to database at height %v: %w", height, err)
-		}
+	err := w.lib2.BatchSetPayload(height, entries)
+	if err != nil {
+		return fmt.Errorf("could not batch write registers to database at height %v: %w", height, err)
 	}
 
-	err := writeBatch.Flush()
-	if err != nil {
-		return fmt.Errorf("could not flush write registers to database at height %v: %w", height, err)
-	}
 	return nil
 }
 

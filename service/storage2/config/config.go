@@ -1,4 +1,4 @@
-package storage2
+package config
 
 import (
 	"github.com/cockroachdb/pebble"

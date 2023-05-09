@@ -5,7 +5,7 @@ import (
 
 	"github.com/cockroachdb/pebble"
 
-	"github.com/onflow/flow-archive/service/storage2"
+	"github.com/onflow/flow-archive/service/storage2/config"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -14,27 +14,23 @@ const (
 	heightSuffixLen = 8
 )
 
-type payloadStorage struct {
+type Storage struct {
 	db *pebble.DB
 }
 
-// NewPayloadStorage creates a pebble-backed payload storage.
+// NewStorage creates a pebble-backed payload storage.
 // The reason we use a separate storage for payloads we need a Comparer with a custom Split function.
 //
 // It needs to access the last available payload with height less or equal to the requested height.
 // This means all point-lookups are range scans.
-func NewStorage(dbPath string, cacheSize int64) (*payloadStorage, error) {
-	// TODO(rbtz): cache metrics
-	cache := pebble.NewCache(cacheSize)
-	defer cache.Unref()
-
-	opts := storage2.DefaultPebbleOptions(cache, newMVCCComparer())
+func NewStorage(dbPath string, cache *pebble.Cache) (*Storage, error) {
+	opts := config.DefaultPebbleOptions(cache, newMVCCComparer())
 	db, err := pebble.Open(dbPath, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
-	return &payloadStorage{
+	return &Storage{
 		db: db,
 	}, nil
 }
@@ -46,7 +42,7 @@ func NewStorage(dbPath string, cacheSize int64) (*payloadStorage, error) {
 // GetPayload(13, A) would return the value at height 11.
 //
 // If no payload is found, an empty byte slice is returned.
-func (s *payloadStorage) GetPayload(
+func (s *Storage) GetPayload(
 	height uint64,
 	reg flow.RegisterID,
 ) ([]byte, error) {
@@ -73,7 +69,7 @@ func (s *payloadStorage) GetPayload(
 }
 
 // BatchSetPayload sets the given entries in a batch.
-func (s *payloadStorage) BatchSetPayload(
+func (s *Storage) BatchSetPayload(
 	height uint64,
 	entries flow.RegisterEntries,
 ) error {
@@ -98,6 +94,6 @@ func (s *payloadStorage) BatchSetPayload(
 }
 
 // Close closes the storage.
-func (s *payloadStorage) Close() error {
+func (s *Storage) Close() error {
 	return s.db.Close()
 }

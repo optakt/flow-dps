@@ -2,7 +2,6 @@ package index
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/rs/zerolog"
@@ -16,25 +15,36 @@ import (
 )
 
 // ConcurrentPathReadLimit sets the number of concurrent paths in the Values lookup
-const ConcurrentPathReadLimit int = 128
+const ConcurrentPathReadLimit int = 1024
 
 // Reader implements the `index.Reader` interface on top of the DPS server's
 // Badger database index.
 type Reader struct {
 	log zerolog.Logger
 	db  *badger.DB
+
+	// Old badger-based index. Eventually all methods from here would migrate to lib2.
 	lib archive.ReadLibrary
+	// New pebble-based index.  Would likely consist of multiple separate pebble databases underneath.
+	lib2 archive.ReadLibrary2
 }
 
 // NewReader creates a new index reader, using the given database as the
 // underlying state repository. It is recommended to provide a read-only Badger
 // database.
-func NewReader(log zerolog.Logger, db *badger.DB, lib archive.ReadLibrary) *Reader {
+func NewReader(
+	log zerolog.Logger,
+	db *badger.DB,
+	lib archive.ReadLibrary,
+	lib2 archive.ReadLibrary2,
+) *Reader {
 
 	r := Reader{
 		log: log.With().Str("component", "index_reader").Logger(),
 		db:  db,
-		lib: lib,
+
+		lib:  lib,
+		lib2: lib2,
 	}
 
 	return &r
@@ -89,30 +99,29 @@ func (r *Reader) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterVa
 	if err != nil {
 		return nil, fmt.Errorf("could not check last height: %w", err)
 	}
+
+	// TODO(rbtz): on average we execute 3 queries for each register fetch:
+	//   first height, last height, and the register value itself.
+	// We should cache the first and last heights in memory to avoid the overhead.
 	if height < first || height > last {
 		return nil, fmt.Errorf("invalid height (given: %d, first: %d, last: %d)", height, first, last)
 	}
 
+	// TODO(rbtz): on average we fetch only a single register, hence parallelism adds more overhead.
+	// We should have a separate specialization for fetching a single register.
 	values := make([]flow.RegisterValue, len(regs))
 	g, _ := errgroup.WithContext(context.Background())
 	g.SetLimit(ConcurrentPathReadLimit)
 	for i, reg := range regs {
 		i, reg := i, reg
 		g.Go(func() error {
-			return r.db.View(func(tx *badger.Txn) error {
-				var payload flow.RegisterValue
-				err := r.lib.RetrievePayload(height, reg, &payload)(tx)
-				if errors.Is(err, badger.ErrKeyNotFound) {
-					values[i] = nil
-					return nil
-				}
-				if err != nil {
-					return fmt.Errorf("could not retrieve payload (register: %x): %w", reg, err)
-				}
+			payload, err := r.lib2.GetPayload(height, reg)
+			if err != nil {
+				return fmt.Errorf("could not retrieve payload (register: %x): %w", reg, err)
+			}
 
-				values[i] = payload
-				return nil
-			})
+			values[i] = payload
+			return nil
 		})
 	}
 	err = g.Wait()

@@ -42,6 +42,7 @@ import (
 	"github.com/onflow/flow-archive/service/metrics"
 	"github.com/onflow/flow-archive/service/profiler"
 	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/service/storage2"
 	"github.com/onflow/flow-archive/service/tracker"
 )
 
@@ -76,7 +77,9 @@ func run() int {
 		flagSkip             bool
 		flagWaitInterval     time.Duration
 
-		flagCache uint64
+		flagCache          uint64
+		flagIndex2         string
+		flagBlockCacheSize int64
 
 		flagFlushInterval time.Duration
 		flagSeedAddress   string
@@ -89,7 +92,6 @@ func run() int {
 	pflag.StringVarP(&flagBucket, "bucket", "u", "", "Google Cloude Storage bucket with block data records")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "path to root checkpoint file for execution state trie")
 	pflag.StringVarP(&flagData, "data", "d", "data", "path to database directory for protocol data")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagFollowerLogLevel, "follower-level", "", "info", "log output level for follower engine")
 	pflag.StringVarP(&flagMetricsAddr, "metrics", "m", "", "address on which to expose metrics (no metrics are exposed when left empty)")
@@ -97,7 +99,10 @@ func run() int {
 	pflag.BoolVarP(&flagSkip, "skip", "s", mapper.DefaultConfig.SkipRegisters, "skip indexing of execution state ledger registers")
 	pflag.DurationVarP(&flagWaitInterval, "wait-interval", "", mapper.DefaultConfig.WaitInterval, "wait interval for polling execution data for the next block (default: 250ms), useful to set a longer duration after fully synced for historical spork")
 
-	pflag.Uint64Var(&flagCache, "cache-size", 1<<30, "maximum cache size for register reads in bytes")
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
+	pflag.StringVarP(&flagIndex2, "index2", "I", "index2", "path to the pebble-based index database directory")
+	pflag.Int64Var(&flagBlockCacheSize, "block-cache-size", 1<<30, "size of the pebble block cache in bytes.")
+	pflag.Uint64Var(&flagCache, "register-cache-size", 1<<30, "maximum cache size for register reads in bytes")
 
 	pflag.DurationVar(&flagFlushInterval, "flush-interval", 1*time.Second, "interval for flushing badger transactions (0s for disabled)")
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
@@ -155,7 +160,18 @@ func run() int {
 	// shutting down.
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
-	read := index.NewReader(log, indexDB, storage)
+	storage2, err := storage2.NewLibrary2(flagIndex2, flagBlockCacheSize)
+	if err != nil {
+		log.Error().Str("index2", flagIndex2).Err(err).Msg("could not open storage2")
+		return failure
+	}
+	defer func() {
+		err := storage2.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close storage2")
+		}
+	}()
+	read := index.NewReader(log, indexDB, storage, storage2)
 
 	// We initialize the writer with a flush interval, which will make sure that
 	// Badger transactions are committed to the database, even if they don't
@@ -165,6 +181,7 @@ func run() int {
 	write := index.NewWriter(
 		indexDB,
 		storage,
+		storage2,
 		index.WithFlushInterval(flagFlushInterval),
 	)
 
