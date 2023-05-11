@@ -1,4 +1,4 @@
-package payload
+package config
 
 import (
 	"testing"
@@ -6,18 +6,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_newMVCCComparer_Split(t *testing.T) {
+func Test_NewMVCCComparer_Split(t *testing.T) {
 	t.Parallel()
 
-	comparer := newMVCCComparer()
+	comparer := NewMVCCComparer()
 
 	tests := []struct {
 		name string
 		arg  []byte
 		want int
 	}{
-		{name: "nil", arg: nil, want: -8},
-		{name: "empty", arg: []byte(""), want: -8},
+		{name: "nil", arg: nil, want: -HeightSuffixLen},
+		{name: "empty", arg: []byte(""), want: -HeightSuffixLen},
 		{name: "edge0", arg: []byte("1234567"), want: -1},
 		{name: "edge1", arg: []byte("12345678"), want: 0},
 		{name: "edge2", arg: []byte("123456789"), want: 1},
