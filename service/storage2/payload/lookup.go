@@ -3,6 +3,7 @@ package payload
 import (
 	"encoding/binary"
 
+	"github.com/onflow/flow-archive/service/storage2/config"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -13,7 +14,7 @@ type lookupKey struct {
 
 func newLookupKey(height uint64, reg flow.RegisterID) *lookupKey {
 	key := lookupKey{
-		encoded: make([]byte, 0, len(reg.Owner)+1+len(reg.Key)+1+heightSuffixLen),
+		encoded: make([]byte, 0, len(reg.Owner)+1+len(reg.Key)+1+config.HeightSuffixLen),
 	}
 
 	// The lookup key used to find most recent value for a register.

@@ -9,11 +9,6 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 )
 
-const (
-	// Size of the block height encoded in the key.
-	heightSuffixLen = 8
-)
-
 type Storage struct {
 	db *pebble.DB
 }
@@ -24,7 +19,7 @@ type Storage struct {
 // It needs to access the last available payload with height less or equal to the requested height.
 // This means all point-lookups are range scans.
 func NewStorage(dbPath string, cache *pebble.Cache) (*Storage, error) {
-	opts := config.DefaultPebbleOptions(cache, newMVCCComparer())
+	opts := config.DefaultPebbleOptions(cache, config.NewMVCCComparer())
 	db, err := pebble.Open(dbPath, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)
