@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/flow-archive/models/archive"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -244,6 +245,55 @@ func TestInvoker_Account(t *testing.T) {
 		_, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
 
 		assert.Error(t, err)
+	})
+}
+
+func TestInvoker_ByHeightFrom(t *testing.T) {
+	t.Run("nominal case", func(t *testing.T) {
+		t.Parallel()
+		vm := mocks.BaselineVirtualMachine(t)
+		index := mocks.BaselineReader(t)
+		invoke := baselineInvoker(t)
+		invoke.vm = vm
+		invoke.index = index
+		res, err := invoke.ByHeightFrom(mocks.GenericHeight, mocks.GenericHeader)
+		assert.NoError(t, err)
+		assert.Equal(t, res, mocks.GenericHeader)
+	})
+
+	t.Run("errors on out of range", func(t *testing.T) {
+		t.Parallel()
+		vm := mocks.BaselineVirtualMachine(t)
+		index := mocks.BaselineReader(t)
+		index.FirstFunc = func() (uint64, error) {
+			return 0, nil
+		}
+		invoke := baselineInvoker(t)
+		invoke.vm = vm
+		invoke.index = index
+		res, err := invoke.ByHeightFrom(mocks.GenericHeight+1, mocks.GenericHeader)
+		assert.ErrorContains(t, err, "is not in the range")
+		assert.Nil(t, res)
+	})
+
+	t.Run("returns requested finalized block", func(t *testing.T) {
+		t.Parallel()
+		vm := mocks.BaselineVirtualMachine(t)
+		index := mocks.BaselineReader(t)
+		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return mocks.GenericHeader, nil
+		}
+		invoke := baselineInvoker(t)
+		invoke.vm = vm
+		invoke.index = index
+		testHeader := &flow.Header{
+			ChainID: archive.FlowTestnet,
+			Height:  mocks.GenericHeight + 4,
+		}
+		res, err := invoke.ByHeightFrom(mocks.GenericHeight, testHeader)
+		assert.NoError(t, err)
+		assert.Equal(t, res, mocks.GenericHeader)
 	})
 }
 

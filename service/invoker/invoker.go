@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/environment"
+	"github.com/onflow/flow-go/fvm/errors"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
@@ -164,7 +165,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 
 	// Initialize the virtual machine context with the given block header so
 	// that parameters related to the block are available from within the script.
-	ctx := fvm.NewContext(fvm.WithBlockHeader(header))
+	ctx := fvm.NewContext(fvm.WithBlockHeader(header), fvm.WithBlocks(i))
 
 	// Initialize the read function. We use a shared cache between all heights
 	// here. It's a smart cache, which means that items that are accessed often
@@ -193,10 +194,22 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	return proc.Value, nil
 }
 
+// ByHeightFrom implements the fvm/env/blocks interface
 func (i *Invoker) ByHeightFrom(height uint64, header *flow.Header) (*flow.Header, error) {
 	if header.Height == height {
 		return header, nil
 	}
 
-	return nil, fmt.Errorf("not implemented to get non-current block")
+	if height > header.Height {
+		minHeight, err := i.index.First()
+		if err != nil {
+			return nil, fmt.Errorf("could not find first indexed height: %w", err)
+		}
+		// imitate flow-go error format
+		msg := fmt.Sprintf("requested height (%d) is not in the range(%d, %d)", height, minHeight, header.Height)
+		err = errors.NewValueErrorf(fmt.Sprint(height), msg)
+		return nil, fmt.Errorf("cannot retrieve block parent: %w", err)
+	}
+	// find the block in storage as all of them are guaranteed to be finalized
+	return i.index.Header(height)
 }
