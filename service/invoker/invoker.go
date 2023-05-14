@@ -206,8 +206,8 @@ func (i *Invoker) ByHeightFrom(height uint64, header *flow.Header) (*flow.Header
 			return nil, fmt.Errorf("could not find first indexed height: %w", err)
 		}
 		// imitate flow-go error format
-		msg := fmt.Sprintf("requested height (%d) is not in the range(%d, %d)", height, minHeight, header.Height)
-		err = errors.NewValueErrorf(fmt.Sprint(height), msg)
+		err = errors.NewValueErrorf(fmt.Sprint(height),
+			"requested height (%d) is not in the range(%d, %d)", height, minHeight, header.Height)
 		return nil, fmt.Errorf("cannot retrieve block parent: %w", err)
 	}
 	// find the block in storage as all of them are guaranteed to be finalized
