@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package invoker
 
 import (
@@ -22,12 +8,16 @@ import (
 
 	"github.com/onflow/flow-archive/testing/mocks"
 
-	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/model/flow"
 )
 
 func TestReadRegister(t *testing.T) {
 	owner := string(mocks.GenericLedgerKey.KeyParts[0].Value)
 	key := string(mocks.GenericLedgerKey.KeyParts[1].Value)
+	registerId := flow.RegisterID{
+		Owner: owner,
+		Key:   key,
+	}
 
 	t.Run("nominal case with cached register", func(t *testing.T) {
 		t.Parallel()
@@ -40,13 +30,13 @@ func TestReadRegister(t *testing.T) {
 
 		var indexCalled bool
 		index := mocks.BaselineReader(t)
-		index.ValuesFunc = func(uint64, []ledger.Path) ([]ledger.Value, error) {
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
 			indexCalled = true
 			return nil, nil
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
-		value, err := readFunc(owner, key)
+		value, err := readFunc(registerId)
 
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericBytes, value[:])
@@ -64,13 +54,13 @@ func TestReadRegister(t *testing.T) {
 
 		var indexCalled bool
 		index := mocks.BaselineReader(t)
-		index.ValuesFunc = func(uint64, []ledger.Path) ([]ledger.Value, error) {
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
 			indexCalled = true
-			return []ledger.Value{mocks.GenericBytes}, nil
+			return []flow.RegisterValue{mocks.GenericBytes}, nil
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
-		value, err := readFunc(owner, key)
+		value, err := readFunc(registerId)
 
 		require.NoError(t, err)
 		assert.Equal(t, mocks.GenericBytes, value[:])
@@ -87,12 +77,12 @@ func TestReadRegister(t *testing.T) {
 		}
 
 		index := mocks.BaselineReader(t)
-		index.ValuesFunc = func(uint64, []ledger.Path) ([]ledger.Value, error) {
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
 			return nil, mocks.GenericError
 		}
 
 		readFunc := readRegister(index, cache, mocks.GenericHeight)
-		_, err := readFunc(owner, key)
+		_, err := readFunc(registerId)
 
 		assert.Error(t, err)
 	})

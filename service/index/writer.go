@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package index
 
 import (
@@ -30,6 +16,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/models/convert"
 	"github.com/onflow/flow-archive/util"
 )
 
@@ -38,11 +25,15 @@ import (
 type Writer struct {
 	sync.RWMutex
 	db   *badger.DB
-	lib  archive.WriteLibrary
 	cfg  Config
 	tx   *badger.Txn
 	sema *semaphore.Weighted
 	err  chan error
+
+	// Old badger-based index. Eventually all methods from here would migrate to lib2.
+	lib archive.WriteLibrary
+	// New pebble-based index.  Would likely consist of multiple separate pebble databases underneath.
+	lib2 archive.WriteLibrary2
 
 	done  chan struct{}   // signals when no more new operations will be added
 	mutex *sync.Mutex     // guards the current transaction against concurrent access
@@ -51,7 +42,12 @@ type Writer struct {
 
 // NewWriter creates a new index writer that writes new indexing data to the
 // given Badger database.
-func NewWriter(db *badger.DB, lib archive.WriteLibrary, options ...func(*Config)) *Writer {
+func NewWriter(
+	db *badger.DB,
+	lib archive.WriteLibrary,
+	lib2 archive.WriteLibrary2,
+	options ...func(*Config),
+) *Writer {
 
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -60,11 +56,13 @@ func NewWriter(db *badger.DB, lib archive.WriteLibrary, options ...func(*Config)
 
 	w := Writer{
 		db:   db,
-		lib:  lib,
 		cfg:  cfg,
 		tx:   db.NewTransaction(true),
 		sema: semaphore.NewWeighted(int64(cfg.ConcurrentTransactions)),
 		err:  make(chan error, cfg.ConcurrentTransactions),
+
+		lib:  lib,
+		lib2: lib2,
 
 		done:  make(chan struct{}),
 		mutex: &sync.Mutex{},
@@ -109,44 +107,54 @@ func (w *Writer) Header(height uint64, header *flow.Header) error {
 	return w.apply(w.lib.SaveHeader(height, header))
 }
 
+// batch atomically writes a set of entries to the database.
+func (w *Writer) batch(height uint64, entries flow.RegisterEntries) error {
+	batch := util.NewBatch(w.db)
+
+	writeBatch := batch.GetWriter()
+	defer writeBatch.Cancel()
+
+	err := w.lib2.BatchSetPayload(height, entries)
+	if err != nil {
+		return fmt.Errorf("could not batch write registers to database at height %v: %w", height, err)
+	}
+
+	return nil
+}
+
 // Payloads indexes the given payloads, which should represent a trie update
 // of the execution state contained within the finalized block at the given
 // height.
-func (w *Writer) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
+func (w *Writer) Payloads(height uint64, payloads []*ledger.Payload) error {
+	// Convert the payloads to register entries by extracting and converting register IDs.
+	entries := make(flow.RegisterEntries, 0, len(payloads))
+	for _, p := range payloads {
+		key, err := p.Key()
+		if err != nil {
+			return fmt.Errorf("could not get key from register payload: %w", err)
+		}
 
-	if len(paths) != len(payloads) {
-		return fmt.Errorf("mismatch between paths and payloads counts")
+		registerID, err := convert.KeyToRegisterID(key)
+		if err != nil {
+			return fmt.Errorf("could not get register ID from key: %w", err)
+		}
+
+		entries = append(entries, flow.RegisterEntry{
+			Key:   registerID,
+			Value: p.Value(),
+		})
 	}
 
-	ops := make([]func(*badger.Txn) error, 0, len(payloads))
-
-	for i, path := range paths {
-		payload := payloads[i]
-		ops = append(ops, w.lib.SavePayload(height, path, payload))
-	}
-
-	return w.apply(ops...)
+	return w.batch(height, entries)
 }
 
 // Registers writes the given registers in a batch to database
 func (w *Writer) Registers(height uint64, registers []*wal.LeafNode) error {
-	batch := util.NewBatch(w.db)
-	writeBatch := batch.GetWriter()
-
+	payloads := make([]*ledger.Payload, 0, len(registers))
 	for _, register := range registers {
-		op := w.lib.BatchSavePayload(height, register.Path, register.Payload)
-		err := op(writeBatch)
-		if err != nil {
-			return fmt.Errorf("could not batch write registers to database at height %v: %w", height, err)
-		}
+		payloads = append(payloads, register.Payload)
 	}
-
-	err := writeBatch.Flush()
-	if err != nil {
-		return fmt.Errorf("could not flush write registers to database at height %v: %w", height, err)
-	}
-
-	return nil
+	return w.Payloads(height, payloads)
 }
 
 // Collections indexes the collections at the given height.

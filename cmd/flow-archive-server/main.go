@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package main
 
 import (
@@ -23,6 +9,7 @@ import (
 	"time"
 
 	"github.com/onflow/flow-archive/service/metrics"
+	"github.com/onflow/flow-archive/service/storage2"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
@@ -59,14 +46,20 @@ func run() int {
 	var (
 		flagAddress string
 		flagLevel   string
-		flagIndex   string
 		flagTracing bool
+
+		flagIndex          string
+		flagIndex2         string
+		flagBlockCacheSize int64
 	)
 
 	pflag.StringVarP(&flagAddress, "address", "a", "127.0.0.1:5005", "bind address for serving DPS API")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.BoolVarP(&flagTracing, "tracing", "t", false, "enable tracing for this instance")
+
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
+	pflag.StringVarP(&flagIndex2, "index2", "I", "index2", "path to the pebble-based index database directory")
+	pflag.Int64Var(&flagBlockCacheSize, "block-cache-size", 1<<30, "size of the pebble block cache in bytes.")
 
 	pflag.Parse()
 
@@ -91,6 +84,17 @@ func run() int {
 	// Initialize storage library.
 	codec := zbor.NewCodec()
 	storage := storage.New(codec)
+	storage2, err := storage2.NewLibrary2(flagIndex2, flagBlockCacheSize)
+	if err != nil {
+		log.Error().Str("index2", flagIndex2).Err(err).Msg("could not open storage2")
+		return failure
+	}
+	defer func() {
+		err := storage2.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close storage2")
+		}
+	}()
 
 	// GRPC API initialization.
 	opts := []logging.Option{
@@ -106,7 +110,7 @@ func run() int {
 			logging.StreamServerInterceptor(grpczerolog.InterceptorLogger(log), opts...),
 		),
 	)
-	index := index.NewReader(log, db, storage)
+	index := index.NewReader(log, db, storage, storage2)
 	var server *api.Server
 	if flagTracing {
 		tracer, err := metrics.NewTracer(log, "archive")

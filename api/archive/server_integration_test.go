@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 //go:build integration
 // +build integration
 
@@ -19,6 +5,7 @@ package archive_test
 
 import (
 	"context"
+	"io"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -32,23 +19,38 @@ import (
 	"github.com/onflow/flow-archive/models/convert"
 	"github.com/onflow/flow-archive/service/index"
 	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/service/storage2"
 	"github.com/onflow/flow-archive/testing/helpers"
 	"github.com/onflow/flow-archive/testing/mocks"
 )
+
+func getFakeDatabase(t *testing.T) (
+	*index.Reader,
+	*index.Writer,
+	*zbor.Codec,
+	io.Closer,
+) {
+	log := zerolog.Nop()
+	codec := zbor.NewCodec()
+
+	db := helpers.InMemoryDB(t)
+
+	lib2, err := storage2.NewLibrary2(t.TempDir(), 1<<20)
+	require.NoError(t, err)
+
+	disk := storage.New(codec)
+	reader := index.NewReader(log, db, disk, lib2)
+	writer := index.NewWriter(db, disk, lib2)
+
+	return reader, writer, codec, db
+}
 
 func TestIntegrationServer_GetFirst(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(mocks.GenericHeight))
@@ -66,15 +68,8 @@ func TestIntegrationServer_GetFirst(t *testing.T) {
 	t.Run("handles indexer failure on First", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -90,15 +85,8 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Last(mocks.GenericHeight))
@@ -116,15 +104,8 @@ func TestIntegrationServer_GetLast(t *testing.T) {
 	t.Run("handles indexer failure on Last", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -142,15 +123,8 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Height(blockID, height))
@@ -170,15 +144,8 @@ func TestIntegrationServer_GetHeightForBlock(t *testing.T) {
 	t.Run("handles indexer failure on HeightForBlock", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -198,15 +165,8 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Commit(height, commit))
@@ -227,15 +187,8 @@ func TestIntegrationServer_GetCommit(t *testing.T) {
 	t.Run("handles indexer failure on Commit", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -255,15 +208,8 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Header(height, header))
@@ -287,15 +233,8 @@ func TestIntegrationServer_GetHeader(t *testing.T) {
 	t.Run("handles indexer failure on Header", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -320,15 +259,8 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 	t.Run("nominal case without type specified", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -354,15 +286,8 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 	t.Run("nominal case with type specified", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
@@ -389,15 +314,8 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 	t.Run("handles indexer failure on Events", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -411,71 +329,55 @@ func TestIntegrationServer_GetEvents(t *testing.T) {
 }
 
 func TestIntegrationServer_GetRegisterValues(t *testing.T) {
-	paths := mocks.GenericLedgerPaths(4)
+	regs := mocks.GenericRegisters(4)
 	payloads := mocks.GenericLedgerPayloads(4)
 	height := mocks.GenericHeight
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
 		require.NoError(t, writer.Last(height))
-		require.NoError(t, writer.Payloads(height, paths, payloads))
+		require.NoError(t, writer.Payloads(height, payloads))
 		require.NoError(t, writer.Close())
 
 		server := archive.NewServer(reader, codec)
 
 		req := &archive.GetRegisterValuesRequest{
-			Height: height,
-			Paths:  convert.PathsToBytes(paths),
+			Height:    height,
+			Registers: convert.RegistersToBytes(regs),
 		}
 		resp, err := server.GetRegisterValues(context.Background(), req)
 
 		require.NoError(t, err)
-		assert.Equal(t, height, resp.Height)
 
-		assert.Len(t, resp.Values, len(paths))
+		assert.Len(t, resp.Values, len(regs))
 		for _, payload := range payloads {
 			assert.Contains(t, resp.Values, []byte(payload.Value()))
 		}
-		assert.Equal(t, convert.PathsToBytes(paths), resp.Paths)
 	})
 
 	t.Run("handles conversion error", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
 		require.NoError(t, writer.Last(height))
-		require.NoError(t, writer.Payloads(height, paths, payloads))
+		require.NoError(t, writer.Payloads(height, payloads))
 		require.NoError(t, writer.Close())
 
 		server := archive.NewServer(reader, codec)
 
 		req := &archive.GetRegisterValuesRequest{
-			Height: height,
-			Paths:  [][]byte{mocks.GenericBytes},
+			Height:    height,
+			Registers: [][]byte{mocks.GenericBytes},
 		}
 		_, err := server.GetRegisterValues(context.Background(), req)
 
@@ -485,20 +387,14 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 	t.Run("handles indexer failure on Values", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
 		server := archive.NewServer(reader, codec)
 
 		req := &archive.GetRegisterValuesRequest{
-			Height: height,
-			Paths:  [][]byte{mocks.GenericBytes},
+			Height:    height,
+			Registers: [][]byte{mocks.GenericBytes},
 		}
 		_, err := server.GetRegisterValues(context.Background(), req)
 
@@ -513,15 +409,8 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Collections(mocks.GenericHeight, collections))
@@ -545,15 +434,8 @@ func TestIntegrationServer_GetCollection(t *testing.T) {
 	t.Run("handles indexer failure on Collection", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -573,15 +455,8 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Collections(height, collections))
@@ -607,15 +482,8 @@ func TestIntegrationServer_ListCollectionsForHeight(t *testing.T) {
 	t.Run("handles indexer failure on CollectionsByHeight", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -635,15 +503,8 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Guarantees(mocks.GenericHeight, guarantees))
@@ -667,15 +528,8 @@ func TestIntegrationServer_GetGuarantee(t *testing.T) {
 	t.Run("handles indexer failure on Guarantee", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -695,15 +549,8 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Transactions(mocks.GenericHeight, transactions))
@@ -727,15 +574,8 @@ func TestIntegrationServer_GetTransaction(t *testing.T) {
 	t.Run("handles indexer failure on Transaction", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -755,15 +595,8 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Transactions(mocks.GenericHeight, transactions))
@@ -784,15 +617,8 @@ func TestIntegrationServer_GetHeightForTransaction(t *testing.T) {
 	t.Run("handles indexer failure on HeightForTransaction", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -812,15 +638,8 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Transactions(height, transactions))
@@ -846,15 +665,8 @@ func TestIntegrationServer_ListTransactionsForHeight(t *testing.T) {
 	t.Run("handles indexer failure on TransactionsByHeight", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -874,15 +686,8 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Results(results))
@@ -906,15 +711,8 @@ func TestIntegrationServer_GetResult(t *testing.T) {
 	t.Run("handles indexer failure on Result", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -934,15 +732,8 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Seals(mocks.GenericHeight, seals))
@@ -966,15 +757,8 @@ func TestIntegrationServer_GetSeal(t *testing.T) {
 	t.Run("handles indexer failure on Seal", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 
@@ -994,15 +778,8 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		reader := index.NewReader(log, db, disk)
-		writer := index.NewWriter(db, disk)
+		reader, writer, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		// Insert mock data in database.
 		require.NoError(t, writer.Seals(height, seals))
@@ -1029,15 +806,8 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 	t.Run("handles indexer failure on SealsByHeight", func(t *testing.T) {
 		t.Parallel()
 
-		log := zerolog.Nop()
-		codec := zbor.NewCodec()
-
-		db := helpers.InMemoryDB(t)
-		defer db.Close()
-
-		disk := storage.New(codec)
-		// No data is written in the database, so the index should fail to retrieve anything.
-		reader := index.NewReader(log, db, disk)
+		reader, _, codec, closer := getFakeDatabase(t)
+		defer closer.Close()
 
 		server := archive.NewServer(reader, codec)
 

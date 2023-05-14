@@ -19,7 +19,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.19
 
       - name: Cache Go modules
         uses: actions/cache@v2
@@ -33,25 +33,6 @@ jobs:
       # action's output, which might be convenient.
       - name: Print Go version
         run: go version
-
-      # The protobuf steps uses the official instructions to install the
-      # pre-compiled binary, see:
-      # https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os
-      - name: Install Protobuf compiler
-        run: |
-          PB_REL="https://github.com/protocolbuffers/protobuf/releases"
-          curl -LO $PB_REL/download/v21.8/protoc-21.8-linux-x86_64.zip
-          unzip protoc-21.8-linux-x86_64.zip -d $HOME/.local
-          export PATH="$PATH:$HOME/.local/bin"
-          git clean -fd
-
-      # In order to be able to generate the protocol buffer and GRPC files, we
-      # need to install the related Go modules.
-      - name: Install Protobuf dependencies
-        run: |
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
-          go install github.com/srikrsna/protoc-gen-gotag@v0.6.2
 
       # In order to be able to build with flow-go and the relic tag, we need to
       # run its go generate target.
@@ -81,12 +62,12 @@ jobs:
       # This check runs all unit tests with verbose output and ensures that all
       # of the tests pass successfully.
       - name: Verify unit tests
-        run: go test -tags relic -v ./...
+        run: go test -race -tags relic -v ./...
 
       # This check runs all integration tests with verbose output and ensures
       # that they pass successfully.
       - name: Verify integration tests
-        run: go test -v -tags="relic integration" ./...
+        run: go test -v -race -tags="relic integration" ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
@@ -107,7 +88,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.19
 
       - name: Cache Go modules
         uses: actions/cache@v2

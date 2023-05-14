@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package mapper
 
 import (
@@ -487,19 +473,17 @@ func (t *Transitions) MapRegisters(s *State) error {
 	// doesn't really matter for badger if they are in random order, so this
 	// way of iterating should be fine.
 	n := 1000
-	paths := make([]ledger.Path, 0, n)
 	payloads := make([]*ledger.Payload, 0, n)
 	for path, payload := range s.registers {
-		paths = append(paths, path)
 		payloads = append(payloads, payload)
 		delete(s.registers, path)
-		if len(paths) >= n {
+		if len(payloads) >= n {
 			break
 		}
 	}
 
 	// Then we store the (maximum) 1000 paths and payloads.
-	err := t.write.Payloads(s.height, paths, payloads)
+	err := t.write.Payloads(s.height, payloads)
 	if err != nil {
 		return fmt.Errorf("could not index registers: %w", err)
 	}
@@ -510,7 +494,10 @@ func (t *Transitions) MapRegisters(s *State) error {
 		return nil
 	}
 
-	log.Debug().Int("batch", len(paths)).Int("remaining", len(s.registers)).Msg("indexed register batch for finalized block")
+	log.Debug().
+		Int("batch", len(payloads)).
+		Int("remaining", len(s.registers)).
+		Msg("indexed register batch for finalized block")
 
 	return nil
 }

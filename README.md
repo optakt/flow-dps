@@ -33,13 +33,25 @@ Below are links to the individual documentation for the binaries within this rep
 
 ### APIs
 
+## Archive API
+
 The Archive API gives access to historical data at any given height.
 
 * [Archive API](./docs/dps-api.md)
 
 There are also additional API layers that can be run on top of the DPS API:
 
-* [Access API](https://github.com/optakt/flow-dps-access)
+## Access API
+
+Flow DPS implements the [Flow Access API Specification](https://developers.flow.com/nodes/access-api), except for the following endpoints:
+
+* `SendTransaction`
+* `GetLatestProtocolStateSnapshot`
+* `GetExecutionResultForBlockID`
+
+It exposes Flow-specific resources such as [`flow.Block`](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#Block), [`flow.Event`](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#Event), [`flow.Transaction`](https://pkg.go.dev/github.com/onflow/flow-go/model/flow#Transaction) and many others.
+
+For more information on the various endpoints of this API, please consult the [official Flow documentation](https://docs.onflow.org/access-api).
 
 ### Developer Documentation
 
@@ -49,17 +61,12 @@ There are also additional API layers that can be run on top of the DPS API:
 * [Snapshots](./docs/snapshots.md)
 
 ## Dependencies
-
-Go `v1.16` or higher is required to compile `flow-dps`.
 Only Linux amd64 builds are supported, because of the dependency to the [`flow-go/crypto`](https://github.com/onflow/flow-go/tree/master/crypto) package.
 Please note that it is also required to make sure that your `GOPATH` is exported in your environment in order to generate the DPS API.
 
 If you want to make changes to the GRPC API, the following dependencies are required as well.
 
-* [`protoc`](https://grpc.io/docs/protoc-installation/) version `3.17.3`
-* `go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26`
-* `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1`
-* `go install github.com/srikrsna/protoc-gen-gotag@v0.6.2`
+* [`buf`](https://github.com/bufbuild/buf)
 
 Once they are installed, you can run `go generate ./...` from the root of this repository to update the generated protobuf files.
 

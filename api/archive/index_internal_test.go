@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package archive
 
 import (
@@ -265,8 +251,8 @@ func TestIndex_Commit(t *testing.T) {
 }
 
 func TestIndex_Values(t *testing.T) {
-	paths := mocks.GenericLedgerPaths(6)
-	values := mocks.GenericLedgerValues(6)
+	regs := mocks.GenericRegisters(6)
+	values := mocks.GenericRegisterValues(6)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -274,23 +260,21 @@ func TestIndex_Values(t *testing.T) {
 		index := Index{
 			client: &apiMock{
 				GetRegisterValuesFunc: func(_ context.Context, in *GetRegisterValuesRequest, _ ...grpc.CallOption) (*GetRegisterValuesResponse, error) {
-					require.Len(t, in.Paths, 6)
+					require.Len(t, in.Registers, 6)
 					codec := mocks.BaselineCodec(t)
 					codec.UnmarshalFunc = cbor.Unmarshal
 
-					assert.Equal(t, convert.PathsToBytes(paths), in.Paths)
+					assert.Equal(t, convert.RegistersToBytes(regs), in.Registers)
 					assert.Equal(t, in.Height, mocks.GenericHeight)
 
 					return &GetRegisterValuesResponse{
-						Height: mocks.GenericHeight,
-						Paths:  convert.PathsToBytes(paths),
 						Values: convert.ValuesToBytes(values),
 					}, nil
 				},
 			},
 		}
 
-		got, err := index.Values(mocks.GenericHeight, paths)
+		got, err := index.Values(mocks.GenericHeight, regs)
 
 		require.NoError(t, err)
 		assert.Equal(t, values, got)
@@ -309,7 +293,7 @@ func TestIndex_Values(t *testing.T) {
 			},
 		}
 
-		_, err := index.Values(mocks.GenericHeight, paths)
+		_, err := index.Values(mocks.GenericHeight, regs)
 
 		assert.Error(t, err)
 	})

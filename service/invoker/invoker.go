@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package invoker
 
 import (
@@ -21,10 +7,10 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-archive/util"
-	"github.com/onflow/flow-go/engine/execution/state/delta"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/environment"
 	"github.com/onflow/flow-go/fvm/errors"
+	"github.com/onflow/flow-go/fvm/storage/snapshot"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
@@ -34,7 +20,7 @@ import (
 // the Flow virtual machine.
 type Invoker struct {
 	index archive.Reader
-	vm    VirtualMachine
+	vm    fvm.VM
 	cache Cache
 }
 
@@ -123,17 +109,15 @@ func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, e
 
 	ctx := fvm.NewContext(fvm.WithBlockHeader(header), fvm.WithBlocks(i))
 
-	// Initialize the read function. We use a shared cache between all heights
-	// here. It's a smart cache, which means that items that are accessed often
-	// are more likely to be kept, regardless of height. This allows us to put
-	// an upper bound on total cache size while using it for all heights.
-	read := readRegister(i.index, i.cache, header.Height)
+	// Initialize the storage snapshot. We use a shared cache between all
+	// heights here. It's a smart cache, which means that items that are
+	// accessed often are more likely to be kept, regardless of height. This
+	// allows us to put an upper bound on total cache size while using it for
+	// all heights.
+	storageSnapshot := snapshot.NewReadFuncStorageSnapshot(
+		readRegister(i.index, i.cache, header.Height))
 
-	// Initialize the view of the execution state on top of the ledger by
-	// using the read function at a specific commit.
-	view := delta.NewView(read)
-
-	account, err := i.vm.GetAccount(ctx, address, view)
+	account, err := i.vm.GetAccount(ctx, address, storageSnapshot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get account at height %d: %w", header.Height, err)
 	}
@@ -167,15 +151,13 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 	// that parameters related to the block are available from within the script.
 	ctx := fvm.NewContext(fvm.WithBlockHeader(header), fvm.WithBlocks(i))
 
-	// Initialize the read function. We use a shared cache between all heights
-	// here. It's a smart cache, which means that items that are accessed often
-	// are more likely to be kept, regardless of height. This allows us to put
-	// an upper bound on total cache size while using it for all heights.
-	read := readRegister(i.index, i.cache, height)
-
-	// Initialize the view of the execution state on top of the ledger by
-	// using the read function at a specific commit.
-	view := delta.NewView(read)
+	// Initialize the storage snapshot. We use a shared cache between all
+	// heights here. It's a smart cache, which means that items that are
+	// accessed often are more likely to be kept, regardless of height. This
+	// allows us to put an upper bound on total cache size while using it for
+	// all heights.
+	storageSnapshot := snapshot.NewReadFuncStorageSnapshot(
+		readRegister(i.index, i.cache, height))
 
 	// Initialize the procedure using the script bytes and the encoded
 	// Cadence parameters.
@@ -183,15 +165,15 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 
 	// The script procedure is then run using the Flow virtual machine and all
 	// the constructed contextual parameters.
-	err = i.vm.Run(ctx, proc, view)
+	_, output, err := i.vm.Run(ctx, proc, storageSnapshot)
 	if err != nil {
 		return nil, fmt.Errorf("could not run script: %w", err)
 	}
-	if proc.Err != nil {
-		return nil, fmt.Errorf("script execution encountered error: %w", proc.Err)
+	if output.Err != nil {
+		return nil, fmt.Errorf("script execution encountered error: %w", output.Err)
 	}
 
-	return proc.Value, nil
+	return output.Value, nil
 }
 
 // ByHeightFrom implements the fvm/env/blocks interface

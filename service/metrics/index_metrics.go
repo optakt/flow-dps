@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package metrics
 
 import (
@@ -108,9 +94,9 @@ func (w *MetricsWriter) Header(height uint64, header *flow.Header) error {
 	return w.write.Header(height, header)
 }
 
-func (w *MetricsWriter) Payloads(height uint64, paths []ledger.Path, payloads []*ledger.Payload) error {
-	w.register.Add(float64(len(paths)))
-	return w.write.Payloads(height, paths, payloads)
+func (w *MetricsWriter) Payloads(height uint64, payloads []*ledger.Payload) error {
+	w.register.Add(float64(len(payloads)))
+	return w.write.Payloads(height, payloads)
 }
 
 func (w *MetricsWriter) Registers(height uint64, registers []*wal.LeafNode) error {

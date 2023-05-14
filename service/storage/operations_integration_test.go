@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 //go:build integration
 // +build integration
 
@@ -24,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/codec/zbor"
@@ -132,7 +117,7 @@ func TestLibrary(t *testing.T) {
 			t.Parallel()
 
 			var got []flow.Event
-			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(1), &got))
+			err := db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(1), &got))
 
 			require.NoError(t, err)
 			assert.ElementsMatch(t, events1, got)
@@ -142,7 +127,7 @@ func TestLibrary(t *testing.T) {
 			t.Parallel()
 
 			var got []flow.Event
-			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{}, &got))
+			err := db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{}, &got))
 
 			require.NoError(t, err)
 			assert.ElementsMatch(t, allEvents, got)
@@ -152,7 +137,7 @@ func TestLibrary(t *testing.T) {
 			t.Parallel()
 
 			var got []flow.Event
-			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(4), &got))
+			err := db.View(lib.RetrieveEvents(mocks.GenericHeight, mocks.GenericEventTypes(4), &got))
 
 			require.NoError(t, err)
 			assert.ElementsMatch(t, allEvents, got)
@@ -162,26 +147,11 @@ func TestLibrary(t *testing.T) {
 			t.Parallel()
 
 			var got []flow.Event
-			err = db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{mocks.GenericEventType(2)}, &got))
+			err := db.View(lib.RetrieveEvents(mocks.GenericHeight, []flow.EventType{mocks.GenericEventType(2)}, &got))
 
 			require.NoError(t, err)
 			assert.Empty(t, got)
 		})
-	})
-
-	t.Run("payload", func(t *testing.T) {
-		t.Parallel()
-
-		db, lib := setupLibrary(t)
-
-		err := db.Update(lib.SavePayload(mocks.GenericHeight, mocks.GenericLedgerPath(0), mocks.GenericLedgerPayload(0)))
-		assert.NoError(t, err)
-
-		var got ledger.Payload
-		err = db.View(lib.RetrievePayload(mocks.GenericHeight, mocks.GenericLedgerPath(0), &got))
-
-		require.NoError(t, err)
-		assert.Equal(t, *mocks.GenericLedgerPayload(0), got)
 	})
 
 	t.Run("transaction", func(t *testing.T) {

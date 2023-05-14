@@ -1,24 +1,9 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package archive
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 
 	"github.com/onflow/flow-archive/models/archive"
@@ -128,11 +113,11 @@ func (i *Index) Header(height uint64) (*flow.Header, error) {
 // as they were after the execution of the finalized block at the given height.
 // For compatibility with existing Flow execution node code, a path that is not
 // found within the indexed execution state returns a nil value without error.
-func (i *Index) Values(height uint64, paths []ledger.Path) ([]ledger.Value, error) {
+func (i *Index) Values(height uint64, regs flow.RegisterIDs) ([]flow.RegisterValue, error) {
 
 	req := GetRegisterValuesRequest{
-		Height: height,
-		Paths:  convert.PathsToBytes(paths),
+		Height:    height,
+		Registers: convert.RegistersToBytes(regs),
 	}
 	res, err := i.client.GetRegisterValues(context.Background(), &req)
 	if err != nil {

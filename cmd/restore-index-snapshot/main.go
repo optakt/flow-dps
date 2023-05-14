@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package main
 
 import (
@@ -32,6 +18,7 @@ import (
 	"github.com/onflow/flow-archive/models/archive"
 	"github.com/onflow/flow-archive/service/index"
 	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/service/storage2"
 )
 
 const (
@@ -61,12 +48,18 @@ func run() int {
 	var (
 		flagCompression string
 		flagEncoding    string
-		flagIndex       string
+
+		flagIndex          string
+		flagIndex2         string
+		flagBlockCacheSize int64
 	)
 
 	pflag.StringVarP(&flagCompression, "compression", "c", compressionZstd, "compression algorithm (\"none\", \"zstd\" or \"gzip\")")
 	pflag.StringVarP(&flagEncoding, "encoding", "e", encodingNone, "output encoding (\"none\", \"hex\" or \"base64\")")
-	pflag.StringVarP(&flagIndex, "index", "i", "index", "database directory for state index")
+
+	pflag.StringVarP(&flagIndex, "index", "i", "index", "path to database directory for state index")
+	pflag.StringVarP(&flagIndex2, "index2", "I", "index2", "path to the pebble-based index database directory")
+	pflag.Int64Var(&flagBlockCacheSize, "block-cache-size", 1<<30, "size of the pebble block cache in bytes.")
 
 	pflag.Parse()
 
@@ -82,8 +75,20 @@ func run() int {
 	}
 	defer db.Close()
 
+	storage2, err := storage2.NewLibrary2(flagIndex2, flagBlockCacheSize)
+	if err != nil {
+		log.Error().Str("index2", flagIndex2).Err(err).Msg("could not open storage2")
+		return failure
+	}
+	defer func() {
+		err := storage2.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("could not close storage2")
+		}
+	}()
+
 	// Check if the database is empty.
-	index := index.NewReader(log, db, storage.New(zbor.NewCodec()))
+	index := index.NewReader(log, db, storage.New(zbor.NewCodec()), storage2)
 	_, err = index.First()
 	if err == nil {
 		log.Error().Msg("database directory already contains index database")

@@ -1,29 +1,12 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package storage
 
 import (
 	"encoding/binary"
 	"fmt"
-	"math"
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/dgraph-io/badger/v2"
 
-	"github.com/onflow/flow-go/ledger"
-	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -56,16 +39,6 @@ func (l *Library) SaveHeader(height uint64, header *flow.Header) func(*badger.Tx
 func (l *Library) SaveEvents(height uint64, typ flow.EventType, events []flow.Event) func(*badger.Txn) error {
 	hash := xxhash.ChecksumString64(string(typ))
 	return l.save(EncodeKey(PrefixEvents, height, hash), events)
-}
-
-// SavePayload is an operation that writes the height of a slice of paths and a slice of payloads.
-func (l *Library) SavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
-	return l.save(EncodeKey(PrefixPayload, path, height), payload)
-}
-
-// BatchSavePayload is an operation that writes the height of a slice of paths and a slice of payloads.
-func (l *Library) BatchSavePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.WriteBatch) error {
-	return l.batchWrite(EncodeKey(PrefixPayload, path, height), payload)
 }
 
 // SaveTransaction is an operation that writes the given transaction.
@@ -188,34 +161,6 @@ func (l *Library) RetrieveEvents(height uint64, types []flow.EventType, events *
 	}
 }
 
-// RetrievePayload retrieves the ledger payloads at the given height that match the given path.
-func (l *Library) RetrievePayload(height uint64, path ledger.Path, payload *ledger.Payload) func(*badger.Txn) error {
-	return func(tx *badger.Txn) error {
-
-		key := EncodeKey(PrefixPayload, path, height)
-		it := tx.NewIterator(badger.IteratorOptions{
-			PrefetchSize:   0,
-			PrefetchValues: false,
-			Reverse:        true,
-			AllVersions:    false,
-			InternalAccess: false,
-			Prefix:         key[:1+pathfinder.PathByteSize],
-		})
-		defer it.Close()
-
-		it.Seek(key)
-		if !it.Valid() {
-			return badger.ErrKeyNotFound
-		}
-
-		err := it.Item().Value(func(val []byte) error {
-			return l.codec.Unmarshal(val, payload)
-		})
-
-		return err
-	}
-}
-
 // RetrieveCollection retrieves the collection with the given identifier.
 func (l *Library) RetrieveCollection(collectionID flow.Identifier, collection *flow.LightCollection) func(*badger.Txn) error {
 	return l.retrieve(EncodeKey(PrefixCollection, collectionID), collection)
@@ -265,88 +210,4 @@ func (l *Library) LookupSealsForHeight(height uint64, sealIDs *[]flow.Identifier
 // RetrieveResult retrieves the result with the given transaction identifier.
 func (l *Library) RetrieveResult(txID flow.Identifier, result *flow.TransactionResult) func(*badger.Txn) error {
 	return l.retrieve(EncodeKey(PrefixResults, txID), result)
-}
-
-// IterateLedger steps through the entire ledger for ledger keys and payloads
-// and call the given callback for each of them.
-func (l *Library) IterateLedger(exclude func(height uint64) bool, process func(path ledger.Path, payload *ledger.Payload) error) func(*badger.Txn) error {
-
-	prefix := EncodeKey(PrefixPayload)
-	opts := badger.IteratorOptions{
-		PrefetchSize:   100,
-		PrefetchValues: false,
-		Reverse:        true,
-		AllVersions:    false,
-		InternalAccess: false,
-		Prefix:         prefix,
-	}
-	highest := ledger.Path{
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	}
-
-	return func(tx *badger.Txn) error {
-
-		it := tx.NewIterator(opts)
-		defer it.Close()
-
-		sentinel := EncodeKey(PrefixPayload, highest, uint64(math.MaxUint64))
-		for it.Seek(sentinel); it.ValidForPrefix(prefix); {
-
-			// First, we extract the height from the item's key, and check if
-			// we should just skip past this entry.
-			item := it.Item()
-			key := item.Key()
-			height := binary.BigEndian.Uint64(key[33:41])
-			if exclude(height) {
-				it.Next()
-				continue
-			}
-
-			// Next, we can get the path from the key and the payload from the
-			// value.
-			var path ledger.Path
-			var payload ledger.Payload
-			copy(path[:], key[1:33])
-			err := item.Value(func(val []byte) error {
-				err := l.codec.Unmarshal(val, &payload)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("could not decode value (path: %x): %w", path, err)
-			}
-
-			// Then, we process the ledger path and payload with the callback.
-			err = process(path, &payload)
-			if err != nil {
-				return fmt.Errorf("could not process register (path: %x): %w", path, err)
-			}
-
-			// We need want to go to the first value that is below the current
-			// path. In order to cover all potential cases, including payloads
-			// at height zero, we need to decrement the current path by one and
-			// use the maximum possible height. If the decrement doesn't work,
-			// we have reached the zero path and we can break; otherwise, we
-			// would just wrap around to the maximum key again.
-			var zero ledger.Path
-			if path == zero {
-				break
-			}
-			for i := len(path) - 1; i >= 0; i-- {
-				path[i] = path[i] - 1
-				if path[i] != 0xff {
-					break
-				}
-			}
-			sentinel = EncodeKey(PrefixPayload, path, uint64(math.MaxUint64))
-			it.Seek(sentinel)
-		}
-
-		return nil
-	}
 }

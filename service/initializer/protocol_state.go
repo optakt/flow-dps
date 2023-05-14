@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 package initializer
 
 import (
@@ -60,24 +46,20 @@ func ProtocolState(file io.Reader, db *badger.DB) error {
 
 	// Initialize the protocol state with the snapshot.
 	collector := metrics.NewNoopCollector()
-	headers := cache.NewHeaders(collector, db)
-	index := cache.NewIndex(collector, db)
-	guarantees := cache.NewGuarantees(collector, db, 1)
-	seals := cache.NewSeals(collector, db)
-	results := cache.NewExecutionResults(collector, db)
-	receipts := cache.NewExecutionReceipts(collector, db, results, 1)
-	payloads := cache.NewPayloads(db, index, guarantees, seals, receipts, results)
+	all := cache.InitAll(collector, db)
+
 	_, err = protocol.Bootstrap(
 		collector,
 		db,
-		headers,
-		seals,
-		results,
-		cache.NewBlocks(db, headers, payloads),
-		cache.NewQuorumCertificates(collector, db, cache.DefaultCacheSize),
-		cache.NewEpochSetups(collector, db),
-		cache.NewEpochCommits(collector, db),
-		cache.NewEpochStatuses(collector, db),
+		all.Headers,
+		all.Seals,
+		all.Results,
+		all.Blocks,
+		all.QuorumCertificates,
+		all.Setups,
+		all.EpochCommits,
+		all.Statuses,
+		all.VersionBeacons,
 		snapshot,
 	)
 	if err != nil {

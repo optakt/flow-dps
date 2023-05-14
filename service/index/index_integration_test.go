@@ -1,17 +1,3 @@
-// Copyright 2021 Optakt Labs OÜ
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
-
 //go:build integration
 // +build integration
 
@@ -30,6 +16,7 @@ import (
 	"github.com/onflow/flow-archive/codec/zbor"
 	"github.com/onflow/flow-archive/service/index"
 	"github.com/onflow/flow-archive/service/storage"
+	"github.com/onflow/flow-archive/service/storage2"
 	"github.com/onflow/flow-archive/testing/helpers"
 	"github.com/onflow/flow-archive/testing/mocks"
 )
@@ -122,18 +109,17 @@ func TestIndex(t *testing.T) {
 		reader, writer, db := setupIndex(t)
 		defer db.Close()
 
-		paths := mocks.GenericLedgerPaths(4)
 		payloads := mocks.GenericLedgerPayloads(4)
-		values := mocks.GenericLedgerValues(4)
+		regs := mocks.GenericRegisters(4)
+		values := mocks.GenericRegisterValues(4)
 
 		assert.NoError(t, writer.First(mocks.GenericHeight))
 		assert.NoError(t, writer.Last(mocks.GenericHeight))
-		assert.NoError(t, writer.Payloads(mocks.GenericHeight, paths, payloads))
+		assert.NoError(t, writer.Payloads(mocks.GenericHeight, payloads))
 		// Close the writer to make it commit its transactions.
 		require.NoError(t, writer.Close())
 
-		got, err := reader.Values(mocks.GenericHeight, paths)
-
+		got, err := reader.Values(mocks.GenericHeight, regs)
 		require.NoError(t, err)
 		assert.ElementsMatch(t, values, got)
 	})
@@ -329,10 +315,13 @@ func setupIndex(t *testing.T) (*index.Reader, *index.Writer, *badger.DB) {
 
 	lib := storage.New(codec)
 
+	lib2, err := storage2.NewLibrary2(t.TempDir(), 1<<20)
+	require.NoError(t, err)
+
 	log := zerolog.Nop()
 
-	reader := index.NewReader(log, db, lib)
-	writer := index.NewWriter(db, lib, index.WithConcurrentTransactions(4))
+	reader := index.NewReader(log, db, lib, lib2)
+	writer := index.NewWriter(db, lib, lib2, index.WithConcurrentTransactions(4))
 
 	return reader, writer, db
 }
