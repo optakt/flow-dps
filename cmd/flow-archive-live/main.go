@@ -406,7 +406,7 @@ func run() int {
 	}
 	log.Info().Msgf("server created at address: %v", flagAddress)
 
-	log.Info().Msgf("creating server at address: %v", flagAccessAddress)
+	log.Info().Msgf("creating access server at address: %v", flagAccessAddress)
 	accessListener, err := net.Listen("tcp", flagAccessAddress)
 	if err != nil {
 		log.Error().Str("address", flagAccessAddress).Err(err).Msg("could not create listener")
