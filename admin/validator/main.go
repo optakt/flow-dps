@@ -182,9 +182,9 @@ func main() {
 	// connect to Archive-Access instance
 	ctx := context.TODO()
 	accessAddr := "access.mainnet.nodes.onflow.org:9000"
-	// archiveAddr := "archive.mainnet.nodes.onflow.org:9000"
+	archiveAddr := "archive.mainnet.nodes.onflow.org:9000"
 	// archiveAddr := "dps-001.mainnet-staging1.nodes.onflow.org:9000" // badger based archive node
-	archiveAddr := "dps-001.mainnet22.nodes.onflow.org:9000" // existing dps with the trie
+	// archiveAddr := "dps-001.mainnet22.nodes.onflow.org:9000" // existing dps with the trie
 	// connect to Access instance
 	apiValidator, err := NewAPIValidator(accessAddr, archiveAddr, ctx)
 	if err != nil {
