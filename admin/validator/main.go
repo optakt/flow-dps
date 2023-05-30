@@ -6,13 +6,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type APIValidator struct {
@@ -33,7 +33,6 @@ func NewAPIValidator(accessAddr string, archiveAddr string, ctx context.Context)
 	recentBlock, err := accessClient.GetLatestBlock(ctx, &access.GetLatestBlockRequest{}) // this might be flakey because a sealed block to access node might not be sealed yet to archive node
 	// recentBlock, err := accessClient.GetBlockByHeight(ctx, &access.GetBlockByHeightRequest{Height: 52853749}) // specify with a recent sealed block
 	// allow for archive node to sync block
-	time.Sleep(5)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get latest block from AN")
 	}
@@ -61,7 +60,7 @@ func getAPIClient(addr string) access.AccessAPIClient {
 	// connect to Archive-Access instance
 	MaxGRPCMessageSize := 1024 * 1024 * 20 // 20MB
 	conn, err := grpc.Dial(addr,
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(MaxGRPCMessageSize)))
 	if err != nil {
 		panic(fmt.Sprintf("unable to create connection to node: %s", addr))
