@@ -4,11 +4,18 @@ import (
 	"testing"
 
 	"github.com/onflow/flow-go/fvm"
+	"github.com/onflow/flow-go/fvm/storage"
 	"github.com/onflow/flow-go/fvm/storage/snapshot"
 	"github.com/onflow/flow-go/model/flow"
 )
 
 type VirtualMachine struct {
+	NewExecutorFunc func(
+		fvm.Context,
+		fvm.Procedure,
+		storage.TransactionPreparer,
+	) fvm.ProcedureExecutor
+
 	GetAccountFunc func(
 		ctx fvm.Context,
 		address flow.Address,
@@ -57,6 +64,14 @@ func BaselineVirtualMachine(t *testing.T) *VirtualMachine {
 	}
 
 	return &vm
+}
+
+func (v *VirtualMachine) NewExecutor(
+	ctx fvm.Context,
+	proc fvm.Procedure,
+	preparer storage.TransactionPreparer,
+) fvm.ProcedureExecutor {
+	return v.NewExecutorFunc(ctx, proc, preparer)
 }
 
 func (v *VirtualMachine) GetAccount(
