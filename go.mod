@@ -13,8 +13,8 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/klauspost/compress v1.15.15
-	github.com/onflow/cadence v0.39.5
-	github.com/onflow/flow-go-sdk v0.41.3
+	github.com/onflow/cadence v0.39.9
+	github.com/onflow/flow-go-sdk v0.41.5
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rs/zerolog v1.29.0
@@ -28,7 +28,7 @@ require (
 require (
 	github.com/cockroachdb/pebble v0.0.0-20230428220915-dc0efbd4333b
 	github.com/envoyproxy/protoc-gen-validate v0.9.1
-	github.com/onflow/flow-go v0.31.4
+	github.com/onflow/flow-go v0.31.9
 	github.com/onflow/flow-go/crypto v0.24.7
 	github.com/onflow/flow/protobuf/go/flow v0.3.2-0.20230602212908-08fc6536d391
 	go.opentelemetry.io/otel v1.14.0
