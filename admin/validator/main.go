@@ -30,7 +30,7 @@ func NewAPIValidator(accessAddr string, archiveAddr string, ctx context.Context)
 	accessClient := getAPIClient(accessAddr)
 	archiveClient := getAPIClient(archiveAddr)
 	accountAddr := flow.HexToAddress("e467b9dd11fa00df").Bytes()
-	recentBlock, err := accessClient.GetLatestBlock(ctx, &access.GetLatestBlockRequest{}) // this might be flakey because a sealed block to access node might not be sealed yet to archive node
+	recentBlock, err := accessClient.GetBlockByHeight(ctx, &access.GetBlockByHeightRequest{Height: 106242795}) // this might be flakey because a sealed block to access node might not be sealed yet to archive node
 	// recentBlock, err := accessClient.GetBlockByHeight(ctx, &access.GetBlockByHeightRequest{Height: 52853749}) // specify with a recent sealed block
 	// allow for archive node to sync block
 	if err != nil {
@@ -181,8 +181,8 @@ func (a *APIValidator) checkGetAccountAtBlockHeight(ctx context.Context) error {
 func main() {
 	// connect to Archive-Access instance
 	ctx := context.TODO()
-	accessAddr := "access.mainnet.nodes.onflow.org:9000"
-	archiveAddr := "archive.mainnet.nodes.onflow.org:9000"
+	accessAddr := "access-001.devnet46.nodes.onflow.org:9000"
+	archiveAddr := "access-003.devnet46.nodes.onflow.org:9000"
 	// archiveAddr := "dps-001.mainnet-staging1.nodes.onflow.org:9000" // badger based archive node
 	// archiveAddr := "dps-001.mainnet22.nodes.onflow.org:9000" // existing dps with the trie
 	// connect to Access instance
