@@ -159,7 +159,7 @@ func TestGCPStreamer_Next(t *testing.T) {
 		assert.ErrorIs(t, err, archive.ErrUnavailable)
 
 		select {
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(10 * time.Millisecond):
 			t.Fatal("GCP Streamer did not attempt to download record from bucket")
 		case <-serverCalled:
 		}

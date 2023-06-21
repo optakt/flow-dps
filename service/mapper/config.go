@@ -8,7 +8,7 @@ import (
 var DefaultConfig = Config{
 	BootstrapState: false,
 	SkipRegisters:  false,
-	WaitInterval:   100 * time.Millisecond,
+	WaitInterval:   10 * time.Millisecond,
 }
 
 // Config contains optional parameters for the Mapper.
