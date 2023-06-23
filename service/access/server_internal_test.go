@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
@@ -1126,6 +1128,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		_, err := s.ExecuteScriptAtBlockID(context.Background(), req)
 
 		assert.Error(t, err)
+		assert.Equal(t, status.Code(err), codes.Internal)
 	})
 
 	t.Run("handles invoker failure", func(t *testing.T) {
@@ -1147,6 +1150,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		_, err := s.ExecuteScriptAtBlockID(context.Background(), req)
 
 		assert.Error(t, err)
+		assert.Equal(t, status.Code(err), codes.InvalidArgument)
 	})
 }
 
@@ -1202,6 +1206,7 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		_, err := s.ExecuteScriptAtLatestBlock(context.Background(), req)
 
 		assert.Error(t, err)
+		assert.Equal(t, status.Code(err), codes.Internal)
 	})
 
 	t.Run("handles invoker failure", func(t *testing.T) {
@@ -1222,6 +1227,7 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		_, err := s.ExecuteScriptAtLatestBlock(context.Background(), req)
 
 		assert.Error(t, err)
+		assert.Equal(t, status.Code(err), codes.InvalidArgument)
 	})
 }
 
