@@ -433,7 +433,7 @@ func (s *Server) ExecuteScriptAtBlockID(ctx context.Context, in *access.ExecuteS
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
 		err = fmt.Errorf("could not get height for block ID %x: %w", blockID, err)
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	req := &access.ExecuteScriptAtBlockHeightRequest{
@@ -453,7 +453,7 @@ func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.Execut
 		val, err := json.Decode(nil, arg)
 		if err != nil {
 			err = fmt.Errorf("could not decode script argument: %w", err)
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 
 		args = append(args, val)
