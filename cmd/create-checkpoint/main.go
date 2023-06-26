@@ -59,7 +59,7 @@ func run() int {
 
 	err = createCheckpoint(flagIndex, flagCheckpoint, log)
 	if err != nil {
-		log.Error().Msg("can not create checkpoint")
+		log.Error().Err(err).Msg("can not create checkpoint")
 		return failure
 	}
 
