@@ -17,4 +17,5 @@
 *.log
 .idea
 .vscode
-create-checkpoint
+./create-checkpoint
+./payloads
