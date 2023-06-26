@@ -100,3 +100,12 @@ docker-push-server:
 .PHONY: docker-push-flow-archive
 docker-push-flow-archive: docker-push-live docker-push-indexer docker-push-client docker-push-server
 
+
+PHONY: docker-build-create-checkpoint
+docker-build-create-checkpoint:
+	docker build -f cmd/Dockerfile --build-arg TARGET=./cmd/create-checkpoint --build-arg GOARCH=$(GOARCH) --target production \
+		-t "$(CONTAINER_REGISTRY)/create-checkpoint:latest" -t "$(CONTAINER_REGISTRY)/create-checkpoint:$(SHORT_COMMIT)" -t "$(CONTAINER_REGISTRY)/create-checkpoint:$(IMAGE_TAG)" .
+
+PHONY: tool-create-checkpoint
+tool-create-checkpoint: docker-build-create-checkpoint
+	docker container create --name create-checkpoint $(CONTAINER_REGISTRY)/create-checkpoint:latest;docker container cp create-checkpoint:/bin/app ./create-checkpoint;docker container rm create-checkpoint
