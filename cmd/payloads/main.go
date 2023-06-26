@@ -35,7 +35,7 @@ func run() int {
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagOwner, "owner", "o", "", "owner in hex format")
 	pflag.StringVarP(&flagKey, "key", "k", "", "register key in hex format")
-	pflag.Uint64VarP(&flagHeight, "height", "i", 0, "height for getting register id")
+	pflag.Uint64VarP(&flagHeight, "height", "h", 0, "height for getting register id")
 
 	pflag.Parse()
 
