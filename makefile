@@ -109,3 +109,12 @@ docker-build-create-checkpoint:
 PHONY: tool-create-checkpoint
 tool-create-checkpoint: docker-build-create-checkpoint
 	docker container create --name create-checkpoint $(CONTAINER_REGISTRY)/create-checkpoint:latest;docker container cp create-checkpoint:/bin/app ./create-checkpoint;docker container rm create-checkpoint
+
+PHONY: docker-build-payloads
+docker-build-payloads:
+	docker build -f cmd/Dockerfile --build-arg TARGET=./cmd/payloads --build-arg GOARCH=$(GOARCH) --target production \
+		-t "$(CONTAINER_REGISTRY)/payloads:latest" -t "$(CONTAINER_REGISTRY)/payloads:$(SHORT_COMMIT)" -t "$(CONTAINER_REGISTRY)/payloads:$(IMAGE_TAG)" .
+
+PHONY: tool-payloads
+tool-payloads: docker-build-payloads
+	docker container create --name payloads $(CONTAINER_REGISTRY)/payloads:latest;docker container cp payloads:/bin/app ./payloads;docker container rm payloads
