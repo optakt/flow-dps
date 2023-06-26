@@ -88,6 +88,10 @@ func (s *Storage) BatchSetPayload(
 	return nil
 }
 
+func (s *Storage) Checkpoint(dir string) error {
+	return s.db.Checkpoint(dir)
+}
+
 // Close closes the storage.
 func (s *Storage) Close() error {
 	return s.db.Close()
