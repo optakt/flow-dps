@@ -413,8 +413,7 @@ func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccoun
 func (s *Server) ExecuteScriptAtLatestBlock(ctx context.Context, in *access.ExecuteScriptAtLatestBlockRequest) (*access.ExecuteScriptResponse, error) {
 	height, err := s.index.Last()
 	if err != nil {
-		err = fmt.Errorf("could not get last height: %w", err)
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "could not get last height: %v", err)
 	}
 
 	req := &access.ExecuteScriptAtBlockHeightRequest{
@@ -432,8 +431,7 @@ func (s *Server) ExecuteScriptAtBlockID(ctx context.Context, in *access.ExecuteS
 	blockID := flow.HashToID(in.BlockId)
 	height, err := s.index.HeightForBlock(blockID)
 	if err != nil {
-		err = fmt.Errorf("could not get height for block ID %x: %w", blockID, err)
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "could not get height for block ID %x: %v", blockID, err)
 	}
 
 	req := &access.ExecuteScriptAtBlockHeightRequest{
@@ -452,8 +450,7 @@ func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.Execut
 	for _, arg := range in.Arguments {
 		val, err := json.Decode(nil, arg)
 		if err != nil {
-			err = fmt.Errorf("could not decode script argument: %w", err)
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Errorf(codes.Internal, "could not decode script argument: %v", err)
 		}
 
 		args = append(args, val)
@@ -461,14 +458,12 @@ func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.Execut
 
 	value, err := s.invoker.Script(in.BlockHeight, in.Script, args)
 	if err != nil {
-		err = fmt.Errorf("could not execute script: %w", err)
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, status.Errorf(codes.InvalidArgument, "could not execute script: %v", err)
 	}
 
 	result, err := json.Encode(value)
 	if err != nil {
-		err = fmt.Errorf("could not encode script result: %w", err)
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "could not encode script result: %v", err)
 	}
 
 	resp := access.ExecuteScriptResponse{
