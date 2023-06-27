@@ -88,6 +88,23 @@ func (s *Storage) BatchSetPayload(
 	return nil
 }
 
+func (s *Storage) PruneByHeight(height uint64) (int, error) {
+	pruned := 0
+
+	iter := s.db.NewIter(&pebble.IterOptions{
+		UseL6Filters: true,
+	})
+	defer iter.Close()
+
+	ok := iter.SeekPrefixGE([]byte{})
+	if !ok {
+		return pruned, nil
+	}
+
+	_ = iter.Key()
+	return pruned, nil
+}
+
 // Close closes the storage.
 func (s *Storage) Close() error {
 	return s.db.Close()

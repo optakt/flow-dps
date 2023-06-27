@@ -25,4 +25,11 @@ func Test_lookupKey_Bytes(t *testing.T) {
 
 	// Test everything together
 	require.Equal(t, []byte("owner/key/\xff\xff\xff\xff\xff\xff\xfc\xf6"), key.Bytes())
+
+	decodedHeight, decodedReg, err := lookupKeyToRegisterID(key.encoded)
+	require.NoError(t, err)
+
+	require.Equal(t, expectedHeight, decodedHeight)
+	require.Equal(t, "owner", decodedReg.Owner)
+	require.Equal(t, "key", decodedReg.Key)
 }
