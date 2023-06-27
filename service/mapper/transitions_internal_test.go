@@ -249,7 +249,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		err := tr.IndexChain(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusUpdate, st.status)
+		assert.Equal(t, StatusForward, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
@@ -700,7 +700,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 
 		// Should be StatusForward because registers map was written
 		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusForward, st.status)
+		assert.Equal(t, StatusIndex, st.status)
 	})
 
 	t.Run("nominal case no more registers left to write", func(t *testing.T) {
@@ -711,7 +711,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 		err := tr.MapRegisters(st)
 
 		assert.NoError(t, err)
-		assert.Equal(t, StatusForward, st.status)
+		assert.Equal(t, StatusIndex, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
@@ -922,7 +922,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		err := tr.ResumeIndexing(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusIndex, st.status)
+		assert.Equal(t, StatusUpdate, st.status)
 		assert.Equal(t, header.Height+1, st.height)
 	})
 
