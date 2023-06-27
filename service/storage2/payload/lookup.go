@@ -14,6 +14,7 @@ type lookupKey struct {
 	encoded []byte
 }
 
+// newLookupKey takes a height and registerID, returns the key for storing the register value in storage
 func newLookupKey(height uint64, reg flow.RegisterID) *lookupKey {
 	key := lookupKey{
 		encoded: make([]byte, 0, len(reg.Owner)+1+len(reg.Key)+1+config.HeightSuffixLen),
@@ -37,33 +38,39 @@ func newLookupKey(height uint64, reg flow.RegisterID) *lookupKey {
 	return &key
 }
 
+// lookupKeyToRegisterID takes a lookup key and decode it into height and RegisterID
 func lookupKeyToRegisterID(lookupKey []byte) (uint64, flow.RegisterID, error) {
-	// Find the first and second occurrence of '/' to split the lookup key.
+	// Find the first slash to split the lookup key and decode the owner.
 	firstSlash := bytes.IndexByte(lookupKey, '/')
 	if firstSlash == -1 {
-		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format, can't find first slash")
+		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: cannot find first slash")
 	}
 
-	secondSlash := bytes.IndexByte(lookupKey[firstSlash+1:], '/')
-	if secondSlash == -1 {
-		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format, can't find second slash")
-	}
-
-	// Extract owner, key, and height portions from the lookup key.
 	owner := string(lookupKey[:firstSlash])
-	key := string(lookupKey[firstSlash+1 : firstSlash+secondSlash+1])
-	heightBytes := lookupKey[firstSlash+secondSlash+2:]
 
-	// Decode the height from the remaining bytes in big-endian byte order.
+	// Find the last 8 bytes to decode the height.
+	heightBytes := lookupKey[len(lookupKey)-8:]
 	if len(heightBytes) != 8 {
-		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format, invalid height bytes length (%v != 8)", len(heightBytes))
+		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: cannot find height")
 	}
 
 	oneCompliment := binary.BigEndian.Uint64(heightBytes)
 	height := ^oneCompliment
-	reg := flow.RegisterID{Owner: owner, Key: key}
 
-	return height, reg, nil
+	// Find the position of the second slash from the end.
+	secondSlashPos := len(lookupKey) - 9
+	// Validate the presence of the second slash.
+	if secondSlashPos <= firstSlash {
+		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: second slash not found")
+	}
+
+	// Decode the remaining bytes into the key.
+	keyBytes := lookupKey[firstSlash+1 : secondSlashPos]
+	key := string(keyBytes)
+
+	regID := flow.RegisterID{Owner: owner, Key: key}
+
+	return height, regID, nil
 }
 
 // Bytes returns the encoded lookup key.

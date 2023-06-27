@@ -33,3 +33,31 @@ func Test_lookupKey_Bytes(t *testing.T) {
 	require.Equal(t, "owner", decodedReg.Owner)
 	require.Equal(t, "key", decodedReg.Key)
 }
+
+func Test_decodeKey_Bytes(t *testing.T) {
+	height := uint64(10)
+	owner := "owneraddress"
+	key := "public/storage"
+
+	lookupKey := newLookupKey(height, flow.RegisterID{Owner: owner, Key: key})
+	decodedHeight, decodedReg, err := lookupKeyToRegisterID(lookupKey.Bytes())
+	require.NoError(t, err)
+
+	require.Equal(t, height, decodedHeight)
+	require.Equal(t, owner, decodedReg.Owner)
+	require.Equal(t, key, decodedReg.Key)
+}
+
+func Test_decodeKey_emptykey(t *testing.T) {
+	height := uint64(10)
+	owner := "owneraddress"
+	key := ""
+
+	lookupKey := newLookupKey(height, flow.RegisterID{Owner: owner, Key: key})
+	decodedHeight, decodedReg, err := lookupKeyToRegisterID(lookupKey.Bytes())
+	require.NoError(t, err)
+
+	require.Equal(t, height, decodedHeight)
+	require.Equal(t, owner, decodedReg.Owner)
+	require.Equal(t, key, decodedReg.Key)
+}
