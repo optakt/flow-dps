@@ -57,9 +57,22 @@ func run() int {
 		Str("key", flagKey).
 		Msgf("flags loaded")
 
-	regID := flow.NewRegisterID(flagOwner, flagKey)
+	if flagKey == "" {
+		log.Error().Msgf("--key flag is empty")
+		return failure
+	}
 
-	err = GetPayload(flagIndex, flagHeight, regID, log)
+	if flagIndex == "" {
+		log.Error().Msgf("--index flag is empty")
+		return failure
+	}
+
+	if flagHeight == 0 {
+		log.Error().Msgf("--height flag is 0")
+		return failure
+	}
+
+	err = GetPayload(flagIndex, flagHeight, flagOwner, flagKey, log)
 	if err != nil {
 		log.Error().Err(err).Msg("can not create checkpoint")
 		return failure
@@ -68,13 +81,21 @@ func run() int {
 	return success
 }
 
-func GetPayload(indexDir string, height uint64, regID flow.RegisterID, log zerolog.Logger) error {
+func GetPayload(indexDir string, height uint64, owner string, key string, log zerolog.Logger) error {
 	lib2, err := storage2.NewLibrary2(indexDir, 1<<30)
 	if err != nil {
 		return err
 	}
 
-	regValue, err := lib2.GetPayload(height, flow.UUIDRegisterID)
+	regID := flow.NewRegisterID(owner, key)
+	if owner == "" {
+		regID = flow.RegisterID{
+			Owner: "",
+			Key:   key,
+		}
+	}
+
+	regValue, err := lib2.GetPayload(height, regID)
 	if err != nil {
 		return fmt.Errorf("could not get register value: %w", err)
 	}

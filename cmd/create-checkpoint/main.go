@@ -54,6 +54,11 @@ func run() int {
 		return failure
 	}
 
+	if flagCheckpoint == "" {
+		log.Error().Msg("missing checkpoint directory")
+		return failure
+	}
+
 	err = createCheckpoint(flagIndex, flagCheckpoint, log)
 	if err != nil {
 		log.Error().Err(err).Msg("can not create checkpoint")
