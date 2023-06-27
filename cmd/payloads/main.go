@@ -74,11 +74,11 @@ func GetPayload(indexDir string, height uint64, regID flow.RegisterID, log zerol
 		return err
 	}
 
-	regValue, err := lib2.GetPayload(height, regID)
+	regValue, err := lib2.GetPayload(height, flow.UUIDRegisterID)
 	if err != nil {
 		return fmt.Errorf("could not get register value: %w", err)
 	}
 
-	log.Info().Msgf("successfully get register value at height %v for reg id: %v: %x", height, regID, regValue)
+	log.Info().Msgf("successfully get register value at height %v for reg id: %v: %v (len: %v)", height, regID, regValue, len(regValue))
 	return nil
 }

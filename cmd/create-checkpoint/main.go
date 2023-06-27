@@ -21,13 +21,11 @@ func run() int {
 
 	// Parse the command line arguments.
 	var (
-		flagData       string
 		flagIndex      string
 		flagLevel      string
 		flagCheckpoint string
 	)
 
-	pflag.StringVarP(&flagData, "data", "d", "", "database directory for protocol state")
 	pflag.StringVarP(&flagIndex, "index", "i", "", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "directory for exporting the checkpoint")
@@ -45,15 +43,14 @@ func run() int {
 	log = log.Level(level)
 
 	log.Info().
-		Str("data", flagData).
 		Str("index", flagIndex).
 		Str("level", flagLevel).
 		Str("checkpoint_dir", flagCheckpoint).
 		Msgf("flags loaded")
 
 	// We should have at least one of data or index directories.
-	if flagData == "" && flagIndex == "" {
-		log.Error().Msg("need at least one of data or index directories")
+	if flagIndex == "" {
+		log.Error().Msg("missing index directory")
 		return failure
 	}
 
@@ -62,6 +59,8 @@ func run() int {
 		log.Error().Err(err).Msg("can not create checkpoint")
 		return failure
 	}
+
+	log.Info().Msgf("successfully created checkpoint at dir: %v", flagCheckpoint)
 
 	return success
 }
