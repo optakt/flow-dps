@@ -1128,7 +1128,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		_, err := s.ExecuteScriptAtBlockID(context.Background(), req)
 
 		assert.Error(t, err)
-		assert.Equal(t, status.Code(err), codes.Internal)
+		assert.Equal(t, status.Code(err), codes.NotFound)
 	})
 
 	t.Run("handles invoker failure", func(t *testing.T) {
