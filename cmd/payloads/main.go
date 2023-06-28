@@ -74,7 +74,7 @@ func run() int {
 
 	err = GetPayload(flagIndex, flagHeight, flagOwner, flagKey, log)
 	if err != nil {
-		log.Error().Err(err).Msg("can not create checkpoint")
+		log.Error().Err(err).Msg("can not get payload")
 		return failure
 	}
 
