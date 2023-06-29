@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/onflow/flow-archive/service/storage2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 )
@@ -17,6 +18,7 @@ func main() {
 	os.Exit(run())
 }
 
+// create-checkpoint command creates a checkpoint for the payload database
 func run() int {
 
 	// Parse the command line arguments.
@@ -26,9 +28,9 @@ func run() int {
 		flagCheckpoint string
 	)
 
-	pflag.StringVarP(&flagIndex, "index", "i", "", "database directory for state index")
+	pflag.StringVarP(&flagIndex, "index", "i", "/var/flow/data/pebble/index2", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
-	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "directory for exporting the checkpoint")
+	pflag.StringVarP(&flagCheckpoint, "checkpoint", "c", "", "directory for exporting the checkpoint, use a different folder than /var/flow/data/pebble")
 
 	pflag.Parse()
 
@@ -54,8 +56,20 @@ func run() int {
 		return failure
 	}
 
+	storagePath := storage2.StoragePath(flagIndex)
+	// Check if the path exists
+	if _, err := os.Stat(storagePath); os.IsNotExist(err) {
+		log.Error().Msgf("The storagePath '%s' does not exist.\n", storagePath)
+		return failure
+	}
+
 	if flagCheckpoint == "" {
 		log.Error().Msg("missing checkpoint directory")
+		return failure
+	}
+
+	if flagCheckpoint == flagIndex {
+		log.Error().Msgf("checkpoint must be a different directory than the index folder")
 		return failure
 	}
 

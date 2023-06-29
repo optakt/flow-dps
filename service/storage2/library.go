@@ -17,13 +17,17 @@ type library2Impl struct {
 	*payload.Storage
 }
 
+func StoragePath(dir string) string {
+	return path.Join(dir, "payload.db")
+}
+
 func NewLibrary2(dir string, blockCacheSize int64) (archive.Library2, error) {
 	// TODO(rbtz): cache metrics
 	cache := pebble.NewCache(blockCacheSize)
 	defer cache.Unref()
 
 	payloadStor, err := payload.NewStorage(
-		path.Join(dir, "payload.db"), cache)
+		StoragePath(dir), cache)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create payload storage: %w", err)
 	}

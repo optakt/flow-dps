@@ -20,6 +20,7 @@ func main() {
 	os.Exit(run())
 }
 
+// payloads command allows us to query the payload (register value) from the storage by owner, key and height
 func run() int {
 
 	// Parse the command line arguments.
@@ -31,7 +32,7 @@ func run() int {
 		flagKey    string
 	)
 
-	pflag.StringVarP(&flagIndex, "index", "i", "", "database directory for state index")
+	pflag.StringVarP(&flagIndex, "index", "i", "/var/flow/data/pebble/index2", "database directory for state index")
 	pflag.StringVarP(&flagLevel, "level", "l", "info", "log output level")
 	pflag.StringVarP(&flagOwner, "owner", "o", "", "owner in hex format")
 	pflag.StringVarP(&flagKey, "key", "k", "", "register key in hex format")
@@ -57,13 +58,20 @@ func run() int {
 		Str("key", flagKey).
 		Msgf("flags loaded")
 
-	if flagKey == "" {
-		log.Error().Msgf("--key flag is empty")
+	if flagIndex == "" {
+		log.Error().Msgf("--index flag is empty")
 		return failure
 	}
 
-	if flagIndex == "" {
-		log.Error().Msgf("--index flag is empty")
+	storagePath := storage2.StoragePath(flagIndex)
+	// Check if the path exists
+	if _, err := os.Stat(storagePath); os.IsNotExist(err) {
+		log.Error().Msgf("The storagePath '%s' does not exist.\n", storagePath)
+		return failure
+	}
+
+	if flagKey == "" {
+		log.Error().Msgf("--key flag is empty")
 		return failure
 	}
 
@@ -81,6 +89,7 @@ func run() int {
 	return success
 }
 
+// GetPayload prints the register value for the given owner and key at the given height
 func GetPayload(indexDir string, height uint64, owner string, key string, log zerolog.Logger) error {
 	lib2, err := storage2.NewLibrary2(indexDir, 1<<30)
 	if err != nil {
