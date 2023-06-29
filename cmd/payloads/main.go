@@ -109,6 +109,6 @@ func GetPayload(indexDir string, height uint64, owner string, key string, log ze
 		return fmt.Errorf("could not get register value: %w", err)
 	}
 
-	log.Info().Msgf("successfully get register value at height %v for reg id: %x: %v (len: %v)", height, regID, regValue, len(regValue))
+	log.Info().Msgf("successfully get register value at height %v for reg id: %v: %x (len: %v)", height, regID, regValue, len(regValue))
 	return nil
 }
