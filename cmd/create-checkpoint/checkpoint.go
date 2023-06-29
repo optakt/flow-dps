@@ -15,7 +15,8 @@ func createCheckpoint(indexDir string, checkpointDir string, log zerolog.Logger)
 		return err
 	}
 
-	err = lib2.Checkpoint(checkpointDir)
+	checkpointPath := storage2.StoragePath(checkpointDir)
+	err = lib2.Checkpoint(checkpointPath)
 	if err != nil {
 		return fmt.Errorf("could not create checkpoint at dir (%v): %w", checkpointDir, err)
 	}
