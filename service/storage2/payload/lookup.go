@@ -40,11 +40,12 @@ func newLookupKey(height uint64, reg flow.RegisterID) *lookupKey {
 
 // lookupKeyToRegisterID takes a lookup key and decode it into height and RegisterID
 func lookupKeyToRegisterID(lookupKey []byte) (uint64, flow.RegisterID, error) {
-       const minLookupKeyLen = 2 + config.HeightSuffixLen
-       if len(lookupKey) < minLookupKeyLen {   
-                return 0, flow.RegiterID{}, fmt.Errorf("invalid lookup key format: expected >= %d bytes, got %d bytes", minLookupKeyLen, len(lookupKey))
-       }
-       
+	const minLookupKeyLen = 2 + config.HeightSuffixLen
+	if len(lookupKey) < minLookupKeyLen {
+		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: expected >= %d bytes, got %d bytes",
+			minLookupKeyLen, len(lookupKey))
+	}
+
 	// Find the first slash to split the lookup key and decode the owner.
 	firstSlash := bytes.IndexByte(lookupKey, '/')
 	if firstSlash == -1 {
@@ -53,22 +54,23 @@ func lookupKeyToRegisterID(lookupKey []byte) (uint64, flow.RegisterID, error) {
 
 	owner := string(lookupKey[:firstSlash])
 
-        // Find the last slash to split encoded height.
-        lastSlashPos := bytes.LastIndexByte(lookupKey, '/')
-        if lastSlashPos == firstSlash {
-		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: expected 2 separators, got 1 separator")        
-        }
-        encodedHeightPos := lastSlashPos + 1
-        if len(lookupKey) - encodedHeightPos !=  config.HeightSuffixLen {
-		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: expected %d bytes of encoded height, got %d bytes", config.HeightSuffixLen, len(lookupKey) - encodedHeightPos)                
-        }
-        
+	// Find the last slash to split encoded height.
+	lastSlashPos := bytes.LastIndexByte(lookupKey, '/')
+	if lastSlashPos == firstSlash {
+		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: expected 2 separators, got 1 separator")
+	}
+	encodedHeightPos := lastSlashPos + 1
+	if len(lookupKey)-encodedHeightPos != config.HeightSuffixLen {
+		return 0, flow.RegisterID{},
+			fmt.Errorf("invalid lookup key format: expected %d bytes of encoded height, got %d bytes",
+				config.HeightSuffixLen, len(lookupKey)-encodedHeightPos)
+	}
+
 	// Decode height.
 	heightBytes := lookupKey[encodedHeightPos:]
 
 	oneCompliment := binary.BigEndian.Uint64(heightBytes)
 	height := ^oneCompliment
-
 
 	// Decode the remaining bytes into the key.
 	keyBytes := lookupKey[firstSlash+1 : lastSlashPos]
