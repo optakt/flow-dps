@@ -20,4 +20,5 @@ type ReadLibrary2 interface {
 
 type WriteLibrary2 interface {
 	BatchSetPayload(height uint64, entries flow.RegisterEntries) error
+	Checkpoint(dir string) error
 }

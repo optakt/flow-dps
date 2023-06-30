@@ -1,7 +1,9 @@
 package payload
 
 import (
+	"bytes"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/onflow/flow-archive/service/storage2/config"
 	"github.com/onflow/flow-go/model/flow"
@@ -12,6 +14,7 @@ type lookupKey struct {
 	encoded []byte
 }
 
+// newLookupKey takes a height and registerID, returns the key for storing the register value in storage
 func newLookupKey(height uint64, reg flow.RegisterID) *lookupKey {
 	key := lookupKey{
 		encoded: make([]byte, 0, len(reg.Owner)+1+len(reg.Key)+1+config.HeightSuffixLen),
@@ -33,6 +36,49 @@ func newLookupKey(height uint64, reg flow.RegisterID) *lookupKey {
 	key.encoded = binary.BigEndian.AppendUint64(key.encoded, onesCompliment)
 
 	return &key
+}
+
+// lookupKeyToRegisterID takes a lookup key and decode it into height and RegisterID
+func lookupKeyToRegisterID(lookupKey []byte) (uint64, flow.RegisterID, error) {
+	const minLookupKeyLen = 2 + config.HeightSuffixLen
+	if len(lookupKey) < minLookupKeyLen {
+		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: expected >= %d bytes, got %d bytes",
+			minLookupKeyLen, len(lookupKey))
+	}
+
+	// Find the first slash to split the lookup key and decode the owner.
+	firstSlash := bytes.IndexByte(lookupKey, '/')
+	if firstSlash == -1 {
+		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: cannot find first slash")
+	}
+
+	owner := string(lookupKey[:firstSlash])
+
+	// Find the last slash to split encoded height.
+	lastSlashPos := bytes.LastIndexByte(lookupKey, '/')
+	if lastSlashPos == firstSlash {
+		return 0, flow.RegisterID{}, fmt.Errorf("invalid lookup key format: expected 2 separators, got 1 separator")
+	}
+	encodedHeightPos := lastSlashPos + 1
+	if len(lookupKey)-encodedHeightPos != config.HeightSuffixLen {
+		return 0, flow.RegisterID{},
+			fmt.Errorf("invalid lookup key format: expected %d bytes of encoded height, got %d bytes",
+				config.HeightSuffixLen, len(lookupKey)-encodedHeightPos)
+	}
+
+	// Decode height.
+	heightBytes := lookupKey[encodedHeightPos:]
+
+	oneCompliment := binary.BigEndian.Uint64(heightBytes)
+	height := ^oneCompliment
+
+	// Decode the remaining bytes into the key.
+	keyBytes := lookupKey[firstSlash+1 : lastSlashPos]
+	key := string(keyBytes)
+
+	regID := flow.RegisterID{Owner: owner, Key: key}
+
+	return height, regID, nil
 }
 
 // Bytes returns the encoded lookup key.
