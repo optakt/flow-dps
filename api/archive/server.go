@@ -179,7 +179,7 @@ func (s *Server) GetRegisterValues(ctx context.Context, req *GetRegisterValuesRe
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
-	err = util.ValidateHeightIndexed(s.index, req.Height)
+	err = util.ValidateRegisterHeightIndexed(s.index, req.Height)
 	if err != nil {
 		return nil, fmt.Errorf("data unavailable for block height: %w", err)
 	}

@@ -66,7 +66,7 @@ func New(index archive.Reader, options ...func(*Config)) (*Invoker, error) {
 
 // Key returns the public key of the account with the given address.
 func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
-	err := util.ValidateHeightIndexed(i.index, height)
+	err := util.ValidateRegisterHeightIndexed(i.index, height)
 	if err != nil {
 		return nil, fmt.Errorf("data unavailable for block height: %w", err)
 	}
@@ -97,7 +97,7 @@ func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.Acc
 
 // Account returns the account with the given address.
 func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, error) {
-	err := util.ValidateHeightIndexed(i.index, height)
+	err := util.ValidateRegisterHeightIndexed(i.index, height)
 	if err != nil {
 		return nil, fmt.Errorf("data unavailable for block height: %w", err)
 	}
@@ -137,7 +137,7 @@ func (i *Invoker) Script(height uint64, script []byte, arguments []cadence.Value
 		}
 		args = append(args, arg)
 	}
-	err := util.ValidateHeightIndexed(i.index, height)
+	err := util.ValidateRegisterHeightIndexed(i.index, height)
 	if err != nil {
 		return nil, fmt.Errorf("data unavailable for block height: %w", err)
 	}

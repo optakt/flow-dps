@@ -342,6 +342,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
 		require.NoError(t, writer.Last(height))
+		require.NoError(t, writer.LatestRegisterHeight(height))
 		require.NoError(t, writer.Payloads(height, payloads))
 		require.NoError(t, writer.Close())
 
@@ -370,6 +371,7 @@ func TestIntegrationServer_GetRegisterValues(t *testing.T) {
 		// Insert mock data in database.
 		require.NoError(t, writer.First(height))
 		require.NoError(t, writer.Last(height))
+		require.NoError(t, writer.LatestRegisterHeight(height))
 		require.NoError(t, writer.Payloads(height, payloads))
 		require.NoError(t, writer.Close())
 
