@@ -132,6 +132,10 @@ func (w *MetricsWriter) Last(height uint64) error {
 	return w.write.Last(height)
 }
 
+func (w *MetricsWriter) LatestRegisterHeight(height uint64) error {
+	return w.write.LatestRegisterHeight(height)
+}
+
 func (w *MetricsWriter) Height(blockID flow.Identifier, height uint64) error {
 	return w.write.Height(blockID, height)
 }

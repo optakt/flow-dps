@@ -365,6 +365,11 @@ func (t *Transitions) MapRegisters(s *State) error {
 
 	// skip the map status again, and its log
 	if len(s.registers) == 0 {
+		// write the height as latest
+		err = t.write.LatestRegisterHeight(s.height)
+		if err != nil {
+			return fmt.Errorf("could not index latest register height: %w", err)
+		}
 		s.status = StatusIndex
 		return nil
 	}

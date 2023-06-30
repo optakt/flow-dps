@@ -20,6 +20,11 @@ func (l *Library) SaveLast(height uint64) func(*badger.Txn) error {
 	return l.save(EncodeKey(PrefixLast), height)
 }
 
+// SaveLatestRegisterHeight is an operation that writes the height for the latest indexed registers
+func (l *Library) SaveLatestRegisterHeight(height uint64) func(txn *badger.Txn) error {
+	return l.save(EncodeKey(PrefixLatestRegisterHeight), height)
+}
+
 // IndexHeightForBlock is an operation that indexes the given height for its block identifier.
 func (l *Library) IndexHeightForBlock(blockID flow.Identifier, height uint64) func(*badger.Txn) error {
 	return l.save(EncodeKey(PrefixHeightForBlock, blockID), height)
@@ -100,6 +105,11 @@ func (l *Library) RetrieveFirst(height *uint64) func(*badger.Txn) error {
 // RetrieveLast retrieves the last indexed height.
 func (l *Library) RetrieveLast(height *uint64) func(*badger.Txn) error {
 	return l.retrieve(EncodeKey(PrefixLast), height)
+}
+
+// RetrieveLatestRegisterHeight retrieves the latest height for registers
+func (l *Library) RetrieveLatestRegisterHeight(height *uint64) func(txn *badger.Txn) error {
+	return l.retrieve(EncodeKey(PrefixLatestRegisterHeight), height)
 }
 
 // LookupHeightForBlock retrieves the height of the given block identifier.

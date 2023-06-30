@@ -1188,7 +1188,7 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
-		index.LastFunc = func() (uint64, error) {
+		index.LatestRegisterHeightFunc = func() (uint64, error) {
 			return 0, mocks.GenericError
 		}
 

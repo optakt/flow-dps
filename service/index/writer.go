@@ -91,6 +91,10 @@ func (w *Writer) Last(height uint64) error {
 	return w.apply(w.lib.SaveLast(height))
 }
 
+func (w *Writer) LatestRegisterHeight(height uint64) error {
+	return w.apply(w.lib.SaveLatestRegisterHeight(height))
+}
+
 // Height indexes the height for the given block ID.
 func (w *Writer) Height(blockID flow.Identifier, height uint64) error {
 	return w.apply(w.lib.IndexHeightForBlock(blockID, height))

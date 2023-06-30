@@ -9,20 +9,21 @@ import (
 )
 
 type Writer struct {
-	FirstFunc        func(height uint64) error
-	LastFunc         func(height uint64) error
-	HeaderFunc       func(height uint64, header *flow.Header) error
-	CommitFunc       func(height uint64, commit flow.StateCommitment) error
-	PayloadsFunc     func(height uint64, payloads []*ledger.Payload) error
-	RegistersFunc    func(height uint64, registers []*wal.LeafNode) error
-	HeightFunc       func(blockID flow.Identifier, height uint64) error
-	CollectionsFunc  func(height uint64, collections []*flow.LightCollection) error
-	GuaranteesFunc   func(height uint64, guarantees []*flow.CollectionGuarantee) error
-	TransactionsFunc func(height uint64, transactions []*flow.TransactionBody) error
-	ResultsFunc      func(results []*flow.TransactionResult) error
-	EventsFunc       func(height uint64, events []flow.Event) error
-	SealsFunc        func(height uint64, seals []*flow.Seal) error
-	CloseFunc        func() error
+	FirstFunc                func(height uint64) error
+	LastFunc                 func(height uint64) error
+	LatestRegisterHeightFunc func(height uint64) error
+	HeaderFunc               func(height uint64, header *flow.Header) error
+	CommitFunc               func(height uint64, commit flow.StateCommitment) error
+	PayloadsFunc             func(height uint64, payloads []*ledger.Payload) error
+	RegistersFunc            func(height uint64, registers []*wal.LeafNode) error
+	HeightFunc               func(blockID flow.Identifier, height uint64) error
+	CollectionsFunc          func(height uint64, collections []*flow.LightCollection) error
+	GuaranteesFunc           func(height uint64, guarantees []*flow.CollectionGuarantee) error
+	TransactionsFunc         func(height uint64, transactions []*flow.TransactionBody) error
+	ResultsFunc              func(results []*flow.TransactionResult) error
+	EventsFunc               func(height uint64, events []flow.Event) error
+	SealsFunc                func(height uint64, seals []*flow.Seal) error
+	CloseFunc                func() error
 }
 
 func BaselineWriter(t *testing.T) *Writer {
@@ -33,6 +34,9 @@ func BaselineWriter(t *testing.T) *Writer {
 			return nil
 		},
 		LastFunc: func(height uint64) error {
+			return nil
+		},
+		LatestRegisterHeightFunc: func(height uint64) error {
 			return nil
 		},
 		HeaderFunc: func(height uint64, header *flow.Header) error {
@@ -82,6 +86,10 @@ func (w *Writer) First(height uint64) error {
 
 func (w *Writer) Last(height uint64) error {
 	return w.LastFunc(height)
+}
+
+func (w *Writer) LatestRegisterHeight(height uint64) error {
+	return w.LatestRegisterHeightFunc(height)
 }
 
 func (w *Writer) Header(height uint64, header *flow.Header) error {
