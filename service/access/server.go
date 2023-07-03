@@ -11,7 +11,6 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-archive/models/archive"
 	conv "github.com/onflow/flow-archive/models/convert"
@@ -446,17 +445,7 @@ func (s *Server) ExecuteScriptAtBlockID(ctx context.Context, in *access.ExecuteS
 // ExecuteScriptAtBlockHeight implements the ExecuteScriptAtBlockHeight endpoint from the Flow Access API.
 // See https://docs.onflow.org/access-api/#executescriptatblockheight
 func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.ExecuteScriptAtBlockHeightRequest) (*access.ExecuteScriptResponse, error) {
-	var args []cadence.Value
-	for _, arg := range in.Arguments {
-		val, err := json.Decode(nil, arg)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "could not decode script argument: %v", err)
-		}
-
-		args = append(args, val)
-	}
-
-	value, err := s.invoker.Script(in.BlockHeight, in.Script, args)
+	value, err := s.invoker.Script(in.BlockHeight, in.Script, in.Arguments)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "could not execute script: %v", err)
 	}

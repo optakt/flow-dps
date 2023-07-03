@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 
 	"github.com/onflow/flow-archive/api/archive"
@@ -95,15 +94,16 @@ func run() int {
 	}
 
 	// Decode the arguments
-	var args []cadence.Value
+	var args [][]byte
 	if flagParams != "" {
 		params := strings.Split(flagParams, ",")
 		for _, param := range params {
-			arg, err := convert.ParseCadenceArgument(param)
+			carg, err := convert.ParseCadenceArgument(param)
 			if err != nil {
 				log.Error().Err(err).Msg("invalid Cadence value")
 				return failure
 			}
+			arg, err := json.Encode(carg)
 			args = append(args, arg)
 		}
 	}

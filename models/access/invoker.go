@@ -9,5 +9,5 @@ import (
 // from the Flow Virtual Machine.
 type Invoker interface {
 	Account(height uint64, address flow.Address) (*flow.Account, error)
-	Script(height uint64, script []byte, parameters []cadence.Value) (cadence.Value, error)
+	Script(height uint64, script []byte, parameters [][]byte) (cadence.Value, error)
 }

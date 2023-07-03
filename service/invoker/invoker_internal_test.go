@@ -2,6 +2,7 @@ package invoker
 
 import (
 	"fmt"
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"testing"
 
 	"github.com/onflow/flow-archive/models/archive"
@@ -82,8 +83,8 @@ func TestInvoker_Script(t *testing.T) {
 		invoke.index = index
 		invoke.vm = vm
 
-		values := []cadence.Value{
-			cadence.NewUInt64(1337),
+		values := [][]byte{
+			jsoncdc.MustEncode(cadence.NewUInt64(1337)),
 		}
 
 		val, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, values)
@@ -103,7 +104,7 @@ func TestInvoker_Script(t *testing.T) {
 		invoke := baselineInvoker(t)
 		invoke.index = index
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
 
 		assert.Error(t, err)
 	})
@@ -119,7 +120,7 @@ func TestInvoker_Script(t *testing.T) {
 		invoke := baselineInvoker(t)
 		invoke.index = index
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
 		expectedError := fmt.Sprintf("the requested height (%d) is beyond the highest indexed height(%d)",
 			mocks.GenericHeight, indexedHeight)
 		assert.Error(t, err)
@@ -151,7 +152,7 @@ func TestInvoker_Script(t *testing.T) {
 		invoke := baselineInvoker(t)
 		invoke.vm = vm
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
 
 		assert.Error(t, err)
 	})
@@ -175,7 +176,7 @@ func TestInvoker_Script(t *testing.T) {
 		invoke := baselineInvoker(t)
 		invoke.vm = vm
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
 
 		assert.Error(t, err)
 	})
@@ -245,7 +246,7 @@ func TestInvoker_Account(t *testing.T) {
 		invoke := baselineInvoker(t)
 		invoke.index = index
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
 
 		assert.Error(t, err)
 	})
@@ -320,6 +321,83 @@ func TestInvoker_ByHeightFrom(t *testing.T) {
 		res, err := invoke.ByHeightFrom(mocks.GenericHeight, testHeader)
 		assert.NoError(t, err)
 		assert.Equal(t, res, mocks.GenericHeader)
+	})
+}
+
+func TestReadRegister(t *testing.T) {
+	owner := string(mocks.GenericLedgerKey.KeyParts[0].Value)
+	key := string(mocks.GenericLedgerKey.KeyParts[1].Value)
+	registerId := flow.RegisterID{
+		Owner: owner,
+		Key:   key,
+	}
+
+	t.Run("nominal case with cached register", func(t *testing.T) {
+		t.Parallel()
+
+		cache := mocks.BaselineCache(t)
+		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+			// Return that the cache contains the register's value already.
+			return mocks.GenericBytes, true
+		}
+
+		var indexCalled bool
+		index := mocks.BaselineReader(t)
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
+			indexCalled = true
+			return nil, nil
+		}
+
+		readFunc := readRegister(index, cache, mocks.GenericHeight)
+		value, err := readFunc(registerId)
+
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericBytes, value[:])
+		assert.False(t, indexCalled)
+	})
+
+	t.Run("nominal case without cached register", func(t *testing.T) {
+		t.Parallel()
+
+		cache := mocks.BaselineCache(t)
+		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+			// Return that the cache DOES NOT contain the register's value already.
+			return nil, false
+		}
+
+		var indexCalled bool
+		index := mocks.BaselineReader(t)
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
+			indexCalled = true
+			return []flow.RegisterValue{mocks.GenericBytes}, nil
+		}
+
+		readFunc := readRegister(index, cache, mocks.GenericHeight)
+		value, err := readFunc(registerId)
+
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericBytes, value[:])
+		assert.True(t, indexCalled)
+	})
+
+	t.Run("handles indexer failure on Values", func(t *testing.T) {
+		t.Parallel()
+
+		cache := mocks.BaselineCache(t)
+		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+			// Return that the cache DOES NOT contain the register's value already.
+			return nil, false
+		}
+
+		index := mocks.BaselineReader(t)
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
+			return nil, mocks.GenericError
+		}
+
+		readFunc := readRegister(index, cache, mocks.GenericHeight)
+		_, err := readFunc(registerId)
+
+		assert.Error(t, err)
 	})
 }
 
