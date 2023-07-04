@@ -1021,12 +1021,12 @@ func TestServer_ExecuteScriptAtBlockHeight(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(height uint64, script []byte, parameters [][]byte) (cadence.Value, error) {
+		invoker.ScriptFunc = func(height uint64, script []byte, parameters [][]byte) ([]byte, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericBytes, script)
 			assert.Equal(t, [][]byte{cadenceValueBytes}, parameters)
 
-			return mocks.GenericAmount(0), nil
+			return json.MustEncode(mocks.GenericAmount(0)), nil
 		}
 
 		s := baselineServer(t)
@@ -1047,7 +1047,7 @@ func TestServer_ExecuteScriptAtBlockHeight(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(uint64, []byte, [][]byte) (cadence.Value, error) {
+		invoker.ScriptFunc = func(uint64, []byte, [][]byte) ([]byte, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1079,12 +1079,12 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(height uint64, script []byte, parameters [][]byte) (cadence.Value, error) {
+		invoker.ScriptFunc = func(height uint64, script []byte, parameters [][]byte) ([]byte, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericBytes, script)
 			assert.Equal(t, [][]byte{cadenceValueBytes}, parameters)
 
-			return mocks.GenericAmount(0), nil
+			return json.MustEncode(mocks.GenericAmount(0)), nil
 		}
 
 		index := mocks.BaselineReader(t)
@@ -1135,7 +1135,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(uint64, []byte, [][]byte) (cadence.Value, error) {
+		invoker.ScriptFunc = func(uint64, []byte, [][]byte) ([]byte, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1166,12 +1166,12 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(height uint64, script []byte, parameters [][]byte) (cadence.Value, error) {
+		invoker.ScriptFunc = func(height uint64, script []byte, parameters [][]byte) ([]byte, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericBytes, script)
 			assert.Equal(t, [][]byte{cadenceValueBytes}, parameters)
 
-			return mocks.GenericAmount(0), nil
+			return json.MustEncode(mocks.GenericAmount(0)), nil
 		}
 
 		s := baselineServer(t)
@@ -1213,7 +1213,7 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(uint64, []byte, [][]byte) (cadence.Value, error) {
+		invoker.ScriptFunc = func(uint64, []byte, [][]byte) ([]byte, error) {
 			return nil, mocks.GenericError
 		}
 

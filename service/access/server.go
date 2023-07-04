@@ -11,7 +11,6 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-archive/models/archive"
 	conv "github.com/onflow/flow-archive/models/convert"
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
@@ -450,13 +449,8 @@ func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.Execut
 		return nil, status.Errorf(codes.InvalidArgument, "could not execute script: %v", err)
 	}
 
-	result, err := json.Encode(value)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not encode script result: %v", err)
-	}
-
 	resp := access.ExecuteScriptResponse{
-		Value: result,
+		Value: value,
 	}
 
 	return &resp, nil
