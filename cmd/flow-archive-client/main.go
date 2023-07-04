@@ -104,6 +104,10 @@ func run() int {
 				return failure
 			}
 			arg, err := json.Encode(carg)
+			if err != nil {
+				log.Error().Err(err).Msg("cannot encode Cadence value")
+				return failure
+			}
 			args = append(args, arg)
 		}
 	}
