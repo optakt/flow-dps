@@ -1,7 +1,9 @@
 package invoker
 
 import (
+	"context"
 	"fmt"
+	"github.com/rs/zerolog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,6 +30,7 @@ func TestNew(t *testing.T) {
 		cfg.CacheSize = 1_000_000
 
 		invoke, err := New(
+			zerolog.Nop(),
 			index,
 			cfg,
 		)
@@ -47,6 +50,7 @@ func TestNew(t *testing.T) {
 		cfg.CacheSize = 0
 
 		_, err := New(
+			zerolog.Nop(),
 			index,
 			cfg,
 		)
@@ -96,14 +100,23 @@ func TestInvoker_Script(t *testing.T) {
 			return vm
 		}
 
-		invoke, err := New(index, config)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			config,
+		)
 		require.NoError(t, err)
 
 		values := [][]byte{
 			jsoncdc.MustEncode(cadence.NewUInt64(1337)),
 		}
 
-		val, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, values)
+		val, err := invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			values,
+		)
 
 		require.NoError(t, err)
 		assert.Equal(t, encodedTestValue, val)
@@ -117,10 +130,19 @@ func TestInvoker_Script(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 
-		_, err = invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil,
+		)
 
 		assert.Error(t, err)
 	})
@@ -133,10 +155,18 @@ func TestInvoker_Script(t *testing.T) {
 			return indexedHeight, nil
 		}
 
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 
-		_, err = invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil)
 		expectedError := fmt.Sprintf("the requested height (%d) is beyond the highest indexed height(%d)",
 			mocks.GenericHeight, indexedHeight)
 		assert.Error(t, err)
@@ -167,10 +197,19 @@ func TestInvoker_Script(t *testing.T) {
 			return &snapshot.ExecutionSnapshot{}, output, nil
 		}
 
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 
-		_, err = invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil,
+		)
 
 		assert.Error(t, err)
 	})
@@ -193,10 +232,19 @@ func TestInvoker_Script(t *testing.T) {
 			return nil, fvm.ProcedureOutput{}, mocks.GenericError
 		}
 
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 
-		_, err = invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil,
+		)
 
 		assert.Error(t, err)
 	})
@@ -234,10 +282,18 @@ func TestInvoker_Account(t *testing.T) {
 			return vm
 		}
 
-		invoke, err := New(index, config)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			config,
+		)
 		require.NoError(t, err)
 
-		account, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+		account, err := invoke.Account(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericAccount.Address,
+		)
 
 		require.NoError(t, err)
 		assert.Equal(t, &mocks.GenericAccount, account)
@@ -251,10 +307,18 @@ func TestInvoker_Account(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 
-		_, err = invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+		_, err = invoke.Account(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericAccount.Address,
+		)
 
 		assert.Error(t, err)
 	})
@@ -267,10 +331,19 @@ func TestInvoker_Account(t *testing.T) {
 			return mocks.GenericHeight - 1, nil
 		}
 
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 
-		_, err = invoke.Script(mocks.GenericHeight, mocks.GenericBytes, nil)
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil,
+		)
 
 		assert.Error(t, err)
 	})
@@ -291,10 +364,18 @@ func TestInvoker_Account(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 
-		_, err = invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+		_, err = invoke.Account(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericAccount.Address,
+		)
 
 		assert.Error(t, err)
 	})
@@ -304,7 +385,11 @@ func TestInvoker_ByHeightFrom(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
 		index := mocks.BaselineReader(t)
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 		res, err := invoke.ByHeightFrom(mocks.GenericHeight, mocks.GenericHeader)
 		assert.NoError(t, err)
@@ -317,7 +402,11 @@ func TestInvoker_ByHeightFrom(t *testing.T) {
 		index.FirstFunc = func() (uint64, error) {
 			return 0, nil
 		}
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 		res, err := invoke.ByHeightFrom(mocks.GenericHeight+1, mocks.GenericHeader)
 		assert.ErrorContains(t, err, "is not in the range")
@@ -331,7 +420,11 @@ func TestInvoker_ByHeightFrom(t *testing.T) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			return mocks.GenericHeader, nil
 		}
-		invoke, err := New(index, DefaultConfig)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
 		require.NoError(t, err)
 		testHeader := &flow.Header{
 			ChainID: archive.FlowTestnet,

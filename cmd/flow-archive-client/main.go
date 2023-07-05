@@ -128,6 +128,7 @@ func run() int {
 	}
 
 	invoke, err := invoker.New(
+		log,
 		read,
 		invoker.Config{
 			CacheSize: flagCache,

@@ -825,7 +825,7 @@ func TestServer_GetAccount(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.AccountFunc = func(height uint64, address flow.Address) (*flow.Account, error) {
+		invoker.AccountFunc = func(ctx context.Context, height uint64, address flow.Address) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, account.Address, address)
 
@@ -866,7 +866,7 @@ func TestServer_GetAccount(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.AccountFunc = func(uint64, flow.Address) (*flow.Account, error) {
+		invoker.AccountFunc = func(context.Context, uint64, flow.Address) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -894,7 +894,7 @@ func TestServer_GetAccountAtLatestBlock(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.AccountFunc = func(height uint64, address flow.Address) (*flow.Account, error) {
+		invoker.AccountFunc = func(ctx context.Context, height uint64, address flow.Address) (*flow.Account, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, account.Address, address)
 
@@ -935,7 +935,7 @@ func TestServer_GetAccountAtLatestBlock(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.AccountFunc = func(uint64, flow.Address) (*flow.Account, error) {
+		invoker.AccountFunc = func(context.Context, uint64, flow.Address) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -965,7 +965,7 @@ func TestServer_GetAccountAtBlockHeight(t *testing.T) {
 		}
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.AccountFunc = func(gotHeight uint64, address flow.Address) (*flow.Account, error) {
+		invoker.AccountFunc = func(ctx context.Context, gotHeight uint64, address flow.Address) (*flow.Account, error) {
 			assert.Equal(t, height, gotHeight)
 			assert.Equal(t, account.Address, address)
 
@@ -992,7 +992,7 @@ func TestServer_GetAccountAtBlockHeight(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.AccountFunc = func(uint64, flow.Address) (*flow.Account, error) {
+		invoker.AccountFunc = func(context.Context, uint64, flow.Address) (*flow.Account, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1021,7 +1021,7 @@ func TestServer_ExecuteScriptAtBlockHeight(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(height uint64, script []byte, parameters [][]byte) ([]byte, error) {
+		invoker.ScriptFunc = func(ctx context.Context, height uint64, script []byte, parameters [][]byte) ([]byte, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericBytes, script)
 			assert.Equal(t, [][]byte{cadenceValueBytes}, parameters)
@@ -1047,7 +1047,7 @@ func TestServer_ExecuteScriptAtBlockHeight(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(uint64, []byte, [][]byte) ([]byte, error) {
+		invoker.ScriptFunc = func(context.Context, uint64, []byte, [][]byte) ([]byte, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1079,7 +1079,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(height uint64, script []byte, parameters [][]byte) ([]byte, error) {
+		invoker.ScriptFunc = func(ctx context.Context, height uint64, script []byte, parameters [][]byte) ([]byte, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericBytes, script)
 			assert.Equal(t, [][]byte{cadenceValueBytes}, parameters)
@@ -1135,7 +1135,7 @@ func TestServer_ExecuteScriptAtBlockID(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(uint64, []byte, [][]byte) ([]byte, error) {
+		invoker.ScriptFunc = func(context.Context, uint64, []byte, [][]byte) ([]byte, error) {
 			return nil, mocks.GenericError
 		}
 
@@ -1166,7 +1166,7 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(height uint64, script []byte, parameters [][]byte) ([]byte, error) {
+		invoker.ScriptFunc = func(ctx context.Context, height uint64, script []byte, parameters [][]byte) ([]byte, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			assert.Equal(t, mocks.GenericBytes, script)
 			assert.Equal(t, [][]byte{cadenceValueBytes}, parameters)
@@ -1213,7 +1213,7 @@ func TestServer_ExecuteScriptAtLatestBlock(t *testing.T) {
 		t.Parallel()
 
 		invoker := mocks.BaselineInvoker(t)
-		invoker.ScriptFunc = func(uint64, []byte, [][]byte) ([]byte, error) {
+		invoker.ScriptFunc = func(context.Context, uint64, []byte, [][]byte) ([]byte, error) {
 			return nil, mocks.GenericError
 		}
 
