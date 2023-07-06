@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -138,7 +139,9 @@ func run() int {
 		log.Error().Err(err).Msg("could not initialize invoker")
 		return failure
 	}
-	result, err := invoke.Script(flagHeight, script, args)
+
+	ctx := context.Background()
+	result, err := invoke.Script(ctx, flagHeight, script, args)
 	if err != nil {
 		log.Error().Err(err).Msg("could not invoke script")
 		return failure
