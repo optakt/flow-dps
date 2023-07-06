@@ -17,6 +17,7 @@ import (
 	"github.com/onflow/flow-archive/codec/zbor"
 	"github.com/onflow/flow-archive/models/convert"
 	"github.com/onflow/flow-archive/service/invoker"
+	flowModel "github.com/onflow/flow-go/model/flow"
 )
 
 const (
@@ -117,7 +118,22 @@ func run() int {
 
 	// Execute the script using remote lookup and read.
 	client := archive.NewAPIClient(conn)
-	invoke, err := invoker.New(archive.IndexFromAPI(client, codec), invoker.WithCacheSize(flagCache))
+
+	read := archive.IndexFromAPI(client, codec)
+
+	chainID, err := getChainId(read)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get chain id")
+		return failure
+	}
+
+	invoke, err := invoker.New(
+		log,
+		read,
+		invoker.Config{
+			CacheSize: flagCache,
+			ChainID:   chainID,
+		})
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize invoker")
 		return failure
@@ -127,13 +143,25 @@ func run() int {
 		log.Error().Err(err).Msg("could not invoke script")
 		return failure
 	}
-	output, err := json.Encode(result)
-	if err != nil {
-		log.Error().Uint64("height", flagHeight).Err(err).Msg("could not encode result")
-		return failure
-	}
 
-	fmt.Println(string(output))
+	fmt.Println(string(result))
 
 	return success
+}
+
+func getChainId(read *archive.Index) (flowModel.ChainID, error) {
+	chainID := flowModel.Emulator
+
+	f, err := read.First()
+	if err != nil {
+		return chainID, err
+	}
+
+	h, err := read.Header(f)
+	if err != nil {
+		return chainID, err
+	}
+	chainID = h.ChainID
+
+	return chainID, nil
 }

@@ -1,47 +1,40 @@
 package invoker
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/onflow/cadence"
+	"github.com/rs/zerolog"
+
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/flow-archive/models/archive"
 	"github.com/onflow/flow-archive/util"
+	"github.com/onflow/flow-go/engine/execution/computation"
+	"github.com/onflow/flow-go/engine/execution/computation/query"
 	"github.com/onflow/flow-go/fvm"
-	"github.com/onflow/flow-go/fvm/environment"
-	"github.com/onflow/flow-go/fvm/errors"
+	reusableRuntime "github.com/onflow/flow-go/fvm/runtime"
+	"github.com/onflow/flow-go/fvm/storage/derived"
 	"github.com/onflow/flow-go/fvm/storage/snapshot"
 	"github.com/onflow/flow-go/model/flow"
-
-	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-go/module/metrics"
 )
 
 // Invoker retrieves account information from and executes Cadence scripts against
 // the Flow virtual machine.
 type Invoker struct {
-	index archive.Reader
-	vm    fvm.VM
-	vmCtx fvm.Context
-	cache Cache
+	index         archive.Reader
+	queryExecutor *query.QueryExecutor
+	cache         Cache
+	*Blocks
 }
 
-// ensure Invoker implemented this interface
-var _ environment.Blocks = (*Invoker)(nil)
-
 // New returns a new Invoker with the given configuration.
-func New(index archive.Reader, options ...func(*Config)) (*Invoker, error) {
-
-	// Initialize the invoker configuration with conservative default values.
-	cfg := Config{
-		CacheSize: uint64(100_000_000), // ~100 MB default size
-	}
-
-	// Apply the option parameters provided by consumer.
-	for _, option := range options {
-		option(&cfg)
-	}
-
-	// Initialize interpreter and virtual machine for execution.
-	vm := fvm.NewVirtualMachine()
+func New(
+	log zerolog.Logger,
+	index archive.Reader,
+	cfg Config,
+) (*Invoker, error) {
 
 	// Initialize the Ristretto cache with the size limit. Ristretto recommends
 	// keeping ten times as many counters as items in the cache when full.
@@ -55,43 +48,66 @@ func New(index archive.Reader, options ...func(*Config)) (*Invoker, error) {
 		return nil, fmt.Errorf("could not initialize cache: %w", err)
 	}
 
-	i := Invoker{
-		index: index,
-		vm:    vm,
-		cache: cache,
+	blocks := NewBlocks(index)
+
+	// This is copied code from flow-go engine/execution/computation/manager.go
+	// Ideally the same code would be used, but that requires flow-go changes.
+	// TODO: reuse code from flow-go
+	var vm fvm.VM
+	if cfg.NewCustomVirtualMachine != nil {
+		vm = cfg.NewCustomVirtualMachine()
+	} else {
+		vm = fvm.NewVirtualMachine()
 	}
 
-	vmCtx := fvm.NewContext(fvm.WithBlocks(&i))
+	chainID := cfg.ChainID
+	fvmOptions := []fvm.Option{
+		fvm.WithReusableCadenceRuntimePool(
+			reusableRuntime.NewReusableCadenceRuntimePool(
+				computation.ReusableCadenceRuntimePoolSize,
+				runtime.Config{
+					TracingEnabled:        cfg.CadenceTracing,
+					AccountLinkingEnabled: true,
+					// Attachments are enabled everywhere except for Mainnet
+					AttachmentsEnabled: chainID != flow.Mainnet,
+					// Capability Controllers are enabled everywhere except for Mainnet
+					CapabilityControllersEnabled: chainID != flow.Mainnet,
+				},
+			),
+		),
+		fvm.WithBlocks(blocks),
+		fvm.WithLogger(log),
+	}
 
-	i.vmCtx = vmCtx
-
-	return &i, nil
-}
-
-// Key returns the public key of the account with the given address.
-func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
-	// Retrieve the account at the specified block height.
-	account, err := i.Account(height, address)
+	vmCtx := fvm.NewContext(fvmOptions...)
+	derivedChainData, err := derived.NewDerivedChainData(cfg.DerivedDataCacheSize)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve account: %w", err)
+		return nil, fmt.Errorf("cannot create derived data cache: %w", err)
 	}
 
-	for _, key := range account.Keys {
-		if key.Index != index {
-			continue
-		}
+	queryExecutor := query.NewQueryExecutor(
+		cfg.QueryConfig,
+		log,
+		&metrics.NoopCollector{}, // TODO: add metrics
+		vm,
+		vmCtx,
+		derivedChainData,
+	)
 
-		if key.Revoked {
-			return nil, fmt.Errorf("account key with given index has been revoked")
-		}
-		return &key, nil
-	}
-
-	return nil, fmt.Errorf("account key with given index not found")
+	return &Invoker{
+		Blocks:        blocks,
+		index:         index,
+		cache:         cache,
+		queryExecutor: queryExecutor,
+	}, nil
 }
 
 // Account returns the account with the given address.
-func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, error) {
+func (i *Invoker) Account(
+	ctx context.Context,
+	height uint64,
+	address flow.Address,
+) (*flow.Account, error) {
 	err := util.ValidateHeightDataAvailable(i.index, height)
 	if err != nil {
 		return nil, err
@@ -102,18 +118,21 @@ func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, e
 		return nil, fmt.Errorf("could not get header: %w", err)
 	}
 
-	ctx := fvm.NewContextFromParent(i.vmCtx, fvm.WithBlockHeader(header))
-
-	account, err := i.vm.GetAccount(ctx, address, i.storageSnapshot(height))
-	if err != nil {
-		return nil, fmt.Errorf("could not get account at height %d: %w", header.Height, err)
-	}
-
-	return account, nil
+	return i.queryExecutor.GetAccount(
+		ctx,
+		address,
+		header,
+		i.storageSnapshot(height),
+	)
 }
 
 // Script executes the given Cadence script and returns its result.
-func (i *Invoker) Script(height uint64, script []byte, args [][]byte) (cadence.Value, error) {
+func (i *Invoker) Script(
+	ctx context.Context,
+	height uint64,
+	script []byte,
+	args [][]byte,
+) ([]byte, error) {
 	err := util.ValidateHeightDataAvailable(i.index, height)
 	if err != nil {
 		return nil, err
@@ -124,43 +143,13 @@ func (i *Invoker) Script(height uint64, script []byte, args [][]byte) (cadence.V
 		return nil, fmt.Errorf("could not get header: %w", err)
 	}
 
-	ctx := fvm.NewContextFromParent(i.vmCtx, fvm.WithBlockHeader(header))
-
-	// Initialize the procedure using the script bytes and the encoded
-	// Cadence parameters.
-	proc := fvm.Script(script).WithArguments(args...)
-
-	// The script procedure is then run using the Flow virtual machine and all
-	// the constructed contextual parameters.
-	_, output, err := i.vm.Run(ctx, proc, i.storageSnapshot(height))
-	if err != nil {
-		return nil, fmt.Errorf("could not run script: %w", err)
-	}
-	if output.Err != nil {
-		return nil, fmt.Errorf("script execution encountered error: %w", output.Err)
-	}
-
-	return output.Value, nil
-}
-
-// ByHeightFrom implements the fvm/env/blocks interface
-func (i *Invoker) ByHeightFrom(height uint64, header *flow.Header) (*flow.Header, error) {
-	if header.Height == height {
-		return header, nil
-	}
-
-	if height > header.Height {
-		minHeight, err := i.index.First()
-		if err != nil {
-			return nil, fmt.Errorf("could not find first indexed height: %w", err)
-		}
-		// imitate flow-go error format
-		err = errors.NewValueErrorf(fmt.Sprint(height),
-			"requested height (%d) is not in the range(%d, %d)", height, minHeight, header.Height)
-		return nil, fmt.Errorf("cannot retrieve block parent: %w", err)
-	}
-	// find the block in storage as all of them are guaranteed to be finalized
-	return i.index.Header(height)
+	return i.queryExecutor.ExecuteScript(
+		ctx,
+		script,
+		args,
+		header,
+		i.storageSnapshot(height),
+	)
 }
 
 func (i *Invoker) storageSnapshot(height uint64) snapshot.StorageSnapshot {
