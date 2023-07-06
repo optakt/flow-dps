@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -11,13 +12,13 @@ import (
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 
 	"github.com/onflow/flow-archive/api/archive"
 	"github.com/onflow/flow-archive/codec/zbor"
 	"github.com/onflow/flow-archive/models/convert"
 	"github.com/onflow/flow-archive/service/invoker"
+	flowModel "github.com/onflow/flow-go/model/flow"
 )
 
 const (
@@ -95,13 +96,18 @@ func run() int {
 	}
 
 	// Decode the arguments
-	var args []cadence.Value
+	var args [][]byte
 	if flagParams != "" {
 		params := strings.Split(flagParams, ",")
 		for _, param := range params {
-			arg, err := convert.ParseCadenceArgument(param)
+			carg, err := convert.ParseCadenceArgument(param)
 			if err != nil {
 				log.Error().Err(err).Msg("invalid Cadence value")
+				return failure
+			}
+			arg, err := json.Encode(carg)
+			if err != nil {
+				log.Error().Err(err).Msg("cannot encode Cadence value")
 				return failure
 			}
 			args = append(args, arg)
@@ -113,23 +119,52 @@ func run() int {
 
 	// Execute the script using remote lookup and read.
 	client := archive.NewAPIClient(conn)
-	invoke, err := invoker.New(archive.IndexFromAPI(client, codec), invoker.WithCacheSize(flagCache))
+
+	read := archive.IndexFromAPI(client, codec)
+
+	chainID, err := getChainId(read)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get chain id")
+		return failure
+	}
+
+	invoke, err := invoker.New(
+		log,
+		read,
+		invoker.Config{
+			CacheSize: flagCache,
+			ChainID:   chainID,
+		})
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize invoker")
 		return failure
 	}
-	result, err := invoke.Script(flagHeight, script, args)
+
+	ctx := context.Background()
+	result, err := invoke.Script(ctx, flagHeight, script, args)
 	if err != nil {
 		log.Error().Err(err).Msg("could not invoke script")
 		return failure
 	}
-	output, err := json.Encode(result)
-	if err != nil {
-		log.Error().Uint64("height", flagHeight).Err(err).Msg("could not encode result")
-		return failure
-	}
 
-	fmt.Println(string(output))
+	fmt.Println(string(result))
 
 	return success
+}
+
+func getChainId(read *archive.Index) (flowModel.ChainID, error) {
+	chainID := flowModel.Emulator
+
+	f, err := read.First()
+	if err != nil {
+		return chainID, err
+	}
+
+	h, err := read.Header(f)
+	if err != nil {
+		return chainID, err
+	}
+	chainID = h.ChainID
+
+	return chainID, nil
 }
