@@ -388,8 +388,8 @@ func (s *Server) GetAccountAtLatestBlock(ctx context.Context, in *access.GetAcco
 
 // GetAccountAtBlockHeight implements the GetAccountAtBlockHeight endpoint from the Flow Access API.
 // See https://docs.onflow.org/access-api/#getaccountatblockheight
-func (s *Server) GetAccountAtBlockHeight(_ context.Context, in *access.GetAccountAtBlockHeightRequest) (*access.AccountResponse, error) {
-	account, err := s.invoker.Account(in.BlockHeight, flow.BytesToAddress(in.Address))
+func (s *Server) GetAccountAtBlockHeight(ctx context.Context, in *access.GetAccountAtBlockHeightRequest) (*access.AccountResponse, error) {
+	account, err := s.invoker.Account(ctx, in.BlockHeight, flow.BytesToAddress(in.Address))
 	if err != nil {
 		return nil, fmt.Errorf("could not get account: %w", err)
 	}
@@ -443,8 +443,8 @@ func (s *Server) ExecuteScriptAtBlockID(ctx context.Context, in *access.ExecuteS
 
 // ExecuteScriptAtBlockHeight implements the ExecuteScriptAtBlockHeight endpoint from the Flow Access API.
 // See https://docs.onflow.org/access-api/#executescriptatblockheight
-func (s *Server) ExecuteScriptAtBlockHeight(_ context.Context, in *access.ExecuteScriptAtBlockHeightRequest) (*access.ExecuteScriptResponse, error) {
-	value, err := s.invoker.Script(in.BlockHeight, in.Script, in.Arguments)
+func (s *Server) ExecuteScriptAtBlockHeight(ctx context.Context, in *access.ExecuteScriptAtBlockHeightRequest) (*access.ExecuteScriptResponse, error) {
+	value, err := s.invoker.Script(ctx, in.BlockHeight, in.Script, in.Arguments)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "could not execute script: %v", err)
 	}

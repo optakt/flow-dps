@@ -395,6 +395,7 @@ func run() int {
 
 	log.Info().Msgf("Creating local invoker with register cache: %d", flagCache)
 	invoke, err := invoker.New(
+		log,
 		read,
 		invoker.Config{
 			CacheSize: flagCache,

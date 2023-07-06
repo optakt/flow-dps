@@ -31,6 +31,7 @@ type Invoker struct {
 
 // New returns a new Invoker with the given configuration.
 func New(
+	log zerolog.Logger,
 	index archive.Reader,
 	cfg Config,
 ) (*Invoker, error) {
@@ -75,6 +76,7 @@ func New(
 			),
 		),
 		fvm.WithBlocks(blocks),
+		fvm.WithLogger(log),
 	}
 
 	vmCtx := fvm.NewContext(fvmOptions...)
@@ -85,7 +87,7 @@ func New(
 
 	queryExecutor := query.NewQueryExecutor(
 		cfg.QueryConfig,
-		zerolog.Nop(),            // TODO: add logger
+		log,
 		&metrics.NoopCollector{}, // TODO: add metrics
 		vm,
 		vmCtx,
@@ -100,30 +102,12 @@ func New(
 	}, nil
 }
 
-// Key returns the public key of the account with the given address.
-func (i *Invoker) Key(height uint64, address flow.Address, index int) (*flow.AccountPublicKey, error) {
-	// Retrieve the account at the specified block height.
-	account, err := i.Account(height, address)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve account: %w", err)
-	}
-
-	for _, key := range account.Keys {
-		if key.Index != index {
-			continue
-		}
-
-		if key.Revoked {
-			return nil, fmt.Errorf("account key with given index has been revoked")
-		}
-		return &key, nil
-	}
-
-	return nil, fmt.Errorf("account key with given index not found")
-}
-
 // Account returns the account with the given address.
-func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, error) {
+func (i *Invoker) Account(
+	ctx context.Context,
+	height uint64,
+	address flow.Address,
+) (*flow.Account, error) {
 	err := util.ValidateHeightDataAvailable(i.index, height)
 	if err != nil {
 		return nil, err
@@ -135,7 +119,7 @@ func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, e
 	}
 
 	return i.queryExecutor.GetAccount(
-		context.Background(), // TODO: add context
+		ctx,
 		address,
 		header,
 		i.storageSnapshot(height),
@@ -143,7 +127,12 @@ func (i *Invoker) Account(height uint64, address flow.Address) (*flow.Account, e
 }
 
 // Script executes the given Cadence script and returns its result.
-func (i *Invoker) Script(height uint64, script []byte, args [][]byte) ([]byte, error) {
+func (i *Invoker) Script(
+	ctx context.Context,
+	height uint64,
+	script []byte,
+	args [][]byte,
+) ([]byte, error) {
 	err := util.ValidateHeightDataAvailable(i.index, height)
 	if err != nil {
 		return nil, err
@@ -155,7 +144,7 @@ func (i *Invoker) Script(height uint64, script []byte, args [][]byte) ([]byte, e
 	}
 
 	return i.queryExecutor.ExecuteScript(
-		context.Background(), // TODO: add context
+		ctx,
 		script,
 		args,
 		header,
