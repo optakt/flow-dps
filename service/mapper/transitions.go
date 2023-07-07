@@ -74,7 +74,7 @@ func (t *Transitions) InitializeMapper(s *State) error {
 		return fmt.Errorf("could not get last height: %w", err)
 	}
 
-	log.Info().
+	log.Debug().
 		Bool("is_bootstrapped", isBootstrapped).
 		Uint64("first", first).
 		Uint64("last", last).
@@ -216,7 +216,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 		return fmt.Errorf("fail to read leaf node: %w", err)
 	}
 
-	log.Info().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
+	log.Debug().Msgf("finish importing payloads to storage for height %v, %v payloads", s.height, total)
 
 	// We have successfully bootstrapped. However, no chain data for the root
 	// block has been indexed yet. This is why we "pretend" that we just
@@ -380,7 +380,7 @@ func (t *Transitions) IndexChain(s *State) error {
 		return fmt.Errorf("could not index events: %w", err)
 	}
 
-	t.log.Info().
+	t.log.Debug().
 		Uint64("height", s.height).
 		Str("block_id", blockID.String()).
 		Int("n_guarantees", len(guarantees)).
@@ -416,7 +416,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
 	}
 	s.updates = updates
-	log.Info().Int("updates", len(s.updates)).Msg("collected trie updates (registers) to be mapped")
+	log.Debug().Int("updates", len(s.updates)).Msg("collected trie updates (registers) to be mapped")
 
 	// Now that we have collected TrieUpdates for the current block,
 	// we can create a path -> payload mapping that we will use to index to the local storage
@@ -527,5 +527,7 @@ func (t *Transitions) ForwardHeight(s *State) error {
 	// Once the height is forwarded, we can set the status so that we index
 	// the blockchain data next.
 	s.status = StatusIndex
+	log := t.log.With().Uint64("height", s.height).Logger()
+	log.Info().Msg("indexed execution and protocol data for block")
 	return nil
 }
