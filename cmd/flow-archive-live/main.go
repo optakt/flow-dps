@@ -394,13 +394,13 @@ func run() int {
 	}
 
 	log.Info().Msgf("Creating local invoker with register cache: %d", flagCache)
+	config := invoker.DefaultConfig
+	config.ChainID = chainID
+	config.CacheSize = flagCache
 	invoke, err := invoker.New(
 		log,
 		read,
-		invoker.Config{
-			CacheSize: flagCache,
-			ChainID:   chainID,
-		},
+		config,
 	)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize script invoker")
