@@ -529,7 +529,7 @@ func run() int {
 func getChainId(read *index.Reader) (flowModel.ChainID, error) {
 	chainID := flowModel.Emulator
 
-	f, err := read.First()
+	f, err := read.Last()
 	if err != nil {
 		return chainID, err
 	}
