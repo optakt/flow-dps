@@ -32,4 +32,5 @@ var DefaultConfig = Config{
 		},
 		DerivedDataCacheSize: derived.DefaultDerivedDataCacheSize,
 	},
+	ChainID: flow.Emulator,
 }
