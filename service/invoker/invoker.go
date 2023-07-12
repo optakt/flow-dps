@@ -77,6 +77,7 @@ func New(
 		),
 		fvm.WithBlocks(blocks),
 		fvm.WithLogger(log),
+		fvm.WithChain(chainID.Chain()),
 	}
 
 	vmCtx := fvm.NewContext(fvmOptions...)

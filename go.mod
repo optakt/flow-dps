@@ -13,7 +13,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/klauspost/compress v1.15.15
-	github.com/onflow/cadence v0.39.9
+	github.com/onflow/cadence v0.39.14
 	github.com/onflow/flow-go-sdk v0.41.5
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/tsdb v0.7.1
