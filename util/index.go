@@ -45,7 +45,7 @@ func ValidateRegisterHeightIndexed(reader archive.Reader, height uint64) error {
 	// where both are written for the root block of the spork
 	l, err := reader.First()
 	if err != nil {
-		fmt.Errorf("could not get first indexed height for Archive node")
+		return fmt.Errorf("could not get first indexed height for Archive node")
 	}
 	if height > h || height < l {
 		return fmt.Errorf("the requested height (%d) is beyond the highest indexed height(%d) for registers", height, h)
