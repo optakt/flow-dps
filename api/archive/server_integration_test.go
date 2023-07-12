@@ -786,6 +786,7 @@ func TestIntegrationServer_ListSealsForHeight(t *testing.T) {
 		// Insert mock data in database.
 		require.NoError(t, writer.Seals(height, seals))
 		require.NoError(t, writer.Last(height))
+		require.NoError(t, writer.First(1))
 		require.NoError(t, writer.Close())
 
 		server := archive.NewServer(reader, codec)
