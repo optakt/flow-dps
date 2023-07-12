@@ -31,6 +31,8 @@ type Transitions struct {
 }
 
 // NewTransitions returns a Transitions component using the given dependencies and using the given options
+// The states are, in order:
+// Initialize -> Bootstrap -> Resume -> Update -> Collect -> Map -> Index -> Forward
 func NewTransitions(log zerolog.Logger, chain archive.Chain, updates TrieUpdates, read archive.Reader, write archive.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
@@ -310,6 +312,10 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	// If indexing payloads is disabled, we can bypass collection and indexing
 	// of payloads and just go straight to indexing chain data
 	if t.cfg.SkipRegisters {
+		err := t.write.LatestRegisterHeight(s.height)
+		if err != nil {
+			return fmt.Errorf("could not index latest register height: %w", err)
+		}
 		s.status = StatusIndex
 		return nil
 	}
@@ -339,6 +345,10 @@ func (t *Transitions) MapRegisters(s *State) error {
 	// If there are no registers left to be indexed, we can go to the next step,
 	// which is indexing the chain data
 	if len(s.registers) == 0 {
+		err := t.write.LatestRegisterHeight(s.height)
+		if err != nil {
+			return fmt.Errorf("could not index latest register height: %w", err)
+		}
 		s.status = StatusIndex
 		return nil
 	}

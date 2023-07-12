@@ -6,19 +6,19 @@ import "fmt"
 type Status uint8
 
 // The following is an enumeration of all possible statuses the
-// state machine can have.
+// state machine can have. The order in the enum reflects the order of normal transitions in the FSM
 const (
 	StatusInitialize Status = iota + 1
 	StatusBootstrap
 	StatusResume
-	StatusIndex
 	StatusUpdate
 	StatusCollect
 	StatusMap
+	StatusIndex
 	StatusForward
 )
 
-// String implements the Stringer interface.
+// String implements the Stringer interface. In order of
 func (s Status) String() string {
 	switch s {
 	case StatusInitialize:
@@ -27,14 +27,14 @@ func (s Status) String() string {
 		return "bootstrap"
 	case StatusResume:
 		return "resume"
-	case StatusIndex:
-		return "index"
 	case StatusUpdate:
 		return "update"
 	case StatusCollect:
 		return "collect"
 	case StatusMap:
 		return "map"
+	case StatusIndex:
+		return "index"
 	case StatusForward:
 		return "forward"
 	default:
