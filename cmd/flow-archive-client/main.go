@@ -128,13 +128,14 @@ func run() int {
 		return failure
 	}
 
+	config := invoker.DefaultConfig
+	config.ChainID = chainID
+	config.CacheSize = flagCache
+
 	invoke, err := invoker.New(
 		log,
 		read,
-		invoker.Config{
-			CacheSize: flagCache,
-			ChainID:   chainID,
-		})
+		config)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize invoker")
 		return failure
