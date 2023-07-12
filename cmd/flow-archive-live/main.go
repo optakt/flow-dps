@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/flow-go/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/bootstrap"
+	flowModel "github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 
 	api "github.com/onflow/flow-archive/api/archive"
@@ -386,8 +387,21 @@ func run() int {
 		server = api.NewServer(read, codec)
 	}
 
+	chainID, err := getChainId(read)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get chainID")
+		return failure
+	}
+
 	log.Info().Msgf("Creating local invoker with register cache: %d", flagCache)
-	invoke, err := invoker.New(read, invoker.WithCacheSize(flagCache))
+	invoke, err := invoker.New(
+		log,
+		read,
+		invoker.Config{
+			CacheSize: flagCache,
+			ChainID:   chainID,
+		},
+	)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize script invoker")
 		return failure
@@ -510,4 +524,21 @@ func run() int {
 	}
 
 	return success
+}
+
+func getChainId(read *index.Reader) (flowModel.ChainID, error) {
+	chainID := flowModel.Emulator
+
+	f, err := read.First()
+	if err != nil {
+		return chainID, err
+	}
+
+	h, err := read.Header(f)
+	if err != nil {
+		return chainID, err
+	}
+	chainID = h.ChainID
+
+	return chainID, nil
 }

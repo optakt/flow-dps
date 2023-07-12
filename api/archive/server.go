@@ -181,7 +181,7 @@ func (s *Server) GetRegisterValues(ctx context.Context, req *GetRegisterValuesRe
 	}
 	err = util.ValidateRegisterHeightIndexed(s.index, req.Height)
 	if err != nil {
-		return nil, fmt.Errorf("data unavailable for block height: %w", err)
+		return nil, err
 	}
 	registers, err := convert.BytesToRegisters(req.Registers)
 	if err != nil {
@@ -435,9 +435,9 @@ func (s *Server) ListSealsForHeight(ctx context.Context, req *ListSealsForHeight
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
 
-	err = util.ValidateHeightIndexed(s.index, req.Height)
+	err = util.ValidateHeightDataAvailable(s.index, req.Height)
 	if err != nil {
-		return nil, fmt.Errorf("data unavailable for block height: %w", err)
+		return nil, err
 	}
 
 	sealIDs, err := s.index.SealsByHeight(req.Height)

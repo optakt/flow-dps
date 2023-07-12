@@ -6,13 +6,26 @@ import (
 	"github.com/onflow/flow-archive/models/archive"
 )
 
-func ValidateHeightIndexed(reader archive.Reader, height uint64) error {
+// ValidateHeightDataAvailable checks if the data  for the requested height
+// is available in the archive node. If not, it returns an error.
+func ValidateHeightDataAvailable(reader archive.Reader, height uint64) error {
+	errf := func(err error) error {
+		return fmt.Errorf("data unavailable for block height: %w", err)
+	}
+
 	h, err := reader.Last()
 	if err != nil {
-		return fmt.Errorf("could not get last indexed height for Archive node")
+		return errf(
+			fmt.Errorf("could not get last indexed height for Archive node"),
+		)
 	}
 	if height > h {
-		return fmt.Errorf("the requested height (%d) is beyond the highest indexed height(%d)", height, h)
+		return errf(
+			fmt.Errorf(
+				"the requested height (%d) is beyond the highest indexed height(%d)",
+				height,
+				h),
+		)
 	}
 	return nil
 }

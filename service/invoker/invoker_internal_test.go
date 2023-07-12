@@ -1,21 +1,23 @@
 package invoker
 
 import (
+	"context"
 	"fmt"
+	"github.com/rs/zerolog"
 	"testing"
 
-	"github.com/onflow/flow-archive/models/archive"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/flow-archive/models/archive"
+	"github.com/onflow/flow-archive/testing/mocks"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/errors"
 	"github.com/onflow/flow-go/fvm/storage/snapshot"
 	"github.com/onflow/flow-go/model/flow"
-
-	"github.com/onflow/flow-archive/testing/mocks"
 )
 
 func TestNew(t *testing.T) {
@@ -24,13 +26,19 @@ func TestNew(t *testing.T) {
 
 		index := mocks.BaselineReader(t)
 
-		invoke, err := New(index, WithCacheSize(1_000_000))
+		cfg := DefaultConfig
+		cfg.CacheSize = 1_000_000
+
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			cfg,
+		)
 
 		require.NoError(t, err)
 		assert.NotNil(t, invoke)
 		assert.Equal(t, index, invoke.index)
 		assert.NotNil(t, invoke.cache)
-		assert.NotNil(t, invoke.vm)
 	})
 
 	t.Run("handles invalid cache configuration", func(t *testing.T) {
@@ -38,7 +46,14 @@ func TestNew(t *testing.T) {
 
 		index := mocks.BaselineReader(t)
 
-		_, err := New(index, WithCacheSize(0))
+		cfg := DefaultConfig
+		cfg.CacheSize = 0
+
+		_, err := New(
+			zerolog.Nop(),
+			index,
+			cfg,
+		)
 
 		assert.Error(t, err)
 	})
@@ -46,6 +61,8 @@ func TestNew(t *testing.T) {
 
 func TestInvoker_Script(t *testing.T) {
 	testValue := cadence.NewUInt64(1337)
+	encodedTestValue, err := jsoncdc.Encode(testValue)
+	require.NoError(t, err)
 
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
@@ -78,18 +95,31 @@ func TestInvoker_Script(t *testing.T) {
 			return &snapshot.ExecutionSnapshot{}, output, nil
 		}
 
-		invoke := baselineInvoker(t)
-		invoke.index = index
-		invoke.vm = vm
-
-		values := []cadence.Value{
-			cadence.NewUInt64(1337),
+		config := DefaultConfig
+		config.NewCustomVirtualMachine = func() fvm.VM {
+			return vm
 		}
 
-		val, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, values)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			config,
+		)
+		require.NoError(t, err)
+
+		values := [][]byte{
+			jsoncdc.MustEncode(cadence.NewUInt64(1337)),
+		}
+
+		val, err := invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			values,
+		)
 
 		require.NoError(t, err)
-		assert.Equal(t, testValue, val)
+		assert.Equal(t, encodedTestValue, val)
 	})
 
 	t.Run("handles indexer failure on Header", func(t *testing.T) {
@@ -100,10 +130,19 @@ func TestInvoker_Script(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		invoke := baselineInvoker(t)
-		invoke.index = index
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil,
+		)
 
 		assert.Error(t, err)
 	})
@@ -116,10 +155,18 @@ func TestInvoker_Script(t *testing.T) {
 			return indexedHeight, nil
 		}
 
-		invoke := baselineInvoker(t)
-		invoke.index = index
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil)
 		expectedError := fmt.Sprintf("the requested height (%d) is beyond the highest indexed height(%d)",
 			mocks.GenericHeight, indexedHeight)
 		assert.Error(t, err)
@@ -128,6 +175,8 @@ func TestInvoker_Script(t *testing.T) {
 
 	t.Run("handles vm failure on Run", func(t *testing.T) {
 		t.Parallel()
+
+		index := mocks.BaselineReader(t)
 
 		vm := mocks.BaselineVirtualMachine(t)
 		vm.RunFunc = func(
@@ -148,16 +197,27 @@ func TestInvoker_Script(t *testing.T) {
 			return &snapshot.ExecutionSnapshot{}, output, nil
 		}
 
-		invoke := baselineInvoker(t)
-		invoke.vm = vm
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil,
+		)
 
 		assert.Error(t, err)
 	})
 
 	t.Run("handles proc error", func(t *testing.T) {
 		t.Parallel()
+
+		index := mocks.BaselineReader(t)
 
 		vm := mocks.BaselineVirtualMachine(t)
 		vm.RunFunc = func(
@@ -172,10 +232,19 @@ func TestInvoker_Script(t *testing.T) {
 			return nil, fvm.ProcedureOutput{}, mocks.GenericError
 		}
 
-		invoke := baselineInvoker(t)
-		invoke.vm = vm
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil,
+		)
 
 		assert.Error(t, err)
 	})
@@ -208,11 +277,23 @@ func TestInvoker_Account(t *testing.T) {
 			return mocks.GenericHeader, nil
 		}
 
-		invoke := baselineInvoker(t)
-		invoke.vm = vm
-		invoke.index = index
+		config := DefaultConfig
+		config.NewCustomVirtualMachine = func() fvm.VM {
+			return vm
+		}
 
-		account, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			config,
+		)
+		require.NoError(t, err)
+
+		account, err := invoke.Account(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericAccount.Address,
+		)
 
 		require.NoError(t, err)
 		assert.Equal(t, &mocks.GenericAccount, account)
@@ -226,10 +307,18 @@ func TestInvoker_Account(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		invoke := baselineInvoker(t)
-		invoke.index = index
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 
-		_, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+		_, err = invoke.Account(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericAccount.Address,
+		)
 
 		assert.Error(t, err)
 	})
@@ -242,10 +331,19 @@ func TestInvoker_Account(t *testing.T) {
 			return mocks.GenericHeight - 1, nil
 		}
 
-		invoke := baselineInvoker(t)
-		invoke.index = index
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 
-		_, err := invoke.Script(mocks.GenericHeight, mocks.GenericBytes, []cadence.Value{})
+		_, err = invoke.Script(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericBytes,
+			nil,
+		)
 
 		assert.Error(t, err)
 	})
@@ -253,6 +351,7 @@ func TestInvoker_Account(t *testing.T) {
 	t.Run("handles vm failure on Account", func(t *testing.T) {
 		t.Parallel()
 
+		index := mocks.BaselineReader(t)
 		vm := mocks.BaselineVirtualMachine(t)
 		vm.GetAccountFunc = func(
 			fvm.Context,
@@ -265,10 +364,18 @@ func TestInvoker_Account(t *testing.T) {
 			return nil, mocks.GenericError
 		}
 
-		invoke := baselineInvoker(t)
-		invoke.vm = vm
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 
-		_, err := invoke.Account(mocks.GenericHeight, mocks.GenericAccount.Address)
+		_, err = invoke.Account(
+			context.Background(),
+			mocks.GenericHeight,
+			mocks.GenericAccount.Address,
+		)
 
 		assert.Error(t, err)
 	})
@@ -277,11 +384,13 @@ func TestInvoker_Account(t *testing.T) {
 func TestInvoker_ByHeightFrom(t *testing.T) {
 	t.Run("nominal case", func(t *testing.T) {
 		t.Parallel()
-		vm := mocks.BaselineVirtualMachine(t)
 		index := mocks.BaselineReader(t)
-		invoke := baselineInvoker(t)
-		invoke.vm = vm
-		invoke.index = index
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 		res, err := invoke.ByHeightFrom(mocks.GenericHeight, mocks.GenericHeader)
 		assert.NoError(t, err)
 		assert.Equal(t, res, mocks.GenericHeader)
@@ -289,14 +398,16 @@ func TestInvoker_ByHeightFrom(t *testing.T) {
 
 	t.Run("errors on out of range", func(t *testing.T) {
 		t.Parallel()
-		vm := mocks.BaselineVirtualMachine(t)
 		index := mocks.BaselineReader(t)
 		index.FirstFunc = func() (uint64, error) {
 			return 0, nil
 		}
-		invoke := baselineInvoker(t)
-		invoke.vm = vm
-		invoke.index = index
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 		res, err := invoke.ByHeightFrom(mocks.GenericHeight+1, mocks.GenericHeader)
 		assert.ErrorContains(t, err, "is not in the range")
 		assert.Nil(t, res)
@@ -304,15 +415,17 @@ func TestInvoker_ByHeightFrom(t *testing.T) {
 
 	t.Run("returns requested finalized block", func(t *testing.T) {
 		t.Parallel()
-		vm := mocks.BaselineVirtualMachine(t)
 		index := mocks.BaselineReader(t)
 		index.HeaderFunc = func(height uint64) (*flow.Header, error) {
 			assert.Equal(t, mocks.GenericHeight, height)
 			return mocks.GenericHeader, nil
 		}
-		invoke := baselineInvoker(t)
-		invoke.vm = vm
-		invoke.index = index
+		invoke, err := New(
+			zerolog.Nop(),
+			index,
+			DefaultConfig,
+		)
+		require.NoError(t, err)
 		testHeader := &flow.Header{
 			ChainID: archive.FlowTestnet,
 			Height:  mocks.GenericHeight + 4,
@@ -323,14 +436,79 @@ func TestInvoker_ByHeightFrom(t *testing.T) {
 	})
 }
 
-func baselineInvoker(t *testing.T) *Invoker {
-	t.Helper()
-
-	i := Invoker{
-		index: mocks.BaselineReader(t),
-		vm:    mocks.BaselineVirtualMachine(t),
-		cache: mocks.BaselineCache(t),
+func TestReadRegister(t *testing.T) {
+	owner := string(mocks.GenericLedgerKey.KeyParts[0].Value)
+	key := string(mocks.GenericLedgerKey.KeyParts[1].Value)
+	registerId := flow.RegisterID{
+		Owner: owner,
+		Key:   key,
 	}
 
-	return &i
+	t.Run("nominal case with cached register", func(t *testing.T) {
+		t.Parallel()
+
+		cache := mocks.BaselineCache(t)
+		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+			// Return that the cache contains the register's value already.
+			return mocks.GenericBytes, true
+		}
+
+		var indexCalled bool
+		index := mocks.BaselineReader(t)
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
+			indexCalled = true
+			return nil, nil
+		}
+
+		readFunc := readRegister(index, cache, mocks.GenericHeight)
+		value, err := readFunc(registerId)
+
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericBytes, value[:])
+		assert.False(t, indexCalled)
+	})
+
+	t.Run("nominal case without cached register", func(t *testing.T) {
+		t.Parallel()
+
+		cache := mocks.BaselineCache(t)
+		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+			// Return that the cache DOES NOT contain the register's value already.
+			return nil, false
+		}
+
+		var indexCalled bool
+		index := mocks.BaselineReader(t)
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
+			indexCalled = true
+			return []flow.RegisterValue{mocks.GenericBytes}, nil
+		}
+
+		readFunc := readRegister(index, cache, mocks.GenericHeight)
+		value, err := readFunc(registerId)
+
+		require.NoError(t, err)
+		assert.Equal(t, mocks.GenericBytes, value[:])
+		assert.True(t, indexCalled)
+	})
+
+	t.Run("handles indexer failure on Values", func(t *testing.T) {
+		t.Parallel()
+
+		cache := mocks.BaselineCache(t)
+		cache.GetFunc = func(key interface{}) (interface{}, bool) {
+			// Return that the cache DOES NOT contain the register's value already.
+			return nil, false
+		}
+
+		index := mocks.BaselineReader(t)
+		index.ValuesFunc = func(uint64, flow.RegisterIDs) ([]flow.RegisterValue, error) {
+			return nil, mocks.GenericError
+		}
+
+		readFunc := readRegister(index, cache, mocks.GenericHeight)
+		_, err := readFunc(registerId)
+
+		assert.Error(t, err)
+	})
 }
