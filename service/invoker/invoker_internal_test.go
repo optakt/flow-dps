@@ -3,8 +3,9 @@ package invoker
 import (
 	"context"
 	"fmt"
-	"github.com/rs/zerolog"
 	"testing"
+
+	"github.com/rs/zerolog"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -151,7 +152,7 @@ func TestInvoker_Script(t *testing.T) {
 		t.Parallel()
 		indexedHeight := mocks.GenericHeight - 1
 		index := mocks.BaselineReader(t)
-		index.LatestRegisterHeightFunc = func() (uint64, error) {
+		index.LastFunc = func() (uint64, error) {
 			return indexedHeight, nil
 		}
 
@@ -327,7 +328,7 @@ func TestInvoker_Account(t *testing.T) {
 		t.Parallel()
 
 		index := mocks.BaselineReader(t)
-		index.LatestRegisterHeightFunc = func() (uint64, error) {
+		index.LastFunc = func() (uint64, error) {
 			return mocks.GenericHeight - 1, nil
 		}
 
