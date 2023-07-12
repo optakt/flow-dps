@@ -55,7 +55,7 @@ func (f *FSM) Run() error {
 
 		lg := log.With().Str("module", "FSM").Str("start_state", startState).Logger()
 
-		lg.Info().Uint64("height", f.state.height).Msgf("before transition")
+		lg.Debug().Uint64("height", f.state.height).Msgf("before transition")
 
 		err := transition(f.state)
 		if errors.Is(err, archive.ErrFinished) {
@@ -69,7 +69,7 @@ func (f *FSM) Run() error {
 
 		endState := f.state.status.String()
 
-		lg.Info().Uint64("height", f.state.height).Str("end_state", endState).Msgf("after transition")
+		lg.Debug().Uint64("height", f.state.height).Str("end_state", endState).Msgf("after transition")
 	}
 }
 
