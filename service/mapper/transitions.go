@@ -358,20 +358,34 @@ func (t *Transitions) MapRegisters(s *State) error {
 	// doesn't really matter for badger if they are in random order, so this
 	// way of iterating should be fine.
 	n := 1000
-	payloads := make([]*ledger.Payload, 0, n)
-	for path, payload := range s.registers {
-		payloads = append(payloads, payload)
-		delete(s.registers, path)
-		if len(payloads) >= n {
-			break
-		}
+	if len(s.registers) < n {
+	        n = len(s.registers)
 	}
 
-	// Then we store the (maximum) 1000 paths and payloads.
-	err := t.write.Payloads(s.height, payloads)
-	if err != nil {
-		return fmt.Errorf("could not index registers: %w", err)
-	}
+        payloads := make([]*ledger.Payload, 0, n)
+
+        for path, payload := range s.registers {
+	        payloads = append(payloads, payload)
+
+		if len(payloads) >= n {
+	                // Store max number of paths and payloads.
+	                err := t.write.Payloads(s.height, payloads)
+	                if err != nil {
+		                return fmt.Errorf("could not index registers: %w", err)
+	                }
+
+	                // Reslice payloads for reuse.
+	                payloads = payloads[:0]
+                }
+        }
+
+        // Store remaining paths and payloads.
+        if len(payloads) > 0 {
+	        err := t.write.Payloads(s.height, payloads)
+	        if err != nil {
+		        return fmt.Errorf("could not index registers: %w", err)
+	        }
+        }
 
 	// skip the map status again, and its log
 	if len(s.registers) == 0 {
