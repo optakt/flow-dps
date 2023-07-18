@@ -340,8 +340,18 @@ func (t *Transitions) MapRegisters(s *State) error {
 	if s.status != StatusMap {
 		return fmt.Errorf("invalid status for indexing registers (%s)", s.status)
 	}
-
 	log := t.log.With().Uint64("height", s.height).Logger()
+
+	// We try to retrieve the next header until it becomes available, which
+	// means all data coming from the protocol state is available after this
+	// point.
+	_, err := t.chain.Header(s.height)
+	if errors.Is(err, archive.ErrUnavailable) {
+		log.Info().Msgf("header is not available, sleep for %s", t.cfg.WaitInterval)
+		time.Sleep(t.cfg.WaitInterval)
+		return nil
+	}
+
 	// If there are no registers left to be indexed, we can go to the next step,
 	// which is indexing the chain data
 	if len(s.registers) == 0 {
@@ -359,38 +369,29 @@ func (t *Transitions) MapRegisters(s *State) error {
 	// way of iterating should be fine.
 	n := 1000
 	if len(s.registers) < n {
-	        n = len(s.registers)
+		n = len(s.registers)
 	}
 
-        payloads := make([]*ledger.Payload, 0, n)
+	payloads := make([]*ledger.Payload, 0, n)
 
-        for path, payload := range s.registers {
-	        payloads = append(payloads, payload)
-
+	for _, payload := range s.registers {
+		payloads = append(payloads, payload)
 		if len(payloads) >= n {
-	                // Store max number of paths and payloads.
-	                err := t.write.Payloads(s.height, payloads)
-	                if err != nil {
-		                return fmt.Errorf("could not index registers: %w", err)
-	                }
+			// Store max number of paths and payloads.
+			err := t.write.Payloads(s.height, payloads)
+			if err != nil {
+				return fmt.Errorf("could not index registers: %w", err)
+			}
 
-	                // Reslice payloads for reuse.
-	                payloads = payloads[:0]
-                }
-        }
-
-        // Store remaining paths and payloads.
-        if len(payloads) > 0 {
-	        err := t.write.Payloads(s.height, payloads)
-	        if err != nil {
-		        return fmt.Errorf("could not index registers: %w", err)
-	        }
-        }
+			// Reslice payloads for reuse.
+			payloads = payloads[:0]
+		}
+	}
 
 	// skip the map status again, and its log
 	if len(s.registers) == 0 {
 		// write the height as latest
-		err = t.write.LatestRegisterHeight(s.height)
+		err := t.write.LatestRegisterHeight(s.height)
 		if err != nil {
 			return fmt.Errorf("could not index latest register height: %w", err)
 		}
