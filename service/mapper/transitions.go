@@ -341,17 +341,6 @@ func (t *Transitions) MapRegisters(s *State) error {
 		return fmt.Errorf("invalid status for indexing registers (%s)", s.status)
 	}
 	log := t.log.With().Uint64("height", s.height).Logger()
-
-	// We try to retrieve the next header until it becomes available, which
-	// means all data coming from the protocol state is available after this
-	// point.
-	_, err := t.chain.Header(s.height)
-	if errors.Is(err, archive.ErrUnavailable) {
-		log.Info().Msgf("header is not available, sleep for %s", t.cfg.WaitInterval)
-		time.Sleep(t.cfg.WaitInterval)
-		return nil
-	}
-
 	// If there are no registers left to be indexed, we can go to the next step,
 	// which is indexing the chain data
 	if len(s.registers) == 0 {
@@ -553,7 +542,7 @@ func (t *Transitions) ForwardHeight(s *State) error {
 
 	// Once the height is forwarded, we can set the status so that we index
 	// the blockchain data next.
-	s.status = StatusIndex
+	s.status = StatusUpdate
 	log := t.log.With().Uint64("height", s.height).Logger()
 	log.Info().Msg("indexed execution and protocol data for block")
 	return nil
