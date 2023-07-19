@@ -711,7 +711,11 @@ func TestTransitions_MapRegisters(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusMap)
-
+		write := mocks.BaselineWriter(t)
+		write.LatestRegisterHeightFunc = func(height uint64) error {
+			return nil
+		}
+		tr.write = write
 		err := tr.MapRegisters(st)
 
 		assert.NoError(t, err)
@@ -788,7 +792,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 		err := tr.ForwardHeight(st)
 
 		assert.NoError(t, err)
-		assert.Equal(t, StatusIndex, st.status)
+		assert.Equal(t, StatusUpdate, st.status)
 		assert.Equal(t, mocks.GenericHeight+1, st.height)
 
 		// Reset status to allow next call.
@@ -796,7 +800,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 		err = tr.ForwardHeight(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusIndex, st.status)
+		assert.Equal(t, StatusUpdate, st.status)
 		assert.Equal(t, mocks.GenericHeight+2, st.height)
 
 		// First should have been called only once.
