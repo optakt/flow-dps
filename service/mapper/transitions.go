@@ -322,10 +322,11 @@ func (t *Transitions) CollectRegisters(s *State) error {
 	// collect paths/payload combinations
 	for _, update := range s.updates {
 		// guard for bootstrap case where t.updates.AllUpdates() returns nil as the queue is empty
-		if update != nil {
-			for i, path := range update.Paths {
-				s.registers[path] = update.Payloads[i]
-			}
+		if update == nil {
+			continue
+		}
+		for i, path := range update.Paths {
+			s.registers[path] = update.Payloads[i]
 		}
 	}
 
