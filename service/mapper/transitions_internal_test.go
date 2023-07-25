@@ -702,7 +702,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 
 		require.NoError(t, err)
 
-		// Should be StatusForward because registers map was written
+		// Should be StatusIndex because registers map was written
 		assert.Empty(t, st.registers)
 		assert.Equal(t, StatusIndex, st.status)
 	})

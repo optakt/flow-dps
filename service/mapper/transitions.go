@@ -342,9 +342,10 @@ func (t *Transitions) MapRegisters(s *State) error {
 		return fmt.Errorf("invalid status for indexing registers (%s)", s.status)
 	}
 	log := t.log.With().Uint64("height", s.height).Logger()
-	// If there are no registers left to be indexed, we can go to the next step,
+	// If there are no registers to be indexed, we can go to the next step,
 	// which is indexing the chain data
-	if len(s.registers) == 0 {
+	registers := len(s.registers)
+	if registers == 0 {
 		err := t.write.LatestRegisterHeight(s.height)
 		if err != nil {
 			return fmt.Errorf("could not index latest register height: %w", err)
@@ -353,19 +354,19 @@ func (t *Transitions) MapRegisters(s *State) error {
 		return nil
 	}
 
-	// We will now collect and index 1000 registers at a time. This gives the
-	// FSM the chance to exit the loop between every 1000 payloads we index. It
+	// We will now collect and index 1000 registers at a time. It
 	// doesn't really matter for badger if they are in random order, so this
 	// way of iterating should be fine.
 	n := 1000
-	if len(s.registers) < n {
+	if registers < n {
 		n = len(s.registers)
 	}
 
 	payloads := make([]*ledger.Payload, 0, n)
 
-	for _, payload := range s.registers {
+	for path, payload := range s.registers {
 		payloads = append(payloads, payload)
+		delete(s.registers, path)
 		if len(payloads) >= n {
 			// Store max number of paths and payloads.
 			err := t.write.Payloads(s.height, payloads)
@@ -378,21 +379,16 @@ func (t *Transitions) MapRegisters(s *State) error {
 		}
 	}
 
-	// skip the map status again, and its log
-	if len(s.registers) == 0 {
-		// write the height as latest
-		err := t.write.LatestRegisterHeight(s.height)
-		if err != nil {
-			return fmt.Errorf("could not index latest register height: %w", err)
-		}
-		s.status = StatusIndex
-		return nil
-	}
-
 	log.Debug().
-		Int("batch", len(payloads)).
-		Int("remaining", len(s.registers)).
-		Msg("indexed register batch for finalized block")
+		Int("registers", registers).
+		Msg("indexed all registers for finalized block")
+
+	// write the height as latest and puge registers
+	err := t.write.LatestRegisterHeight(s.height)
+	if err != nil {
+		return fmt.Errorf("could not index latest register height: %w", err)
+	}
+	s.status = StatusIndex
 
 	return nil
 }
