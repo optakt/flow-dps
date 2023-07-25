@@ -91,7 +91,7 @@ func TestTransitions_BootstrapState(t *testing.T) {
 			}
 			root := mocks.BaselineChain(t)
 			root.RootFunc = func() (uint64, error) {
-				return uint64(sporkHeight), nil
+				return sporkHeight, nil
 			}
 			tr, st := baselineFSM(t, StatusBootstrap, withWriter(writer), withChain(root))
 			st.checkpointFileName = fileName
@@ -100,11 +100,11 @@ func TestTransitions_BootstrapState(t *testing.T) {
 		})
 	})
 
-	t.Run("multiple batchs", func(t *testing.T) {
+	t.Run("multiple batches", func(t *testing.T) {
 		t.Parallel()
 		unittest.RunWithTempDir(t, func(dir string) {
 			logger := unittest.Logger()
-			trie1 := createTrieWithNPayloads(t, 3001) // 3001 payloads would require 4 batchs
+			trie1 := createTrieWithNPayloads(t, 3001) // 3001 payloads would require 4 batches
 			tries := []*trie.MTrie{trie1}
 			fileName := "test_checkpoint_file"
 			require.NoErrorf(t, wal.StoreCheckpointV6Concurrently(tries, dir, fileName, &logger), "fail to store checkpoint")
@@ -249,7 +249,7 @@ func TestTransitions_IndexChain(t *testing.T) {
 		err := tr.IndexChain(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusUpdate, st.status)
+		assert.Equal(t, StatusForward, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
@@ -529,7 +529,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 
 		tr, st := baselineFSM(t, StatusUpdate)
 
-		// Set up the mock triereader to return an unavailable error on the first call and return successfully
+		// Set up the mock trie reader to return an unavailable error on the first call and return successfully
 		// to subsequent calls.
 		var updateCalled bool
 		updates := mocks.BaselineParser(t)
@@ -578,7 +578,7 @@ func TestTransitions_UpdateTree(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles triereader update failure", func(t *testing.T) {
+	t.Run("handles trie reader update failure", func(t *testing.T) {
 		t.Parallel()
 
 		updates := mocks.BaselineParser(t)
@@ -620,7 +620,7 @@ func TestTransitions_CollectRegisters(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusForward, st.status)
+		assert.Equal(t, StatusIndex, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
@@ -689,6 +689,10 @@ func TestTransitions_MapRegisters(t *testing.T) {
 			assert.Len(t, value, 5)
 			return nil
 		}
+		write.LatestRegisterHeightFunc = func(height uint64) error {
+			assert.Equal(t, mocks.GenericHeight, height)
+			return nil
+		}
 
 		tr, st := baselineFSM(t, StatusMap)
 		tr.write = write
@@ -698,20 +702,24 @@ func TestTransitions_MapRegisters(t *testing.T) {
 
 		require.NoError(t, err)
 
-		// Should be StatusForward because registers map was written
+		// Should be StatusIndex because registers map was written
 		assert.Empty(t, st.registers)
-		assert.Equal(t, StatusForward, st.status)
+		assert.Equal(t, StatusIndex, st.status)
 	})
 
 	t.Run("nominal case no more registers left to write", func(t *testing.T) {
 		t.Parallel()
 
 		tr, st := baselineFSM(t, StatusMap)
-
+		write := mocks.BaselineWriter(t)
+		write.LatestRegisterHeightFunc = func(height uint64) error {
+			return nil
+		}
+		tr.write = write
 		err := tr.MapRegisters(st)
 
 		assert.NoError(t, err)
-		assert.Equal(t, StatusForward, st.status)
+		assert.Equal(t, StatusIndex, st.status)
 	})
 
 	t.Run("handles invalid status", func(t *testing.T) {
@@ -734,7 +742,7 @@ func TestTransitions_MapRegisters(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("handles writer failure", func(t *testing.T) {
+	t.Run("handles register writer failure", func(t *testing.T) {
 		t.Parallel()
 
 		testRegisters := map[ledger.Path]*ledger.Payload{
@@ -784,7 +792,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 		err := tr.ForwardHeight(st)
 
 		assert.NoError(t, err)
-		assert.Equal(t, StatusIndex, st.status)
+		assert.Equal(t, StatusUpdate, st.status)
 		assert.Equal(t, mocks.GenericHeight+1, st.height)
 
 		// Reset status to allow next call.
@@ -792,7 +800,7 @@ func TestTransitions_ForwardHeight(t *testing.T) {
 		err = tr.ForwardHeight(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusIndex, st.status)
+		assert.Equal(t, StatusUpdate, st.status)
 		assert.Equal(t, mocks.GenericHeight+2, st.height)
 
 		// First should have been called only once.
@@ -922,7 +930,7 @@ func TestTransitions_ResumeIndexing(t *testing.T) {
 		err := tr.ResumeIndexing(st)
 
 		require.NoError(t, err)
-		assert.Equal(t, StatusIndex, st.status)
+		assert.Equal(t, StatusUpdate, st.status)
 		assert.Equal(t, header.Height+1, st.height)
 	})
 

@@ -31,6 +31,8 @@ type Transitions struct {
 }
 
 // NewTransitions returns a Transitions component using the given dependencies and using the given options
+// The states are, in order:
+// Initialize -> Bootstrap -> Resume -> Update -> Collect -> Map -> Index -> Forward
 func NewTransitions(log zerolog.Logger, chain archive.Chain, updates TrieUpdates, read archive.Reader, write archive.Writer, options ...Option) *Transitions {
 
 	cfg := DefaultConfig
@@ -227,7 +229,7 @@ func (t *Transitions) BootstrapState(s *State) error {
 	// we have imported all payloads, we can skip the StatusCollect and StatusMap
 	// status which is only needed after the bootstrap
 	// since t.updates.AllUpdates() returns nil for bootstrap case, we will do nothing
-	// in the StatusCollect and StatusMap status, which is equivilent to skipping
+	// in the StatusCollect and StatusMap status, which is equivalent to skipping
 
 	return nil
 }
@@ -269,9 +271,125 @@ func (t *Transitions) ResumeIndexing(s *State) error {
 	// then proceed with the first non-indexed block and index values
 	s.height = last + 1
 
-	// At this point, we should be able to start indexing the chain data for
+	// At this point, we should be able to start indexing the register data for
 	// the next height.
+	s.status = StatusUpdate
+	return nil
+}
+
+// UpdateTree gets all trie updates and stores it in the state
+func (t *Transitions) UpdateTree(s *State) error {
+	if s.status != StatusUpdate {
+		return fmt.Errorf("invalid status for updating tree (%s)", s.status)
+	}
+	log := t.log.With().Uint64("height", s.height).Logger()
+	// grab updates and move on to next state
+	updates, err := t.updates.AllUpdates()
+	if errors.Is(err, archive.ErrUnavailable) {
+		time.Sleep(t.cfg.WaitInterval)
+		log.Debug().Msg("waiting for next trie update")
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
+	}
+	s.updates = updates
+	log.Info().Int("updates", len(s.updates)).Msg("collected trie updates (registers) to be mapped")
+
+	// Now that we have collected TrieUpdates for the current block,
+	// we can create a path -> payload mapping that we will use to index to the local storage
+	s.status = StatusCollect
+	return nil
+}
+
+// CollectRegisters reads the payloads for the next block to be indexed from the state's forest, unless payload
+// indexing is disabled.
+func (t *Transitions) CollectRegisters(s *State) error {
+	if s.status != StatusCollect {
+		return fmt.Errorf("invalid status for collecting registers (%s)", s.status)
+	}
+
+	// If indexing payloads is disabled, we can bypass collection and indexing
+	// of payloads and just go straight to indexing chain data
+	if t.cfg.SkipRegisters {
+		err := t.write.LatestRegisterHeight(s.height)
+		if err != nil {
+			return fmt.Errorf("could not index latest register height: %w", err)
+		}
+		s.status = StatusIndex
+		return nil
+	}
+	// collect paths/payload combinations
+	for _, update := range s.updates {
+		// guard for bootstrap case where t.updates.AllUpdates() returns nil as the queue is empty
+		if update == nil {
+			continue
+		}
+		for i, path := range update.Paths {
+			s.registers[path] = update.Payloads[i]
+		}
+	}
+
+	// At this point, we have collected all the payloads, so we go to the next
+	// step, where we will index them.
+	s.status = StatusMap
+	return nil
+}
+
+// MapRegisters maps the collected registers to the current block.
+func (t *Transitions) MapRegisters(s *State) error {
+	if s.status != StatusMap {
+		return fmt.Errorf("invalid status for indexing registers (%s)", s.status)
+	}
+	log := t.log.With().Uint64("height", s.height).Logger()
+	// If there are no registers to be indexed, we can go to the next step,
+	// which is indexing the chain data
+	registers := len(s.registers)
+	if registers == 0 {
+		err := t.write.LatestRegisterHeight(s.height)
+		if err != nil {
+			return fmt.Errorf("could not index latest register height: %w", err)
+		}
+		s.status = StatusIndex
+		return nil
+	}
+
+	// We will now collect and index 1000 registers at a time. It
+	// doesn't really matter for badger if they are in random order, so this
+	// way of iterating should be fine.
+	n := 1000
+	if registers < n {
+		n = len(s.registers)
+	}
+
+	payloads := make([]*ledger.Payload, 0, n)
+
+	for path, payload := range s.registers {
+		payloads = append(payloads, payload)
+		delete(s.registers, path)
+		if len(payloads) >= n {
+			// Store max number of paths and payloads.
+			err := t.write.Payloads(s.height, payloads)
+			if err != nil {
+				return fmt.Errorf("could not index registers: %w", err)
+			}
+
+			// Reslice payloads for reuse.
+			payloads = payloads[:0]
+		}
+	}
+
+	log.Debug().
+		Int("registers", registers).
+		Msg("indexed all registers for finalized block")
+
+	// write the height as latest and puge registers
+	err := t.write.LatestRegisterHeight(s.height)
+	if err != nil {
+		return fmt.Errorf("could not index latest register height: %w", err)
+	}
 	s.status = StatusIndex
+
 	return nil
 }
 
@@ -392,113 +510,8 @@ func (t *Transitions) IndexChain(s *State) error {
 		Int("n_events", len(events)).
 		Msgf("successfully indexed block")
 
-	// After indexing the blockchain data, we can go back to updating the state
-	// tree until we find the commit of the finalized block. This will allow us
-	// to index the payloads then.
-	s.status = StatusUpdate
-	return nil
-}
-
-// UpdateTree gets all trie updates and stores it in the state
-func (t *Transitions) UpdateTree(s *State) error {
-	if s.status != StatusUpdate {
-		return fmt.Errorf("invalid status for updating tree (%s)", s.status)
-	}
-	log := t.log.With().Uint64("height", s.height).Logger()
-	// grab updates and move on to next state
-	updates, err := t.updates.AllUpdates()
-	if errors.Is(err, archive.ErrUnavailable) {
-		time.Sleep(t.cfg.WaitInterval)
-		log.Debug().Msg("waiting for next trie update")
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
-	}
-	s.updates = updates
-	log.Debug().Int("updates", len(s.updates)).Msg("collected trie updates (registers) to be mapped")
-
-	// Now that we have collected TrieUpdates for the current block,
-	// we can create a path -> payload mapping that we will use to index to the local storage
-	s.status = StatusCollect
-	return nil
-}
-
-// CollectRegisters reads the payloads for the next block to be indexed from the state's forest, unless payload
-// indexing is disabled.
-func (t *Transitions) CollectRegisters(s *State) error {
-	if s.status != StatusCollect {
-		return fmt.Errorf("invalid status for collecting registers (%s)", s.status)
-	}
-
-	// If indexing payloads is disabled, we can bypass collection and indexing
-	// of payloads and just go straight to forwarding the height to the next
-	// finalized block.
-	if t.cfg.SkipRegisters {
-		s.status = StatusForward
-		return nil
-	}
-	// collect paths/payload combinations
-	for _, update := range s.updates {
-		// guard for bootstrap case where t.updates.AllUpdates() returns nil as the queue is empty
-		if update != nil {
-			for i, path := range update.Paths {
-				s.registers[path] = update.Payloads[i]
-			}
-		}
-	}
-
-	// At this point, we have collected all the payloads, so we go to the next
-	// step, where we will index them.
-	s.status = StatusMap
-	return nil
-}
-
-// MapRegisters maps the collected registers to the current block.
-func (t *Transitions) MapRegisters(s *State) error {
-	if s.status != StatusMap {
-		return fmt.Errorf("invalid status for indexing registers (%s)", s.status)
-	}
-
-	log := t.log.With().Uint64("height", s.height).Logger()
-	// If there are no registers left to be indexed, we can go to the next step,
-	// which is about forwarding the height to the next finalized block.
-	if len(s.registers) == 0 {
-		s.status = StatusForward
-		return nil
-	}
-
-	// We will now collect and index 1000 registers at a time. This gives the
-	// FSM the chance to exit the loop between every 1000 payloads we index. It
-	// doesn't really matter for badger if they are in random order, so this
-	// way of iterating should be fine.
-	n := 1000
-	payloads := make([]*ledger.Payload, 0, n)
-	for path, payload := range s.registers {
-		payloads = append(payloads, payload)
-		delete(s.registers, path)
-		if len(payloads) >= n {
-			break
-		}
-	}
-
-	// Then we store the (maximum) 1000 paths and payloads.
-	err := t.write.Payloads(s.height, payloads)
-	if err != nil {
-		return fmt.Errorf("could not index registers: %w", err)
-	}
-
-	// skip the map status again, and its log
-	if len(s.registers) == 0 {
-		s.status = StatusForward
-		return nil
-	}
-
-	log.Debug().
-		Int("batch", len(payloads)).
-		Int("remaining", len(s.registers)).
-		Msg("indexed register batch for finalized block")
-
+	// After indexing the blockchain data, we can move on to the next height
+	s.status = StatusForward
 	return nil
 }
 
@@ -526,7 +539,7 @@ func (t *Transitions) ForwardHeight(s *State) error {
 
 	// Once the height is forwarded, we can set the status so that we index
 	// the blockchain data next.
-	s.status = StatusIndex
+	s.status = StatusUpdate
 	log := t.log.With().Uint64("height", s.height).Logger()
 	log.Info().Msg("indexed execution and protocol data for block")
 	return nil

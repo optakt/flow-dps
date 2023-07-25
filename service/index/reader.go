@@ -63,6 +63,13 @@ func (r *Reader) Last() (uint64, error) {
 	return height, err
 }
 
+// LatestRegisterHeight returns the latest height for which all registers are indexed
+func (r *Reader) LatestRegisterHeight() (uint64, error) {
+	var height uint64
+	err := r.db.View(r.lib.RetrieveLatestRegisterHeight(&height))
+	return height, err
+}
+
 // HeightForBlock returns the height for the given block identifier.
 func (r *Reader) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 	var height uint64

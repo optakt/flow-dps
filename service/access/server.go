@@ -409,7 +409,7 @@ func (s *Server) GetAccountAtBlockHeight(ctx context.Context, in *access.GetAcco
 // ExecuteScriptAtLatestBlock implements the ExecuteScriptAtLatestBlock endpoint from the Flow Access API.
 // See https://docs.onflow.org/access-api/#executescriptatlatestblock
 func (s *Server) ExecuteScriptAtLatestBlock(ctx context.Context, in *access.ExecuteScriptAtLatestBlockRequest) (*access.ExecuteScriptResponse, error) {
-	height, err := s.index.Last()
+	height, err := s.index.LatestRegisterHeight()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not get last height: %v", err)
 	}

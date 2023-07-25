@@ -10,6 +10,7 @@ import (
 type Writer interface {
 	First(height uint64) error
 	Last(height uint64) error
+	LatestRegisterHeight(height uint64) error
 
 	Height(blockID flow.Identifier, height uint64) error
 

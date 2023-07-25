@@ -55,6 +55,16 @@ func (i *Index) Last() (uint64, error) {
 	return res.Height, nil
 }
 
+func (i *Index) LatestRegisterHeight() (uint64, error) {
+	req := GetLastRequest{}
+	res, err := i.client.GetLast(context.Background(), &req)
+	if err != nil {
+		return 0, fmt.Errorf("could not get last height: %w", err)
+	}
+
+	return res.Height, nil
+}
+
 // HeightForBlock returns the height of the given blockID.
 func (i *Index) HeightForBlock(blockID flow.Identifier) (uint64, error) {
 

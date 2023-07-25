@@ -1,8 +1,9 @@
 package storage
 
 const (
-	PrefixFirst = 1
-	PrefixLast  = 2
+	PrefixFirst                = 1
+	PrefixLast                 = 2
+	PrefixLatestRegisterHeight = 18
 
 	PrefixHeightForBlock       = 7
 	PrefixHeightForTransaction = 16
