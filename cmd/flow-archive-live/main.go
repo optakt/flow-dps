@@ -318,7 +318,8 @@ func run() int {
 			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)),
 			grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-
+			log.Error().Err(err).Msg("could not get connect to exec data sync access node")
+			return failure
 		}
 		execApi = access2.NewExecutionDataAPIClient(conn)
 	}
