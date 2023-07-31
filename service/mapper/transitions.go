@@ -291,7 +291,7 @@ func (t *Transitions) UpdateTree(s *State) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("unable to retrieve trie updates for block height %x", s.height)
+		return fmt.Errorf("unable to retrieve trie updates for block height %d: %w", s.height, err)
 	}
 	s.updates = updates
 	log.Info().Int("updates", len(s.updates)).Msg("collected trie updates (registers) to be mapped")
