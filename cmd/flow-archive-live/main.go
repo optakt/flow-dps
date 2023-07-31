@@ -18,6 +18,7 @@ import (
 	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
+	"github.com/onflow/flow-go-sdk"
 	access2 "github.com/onflow/flow/protobuf/go/flow/executiondata"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
@@ -30,7 +31,6 @@ import (
 	"github.com/onflow/flow-go/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/bootstrap"
-	flowModel "github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 
 	api "github.com/onflow/flow-archive/api/archive"
@@ -312,24 +312,24 @@ func run() int {
 	)
 	// create exec data client from seed address
 	var execApi access2.ExecutionDataAPIClient
-	if flagExecAddress != "" {
-		conn, err := grpc.Dial(
-			flagExecAddress,
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)),
-			grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			log.Error().Err(err).Msg("could not get connect to exec data sync access node")
-			return failure
-		}
-		execApi = access2.NewExecutionDataAPIClient(conn)
-	}
-
-	chainID, err := getChainId(read)
-
+	conn, err := grpc.Dial(
+		flagExecAddress,
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Error().Err(err).Msg("could not get chainID")
+		log.Error().Err(err).Msg("could not get connect to exec data sync access node")
 		return failure
 	}
+	execApi = access2.NewExecutionDataAPIClient(conn)
+	accessApi := access.NewAccessAPIClient(conn)
+
+	req := &access.GetNetworkParametersRequest{}
+	res, err := accessApi.GetNetworkParameters(context.Background(), req)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get network params")
+		return failure
+	}
+	chainID := flow.ChainID(res.ChainId)
 
 	// Next, we can initialize our consensus and execution trackers. They are
 	// responsible for tracking changes to the available data, for the consensus
@@ -412,7 +412,6 @@ func run() int {
 		server = api.NewServer(read, codec)
 	}
 
-	chainID, err = getChainId(read)
 	if err != nil {
 		log.Error().Err(err).Msg("could not get chainID")
 		return failure
@@ -549,21 +548,4 @@ func run() int {
 	}
 
 	return success
-}
-
-func getChainId(read *index.Reader) (flowModel.ChainID, error) {
-	chainID := flowModel.Emulator
-
-	f, err := read.Last()
-	if err != nil {
-		return chainID, err
-	}
-
-	h, err := read.Header(f)
-	if err != nil {
-		return chainID, err
-	}
-	chainID = h.ChainID
-
-	return chainID, nil
 }
