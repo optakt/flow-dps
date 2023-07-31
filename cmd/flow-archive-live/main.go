@@ -18,7 +18,6 @@ import (
 	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
-	"github.com/onflow/flow-go-sdk"
 	access2 "github.com/onflow/flow/protobuf/go/flow/executiondata"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
@@ -31,6 +30,7 @@ import (
 	"github.com/onflow/flow-go/crypto"
 	unstaked "github.com/onflow/flow-go/follower"
 	"github.com/onflow/flow-go/model/bootstrap"
+	flowModel "github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow/protobuf/go/flow/access"
 
 	api "github.com/onflow/flow-archive/api/archive"
@@ -329,7 +329,7 @@ func run() int {
 		log.Error().Err(err).Msg("could not get network params")
 		return failure
 	}
-	chainID := flow.ChainID(res.ChainId)
+	chainID := flowModel.ChainID(res.ChainId)
 
 	// Next, we can initialize our consensus and execution trackers. They are
 	// responsible for tracking changes to the available data, for the consensus
