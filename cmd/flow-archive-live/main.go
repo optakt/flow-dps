@@ -18,10 +18,12 @@ import (
 	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
+	access2 "github.com/onflow/flow/protobuf/go/flow/executiondata"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	sdk "github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go/cmd/bootstrap/utils"
@@ -48,8 +50,9 @@ import (
 )
 
 const (
-	success = 0
-	failure = 1
+	success        = 0
+	failure        = 1
+	maxGrpcMsgSize = 90 * 1024 * 1024 // 90 mb for large exec data chunks
 )
 
 func main() {
@@ -305,12 +308,28 @@ func run() int {
 	stream := cloud.NewGCPStreamer(log, bucket,
 		cloud.WithCatchupBlocks(blockIDs),
 	)
+	// create exec data client from seed address
+	conn, err := grpc.Dial(
+		flagSeedAddress,
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+
+	}
+	execApi := access2.NewExecutionDataAPIClient(conn)
+
+	chainID, err := getChainId(read)
+
+	if err != nil {
+		log.Error().Err(err).Msg("could not get chainID")
+		return failure
+	}
 
 	// Next, we can initialize our consensus and execution trackers. They are
 	// responsible for tracking changes to the available data, for the consensus
 	// follower and related consensus data on one side, and the cloud streamer
 	// and available execution records on the other side.
-	execution, err := tracker.NewExecution(log, protocolDB, stream)
+	execution, err := tracker.NewExecution(log, protocolDB, stream, execApi, chainID.Chain())
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize execution tracker")
 		return failure
@@ -387,7 +406,7 @@ func run() int {
 		server = api.NewServer(read, codec)
 	}
 
-	chainID, err := getChainId(read)
+	chainID, err = getChainId(read)
 	if err != nil {
 		log.Error().Err(err).Msg("could not get chainID")
 		return failure
