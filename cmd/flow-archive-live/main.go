@@ -73,6 +73,7 @@ func run() int {
 		flagBucket           string
 		flagCheckpoint       string
 		flagData             string
+		flagExecAddress      string
 		flagIndex            string
 		flagLevel            string
 		flagFollowerLogLevel string
@@ -112,6 +113,7 @@ func run() int {
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
 	pflag.BoolVarP(&flagTracing, "tracing", "t", false, "enable tracing for this instance")
+	pflag.StringVar(&flagExecAddress, "exec-address", "", "host address of access node to get exec data from")
 
 	pflag.Parse()
 
@@ -310,7 +312,7 @@ func run() int {
 	)
 	// create exec data client from seed address
 	conn, err := grpc.Dial(
-		flagSeedAddress,
+		flagExecAddress,
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
