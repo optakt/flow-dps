@@ -311,14 +311,17 @@ func run() int {
 		cloud.WithCatchupBlocks(blockIDs),
 	)
 	// create exec data client from seed address
-	conn, err := grpc.Dial(
-		flagExecAddress,
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
+	var execApi access2.ExecutionDataAPIClient
+	if flagExecAddress != "" {
+		conn, err := grpc.Dial(
+			flagExecAddress,
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)),
+			grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
 
+		}
+		execApi = access2.NewExecutionDataAPIClient(conn)
 	}
-	execApi := access2.NewExecutionDataAPIClient(conn)
 
 	chainID, err := getChainId(read)
 

@@ -169,39 +169,40 @@ func (e *Execution) processNext() error {
 		return fmt.Errorf("duplicate execution record (block: %x)", blockID)
 	}
 
-	// get Trie updates from exec data sync
-	req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
-	res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
-	if err != nil {
-		return fmt.Errorf("could not get execution data from access node: %w", err)
-	}
 	// Dump the block execution record into our cache and push all trie updates
 	// into our update queue.
 	e.records[blockID] = record
-
-	execTrieUpdates := make([]*ledger.TrieUpdate, 0)
-	// validate before pushing!
-	for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
-		convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
+	if e.execClient != nil {
+		e.log.Info().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
+		// get Trie updates from exec data sync
+		req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
+		res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
 		if err != nil {
-			return fmt.Errorf("unable to convert execution data chunk : %w", err)
+			return fmt.Errorf("could not get execution data from access node: %w", err)
 		}
-		execTrieUpdates = append(execTrieUpdates, convertedChunk.TrieUpdate)
-	}
-	if len(record.TrieUpdates) != len(execTrieUpdates) {
-		return fmt.Errorf("trie update sizes do not match, got %d from gcp and %d from exec state sync",
-			len(record.TrieUpdates), len(execTrieUpdates))
-	}
-	for idx := 0; idx < len(record.TrieUpdates); idx++ {
-		if !execTrieUpdates[idx].Equals(record.TrieUpdates[idx]) {
-			return fmt.Errorf("trie updates do not match at index %d", idx)
-		}
-	}
 
+		execTrieUpdates := make([]*ledger.TrieUpdate, 0)
+		// validate before pushing!
+		for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
+			convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
+			if err != nil {
+				return fmt.Errorf("unable to convert execution data chunk : %w", err)
+			}
+			execTrieUpdates = append(execTrieUpdates, convertedChunk.TrieUpdate)
+		}
+		if len(record.TrieUpdates) != len(execTrieUpdates) {
+			return fmt.Errorf("trie update sizes do not match, got %d from gcp and %d from exec state sync",
+				len(record.TrieUpdates), len(execTrieUpdates))
+		}
+		for idx := 0; idx < len(record.TrieUpdates); idx++ {
+			if !execTrieUpdates[idx].Equals(record.TrieUpdates[idx]) {
+				return fmt.Errorf("trie updates do not match at index %d", idx)
+			}
+		}
+		// alternatively, we can just use the trie updates we collected from data sync!!
+		// e.queue.PushFront(execTrieUpdates)
+	}
 	e.queue.PushFront(record.TrieUpdates)
-
-	// alternatively, we can just use the trie updates we collected from data sync!!
-	// e.queue.PushFront(execTrieUpdates)
 
 	e.log.Info().
 		Hex("block", blockID[:]).
