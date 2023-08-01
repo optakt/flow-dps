@@ -196,7 +196,7 @@ func (e *Execution) processNext() error {
 		}
 		// hash search for matching update
 		for _, gcpUpdate := range record.TrieUpdates {
-			if gcpUpdate != nil && !gcpUpdate.IsEmpty() {
+			if gcpUpdate != nil && !gcpUpdate.IsEmpty() && &gcpUpdate.RootHash != nil {
 				log.Info().Str("source", "gcp").Str("update", gcpUpdate.String()).Msg("comparing update")
 				if !execTrieUpdates[gcpUpdate.String()].Equals(gcpUpdate) {
 					return fmt.Errorf("got %s mismatching trie updates between exec sync and GCP", gcpUpdate.String())
