@@ -7,14 +7,12 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/gammazero/deque"
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
-	access "github.com/onflow/flow/protobuf/go/flow/executiondata"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-
 	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
+	access "github.com/onflow/flow/protobuf/go/flow/executiondata"
+	"github.com/rs/zerolog"
 )
 
 // Execution is the DPS execution follower, which keeps track of updates to the
@@ -174,11 +172,8 @@ func (e *Execution) processNext() error {
 	// into our update queue.
 	e.records[blockID] = record
 	if e.execClient != nil {
-		e.log.Info().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
-		e.log.Info().Int("updates", len(record.TrieUpdates)).Msg("got trie updates from GCP")
-		for _, update := range record.TrieUpdates {
-			log.Info().Str("source", "GCP").Str("update", update.String()).Msg("unmarshalled trie update")
-		}
+		e.log.Debug().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
+		e.log.Debug().Int("updates", len(record.TrieUpdates)).Msg("got trie updates from GCP")
 		// get Trie updates from exec data sync
 		req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
 		res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
@@ -186,19 +181,31 @@ func (e *Execution) processNext() error {
 			return fmt.Errorf("could not get execution data from access node: %w", err)
 		}
 
-		execTrieUpdates := make(map[string]*ledger.TrieUpdate, 0)
-		// validate before pushing!
+		execTrieUpdates := make([]*ledger.TrieUpdate, 0)
+		// collect updates before pushing!
 		for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
 			convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
 			if err != nil {
 				return fmt.Errorf("unable to convert execution data chunk : %w", err)
 			}
-			execTrieUpdates[convertedChunk.TrieUpdate.String()] = convertedChunk.TrieUpdate
-			log.Info().Str("trie_update", convertedChunk.TrieUpdate.String()).Msg("got trie update from exec")
+			execTrieUpdates = append(execTrieUpdates, convertedChunk.TrieUpdate)
 		}
 		if len(record.TrieUpdates) != len(execTrieUpdates) {
 			return fmt.Errorf("trie update sizes do not match, got %d from gcp and %d from exec state sync",
 				len(record.TrieUpdates), len(execTrieUpdates))
+		}
+		// linear search for each matching update, since the order of fields and nil fields mean that equal
+		// TrieUpdates may not have equal Md5 hashes or valid String() outputs
+		mismatchingUpdates := len(execTrieUpdates)
+		for _, update := range execTrieUpdates {
+			for _, gcpUpdate := range record.TrieUpdates {
+				if update.Equals(gcpUpdate) {
+					mismatchingUpdates--
+				}
+			}
+		}
+		if mismatchingUpdates > 0 {
+			return fmt.Errorf("got %d mismatching trie updates between eexc sync and GCP", mismatchingUpdates)
 		}
 		// alternatively, we can just use the trie updates we collected from data sync!!
 		// e.queue.PushFront(execTrieUpdates)
