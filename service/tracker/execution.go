@@ -13,6 +13,7 @@ import (
 	"github.com/onflow/flow-go/storage/badger/operation"
 	access "github.com/onflow/flow/protobuf/go/flow/executiondata"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // Execution is the DPS execution follower, which keeps track of updates to the
@@ -190,11 +191,13 @@ func (e *Execution) processNext() error {
 			}
 			if convertedChunk.TrieUpdate != nil {
 				execTrieUpdates[convertedChunk.TrieUpdate.String()] = convertedChunk.TrieUpdate
+				log.Info().Str("source", "exec sync").Str("update", convertedChunk.TrieUpdate.String()).Msg("")
 			}
 		}
 		// hash search for matching update
 		for _, gcpUpdate := range record.TrieUpdates {
 			if gcpUpdate != nil && !gcpUpdate.IsEmpty() {
+				log.Info().Str("source", "gcp").Str("update", gcpUpdate.String()).Msg("comparing update")
 				if !execTrieUpdates[gcpUpdate.String()].Equals(gcpUpdate) {
 					return fmt.Errorf("got %s mismatching trie updates between exec sync and GCP", gcpUpdate.String())
 				}
