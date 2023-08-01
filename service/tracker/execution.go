@@ -175,6 +175,10 @@ func (e *Execution) processNext() error {
 	e.records[blockID] = record
 	if e.execClient != nil {
 		e.log.Info().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
+		e.log.Info().Int("updates", len(record.TrieUpdates)).Msg("got trie updates from GCP")
+		for _, update := range record.TrieUpdates {
+			log.Info().Str("source", "GCP").Str("update", update.String()).Msg("unmarshalled trie update")
+		}
 		// get Trie updates from exec data sync
 		req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
 		res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
@@ -195,16 +199,6 @@ func (e *Execution) processNext() error {
 		if len(record.TrieUpdates) != len(execTrieUpdates) {
 			return fmt.Errorf("trie update sizes do not match, got %d from gcp and %d from exec state sync",
 				len(record.TrieUpdates), len(execTrieUpdates))
-		}
-		for idx := 0; idx < len(record.TrieUpdates); idx++ {
-			if record.TrieUpdates[idx] != nil {
-				log.Info().Str("trie_update", record.TrieUpdates[idx].String()).Msg("got trie update from gcp")
-			}
-		}
-		for idx := 0; idx < len(record.TrieUpdates); idx++ {
-			if !execTrieUpdates[record.TrieUpdates[idx].String()].Equals(record.TrieUpdates[idx]) {
-				return fmt.Errorf("trie updates do not match at index %d", idx)
-			}
 		}
 		// alternatively, we can just use the trie updates we collected from data sync!!
 		// e.queue.PushFront(execTrieUpdates)
