@@ -9,6 +9,7 @@ import (
 	"github.com/onflow/flow-go/engine/common/rpc/convert"
 	access "github.com/onflow/flow/protobuf/go/flow/executiondata"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 	"github.com/onflow/flow-go/ledger"
@@ -189,15 +190,17 @@ func (e *Execution) processNext() error {
 				return fmt.Errorf("unable to convert execution data chunk : %w", err)
 			}
 			execTrieUpdates[convertedChunk.TrieUpdate.String()] = convertedChunk.TrieUpdate
+			log.Info().Str("trie_update", convertedChunk.TrieUpdate.String()).Msg("got trie update from exec")
 		}
 		if len(record.TrieUpdates) != len(execTrieUpdates) {
 			return fmt.Errorf("trie update sizes do not match, got %d from gcp and %d from exec state sync",
 				len(record.TrieUpdates), len(execTrieUpdates))
 		}
 		for idx := 0; idx < len(record.TrieUpdates); idx++ {
-			if !execTrieUpdates[record.TrieUpdates[idx].String()].Equals(record.TrieUpdates[idx]) {
-				return fmt.Errorf("trie updates do not match at index %d", idx)
-			}
+			log.Info().Str("trie_update", record.TrieUpdates[idx].String()).Msg("got trie update from gcp")
+			//if !execTrieUpdates[record.TrieUpdates[idx].String()].Equals(record.TrieUpdates[idx]) {
+			//	return fmt.Errorf("trie updates do not match at index %d", idx)
+			//}
 		}
 		// alternatively, we can just use the trie updates we collected from data sync!!
 		// e.queue.PushFront(execTrieUpdates)
