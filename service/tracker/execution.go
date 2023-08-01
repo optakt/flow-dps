@@ -192,10 +192,6 @@ func (e *Execution) processNext() error {
 				execTrieUpdates = append(execTrieUpdates, convertedChunk.TrieUpdate)
 			}
 		}
-		if len(record.TrieUpdates) != len(execTrieUpdates) {
-			return fmt.Errorf("trie update sizes do not match, got %d from gcp and %d from exec state sync",
-				len(record.TrieUpdates), len(execTrieUpdates))
-		}
 		// linear search for each matching update, since the order of fields and nil fields mean that equal
 		// TrieUpdates may not have equal Md5 hashes or valid String() outputs
 		mismatchingUpdates := len(execTrieUpdates)
