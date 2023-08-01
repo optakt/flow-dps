@@ -181,21 +181,21 @@ func (e *Execution) processNext() error {
 			return fmt.Errorf("could not get execution data from access node: %w", err)
 		}
 
-		execTrieUpdates := make(map[*ledger.TrieUpdate]bool, 0)
+		execTrieUpdates := make(map[string]*ledger.TrieUpdate, 0)
 		// validate before pushing!
 		for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
 			convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
 			if err != nil {
 				return fmt.Errorf("unable to convert execution data chunk : %w", err)
 			}
-			execTrieUpdates[convertedChunk.TrieUpdate] = true
+			execTrieUpdates[convertedChunk.TrieUpdate.String()] = convertedChunk.TrieUpdate
 		}
 		if len(record.TrieUpdates) != len(execTrieUpdates) {
 			return fmt.Errorf("trie update sizes do not match, got %d from gcp and %d from exec state sync",
 				len(record.TrieUpdates), len(execTrieUpdates))
 		}
 		for idx := 0; idx < len(record.TrieUpdates); idx++ {
-			if !execTrieUpdates[record.TrieUpdates[idx]] {
+			if !execTrieUpdates[record.TrieUpdates[idx].String()].Equals(record.TrieUpdates[idx]) {
 				return fmt.Errorf("trie updates do not match at index %d", idx)
 			}
 		}
