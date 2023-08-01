@@ -1,19 +1,16 @@
 package tracker
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/gammazero/deque"
-	"github.com/onflow/flow-go/engine/common/rpc/convert"
 	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
 	access "github.com/onflow/flow/protobuf/go/flow/executiondata"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // Execution is the DPS execution follower, which keeps track of updates to the
@@ -172,40 +169,40 @@ func (e *Execution) processNext() error {
 	// Dump the block execution record into our cache and push all trie updates
 	// into our update queue.
 	e.records[blockID] = record
-	if e.execClient != nil {
-		e.log.Debug().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
-		e.log.Debug().Int("updates", len(record.TrieUpdates)).Msg("got trie updates from GCP")
-		// get Trie updates from exec data sync
-		req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
-		res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
-		if err != nil {
-			return fmt.Errorf("could not get execution data from access node: %w", err)
-		}
-
-		execTrieUpdates := make(map[string]bool, 0)
-		// collect updates before pushing!
-		for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
-			convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
-			if err != nil {
-				return fmt.Errorf("unable to convert execution data chunk : %w", err)
-			}
-			if convertedChunk.TrieUpdate != nil {
-				execTrieUpdates[convertedChunk.TrieUpdate.String()] = true
-				log.Info().Str("source", "exec sync").Str("update", convertedChunk.TrieUpdate.String()).Msg("")
-			}
-		}
-		// hash search for matching update
-		for _, gcpUpdate := range record.TrieUpdates {
-			if gcpUpdate != nil && !gcpUpdate.IsEmpty() {
-				log.Info().Str("source", "gcp").Str("update", gcpUpdate.String()).Msg("comparing update")
-				if !execTrieUpdates[gcpUpdate.String()] {
-					return fmt.Errorf("got %s mismatching trie updates between exec sync and GCP", gcpUpdate.String())
-				}
-			}
-		}
-		// alternatively, we can just use the trie updates we collected from data sync!!
-		// e.queue.PushFront(execTrieUpdates)
-	}
+	//if e.execClient != nil {
+	//	e.log.Debug().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
+	//	e.log.Debug().Int("updates", len(record.TrieUpdates)).Msg("got trie updates from GCP")
+	//	// get Trie updates from exec data sync
+	//	req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
+	//	res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
+	//	if err != nil {
+	//		return fmt.Errorf("could not get execution data from access node: %w", err)
+	//	}
+	//
+	//	execTrieUpdates := make(map[string]bool, 0)
+	//	// collect updates before pushing!
+	//	for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
+	//		convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
+	//		if err != nil {
+	//			return fmt.Errorf("unable to convert execution data chunk : %w", err)
+	//		}
+	//		if convertedChunk.TrieUpdate != nil {
+	//			execTrieUpdates[convertedChunk.TrieUpdate.String()] = true
+	//			log.Info().Str("source", "exec sync").Str("update", convertedChunk.TrieUpdate.String()).Msg("")
+	//		}
+	//	}
+	//	// hash search for matching update
+	//	for _, gcpUpdate := range record.TrieUpdates {
+	//		if gcpUpdate != nil && !gcpUpdate.IsEmpty() {
+	//			log.Info().Str("source", "gcp").Str("update", gcpUpdate.String()).Msg("comparing update")
+	//			if !execTrieUpdates[gcpUpdate.String()] {
+	//				return fmt.Errorf("got %s mismatching trie updates between exec sync and GCP", gcpUpdate.String())
+	//			}
+	//		}
+	//	}
+	//	// alternatively, we can just use the trie updates we collected from data sync!!
+	//	// e.queue.PushFront(execTrieUpdates)
+	//}
 	e.queue.PushFront(record.TrieUpdates)
 
 	e.log.Info().
