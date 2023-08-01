@@ -188,7 +188,7 @@ func (e *Execution) processNext() error {
 			if err != nil {
 				return fmt.Errorf("unable to convert execution data chunk : %w", err)
 			}
-			if execTrieUpdates != nil {
+			if convertedChunk != nil {
 				execTrieUpdates = append(execTrieUpdates, convertedChunk.TrieUpdate)
 			}
 		}
