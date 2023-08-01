@@ -197,10 +197,14 @@ func (e *Execution) processNext() error {
 				len(record.TrieUpdates), len(execTrieUpdates))
 		}
 		for idx := 0; idx < len(record.TrieUpdates); idx++ {
-			log.Info().Str("trie_update", record.TrieUpdates[idx].String()).Msg("got trie update from gcp")
-			//if !execTrieUpdates[record.TrieUpdates[idx].String()].Equals(record.TrieUpdates[idx]) {
-			//	return fmt.Errorf("trie updates do not match at index %d", idx)
-			//}
+			if record.TrieUpdates[idx] != nil {
+				log.Info().Str("trie_update", record.TrieUpdates[idx].String()).Msg("got trie update from gcp")
+			}
+		}
+		for idx := 0; idx < len(record.TrieUpdates); idx++ {
+			if !execTrieUpdates[record.TrieUpdates[idx].String()].Equals(record.TrieUpdates[idx]) {
+				return fmt.Errorf("trie updates do not match at index %d", idx)
+			}
 		}
 		// alternatively, we can just use the trie updates we collected from data sync!!
 		// e.queue.PushFront(execTrieUpdates)
