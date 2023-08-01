@@ -188,7 +188,9 @@ func (e *Execution) processNext() error {
 			if err != nil {
 				return fmt.Errorf("unable to convert execution data chunk : %w", err)
 			}
-			execTrieUpdates = append(execTrieUpdates, convertedChunk.TrieUpdate)
+			if execTrieUpdates != nil {
+				execTrieUpdates = append(execTrieUpdates, convertedChunk.TrieUpdate)
+			}
 		}
 		if len(record.TrieUpdates) != len(execTrieUpdates) {
 			return fmt.Errorf("trie update sizes do not match, got %d from gcp and %d from exec state sync",
@@ -199,7 +201,7 @@ func (e *Execution) processNext() error {
 		mismatchingUpdates := len(execTrieUpdates)
 		for _, update := range execTrieUpdates {
 			for _, gcpUpdate := range record.TrieUpdates {
-				if update.Equals(gcpUpdate) {
+				if gcpUpdate != nil && update.Equals(gcpUpdate) {
 					mismatchingUpdates--
 				}
 			}
