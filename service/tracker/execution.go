@@ -181,29 +181,24 @@ func (e *Execution) processNext() error {
 			return fmt.Errorf("could not get execution data from access node: %w", err)
 		}
 
-		execTrieUpdates := make([]*ledger.TrieUpdate, 0)
+		execTrieUpdates := make(map[string]*ledger.TrieUpdate, 0)
 		// collect updates before pushing!
 		for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
 			convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
 			if err != nil {
 				return fmt.Errorf("unable to convert execution data chunk : %w", err)
 			}
-			if convertedChunk != nil {
-				execTrieUpdates = append(execTrieUpdates, convertedChunk.TrieUpdate)
+			if convertedChunk.TrieUpdate != nil {
+				execTrieUpdates[convertedChunk.TrieUpdate.String()] = convertedChunk.TrieUpdate
 			}
 		}
-		// linear search for each matching update, since the order of fields and nil fields mean that equal
-		// TrieUpdates may not have equal Md5 hashes or valid String() outputs
-		mismatchingUpdates := len(execTrieUpdates)
-		for _, update := range execTrieUpdates {
-			for _, gcpUpdate := range record.TrieUpdates {
-				if gcpUpdate != nil && update.Equals(gcpUpdate) {
-					mismatchingUpdates--
+		// hash search for matching update
+		for _, gcpUpdate := range record.TrieUpdates {
+			if gcpUpdate != nil {
+				if !execTrieUpdates[gcpUpdate.String()].Equals(gcpUpdate) {
+					return fmt.Errorf("got %s mismatching trie updates between exec sync and GCP", gcpUpdate.String())
 				}
 			}
-		}
-		if mismatchingUpdates > 0 {
-			return fmt.Errorf("got %d mismatching trie updates between eexc sync and GCP", mismatchingUpdates)
 		}
 		// alternatively, we can just use the trie updates we collected from data sync!!
 		// e.queue.PushFront(execTrieUpdates)
