@@ -168,43 +168,16 @@ func (e *Execution) processNext() error {
 		return fmt.Errorf("duplicate execution record (block: %x)", blockID)
 	}
 
+	if e.execClient != nil {
+		err := e.checkTrieUpdates(record, blockID)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+	}
+
 	// Dump the block execution record into our cache and push all trie updates
 	// into our update queue.
 	e.records[blockID] = record
-	if e.execClient != nil {
-		e.log.Debug().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
-		e.log.Debug().Int("updates", len(record.TrieUpdates)).Msg("got trie updates from GCP")
-		// get Trie updates from exec data sync
-		req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
-		res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
-		if err != nil {
-			return fmt.Errorf("could not get execution data from access node: %w", err)
-		}
-
-		execTrieUpdates := make(map[string]bool, 0)
-		// collect updates before pushing!
-		for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
-			convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
-			if err != nil {
-				return fmt.Errorf("unable to convert execution data chunk : %w", err)
-			}
-			if convertedChunk.TrieUpdate != nil {
-				execTrieUpdates[convertedChunk.TrieUpdate.String()] = true
-				e.log.Debug().Str("source", "exec sync").Str("update", convertedChunk.TrieUpdate.String()).Msg("")
-			}
-		}
-		// hash search for matching update
-		for _, gcpUpdate := range record.TrieUpdates {
-			if gcpUpdate != nil && !gcpUpdate.IsEmpty() {
-				e.log.Debug().Str("source", "gcp").Str("update", gcpUpdate.String()).Msg("comparing update")
-				if !execTrieUpdates[gcpUpdate.String()] {
-					return fmt.Errorf("got %s mismatching trie updates between exec sync and GCP", gcpUpdate.String())
-				}
-			}
-		}
-		// alternatively, we can just use the trie updates we collected from data sync!!
-		// e.queue.PushFront(execTrieUpdates)
-	}
 	e.queue.PushFront(record.TrieUpdates)
 
 	e.log.Info().
@@ -213,6 +186,45 @@ func (e *Execution) processNext() error {
 		Int("trie_updates", len(record.TrieUpdates)).
 		Msg("next execution record processed")
 
+	return nil
+}
+
+func (e *Execution) checkTrieUpdates(record *uploader.BlockData, blockID flow.Identifier) error {
+	e.log.Debug().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
+	e.log.Debug().Int("updates", len(record.TrieUpdates)).Msg("got trie updates from GCP")
+	// get Trie updates from exec data sync
+	req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
+	res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
+	if err != nil {
+		return fmt.Errorf("could not get execution data from access node: %w", err)
+	}
+
+	execTrieUpdates := make(map[string]bool, 0)
+	// collect updates before pushing!
+	for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
+		convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
+		if err != nil {
+			return fmt.Errorf("unable to convert execution data chunk : %w", err)
+		}
+		if convertedChunk.TrieUpdate != nil {
+			execTrieUpdates[convertedChunk.TrieUpdate.String()] = true
+			e.log.Debug().Str("source", "exec sync").Str("update", convertedChunk.TrieUpdate.String()).Msg("")
+		}
+	}
+	// hash search for matching update
+	for _, gcpUpdate := range record.TrieUpdates {
+		if gcpUpdate != nil && !gcpUpdate.IsEmpty() {
+			e.log.Debug().Str("source", "gcp").Str("update", gcpUpdate.String()).Msg("comparing update")
+			if !execTrieUpdates[gcpUpdate.String()] {
+				return fmt.Errorf("got %s mismatching trie updates between exec sync and GCP", gcpUpdate.String())
+			}
+			delete(execTrieUpdates, gcpUpdate.String())
+		}
+	}
+
+	if len(execTrieUpdates) > 0 {
+		return fmt.Errorf("got %d more trie updates from exec sync than GCP", len(execTrieUpdates))
+	}
 	return nil
 }
 
