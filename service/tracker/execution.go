@@ -169,7 +169,7 @@ func (e *Execution) processNext() error {
 	}
 
 	if e.execClient != nil {
-		err := e.checkTrieUpdates(record, blockID)
+		err := e.checkTrieUpdates(record.TrieUpdates, blockID)
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -189,9 +189,13 @@ func (e *Execution) processNext() error {
 	return nil
 }
 
-func (e *Execution) checkTrieUpdates(record *uploader.BlockData, blockID flow.Identifier) error {
+func (e *Execution) checkTrieUpdates(gcpUpdates []*ledger.TrieUpdate, blockID flow.Identifier) error {
+	if gcpUpdates == nil || len(gcpUpdates) == 0 {
+		// skip as there are no updates
+		return nil
+	}
 	e.log.Debug().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
-	e.log.Debug().Int("updates", len(record.TrieUpdates)).Msg("got trie updates from GCP")
+	e.log.Debug().Int("updates", len(gcpUpdates)).Msg("got trie updates from GCP")
 	// get Trie updates from exec data sync
 	req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
 	res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
@@ -201,7 +205,7 @@ func (e *Execution) checkTrieUpdates(record *uploader.BlockData, blockID flow.Id
 
 	execTrieUpdates := make(map[string]bool, 0)
 	// collect updates to map to compare
-	for _, gcpUpdate := range record.TrieUpdates {
+	for _, gcpUpdate := range gcpUpdates {
 		if gcpUpdate != nil && !gcpUpdate.IsEmpty() {
 			key := gcpUpdate.String()
 			execTrieUpdates[key] = true
@@ -209,14 +213,17 @@ func (e *Execution) checkTrieUpdates(record *uploader.BlockData, blockID flow.Id
 		}
 	}
 	// hash search for matching updates in exec data API
-	for _, chunk := range res.GetBlockExecutionData().ChunkExecutionData {
+	execData := res.GetBlockExecutionData()
+	if execData == nil {
+		return fmt.Errorf("could not get execution data for block %x from exec data api", blockID[:])
+	}
+	for _, chunk := range execData.ChunkExecutionData {
 		convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
 		if err != nil {
 			return fmt.Errorf("unable to convert execution data chunk : %w", err)
 		}
-		tu := convertedChunk.TrieUpdate
-		lookup := tu.String()
-		if tu != nil {
+		if tu := convertedChunk.TrieUpdate; tu != nil {
+			lookup := tu.String()
 			e.log.Debug().Hex("blockID", blockID[:]).Str("update", lookup).Msg("got update from exec sync")
 			if !execTrieUpdates[lookup] {
 				return fmt.Errorf("got %s mismatching trie updates between exec sync and GCP", lookup)
