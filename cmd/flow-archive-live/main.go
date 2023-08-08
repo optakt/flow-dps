@@ -18,10 +18,12 @@ import (
 	grpczerolog "github.com/grpc-ecosystem/go-grpc-middleware/providers/zerolog/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/tags"
+	access2 "github.com/onflow/flow/protobuf/go/flow/executiondata"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	sdk "github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go/cmd/bootstrap/utils"
@@ -48,8 +50,9 @@ import (
 )
 
 const (
-	success = 0
-	failure = 1
+	success        = 0
+	failure        = 1
+	maxGrpcMsgSize = 90 * 1024 * 1024 // 90 mb for large exec data chunks
 )
 
 func main() {
@@ -70,6 +73,7 @@ func run() int {
 		flagBucket           string
 		flagCheckpoint       string
 		flagData             string
+		flagExecAddress      string
 		flagIndex            string
 		flagLevel            string
 		flagFollowerLogLevel string
@@ -109,6 +113,7 @@ func run() int {
 	pflag.StringVar(&flagSeedAddress, "seed-address", "", "host address of seed node to follow consensus")
 	pflag.StringVar(&flagSeedKey, "seed-key", "", "hex-encoded public network key of seed node to follow consensus")
 	pflag.BoolVarP(&flagTracing, "tracing", "t", false, "enable tracing for this instance")
+	pflag.StringVar(&flagExecAddress, "exec-address", "", "host address of access node to get exec data from")
 
 	pflag.Parse()
 
@@ -305,12 +310,32 @@ func run() int {
 	stream := cloud.NewGCPStreamer(log, bucket,
 		cloud.WithCatchupBlocks(blockIDs),
 	)
+	// create exec data client from seed address
+	var execApi access2.ExecutionDataAPIClient
+	conn, err := grpc.Dial(
+		flagExecAddress,
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error().Err(err).Msg("could not get connect to exec data sync access node")
+		return failure
+	}
+	execApi = access2.NewExecutionDataAPIClient(conn)
+	accessApi := access.NewAccessAPIClient(conn)
+
+	req := &access.GetNetworkParametersRequest{}
+	res, err := accessApi.GetNetworkParameters(context.Background(), req)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get network params")
+		return failure
+	}
+	chainID := flowModel.ChainID(res.ChainId)
 
 	// Next, we can initialize our consensus and execution trackers. They are
 	// responsible for tracking changes to the available data, for the consensus
 	// follower and related consensus data on one side, and the cloud streamer
 	// and available execution records on the other side.
-	execution, err := tracker.NewExecution(log, protocolDB, stream)
+	execution, err := tracker.NewExecution(log, protocolDB, stream, execApi, chainID.Chain())
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize execution tracker")
 		return failure
@@ -387,7 +412,6 @@ func run() int {
 		server = api.NewServer(read, codec)
 	}
 
-	chainID, err := getChainId(read)
 	if err != nil {
 		log.Error().Err(err).Msg("could not get chainID")
 		return failure
@@ -524,21 +548,4 @@ func run() int {
 	}
 
 	return success
-}
-
-func getChainId(read *index.Reader) (flowModel.ChainID, error) {
-	chainID := flowModel.Emulator
-
-	f, err := read.Last()
-	if err != nil {
-		return chainID, err
-	}
-
-	h, err := read.Header(f)
-	if err != nil {
-		return chainID, err
-	}
-	chainID = h.ChainID
-
-	return chainID, nil
 }

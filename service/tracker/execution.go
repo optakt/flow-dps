@@ -1,16 +1,18 @@
 package tracker
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/gammazero/deque"
-	"github.com/rs/zerolog"
-
+	"github.com/onflow/flow-go/engine/common/rpc/convert"
 	"github.com/onflow/flow-go/engine/execution/ingestion/uploader"
 	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/storage/badger/operation"
+	access "github.com/onflow/flow/protobuf/go/flow/executiondata"
+	"github.com/rs/zerolog"
 )
 
 // Execution is the DPS execution follower, which keeps track of updates to the
@@ -18,15 +20,23 @@ import (
 // streamer and extracts the trie updates for consumers. It also makes the rest
 // of the block record data available for external consumers by block ID.
 type Execution struct {
-	log     zerolog.Logger
-	queue   *deque.Deque
-	stream  RecordStreamer
-	records map[flow.Identifier]*uploader.BlockData
+	log        zerolog.Logger
+	queue      *deque.Deque
+	stream     RecordStreamer
+	records    map[flow.Identifier]*uploader.BlockData
+	execClient access.ExecutionDataAPIClient
+	chain      flow.Chain
 }
 
 // NewExecution creates a new DPS execution follower, relying on the provided
 // stream of block records (block data updates).
-func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Execution, error) {
+func NewExecution(
+	log zerolog.Logger,
+	db *badger.DB,
+	stream RecordStreamer,
+	execClient access.ExecutionDataAPIClient,
+	chain flow.Chain,
+) (*Execution, error) {
 
 	// The root block does not have a record that we can pull from the cloud
 	// stream of execution data. We thus construct it by getting the root block
@@ -58,10 +68,12 @@ func NewExecution(log zerolog.Logger, db *badger.DB, stream RecordStreamer) (*Ex
 	}
 
 	e := Execution{
-		log:     log.With().Str("component", "execution_tracker").Logger(),
-		stream:  stream,
-		queue:   deque.New(),
-		records: make(map[flow.Identifier]*uploader.BlockData),
+		log:        log.With().Str("component", "execution_tracker").Logger(),
+		stream:     stream,
+		queue:      deque.New(),
+		records:    make(map[flow.Identifier]*uploader.BlockData),
+		execClient: execClient,
+		chain:      chain,
 	}
 
 	payload := flow.Payload{
@@ -156,10 +168,16 @@ func (e *Execution) processNext() error {
 		return fmt.Errorf("duplicate execution record (block: %x)", blockID)
 	}
 
+	if e.execClient != nil {
+		err := e.checkTrieUpdates(record.TrieUpdates, blockID)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+	}
+
 	// Dump the block execution record into our cache and push all trie updates
 	// into our update queue.
 	e.records[blockID] = record
-
 	e.queue.PushFront(record.TrieUpdates)
 
 	e.log.Info().
@@ -168,6 +186,55 @@ func (e *Execution) processNext() error {
 		Int("trie_updates", len(record.TrieUpdates)).
 		Msg("next execution record processed")
 
+	return nil
+}
+
+func (e *Execution) checkTrieUpdates(gcpUpdates []*ledger.TrieUpdate, blockID flow.Identifier) error {
+	if len(gcpUpdates) == 0 {
+		// skip as there are no updates
+		return nil
+	}
+	e.log.Debug().Hex("block_id", blockID[:]).Msg("fetching updates from data sync")
+	e.log.Debug().Int("updates", len(gcpUpdates)).Msg("got trie updates from GCP")
+	// get Trie updates from exec data sync
+	req := &access.GetExecutionDataByBlockIDRequest{BlockId: blockID[:]}
+	res, err := e.execClient.GetExecutionDataByBlockID(context.Background(), req)
+	if err != nil {
+		return fmt.Errorf("could not get execution data from access node: %w", err)
+	}
+
+	execTrieUpdates := make(map[string]bool, 0)
+	// collect updates to map to compare
+	for _, gcpUpdate := range gcpUpdates {
+		if gcpUpdate != nil && !gcpUpdate.IsEmpty() {
+			key := gcpUpdate.String()
+			execTrieUpdates[key] = true
+			e.log.Debug().Hex("blockID", blockID[:]).Str("update", key).Msg("got update from GCP")
+		}
+	}
+	// hash search for matching updates in exec data API
+	execData := res.GetBlockExecutionData()
+	if execData == nil {
+		return fmt.Errorf("could not get execution data for block %x from exec data api", blockID[:])
+	}
+	for _, chunk := range execData.ChunkExecutionData {
+		convertedChunk, err := convert.MessageToChunkExecutionData(chunk, e.chain)
+		if err != nil {
+			return fmt.Errorf("unable to convert execution data chunk : %w", err)
+		}
+		if tu := convertedChunk.TrieUpdate; tu != nil {
+			lookup := tu.String()
+			e.log.Debug().Hex("blockID", blockID[:]).Str("update", lookup).Msg("got update from exec sync")
+			if !execTrieUpdates[lookup] {
+				return fmt.Errorf("got %s mismatching trie updates between exec sync and GCP", lookup)
+			}
+			delete(execTrieUpdates, lookup)
+		}
+	}
+
+	if len(execTrieUpdates) > 0 {
+		return fmt.Errorf("got %d more trie updates from GCP than exec sync", len(execTrieUpdates))
+	}
 	return nil
 }
 

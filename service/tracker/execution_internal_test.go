@@ -32,7 +32,7 @@ func TestNewExecution(t *testing.T) {
 		require.NoError(t, db.Update(operation.IndexLatestSealAtBlock(blockID, seal.ID())))
 		require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
-		exec, err := NewExecution(log, db, stream)
+		exec, err := NewExecution(log, db, stream, nil, flow.Emulator.Chain())
 
 		require.NoError(t, err)
 		assert.Equal(t, stream, exec.stream)
@@ -52,7 +52,7 @@ func TestNewExecution(t *testing.T) {
 		require.NoError(t, db.Update(operation.IndexLatestSealAtBlock(blockID, seal.ID())))
 		require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
-		_, err := NewExecution(log, db, stream)
+		_, err := NewExecution(log, db, stream, nil, flow.Emulator.Chain())
 
 		assert.Error(t, err)
 	})
@@ -69,7 +69,7 @@ func TestNewExecution(t *testing.T) {
 		require.NoError(t, db.Update(operation.IndexLatestSealAtBlock(blockID, seal.ID())))
 		require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
-		_, err := NewExecution(log, db, stream)
+		_, err := NewExecution(log, db, stream, nil, flow.Emulator.Chain())
 
 		assert.Error(t, err)
 	})
@@ -86,7 +86,7 @@ func TestNewExecution(t *testing.T) {
 		require.NoError(t, db.Update(operation.IndexLatestSealAtBlock(blockID, seal.ID())))
 		require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
-		_, err := NewExecution(log, db, stream)
+		_, err := NewExecution(log, db, stream, nil, flow.Emulator.Chain())
 
 		assert.Error(t, err)
 	})
@@ -103,7 +103,7 @@ func TestNewExecution(t *testing.T) {
 		//require.NoError(t, db.Update(operation.IndexBlockSeal(blockID, seal.ID())))
 		require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
-		_, err := NewExecution(log, db, stream)
+		_, err := NewExecution(log, db, stream, nil, flow.Emulator.Chain())
 
 		assert.Error(t, err)
 	})
@@ -120,7 +120,7 @@ func TestNewExecution(t *testing.T) {
 		// Do not insert seal.
 		// require.NoError(t, db.Update(operation.InsertSeal(seal.ID(), seal)))
 
-		_, err := NewExecution(log, db, stream)
+		_, err := NewExecution(log, db, stream, nil, flow.Emulator.Chain())
 
 		assert.Error(t, err)
 	})
