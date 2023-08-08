@@ -190,7 +190,7 @@ func (e *Execution) processNext() error {
 }
 
 func (e *Execution) checkTrieUpdates(gcpUpdates []*ledger.TrieUpdate, blockID flow.Identifier) error {
-	if gcpUpdates == nil || len(gcpUpdates) == 0 {
+	if len(gcpUpdates) == 0 {
 		// skip as there are no updates
 		return nil
 	}
