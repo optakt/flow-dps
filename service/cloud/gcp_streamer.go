@@ -44,6 +44,7 @@ func NewGCPStreamer(log zerolog.Logger, bucket *storage.BucketHandle, options ..
 	decOptions := cbor.DecOptions{
 		ExtraReturnErrors: cbor.ExtraDecErrorUnknownField,
 		MaxArrayElements:  cborMaxArrayElements,
+		UTF8:              cbor.UTF8DecodeInvalid, // there might be invalid utf8 characters in the user input (e.g. transaction payload)
 	}
 	decoder, err := decOptions.DecMode()
 	if err != nil {
